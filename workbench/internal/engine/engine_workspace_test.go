@@ -13,6 +13,14 @@ import (
 
 // TestWorkspaceProjectModeUnchanged 覆盖"新功能不破坏原逻辑"：
 // 默认配置下任务工作目录仍是数据根下的沙箱，engine 的工作目录视图保持 project。
+// normWP 解析软链接与 Windows 8.3 短路径名，避免 CI（runneradmin 临时目录 RUNNER~1 短名）假失败。
+func normWP(p string) string {
+	if r, err := filepath.EvalSymlinks(p); err == nil && r != "" {
+		return r
+	}
+	return p
+}
+
 func TestWorkspaceProjectModeUnchanged(t *testing.T) {
 	e, _, layout := newTestEngine(t)
 	if e.Workspace() == nil {
@@ -56,7 +64,7 @@ func TestWorkspaceSelectExternalPersists(t *testing.T) {
 	if !e.Workspace().IsExternal() {
 		t.Fatal("引擎应切到 external")
 	}
-	if wd := e.WorkDirFor("task-y"); !strings.EqualFold(wd, target) {
+	if wd := e.WorkDirFor("task-y"); !strings.EqualFold(normWP(wd), normWP(target)) {
 		t.Fatalf("external 工作目录 = %q, want %q", wd, target)
 	}
 	// 配置落盘（重启后可恢复）
@@ -64,7 +72,7 @@ func TestWorkspaceSelectExternalPersists(t *testing.T) {
 	if err := config.ReadJSON(layout.ConfigFile, &cfg); err != nil {
 		t.Fatal(err)
 	}
-	if cfg.Workspace.Mode != workspace.ModeExternal || !strings.EqualFold(cfg.Workspace.Root, target) {
+	if cfg.Workspace.Mode != workspace.ModeExternal || !strings.EqualFold(normWP(cfg.Workspace.Root), normWP(target)) {
 		t.Fatalf("配置未落盘: %+v", cfg.Workspace)
 	}
 	// 上下文注入：必须包含目录树与协议提示
