@@ -52,6 +52,8 @@ cp /tmp/workbench-output/autonomy/goals.json /dk/evidence/$RUN_ID/goals.json 2>/
 cp /tmp/workbench-output/autonomy/decisions.jsonl /dk/evidence/$RUN_ID/decisions.jsonl 2>/dev/null || true
 rm -rf /dk/evidence/$RUN_ID/tasks 2>/dev/null || true
 cp -r /tmp/workbench-output/tasks /dk/evidence/$RUN_ID/tasks 2>/dev/null || true
+# 证据文件在容器内以 root 写入，GitHub runner 用户读取会 EACCES —— 统一放开读权限。
+chmod -R a+rX /dk/evidence/$RUN_ID 2>/dev/null || true
 kill $WB_PID 2>/dev/null || true
 sleep 1
 if [ "$JUDGE_RC" -ne 0 ]; then echo E2E_FAIL; exit 1; fi

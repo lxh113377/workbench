@@ -6,9 +6,19 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
+
+// normViaEval 解析软链接与 Windows 8.3 短路径名后比较，避免 CI（runneradmin 临时目录
+// 常为 RUNNER~1 短名）与本机（长名）路径形态差异导致的假失败。
+func normViaEval(p string) string {
+	if r, err := filepath.EvalSymlinks(p); err == nil && r != "" {
+		return r
+	}
+	return p
+}
 
 // doJSON 用给定方法/请求体调用一个 handler，并解析 JSON 响应。
 func doJSON(t *testing.T, fn http.HandlerFunc, srv *Server, method, path string, body any) (int, map[string]any) {
@@ -77,11 +87,11 @@ func TestWorkspaceAPISelectAndReset(t *testing.T) {
 	if view["mode"] != "external" {
 		t.Fatalf("切换后应为 external: %+v", view)
 	}
-	if got, _ := view["root"].(string); !strings.EqualFold(got, target) {
+	if got, _ := view["root"].(string); !strings.EqualFold(normViaEval(got), normViaEval(target)) {
 		t.Fatalf("根应为目标目录: %q", got)
 	}
 	// 引擎侧工作目录确实指向用户目录
-	if wd := eng.WorkDirFor("task-any"); !strings.EqualFold(wd, target) {
+	if wd := eng.WorkDirFor("task-any"); !strings.EqualFold(normViaEval(wd), normViaEval(target)) {
 		t.Fatalf("引擎任务工作目录 = %q", wd)
 	}
 	// 4) 非法目录不改变模式（失败不污染状态）
@@ -161,9 +171,11 @@ func TestWorkspaceAPIBrowse(t *testing.T) {
 	var out2 map[string]any
 	_ = json.Unmarshal(rec2.Body.Bytes(), &out2)
 	b2, _ := out2["browse"].(map[string]any)
-	drives, _ := b2["drives"].([]any)
-	if len(drives) == 0 {
-		t.Fatalf("空路径应返回盘符列表: %+v", out2)
+	if runtime.GOOS == "windows" {
+		drives, _ := b2["drives"].([]any)
+		if len(drives) == 0 {
+			t.Fatalf("空路径应返回盘符列表: %+v", out2)
+		}
 	}
 }
 

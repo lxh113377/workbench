@@ -89,6 +89,16 @@ func TestIsWithinBoundaries(t *testing.T) {
 	_ = sep
 }
 
+
+// normCanonical 归一化路径用于跨环境比较：解析软链接与 Windows 8.3 短路径名，
+// 使 CI（runneradmin 临时目录常为 RUNNER~1 短名）与本机（长名）结果一致。
+func normCanonical(p string) string {
+	if r, err := evalExisting(p); err == nil && r != "" {
+		p = r
+	}
+	return normForCompare(p)
+}
+
 func TestValidateRejectsBadInputs(t *testing.T) {
 	m, project, data := newManager(t)
 	abs := func(p string) string { return p }
@@ -144,7 +154,7 @@ func TestValidateAcceptsNormalDir(t *testing.T) {
 	if v.Files != 1 || v.Dirs != 1 {
 		t.Fatalf("入口统计不对: files=%d dirs=%d", v.Files, v.Dirs)
 	}
-	if v.Canonical == "" || !samePath(v.Canonical, dir) {
+	if v.Canonical == "" || normCanonical(v.Canonical) != normCanonical(dir) {
 		t.Fatalf("canonical = %q, want %q", v.Canonical, dir)
 	}
 	// 写探针不得留下文件
@@ -166,7 +176,7 @@ func TestSelectExternalAndResetProject(t *testing.T) {
 		t.Fatal("应切换为 external")
 	}
 	wd, sandboxed := m.TaskWorkDir("task-1")
-	if sandboxed || !samePath(wd, dir) {
+	if sandboxed || normCanonical(wd) != normCanonical(dir) {
 		t.Fatalf("external 任务工作目录 = %q sandboxed=%v", wd, sandboxed)
 	}
 	// 非法目录不得改变状态
@@ -184,7 +194,7 @@ func TestSelectExternalAndResetProject(t *testing.T) {
 	if !sandboxed || !strings.Contains(wd, filepath.Join("tasks", "task-1", "workspace")) {
 		t.Fatalf("项目模式任务目录 = %q", wd)
 	}
-	if !strings.HasPrefix(wd, data) {
+	if !strings.HasPrefix(normCanonical(wd), normCanonical(data)) {
 		t.Fatalf("项目模式目录应在数据根下: %q", wd)
 	}
 }
@@ -206,7 +216,7 @@ func TestResolveWriteAndRead(t *testing.T) {
 	}
 	// 目录内相对路径 OK
 	got, err := m.ResolveWrite("src/main.go", "t1")
-	if err != nil || !samePath(got, filepath.Join(root, "src", "main.go")) {
+	if err != nil || normCanonical(got) != normCanonical(filepath.Join(root, "src", "main.go")) {
 		t.Fatalf("目录内相对路径应允许: %q %v", got, err)
 	}
 	// 目录内绝对路径 OK
