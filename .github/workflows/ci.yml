@@ -1,0 +1,85 @@
+name: CI
+
+# 对标 riverqueue/river（6 条 workflow）、hibiken/asynq（2 条）的 CI 保护面：
+# 本项目是 Windows 单 EXE 桌面程序，故矩阵只跑 windows-latest，但判据与同类项目对齐：
+#   1) go vet        —— 静态检查（等价于对方 lint 步骤）
+#   2) go test -race —— 竞态检测（需要 mingw gcc；windows-latest 镜像自带）
+#   3) build.ps1     —— 完整构建 + 覆盖率门禁（自带阈值，低于阈值直接失败）
+#   4) 产物校验      —— EXE 存在、大小在合理区间、--version / --diagnose 可执行
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  GO_VERSION: "1.27.x"
+
+jobs:
+  test:
+    name: vet + test (race)
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: workbench
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+          cache-dependency-path: workbench/go.mod
+
+      - name: go vet
+        run: go vet ./...
+
+      - name: go test -race
+        run: go test -race -count=1 ./...
+
+  build:
+    name: build + coverage gate
+    runs-on: windows-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "${{ env.GO_VERSION }}"
+          cache-dependency-path: workbench/go.mod
+
+      - name: Build single EXE (含覆盖率门禁)
+        shell: pwsh
+        run: ./setup/build.ps1 -Version 1.1.0
+
+      - name: Verify artifact
+        shell: pwsh
+        run: |
+          $exe = "dist/workbench.exe"
+          if (-not (Test-Path $exe)) { throw "构建产物不存在: $exe" }
+          $size = (Get-Item $exe).Length
+          if ($size -lt 3MB -or $size -gt 40MB) { throw "产物大小异常: $size bytes" }
+          $ver = & $exe --version
+          if ($LASTEXITCODE -ne 0) { throw "--version 退出码 $LASTEXITCODE" }
+          if ($ver -notmatch "workbench") { throw "--version 输出异常: $ver" }
+          & $exe --diagnose | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw "--diagnose 退出码 $LASTEXITCODE" }
+          Write-Host "产物校验通过: $size bytes, $ver"
+
+      - name: Upload EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: workbench-exe
+          path: dist/workbench.exe
+          retention-days: 7
