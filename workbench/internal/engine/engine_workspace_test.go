@@ -13,12 +13,51 @@ import (
 
 // TestWorkspaceProjectModeUnchanged 覆盖"新功能不破坏原逻辑"：
 // 默认配置下任务工作目录仍是数据根下的沙箱，engine 的工作目录视图保持 project。
-// normWP 解析软链接与 Windows 8.3 短路径名，避免 CI（runneradmin 临时目录 RUNNER~1 短名）假失败。
+// normWP 把路径归一到「长名」形态用于跨环境比较：逐级解析已存在前缀的软链接与
+// Windows 8.3 短名（RUNNER~1 → runneradmin），拼接尚不存在的尾部。CI runner 的临时目录
+// 常呈 8.3 短名，而目标子路径（tasks/<id>/workspace）尚不存在，必须只解析已存在的前缀。
 func normWP(p string) string {
-	if r, err := filepath.EvalSymlinks(p); err == nil && r != "" {
-		p = r
+	p = filepath.Clean(p)
+	var tail []string
+	cur := p
+	for i := 0; i < 64; i++ {
+		if r, err := filepath.EvalSymlinks(cur); err == nil && r != "" {
+			for j := len(tail) - 1; j >= 0; j-- {
+				r = filepath.Join(r, tail[j])
+			}
+			return strings.ToLower(r)
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			break
+		}
+		tail = append(tail, filepath.Base(cur))
+		cur = parent
 	}
-	return strings.ToLower(filepath.Clean(p))
+	return strings.ToLower(p)
+}
+
+// normPathLong 把纯路径归一到「长名」形态（保留原始大小写），用于与文本中嵌入的
+// 路径做大小写不敏感比较。只用于纯路径，绝不能用于整段文本。
+func normPathLong(p string) string {
+	p = filepath.Clean(p)
+	var tail []string
+	cur := p
+	for i := 0; i < 64; i++ {
+		if r, err := filepath.EvalSymlinks(cur); err == nil && r != "" {
+			for j := len(tail) - 1; j >= 0; j-- {
+				r = filepath.Join(r, tail[j])
+			}
+			return r
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			break
+		}
+		tail = append(tail, filepath.Base(cur))
+		cur = parent
+	}
+	return p
 }
 
 // withinPath 判断 target 是否等于或位于 root 之下。用 filepath.Rel 而非字符串前缀，
@@ -87,7 +126,7 @@ func TestWorkspaceSelectExternalPersists(t *testing.T) {
 	}
 	// 上下文注入：必须包含目录树与协议提示
 	ctx := e.workspaceContextText()
-	if !strings.Contains(normWP(ctx), normWP(target)) || !strings.Contains(ctx, "README.md") || !strings.Contains(ctx, "ARTIFACTS") {
+	if !strings.Contains(strings.ToLower(ctx), strings.ToLower(normPathLong(target))) || !strings.Contains(ctx, "README.md") || !strings.Contains(ctx, "ARTIFACTS") {
 		t.Fatalf("上下文不完整:\n%s", ctx)
 	}
 	// 切回项目模式
