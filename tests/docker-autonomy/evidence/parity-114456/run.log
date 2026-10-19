@@ -1,0 +1,33 @@
+=== 0. 环境 ===
+Linux x86_64
+python3: Python 3.11.2
+binary: workbench docker-e2e (docker)
+=== 1. 离线自检 ===
+  [PASS] 离线 selftest 11/11
+=== 2. 启动面板服务 ===
+URL=http://127.0.0.1:17890/
+TOKEN_LEN=32
+{"phase":"running"}
+
+=== 3. 等闭环推进（最多 150 秒） ===
+goals=1 completed=0 active=容器闭环验收目标 stages=0 progress=0 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=0
+goals=1 completed=0 active=容器闭环验收目标 stages=1 progress=90 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=1
+goals=1 completed=0 active=容器闭环验收目标 stages=1 progress=90 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=1
+goals=2 completed=1 active=容器闭环验收目标 · 深化：自测 stages=1 progress=90 enabled=True
+raw_goalDone=1 raw_nextGoal=1 raw_accept=3
+endpoints reached at iter 4
+=== 4. 判据核对 ===
+  [PASS] 2 目标 bootstrap（active + 机器判据）
+  [PASS] 3 目标推导阶段任务（plan 决策 >= 1）
+  [PASS] 4 产物真实落盘（workspace/result.py）
+  [PASS] 5 真实执行验收通过（verify.json pass）
+  [PASS] 6 自主验收记账（accept >= 1）
+  [PASS] 7 阶段推进（stages >= 2）
+  [PASS] 8a 目标完成（goalDone >= 1）
+  [PASS] 8b 自动下一目标（nextGoal >= 1）
+  [PASS] 8c completed 旧目标 + activeId 指向新目标
+SUMMARY_PASS
+E2E_PASS

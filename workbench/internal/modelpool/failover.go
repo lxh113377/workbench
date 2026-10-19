@@ -1,0 +1,222 @@
+package modelpool
+
+import (
+	"context"
+	"strings"
+	"time"
+
+	"workbench/internal/config"
+	"workbench/internal/executor"
+	"workbench/internal/model"
+)
+
+// ── 故障转移执行器（无感切换的核心） ──────────────────────────────
+//
+// 引擎一次尝试只选一个模型；如果那个模型超时/报错，传统做法是「失败 → 退避 5s
+// → 换模型重试」，用户看到的是 5 秒空窗 + 失败计数 + 最终仍可能判死。
+//
+// FailoverRunner 包在真实执行器外面，在**一次尝试内部**完成切换：
+//  1. 按池子的调度顺序（优先级/轮询）拿到候选链；
+//  2. 依次调用真实执行器，失败立刻换下一个（不睡退避）；
+//  3. 第一个成功的结果原样返回给引擎 —— 引擎只看到「成功」，用户只看到产出。
+//
+// 只有整条链都失败才把最后一个错误抛回引擎，交给既有的重试策略处理。
+// 每次切换都写 model-status.jsonl（kind=switch），保证过程可追溯。
+
+// FailoverRunner 是带模型故障转移的执行器装饰器。
+type FailoverRunner struct {
+	inner executor.RunnerContract
+	mgr   *Manager
+	sch   *Scheduler
+	// MaxSwitch 是单次尝试内最多切换几个模型（0 = 用池内全部可用模型，上限 8）。
+	MaxSwitch int
+	// MinRemain 是切换前要求剩余的任务时间（低于它就不再换，交给引擎重试）。
+	MinRemain time.Duration
+}
+
+// NewFailoverRunner 构造装饰器。
+func NewFailoverRunner(inner executor.RunnerContract, mgr *Manager, sch *Scheduler) *FailoverRunner {
+	return &FailoverRunner{inner: inner, mgr: mgr, sch: sch, MaxSwitch: 8, MinRemain: 45 * time.Second}
+}
+
+// UpdateConfig 透传执行器配置（满足 executor.RunnerContract）。
+func (f *FailoverRunner) UpdateConfig(cfg config.ExecutorConfig) {
+	if f.inner != nil {
+		f.inner.UpdateConfig(cfg)
+	}
+}
+
+// Inner 暴露被装饰的真实执行器，供引擎沿装饰器链下探。
+//
+// 关键：external 模式的 allowAll 开关与工作目录上下文钩子都挂在具体执行器上，
+// 引擎用「接口断言 + Inner() 链」找它。装饰器不实现 Inner() 会让这些能力
+// 静默失效（切到 external 后仍按项目模式跑），属于运行期难发现的缺陷。
+func (f *FailoverRunner) Inner() executor.RunnerContract { return f.inner }
+
+// Run 执行一次任务：主模型失败即在内部换模型，成功结果对上层不可见地返回。
+func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID string) (res *executor.Result, runErr error) {
+	if f.inner == nil {
+		return nil, errNoInner
+	}
+	if f.mgr == nil || f.sch == nil {
+		return f.inner.Run(ctx, task, modelID)
+	}
+	now := nowMs()
+	specs := f.mgr.Specs()
+	chain := f.sch.PickChain(specs, now)
+	order := make([]string, 0, len(chain)+1)
+	seen := map[string]bool{}
+	if strings.TrimSpace(modelID) != "" {
+		order = append(order, modelID)
+		seen[modelID] = true
+	}
+	for _, id := range chain {
+		if seen[id] || len(order) >= f.MaxSwitch+1 {
+			continue
+		}
+		order = append(order, id)
+		seen[id] = true
+	}
+	if len(order) == 0 {
+		return f.inner.Run(ctx, task, modelID)
+	}
+
+	var lastRes *executor.Result
+	var lastErr error
+	from := order[0]
+	for i, id := range order {
+		if i > 0 {
+			// 切换前确认还有足够时间，避免把「任务超时」误当「模型故障」反复换。
+			if !hasTimeLeft(ctx, f.MinRemain) {
+				break
+			}
+			f.mgr.AppendSwitch(transitionRecord{
+				TaskID: task.ID, From: from, To: id,
+				Reason: "模型失败自动切换（" + firstNonEmpty(errText(lastErr), kindOf(lastRes), "unknown") + "）",
+			})
+		}
+		f.sch.Acquire(id)
+		res, err := f.inner.Run(ctx, task, id)
+		f.sch.Release(id)
+		ok, kind, detail := judge(res, err)
+		if ok {
+			f.mgr.MarkSuccess(id, elapsedMs(res))
+			return res, err
+		}
+		// 只有「可归因到模型」的失败才计入模型健康度：
+		//   - 结构性：model_unavailable / missing_credential / unreachable；
+		//   - 环境性：timeout / upstream_failed / stalled。
+		// bad_exit（尤其「无最终答案」）往往是任务/提示词层面的问题，
+		// 把它算到模型头上会让整池在几分钟内被打入长冷却（现场 6 个模型同时 down）。
+		if modelAttributable(kind) {
+			f.mgr.MarkFailure(id, kind, detail)
+		} else {
+			f.mgr.log(logRecord{Kind: "skip", Model: id, State: kind,
+				Reason: "任务级失败，不计入模型健康度: " + trim(detail, 160)})
+		}
+		lastRes, lastErr = res, err
+		// 用户取消 / 上下文结束：不再换模型，原样返回。
+		if ctx.Err() != nil || kind == string(executor.KindCancelled) {
+			return lastRes, lastErr
+		}
+		// 上游限流（429）：立即停止换模型，原样上抛交给 engine 做车道冷却。
+		//
+		// 现场实测（2026-10-19 08:08，隔离实例）：限流时这里连试 8 个模型（每个约 3 秒），
+		// 24 秒内打空整池并全部记失败。限流是通道级/账号级的，换模型毫无意义，
+		// 只会延长限流窗口（现场限流因此持续 50+ 分钟）。
+		//
+		// 注意：这里**不** MarkFailure —— 健康模型不该因为车道限流被冷却 30 分钟。
+		if kind == string(executor.KindRateLimited) {
+			f.mgr.log(logRecord{Kind: "skip", Model: id, State: kind,
+				Reason: "上游限流，停止换模型（车道级，非模型故障）"})
+			return lastRes, lastErr
+		}
+	}
+	return lastRes, lastErr
+}
+
+// judge 判断一次执行是否算成功，并给出失败类别与详情。
+//
+// 与引擎 runOne 的判定保持一致：超时、空产出、错误都算失败；错误类别优先取
+// 执行器给出的 ErrorKind，其次按错误对象兜底。
+func judge(res *executor.Result, err error) (bool, string, string) {
+	if err != nil {
+		kind := string(executor.KindUnknown)
+		if res != nil && res.ErrorKind != "" {
+			kind = res.ErrorKind
+		} else if isMissingCredential(err) {
+			kind = string(executor.KindMissingKey)
+		}
+		return false, kind, err.Error()
+	}
+	if res == nil {
+		return false, string(executor.KindUnknown), "执行器返回空结果"
+	}
+	if res.TimedOut {
+		return false, string(executor.KindTimeout), "任务超时"
+	}
+	// 结构化错误类别优先于"空产出"规则：429 时 final 本来就是空的，
+	// 若先走空产出分支会被覆盖成 bad_exit（现场：限流被误判为任务问题，
+	// 于是引擎换 8 个模型打空整池）。
+	if res.ErrorKind != "" && res.ErrorKind != string(executor.KindNone) {
+		return false, res.ErrorKind, firstNonEmpty(errText(nil), res.LastError)
+	}
+	if strings.TrimSpace(res.FinalText) == "" {
+		return false, string(executor.KindExit), "任务无最终答案"
+	}
+	return true, "", ""
+}
+
+// modelAttributable 判断一次失败是否可以归因到「模型不可用」。
+func modelAttributable(kind string) bool {
+	switch kind {
+	case string(executor.KindModelDead), string(executor.KindMissingKey),
+		string(executor.KindUpstream), string(executor.KindTimeout),
+		string(executor.KindStalled):
+		return true
+	}
+	// unreachable / bad_endpoint 是探测层的分类，同样归因到模型端点。
+	return kind == "unreachable" || kind == "bad_endpoint" || kind == "model_unavailable"
+}
+
+// modelAttributable 判断一次失败是否可以归因到「模型不可用」。
+
+func kindOf(res *executor.Result) string {
+	if res != nil && res.ErrorKind != "" {
+		return res.ErrorKind
+	}
+	return ""
+}
+
+func elapsedMs(res *executor.Result) int64 {
+	if res == nil {
+		return 0
+	}
+	return res.Elapsed.Milliseconds()
+}
+
+func hasTimeLeft(ctx context.Context, need time.Duration) bool {
+	dl, ok := ctx.Deadline()
+	if !ok {
+		return true
+	}
+	return time.Until(dl) > need
+}
+
+func isMissingCredential(err error) bool {
+	msg := strings.ToLower(err.Error())
+	return strings.Contains(msg, "missing_credential") || strings.Contains(msg, "unauthorized") || strings.Contains(msg, "401")
+}
+
+func errText(err error) string {
+	if err == nil {
+		return ""
+	}
+	return trim(err.Error(), 200)
+}
+
+var errNoInner = &innerError{}
+
+type innerError struct{}
+
+func (e *innerError) Error() string { return "模型池：内部执行器未注入" }

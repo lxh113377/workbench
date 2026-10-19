@@ -1,0 +1,15 @@
+{
+  "round": 1,
+  "pass": true,
+  "outcomes": [
+    {
+      "cmd": "python3 result.py",
+      "exit": 0,
+      "expectExit": 0,
+      "pass": true,
+      "ms": 6,
+      "stdoutTail": "hello from workbench container e2e"
+    }
+  ],
+  "at": 1792379878450
+}

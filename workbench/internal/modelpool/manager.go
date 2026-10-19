@@ -1,0 +1,817 @@
+package modelpool
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net"
+	"net/url"
+	"sort"
+	"strings"
+	"sync"
+	"time"
+
+	"workbench/internal/config"
+)
+
+// ── Manager：模型池唯一读写入口 ───────────────────────────────────
+
+// transitionRecord 记录一次「谁切到谁」的故障转移（无感切换的可追溯证据）。
+type transitionRecord struct {
+	At     int64  `json:"at"`
+	TaskID string `json:"taskId,omitempty"`
+	From   string `json:"from"`
+	To     string `json:"to"`
+	Reason string `json:"reason"`
+}
+
+// Manager 统一管理模型清单、可用性与调度顺序。
+//
+// 锁边界：所有读写临界区都在 m.mu 内；磁盘写盘与日志追加不持锁（先取快照再写），
+// 避免 7x24 运行时探测线程与调度线程互相拖慢。
+type Manager struct {
+	mu    sync.RWMutex
+	specs []Spec
+	// order 保存自定义顺序（面板拖动优先级时写入），空表示按 Priority 排序。
+	health map[string]*Health
+	store  *Store
+	// onRoutes 是「池子变化后把新路由表推给引擎」的回调（由 web/main 注入，避免反向依赖）。
+	onRoutes func([]config.ModelRoute)
+	// log 是最近一次探测摘要（面板展示用，不落盘）。
+	lastProbe ProbeSummary
+	// gatewayBase 是本机 OFM 网关地址（Discover 得到）。
+	gatewayBase string
+	cycle       int
+	sweepCancel chan struct{}
+	sweepOnce   sync.Once
+	// pendingLogs 是持锁期间积攒的待写日志（解锁后统一落盘，避免持锁做 IO）。
+	pendingLogs []logRecord
+	// lastSync 是最近一次网关清单同步的统计。
+	lastSync SyncResult
+	// gatewayKeySet 标记当前是否拿到了可用的网关密钥。
+	gatewayKeySet bool
+}
+
+// NewManager 从磁盘加载（不存在则用 seed 初始化），返回可用实例。
+func NewManager(store *Store, seed []Spec) *Manager {
+	m := &Manager{store: store, health: map[string]*Health{}}
+	f, err := store.Load()
+	if err != nil || f == nil || len(f.Specs) == 0 {
+		if seed == nil {
+			seed = SeedSpecs()
+		}
+		m.specs = append([]Spec(nil), seed...)
+		for i := range m.specs {
+			m.specs[i].Enabled = true
+			if m.specs[i].UpdatedAt == 0 {
+				m.specs[i].UpdatedAt = nowMs()
+			}
+			m.health[m.specs[i].ID] = &Health{ID: m.specs[i].ID, State: StateUnknown}
+		}
+		m.mu.Lock()
+		m.syncSpecStateLocked()
+		m.mu.Unlock()
+		m.mu.Lock()
+		m.syncSpecStateLocked()
+		m.mu.Unlock()
+		if seedErr := store.Save(&file{Specs: m.specs, Health: m.health}); seedErr != nil {
+			_ = seedErr
+		}
+		return m
+	}
+	m.specs = f.Specs
+	for i := range m.specs {
+		if m.specs[i].MaxFail <= 0 {
+			m.specs[i].MaxFail = 3
+		}
+		if m.specs[i].CooldownSec <= 0 {
+			m.specs[i].CooldownSec = 120
+		}
+	}
+	for id, h := range f.Health {
+		if h != nil {
+			m.health[id] = h
+		}
+	}
+	for _, s := range m.specs {
+		if m.health[s.ID] == nil {
+			m.health[s.ID] = &Health{ID: s.ID, State: StateUnknown}
+		}
+		if !s.Enabled && m.health[s.ID].State != StateDown {
+			m.health[s.ID].State = StateDisabled
+		}
+	}
+	m.mu.Lock()
+	m.syncSpecStateLocked()
+	m.mu.Unlock()
+	return m
+}
+
+// SetRouteSink 注入「路由表变更」回调（引擎热更新）。
+func (m *Manager) SetRouteSink(fn func([]config.ModelRoute)) {
+	m.mu.Lock()
+	m.onRoutes = fn
+	m.mu.Unlock()
+	m.NotifyRoutes()
+}
+
+// SetGatewayBase 记录本机网关地址（Discover 的产物）。
+func (m *Manager) SetGatewayBase(v string) {
+	m.mu.Lock()
+	m.gatewayBase = v
+	m.mu.Unlock()
+}
+
+// GatewayBase 返回本机网关地址。
+func (m *Manager) GatewayBase() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.gatewayBase
+}
+
+// Specs 返回全部模型定义（按调度顺序：优先级升序 + 权重降序 + id）。
+// 返回值带 Runtime 快照，调度器与面板可直接据此判断可用性。
+func (m *Manager) Specs() []Spec {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := append([]Spec(nil), m.specs...)
+	m.syncRuntime(out)
+	sortSpecs(out)
+	return out
+}
+
+// syncRuntime 为 Spec 副本补 Runtime（不持锁时的只读投影）。
+func (m *Manager) syncRuntime(specs []Spec) {
+	now := nowMs()
+	for i := range specs {
+		id := specs[i].ID
+		h := m.health[id]
+		rt := &specRuntime{State: StateUnknown}
+		if h != nil {
+			rt.State = h.State
+			rt.CooldownTo = h.CooldownTo
+			if !specs[i].Enabled {
+				rt.State = StateDisabled
+			} else if h.CooldownTo > now && h.State != StateDown {
+				rt.State = StateDown
+			}
+		}
+		specs[i].Runtime = rt
+	}
+}
+
+// HealthSnapshot 返回全部健康度（按调度顺序，保证面板与调度器同序）。
+func (m *Manager) HealthSnapshot() []Health {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	out := make([]Health, 0, len(m.health))
+	for _, s := range m.specs {
+		if h, ok := m.health[s.ID]; ok && h != nil {
+			cp := *h
+			out = append(out, cp)
+		}
+	}
+	return out
+}
+
+// Get 返回单个模型定义与健康度。
+func (m *Manager) Get(id string) (Spec, Health, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	for _, s := range m.specs {
+		if s.ID == id {
+			h := Health{ID: id}
+			if cur, ok := m.health[id]; ok && cur != nil {
+				h = *cur
+			}
+			return s, h, true
+		}
+	}
+	return Spec{}, Health{}, false
+}
+
+// ── 增删改 ──────────────────────────────────────────────────────
+
+// Upsert 新增或更新一个模型定义（面板「添加/编辑」入口）。
+func (m *Manager) Upsert(s Spec, actor string) (Spec, error) {
+	s.ID = strings.TrimSpace(s.ID)
+	if s.ID == "" {
+		return Spec{}, fmt.Errorf("模型 id 不能为空")
+	}
+	// 注意：OFM 的模型 id 天然带斜杠（z-ai/glm-5.3、opencode/xxx-free），
+	// 因此只拒绝空白、控制字符与查询符号；斜杠/冒号是合法字符。
+	if strings.ContainsAny(s.ID, " \t\r\n?#") {
+		return Spec{}, fmt.Errorf("模型 id 不能包含空白或 ? # 等查询符号")
+	}
+	if s.Model = firstNonEmpty(strings.TrimSpace(s.Model), s.ID); s.Model == "" {
+		return Spec{}, fmt.Errorf("上游模型名不能为空")
+	}
+	if s.BaseURL = strings.TrimSpace(s.BaseURL); s.BaseURL != "" {
+		u, err := url.Parse(s.BaseURL)
+		if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" {
+			return Spec{}, fmt.Errorf("BaseURL 必须是 http(s) 绝对地址")
+		}
+	}
+	if s.Format == "" {
+		s.Format = FormatChat
+	}
+	switch s.Format {
+	case FormatChat, FormatResponses, FormatMessages:
+	default:
+		return Spec{}, fmt.Errorf("不支持的线协议: %s", s.Format)
+	}
+	if s.Tier == "" {
+		s.Tier = "balanced"
+	}
+	switch s.Tier {
+	case "quality", "balanced", "fast":
+	default:
+		return Spec{}, fmt.Errorf("tier 只能是 quality/balanced/fast")
+	}
+	if s.Lane == "" {
+		s.Lane = LaneCustom
+	}
+	if s.Group == "" {
+		s.Group = "自定义"
+	}
+	if s.Provider == "" {
+		s.Provider = "custom"
+	}
+	if s.Priority <= 0 {
+		s.Priority = 100
+	}
+	if s.Weight <= 0 {
+		s.Weight = 50
+	}
+	if s.MaxFail <= 0 {
+		s.MaxFail = 3
+	}
+	if s.CooldownSec <= 0 {
+		s.CooldownSec = 120
+	}
+	s.Source = firstNonEmpty(s.Source, "user")
+	s.UpdatedAt = nowMs()
+
+	m.mu.Lock()
+	found := false
+	for i := range m.specs {
+		if m.specs[i].ID == s.ID {
+			// 允许留空 APIKey 表示「不修改」，避免面板回写时把密钥清掉。
+			if s.APIKey == "" {
+				s.APIKey = m.specs[i].APIKey
+			}
+			// 保留创建来源，避免每次编辑都变成 user。
+			if s.Source == "user" && m.specs[i].Source != "" {
+				s.Source = m.specs[i].Source
+			}
+			m.specs[i] = s
+			found = true
+			break
+		}
+	}
+	if !found {
+		m.specs = append(m.specs, s)
+	}
+	if m.health[s.ID] == nil {
+		m.health[s.ID] = &Health{ID: s.ID, State: StateUnknown}
+	}
+	if !s.Enabled {
+		m.health[s.ID].State = StateDisabled
+	} else if m.health[s.ID].State == StateDisabled {
+		m.health[s.ID].State = StateUnknown
+	}
+	m.mu.Unlock()
+
+	m.persist()
+	m.log(logRecord{Kind: "crud", Model: s.ID, State: "upsert", Reason: fmt.Sprintf("优先级 %d / 权重 %d / 启用 %v", s.Priority, s.Weight, s.Enabled), Actor: actor})
+	m.NotifyRoutes()
+	return s, nil
+}
+
+// Delete 删除一个模型（面板「删除」入口）。
+func (m *Manager) Delete(id, actor string) error {
+	m.mu.Lock()
+	idx := -1
+	for i := range m.specs {
+		if m.specs[i].ID == id {
+			idx = i
+			break
+		}
+	}
+	var removed Spec
+	if idx >= 0 {
+		removed = m.specs[idx]
+		m.specs = append(m.specs[:idx], m.specs[idx+1:]...)
+		delete(m.health, id)
+	}
+	m.mu.Unlock()
+	if idx < 0 {
+		return fmt.Errorf("模型不存在: %s", id)
+	}
+	m.persist()
+	m.log(logRecord{Kind: "crud", Model: id, State: "delete", Reason: "面板删除", Actor: actor})
+	m.NotifyRoutes()
+	_ = removed
+	return nil
+}
+
+// SetEnabled 启用/停用一个模型。
+func (m *Manager) SetEnabled(id string, enabled bool, actor string) error {
+	m.mu.Lock()
+	found := false
+	for i := range m.specs {
+		if m.specs[i].ID == id {
+			m.specs[i].Enabled = enabled
+			m.specs[i].UpdatedAt = nowMs()
+			found = true
+			break
+		}
+	}
+	if found {
+		h := m.health[id]
+		if h == nil {
+			h = &Health{ID: id}
+			m.health[id] = h
+		}
+		if enabled {
+			if h.State == StateDisabled {
+				h.State = StateUnknown
+			}
+			h.CooldownTo = 0
+			h.ConsecFail = 0
+		} else {
+			h.State = StateDisabled
+		}
+	}
+	m.mu.Unlock()
+	if !found {
+		return fmt.Errorf("模型不存在: %s", id)
+	}
+	m.persist()
+	state := "enable"
+	if !enabled {
+		state = "disable"
+	}
+	m.log(logRecord{Kind: "crud", Model: id, State: state, Actor: actor})
+	m.NotifyRoutes()
+	return nil
+}
+
+// Reorder 调整优先级（面板拖动/上下移）。ids 按「最高优先级在前」排序。
+func (m *Manager) Reorder(ids []string, actor string) error {
+	m.mu.Lock()
+	index := map[string]int{}
+	for i, id := range ids {
+		index[id] = i + 1
+	}
+	changed := 0
+	for i := range m.specs {
+		if p, ok := index[m.specs[i].ID]; ok && m.specs[i].Priority != p {
+			m.specs[i].Priority = p
+			m.specs[i].UpdatedAt = nowMs()
+			changed++
+		}
+	}
+	m.mu.Unlock()
+	if changed == 0 {
+		return nil
+	}
+	m.persist()
+	m.log(logRecord{Kind: "crud", State: "reorder", Reason: fmt.Sprintf("已调整 %d 条优先级", changed), Actor: actor})
+	m.NotifyRoutes()
+	return nil
+}
+
+// Restore 把模型从冷却/下线状态恢复为未知（面板「重置」按钮）。
+func (m *Manager) Restore(id, actor string) error {
+	m.mu.Lock()
+	found := false
+	for i := range m.specs {
+		if m.specs[i].ID == id {
+			m.specs[i].Enabled = true
+			found = true
+			break
+		}
+	}
+	if found {
+		m.health[id] = &Health{ID: id, State: StateUnknown}
+	}
+	m.mu.Unlock()
+	if !found {
+		return fmt.Errorf("模型不存在: %s", id)
+	}
+	m.persist()
+	m.log(logRecord{Kind: "recover", Model: id, State: "restore", Reason: "手动重置冷却与计数", Actor: actor})
+	m.NotifyRoutes()
+	return nil
+}
+
+// ── 可用性反馈（供调度/执行侧回报） ──────────────────────────────
+
+// MarkSuccess 记录一次成功：清空连续失败、回到健康和可用。
+func (m *Manager) MarkSuccess(id string, latencyMs int64) {
+	m.mu.Lock()
+	var recovered bool
+	if h := m.ensureLocked(id); h != nil {
+		h.Success++
+		h.ConsecFail = 0
+		h.State = StateHealthy
+		h.CooldownTo = 0
+		h.CheckedAt = nowMs()
+		h.LastUsedAt = nowMs()
+		if latencyMs > 0 {
+			if h.LatencyMs == 0 {
+				h.LatencyMs = latencyMs
+			} else {
+				h.LatencyMs = (h.LatencyMs*2 + latencyMs) / 3
+			}
+		}
+		recovered = h.ProbeFail > 0 || h.ConsecFail > 0
+	}
+	m.mu.Unlock()
+	m.persist()
+	_ = recovered
+}
+
+// MarkFailure 记录一次失败：连续失败达到阈值即冷却并禁用调度。
+func (m *Manager) MarkFailure(id, kind, msg string) {
+	m.mu.Lock()
+	var trip bool
+	var cooldown int64
+	var consec int
+	var maxFail int
+	if h := m.ensureLocked(id); h != nil {
+		h.Failure++
+		h.ConsecFail++
+		h.LastErr = trim(kind+": "+msg, 300)
+		h.LastErrKind = kind
+		h.CheckedAt = nowMs()
+		h.LastUsedAt = nowMs()
+		consec = h.ConsecFail
+		maxFail = 3
+		cooldownSec := 120
+		for i := range m.specs {
+			if m.specs[i].ID == id {
+				if m.specs[i].MaxFail > 0 {
+					maxFail = m.specs[i].MaxFail
+				}
+				if m.specs[i].CooldownSec > 0 {
+					cooldownSec = m.specs[i].CooldownSec
+				}
+				break
+			}
+		}
+		// 结构性错误直接长冷却（模型不存在/凭据缺失/端点不可达），
+		// 与「偶发超时」分层，避免风暴式重试把整池拖死。
+		long := kind == "model_unavailable" || kind == "missing_credential" || kind == "unreachable" || kind == "bad_endpoint"
+		if consec >= maxFail || long {
+			mult := consec - maxFail
+			if mult < 0 {
+				mult = 0
+			}
+			if mult > 5 {
+				mult = 5
+			}
+			sec := int64(cooldownSec) << uint(mult)
+			if sec > 3600 {
+				sec = 3600
+			}
+			h.CooldownTo = nowMs() + sec*1000
+			h.State = StateDown
+			trip = true
+			cooldown = sec
+		} else {
+			h.State = StateDegraded
+		}
+	}
+	m.mu.Unlock()
+	m.persist()
+	if trip {
+		m.log(logRecord{Kind: "failure", Model: id, State: string(StateDown), Reason: fmt.Sprintf("连续失败 %d 次（阈值 %d），冷却 %d 秒后自动恢复探测", consec, maxFail, cooldown)})
+	} else {
+		m.log(logRecord{Kind: "failure", Model: id, State: string(StateDegraded), Reason: trim(kind+": "+msg, 200)})
+	}
+	m.NotifyRoutes()
+}
+
+func (m *Manager) ensureLocked(id string) *Health {
+	if id == "" {
+		return nil
+	}
+	if h, ok := m.health[id]; ok && h != nil {
+		return h
+	}
+	m.health[id] = &Health{ID: id, State: StateUnknown}
+	return m.health[id]
+}
+
+// ── 探测 → 状态机 → 日志 ────────────────────────────────────────
+
+// healHalfOpenLocked 把「冷却已到期」的 down 模型放回半开态（unknown），
+// 让调度器重新试它一次（等价于 Envoy 的 outlier detection 半开探测）。
+// 没有这个动作，模型会永远停在 down，只能靠外部探测把它救回来。
+func (m *Manager) healHalfOpenLocked(now int64) {
+	for id, h := range m.health {
+		if h == nil {
+			continue
+		}
+		if h.State != StateDown || h.CooldownTo <= 0 || h.CooldownTo > now {
+			continue
+		}
+		h.State = StateUnknown
+		h.CooldownTo = 0
+		h.ConsecFail = 0
+		h.LastErr = ""
+		h.LastErrKind = ""
+		if m.pendingLogs == nil {
+			m.pendingLogs = make([]logRecord, 0, 4)
+		}
+		m.pendingLogs = append(m.pendingLogs, logRecord{
+			Kind: "recover", Model: id, State: string(StateUnknown),
+			Reason: "冷却到期，半开恢复（下一次调用验证）",
+		})
+	}
+}
+
+// healHalfOpenLocked 把「冷却已到期」的 down 模型放回半开态（unknown），
+// 让调度器重新试它一次（等价于 Envoy 的 outlier detection 半开探测）。
+// 没有这个动作，模型会永远停在 down，只能靠外部探测把它救回来。
+
+// ApplyProbe 把一轮探测结果并入健康度：
+//   - 成功：healthy + 解除冷却（恢复会自动回到调度队列）；
+//   - 失败：累计连续失败，达阈值转 down（随后按冷却时间自动重新探测）；
+//   - 本机网关未开启（gateway_off）：保持 unknown，不误杀模型。
+func (m *Manager) ApplyProbe(results []ProbeResult) ProbeSummary {
+	summary := Summarize(results)
+	now := nowMs()
+	m.mu.Lock()
+	for _, r := range results {
+		h := m.ensureLocked(r.Model)
+		if h == nil {
+			continue
+		}
+		was := h.State
+		switch r.State {
+		case StateHealthy:
+			h.ProbeOK++
+			h.ConsecFail = 0
+			h.Success++
+			h.State = StateHealthy
+			h.CooldownTo = 0
+			h.LastErr = ""
+			h.LastErrKind = ""
+			if r.LatencyMs > 0 {
+				h.LatencyMs = r.LatencyMs
+			}
+		case StateDown:
+			h.ProbeFail++
+			h.Failure++
+			h.ConsecFail++
+			h.State = StateDown
+			h.LastErr = trim(r.Error, 300)
+			h.LastErrKind = r.Kind
+			sec := int64(60)
+			for i := range m.specs {
+				if m.specs[i].ID == r.Model && m.specs[i].CooldownSec > 0 {
+					sec = int64(m.specs[i].CooldownSec)
+					break
+				}
+			}
+			backoff := h.ProbeFail
+			if backoff > 4 {
+				backoff = 4
+			}
+			sec <<= uint(backoff)
+			if sec > 1800 {
+				sec = 1800
+			}
+			h.CooldownTo = now + sec*1000
+		case StateDegraded:
+			h.ProbeFail++
+			h.ConsecFail++
+			h.State = StateDegraded
+			h.LastErr = trim(r.Error, 300)
+			h.LastErrKind = r.Kind
+		default:
+			// unknown：只在历史上没成功过时保留 unknown，避免把已健康的模型打回未知。
+			if was == "" || was == StateUnknown {
+				h.State = StateUnknown
+			}
+		}
+		h.CheckedAt = now
+		if r.LatencyMs > 0 {
+			if h.LatencyMs == 0 {
+				h.LatencyMs = r.LatencyMs
+			} else {
+				h.LatencyMs = (h.LatencyMs*3 + r.LatencyMs) / 4
+			}
+		}
+		if was != h.State && r.Model != "" {
+			m.appendSwitchLocked(logRecord{
+				Kind: "probe", Model: r.Model, From: string(was), To: string(h.State),
+				Reason: firstNonEmpty(trim(r.Error, 160), "探测状态变化"), LatencyMs: r.LatencyMs,
+			})
+		}
+	}
+	m.lastProbe = summary
+	m.cycle++
+	m.syncSpecStateLocked()
+	pending := m.drainPendingLocked()
+	m.mu.Unlock()
+	for _, rec := range pending {
+		m.log(rec)
+	}
+	m.persist()
+	m.log(logRecord{Kind: "probe-cycle", Reason: fmt.Sprintf("本轮探测 %d 个：可用 %d / 下线 %d / 未知 %d", summary.Total, summary.OK, summary.Down, summary.Unknown)})
+	m.NotifyRoutes()
+	return summary
+}
+
+// syncSpecStateLocked 把 health 快照同步进每个 Spec 的 Runtime 字段。
+// 调用方必须持写锁。
+func (m *Manager) syncSpecStateLocked() {
+	now := nowMs()
+	for i := range m.specs {
+		id := m.specs[i].ID
+		h := m.health[id]
+		rt := &specRuntime{State: StateUnknown}
+		if h != nil {
+			rt.State = h.State
+			rt.CooldownTo = h.CooldownTo
+			if !m.specs[i].Enabled {
+				rt.State = StateDisabled
+			} else if h.CooldownTo > now && h.State != StateDown {
+				rt.State = StateDown
+			}
+		}
+		m.specs[i].Runtime = rt
+	}
+}
+
+// drainPendingLocked 取出积攒的日志并清空（调用方持锁）。
+func (m *Manager) drainPendingLocked() []logRecord {
+	if len(m.pendingLogs) == 0 {
+		return nil
+	}
+	out := m.pendingLogs
+	m.pendingLogs = nil
+	return out
+}
+
+// AppendSwitch 记录一次运行期故障转移（executor 失败 → 换模型）。
+func (m *Manager) AppendSwitch(rec transitionRecord) {
+	if rec.At == 0 {
+		rec.At = nowMs()
+	}
+	m.log(logRecord{Kind: "switch", Model: rec.To, From: rec.From, To: rec.To, Reason: rec.Reason})
+}
+
+// LastProbe 返回最近一次探测摘要。
+func (m *Manager) LastProbe() ProbeSummary {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.lastProbe
+}
+
+// ── 投影成 modelroute 路由表 ────────────────────────────────────
+
+// Routes 把池子投影成 config.ModelRoute（喂给既有调度器）。
+// 只有「启用且非 down」的模型进入路由表；enabled 与健康状态分离，便于面板停用而不丢配置。
+func (m *Manager) Routes() []config.ModelRoute {
+	// 先做一次半开恢复：冷却到期的模型必须重新进入候选，
+	// 否则一次误判会让模型永久缺席（现场 6 个模型同时长冷却导致整池停摆）。
+	m.mu.Lock()
+	before := len(m.pendingLogs)
+	m.healHalfOpenLocked(nowMs())
+	pending := m.drainPendingLocked()
+	_ = before
+	m.mu.Unlock()
+	for _, rec := range pending {
+		m.log(rec)
+	}
+	snapshot := m.HealthSnapshot()
+	order := map[string]Health{}
+	for _, h := range snapshot {
+		order[h.ID] = h
+	}
+	m.mu.RLock()
+	specs := append([]Spec(nil), m.specs...)
+	m.mu.RUnlock()
+	sortSpecs(specs)
+	now := nowMs()
+	out := make([]config.ModelRoute, 0, len(specs))
+	for _, s := range specs {
+		if !s.Enabled || !s.Routable {
+			continue
+		}
+		h := order[s.ID]
+		if h.State == StateDown || h.CooldownTo > now {
+			continue
+		}
+		// Provider 统一写 our-free-model：DSH 的 overlay 只认这个 provider id，
+		// 其它值（kilo / gateway / custom）写进去会被执行器判成「未知 provider」。
+		out = append(out, config.ModelRoute{
+			Model: s.ID, Provider: "our-free-model",
+			// Lane 必须传下去（2026-10-19 现场教训）：三条车道在 DSH 里同属
+			// provider "our-free-model"，但上游线路完全独立。不传 lane，
+			// engine 侧就无法只冷却出问题的车道，只能整池停摆。
+			Lane: string(s.Lane),
+			Tier: s.Tier, Enabled: true, Weight: s.Weight,
+			MaxFail: s.MaxFail, CooldownM: maxInt(1, s.CooldownSec/60),
+		})
+	}
+	return out
+}
+
+// NotifyRoutes 把最新路由表推给引擎（无回调时静默）。
+func (m *Manager) NotifyRoutes() {
+	routes := m.Routes()
+	m.mu.RLock()
+	sink := m.onRoutes
+	m.mu.RUnlock()
+	if sink != nil {
+		sink(routes)
+	}
+}
+
+// ── 持久化与日志 ────────────────────────────────────────────────
+
+func (m *Manager) persist() {
+	m.mu.RLock()
+	f := &file{Specs: append([]Spec(nil), m.specs...), Health: map[string]*Health{}}
+	for id, h := range m.health {
+		if h == nil {
+			continue
+		}
+		cp := *h
+		f.Health[id] = &cp
+	}
+	store := m.store
+	m.mu.RUnlock()
+	if store != nil {
+		_ = store.Save(f)
+	}
+}
+
+func (m *Manager) log(rec logRecord) {
+	m.mu.RLock()
+	store := m.store
+	m.mu.RUnlock()
+	if rec.At == 0 {
+		rec.At = nowMs()
+	}
+	if store != nil {
+		store.AppendLog(rec)
+	}
+}
+
+// appendSwitchLocked 在持锁状态下构造切换记录（避免递归加锁）。
+func (m *Manager) appendSwitchLocked(rec logRecord) {
+	if rec.At == 0 {
+		rec.At = nowMs()
+	}
+	// 这里只入内存队列，实际写盘由调用方解锁后的 log() 统一处理。
+	if m.pendingLogs == nil {
+		m.pendingLogs = make([]logRecord, 0, 8)
+	}
+	m.pendingLogs = append(m.pendingLogs, rec)
+}
+
+type netDialer struct{}
+
+// Dial 建立一个 TCP 连接（用于判断本机网关端口是否在监听）。
+func (d *netDialer) Dial(addr string) (net.Conn, error) {
+	return net.DialTimeout("tcp", addr, 800*time.Millisecond)
+}
+
+// ── 小工具 ──────────────────────────────────────────────────────
+
+func sortSpecs(in []Spec) {
+	sort.SliceStable(in, func(i, j int) bool {
+		a, b := in[i], in[j]
+		if a.Priority != b.Priority {
+			return a.Priority < b.Priority
+		}
+		if a.Weight != b.Weight {
+			return a.Weight > b.Weight
+		}
+		return a.ID < b.ID
+	})
+}
+
+func maxInt(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
+}
+
+// jsonUnmarshal 是 json.Unmarshal 的薄封装（集中错误信息，便于日志定位）。
+func jsonUnmarshal(b []byte, v any) error {
+	if err := json.Unmarshal(b, v); err != nil {
+		return fmt.Errorf("解析 JSON 失败: %w", err)
+	}
+	return nil
+}
+
+var _ = errors.Is

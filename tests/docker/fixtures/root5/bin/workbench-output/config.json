@@ -1,0 +1,161 @@
+{
+  "schemaVersion": 5,
+  "autoResume": false,
+  "resumeOnBoot": false,
+  "autoStart": false,
+  "outputRoot": "",
+  "eval": {
+    "weights": {
+      "value": 0.5,
+      "cost": 0.2,
+      "feasibility": 0.3
+    },
+    "threshold": 60,
+    "semanticOn": false,
+    "repeatGate": false,
+    "similarityCap": 0.9,
+    "dailyCap": 200,
+    "diversityCap": 0.4
+  },
+  "models": [
+    {
+      "model": "z-ai/glm-5.3",
+      "provider": "our-free-model",
+      "tier": "balanced",
+      "enabled": true,
+      "weight": 100,
+      "maxFail": 3,
+      "cooldownM": 30
+    },
+    {
+      "model": "openai/gpt-oss-20b",
+      "provider": "our-free-model",
+      "tier": "fast",
+      "enabled": true,
+      "weight": 60,
+      "maxFail": 3,
+      "cooldownM": 30
+    },
+    {
+      "model": "z-ai/glm-5.3-flash",
+      "provider": "our-free-model",
+      "tier": "fast",
+      "enabled": true,
+      "weight": 30,
+      "maxFail": 2,
+      "cooldownM": 60
+    }
+  ],
+  "executor": {
+    "concurrency": 1,
+    "defaultTimeout": 30,
+    "maxRetries": 0,
+    "retryBackoffMs": [
+      5000,
+      20000,
+      60000
+    ],
+    "maxOutputMB": 32,
+    "stallSeconds": 420,
+    "dshExe": "",
+    "profileName": "web-desktop",
+    "retryPolicy": {
+      "baseDelayMs": 5000,
+      "maxDelayMs": 600000,
+      "jitter": 0,
+      "retryableKinds": null
+    },
+    "shutdownGraceSeconds": 20,
+    "appendProtocol": true,
+    "repairRounds": 3,
+    "requestsPerMinute": 20,
+    "requestBurst": 3
+  },
+  "chain": {
+    "enabled": false,
+    "maxDepth": 5,
+    "fanout": 0,
+    "minQuality": 0,
+    "contextChars": 2000
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 17903,
+    "openBrowser": false
+  },
+  "supervisor": {
+    "enabled": false,
+    "memLimitMB": 0,
+    "handleLimit": 0,
+    "goroutineLimit": 0,
+    "sampleSeconds": 30,
+    "strikesToRestart": 3
+  },
+  "gov": {
+    "enabled": false,
+    "sampleSeconds": 300,
+    "autoEscalate": false,
+    "expiringDays": 30,
+    "complianceMin": 70
+  },
+  "autonomy": {
+    "enabled": true,
+    "budget": {
+      "maxTasksPerGoal": 12,
+      "maxStages": 6,
+      "minQuality": 6,
+      "maxRollbacks": 3,
+      "stageEvery": 1
+    },
+    "bounds": {
+      "allowedDomains": [
+        "content",
+        "code",
+        "knowledge",
+        "data",
+        "solution",
+        "report"
+      ],
+      "maxTaskWords": 3000,
+      "maxDraftsPerRound": 2
+    },
+    "plan": {
+      "rootTitle": "持续产出与能力沉淀",
+      "rootIntent": "围绕个人知识资产持续产出高质量可复用成果：先把主题拆透、写出成体系的长文，再拆成卡片/脚本等可复用形态，最后复盘补齐不足。",
+      "defaultDomain": "content",
+      "words": 1000,
+      "maxDrafts": 2
+    },
+    "risk": {
+      "escalateMinQuality": 3,
+      "blockOnRepeat": false
+    },
+    "rollback": {
+      "onLowQuality": true,
+      "onCostOverrun": true
+    }
+  },
+  "pool": {
+    "enabled": true,
+    "probeSeconds": 3600,
+    "syncSeconds": 3600,
+    "strategy": "priority",
+    "deepProbe": false
+  },
+  "workspace": {
+    "mode": "project",
+    "root": "",
+    "allowedReadRoots": [],
+    "maxFiles": 80,
+    "maxBytes": 524288,
+    "maxFileBytes": 131072,
+    "allowDotDirs": false,
+    "since": 0
+  },
+  "retention": {
+    "dshHomeDays": 0,
+    "workspaceDays": 0,
+    "taskDirDays": 0
+  },
+  "updatedAt": 1792381211288
+}

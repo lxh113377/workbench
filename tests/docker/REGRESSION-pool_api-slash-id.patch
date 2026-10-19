@@ -1,0 +1,31 @@
+--- a/workbench/internal/web/pool_api.go
++++ b/workbench/internal/web/pool_api.go
+@@ handlePoolModelItem: 模型 ID 本身带斜杠，不能按第一段切
+-	parts := strings.Split(rest, "/")
+-	id, err := url.PathUnescape(parts[0])
+-	if err != nil {
+-		bad(w, "模型 ID 非法")
+-		return
+-	}
+-	action := ""
+-	if len(parts) > 1 {
+-		action = parts[1]
+-	}
++	// 模型 ID 天然带斜杠（z-ai/glm-5.3、opencode/x-free、vendor/e2e-model），
++	// 按第一段切会把 ID 截断成 "vendor"、并把 "e2e-model" 当成动作词，
++	// 于是 disable/enable/restore/delete 全部 400（容器 e2e 实测抓到）。
++	// 规则：只有「最后一段恰好是已知动作词」才视为动作，其余整段都是 ID。
++	action := ""
++	idPart := rest
++	knownActions := map[string]bool{"enable": true, "disable": true, "restore": true, "probe": true, "edit": true}
++	if idx := strings.LastIndex(rest, "/"); idx >= 0 {
++		if last := rest[idx+1:]; knownActions[last] {
++			action = last
++			idPart = rest[:idx]
++		}
++	}
++	id, err := url.PathUnescape(idPart)
++	if err != nil || id == "" {
++		bad(w, "模型 ID 非法")
++		return
++	}

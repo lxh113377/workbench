@@ -1,0 +1,84 @@
+=== 0. 环境 ===
+Linux x86_64
+python3: Python 3.11.2
+binary: workbench docker-e2e (docker)
+=== 1. 离线自检 ===
+  [PASS] 离线 selftest 11/11
+=== 2. 启动面板服务 ===
+URL=http://127.0.0.1:17890/
+TOKEN_LEN=32
+{"phase":"running"}
+
+=== 3. 等闭环推进（最多 150 秒） ===
+goals=1 completed=0 active=容器闭环验收目标 stages=0 progress=0 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=0
+goals=1 completed=0 active=容器闭环验收目标 stages=1 progress=50 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=1
+goals=1 completed=0 active=容器闭环验收目标 stages=3 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=3
+goals=2 completed=0 active=容器闭环验收目标 stages=2 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=5
+goals=2 completed=0 active=容器闭环验收目标 stages=3 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=6
+goals=3 completed=0 active=容器闭环验收目标 stages=2 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=8
+goals=4 completed=0 active=容器闭环验收目标 stages=1 progress=50 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=10
+goals=4 completed=0 active=容器闭环验收目标 stages=2 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=11
+goals=5 completed=0 active=容器闭环验收目标 stages=1 progress=50 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=13
+goals=5 completed=0 active=容器闭环验收目标 stages=3 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=15
+goals=6 completed=0 active=容器闭环验收目标 stages=1 progress=50 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=16
+goals=6 completed=0 active=容器闭环验收目标 stages=3 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=18
+goals=7 completed=0 active=容器闭环验收目标 stages=2 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=20
+goals=7 completed=0 active=容器闭环验收目标 stages=3 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=21
+goals=8 completed=0 active=容器闭环验收目标 stages=2 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=23
+goals=9 completed=0 active=容器闭环验收目标 stages=1 progress=50 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=25
+goals=9 completed=0 active=容器闭环验收目标 stages=3 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=27
+goals=10 completed=0 active=容器闭环验收目标 stages=1 progress=50 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=28
+goals=10 completed=0 active=容器闭环验收目标 stages=3 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=30
+goals=11 completed=0 active=容器闭环验收目标 stages=2 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=32
+goals=11 completed=0 active=容器闭环验收目标 stages=3 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=33
+goals=12 completed=0 active=容器闭环验收目标 stages=2 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=35
+goals=13 completed=0 active=容器闭环验收目标 stages=1 progress=50 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=37
+goals=13 completed=0 active=容器闭环验收目标 stages=2 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=38
+goals=14 completed=0 active=容器闭环验收目标 stages=1 progress=50 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=40
+goals=14 completed=0 active=容器闭环验收目标 stages=3 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=42
+goals=15 completed=0 active=容器闭环验收目标 stages=1 progress=50 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=43
+goals=15 completed=0 active=容器闭环验收目标 stages=3 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=45
+goals=16 completed=0 active=容器闭环验收目标 stages=2 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=47
+goals=16 completed=0 active=容器闭环验收目标 stages=3 progress=60 enabled=True
+raw_goalDone=0 raw_nextGoal=0 raw_accept=48
+=== 4. 判据核对 ===
+  [PASS] 2 目标 bootstrap（active + 机器判据）
+  [PASS] 3 目标推导阶段任务（plan 决策 >= 1）
+  [PASS] 4 产物真实落盘（workspace/result.py）
+  [PASS] 5 真实执行验收通过（verify.json pass）
+  [PASS] 6 自主验收记账（accept >= 1）
+  [PASS] 7 阶段推进（stages >= 2）
+  [FAIL] 8a 目标完成（goalDone >= 1） goalDone=0
+  [FAIL] 8b 自动下一目标（nextGoal >= 1） nextGoal=0
+  [FAIL] 8c completed 旧目标 + activeId 指向新目标 completed=0 activeId=goal-1792379992410-79e51f26
+SUMMARY_FAIL
+E2E_FAIL

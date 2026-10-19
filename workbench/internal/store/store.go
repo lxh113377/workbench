@@ -1,0 +1,563 @@
+// Package store 负责工作台的全部持久化：队列快照、引擎状态、任务目录与审计流水。
+// 设计原则：内存是权威，磁盘是投影；每次状态迁移都先写盘再返回，保证崩溃后可重放。
+package store
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+	"sync"
+
+	"workbench/internal/config"
+	"workbench/internal/model"
+)
+
+// AttemptRecord 是一次执行尝试的台账（不可变，追加写）。
+//
+// 对标 riverqueue/river 的 AttemptError：把"第几次尝试、用什么模型、
+// 哪类错误、等了多久"结构化落盘，而不是只留一行自由文本。
+// 文件位置：tasks/<id>/attempts.jsonl（JSONL 追加，崩溃后仍可回溯）。
+type AttemptRecord struct {
+	At        int64  `json:"at"`
+	TaskID    string `json:"taskId"`
+	Attempt   int    `json:"attempt"`   // 第几次尝试（0 = 首次）
+	Model     string `json:"model"`     // 本次使用的模型
+	Kind      string `json:"kind"`      // 错误类别（成功为 done）
+	Action    string `json:"action"`    // retry / fail / cancel / done
+	DelayMs   int64  `json:"delayMs"`   // 本次失败后计划等待（毫秒）
+	ElapsedMs int64  `json:"elapsedMs"` // 本次执行耗时
+	Error     string `json:"error,omitempty"`
+}
+
+// AuditRecord 是一条审计记录，写入 audit.jsonl 后不可变。
+type AuditRecord struct {
+	At      int64  `json:"at"`
+	TaskID  string `json:"taskId,omitempty"`
+	From    string `json:"from,omitempty"`
+	To      string `json:"to,omitempty"`
+	Actor   string `json:"actor"` // engine/user/system
+	Kind    string `json:"kind"`  // transition/create/note/error
+	Message string `json:"message,omitempty"`
+}
+
+// EngineState 是引擎的持久化状态。
+type EngineState struct {
+	Phase        model.EnginePhase `json:"phase"`
+	StartedAt    int64             `json:"startedAt"`
+	StoppedAt    int64             `json:"stoppedAt"`
+	PausedAt     int64             `json:"pausedAt"`
+	RestartCount int               `json:"restartCount"`
+	LastError    string            `json:"lastError,omitempty"`
+	UpdatedAt    int64             `json:"updatedAt"`
+}
+
+// Snapshot 是队列的磁盘结构。
+type Snapshot struct {
+	SchemaVersion int            `json:"schemaVersion"`
+	Tasks         []*model.Task  `json:"tasks"`
+	Chains        []*model.Chain `json:"chains"`
+	SavedAt       int64          `json:"savedAt"`
+}
+
+// Store 是任务与状态的唯一写入口。
+type Store struct {
+	layout config.Layout
+
+	mu     sync.RWMutex
+	tasks  map[string]*model.Task
+	chains map[string]*model.Chain
+	state  EngineState
+
+	audit *config.JSONLWriter
+	busy  bool
+
+	events   map[string]*config.JSONLWriter
+	attempts map[string]*config.JSONLWriter
+
+	// wal 是队列状态的追加日志（P2-3）。写路径 = WAL 追加，读路径 = 快照 + WAL 回放。
+	wal *wal
+}
+
+// Open 打开存储并完成崩溃恢复（把悬挂的 running 任务标记为 interrupted）。
+func Open(layout config.Layout) (*Store, error) {
+	if err := layout.EnsureDirs(); err != nil {
+		return nil, err
+	}
+	s := &Store{
+		layout: layout,
+		tasks:  make(map[string]*model.Task),
+		chains: make(map[string]*model.Chain),
+		audit:  config.NewJSONLWriter(layout.LogFile("audit.jsonl")),
+
+		events:   make(map[string]*config.JSONLWriter),
+		attempts: make(map[string]*config.JSONLWriter),
+	}
+	if err := s.load(); err != nil {
+		return nil, err
+	}
+	// 快照之后回放 WAL：把上次进程崩溃前已追加但未压缩的操作补回内存。
+	w, werr := openWAL(layout.WALFile)
+	if werr != nil {
+		return nil, fmt.Errorf("打开 WAL 失败: %w", werr)
+	}
+	s.wal = w
+	replayed := s.replay()
+	if replayed > 0 {
+		_ = s.audit.Append(AuditRecord{At: model.Now(), Actor: "system", Kind: "note",
+			Message: fmt.Sprintf("WAL 回放 %d 条操作（快照 + 追加日志重建）", replayed)})
+	}
+	if err := s.loadState(); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+// replay 把 WAL 应用回内存，返回回放条数。
+func (s *Store) replay() int {
+	if s.wal == nil {
+		return 0
+	}
+	n, err := replayWAL(s.wal.path, func(rec walRecord) {
+		if rec.Task != nil && rec.Task.ID != "" {
+			cp := *rec.Task
+			s.tasks[cp.ID] = &cp
+		}
+		if rec.Chain != nil && rec.Chain.ID != "" {
+			cp := *rec.Chain
+			s.chains[cp.ID] = &cp
+		}
+	})
+	if err != nil {
+		return n
+	}
+	return n
+}
+
+func (s *Store) load() error {
+	var snap Snapshot
+	err := config.ReadJSON(s.layout.QueueFile, &snap)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("读取队列失败: %w", err)
+	}
+	if err == nil {
+		for _, t := range snap.Tasks {
+			if t == nil || t.ID == "" {
+				continue
+			}
+			if t.Tags == nil {
+				t.Tags = []string{}
+			}
+			s.tasks[t.ID] = t
+		}
+		for _, c := range snap.Chains {
+			if c == nil || c.ID == "" {
+				continue
+			}
+			s.chains[c.ID] = c
+		}
+	}
+	return nil
+}
+
+func (s *Store) loadState() error {
+	var st EngineState
+	err := config.ReadJSON(s.layout.StateFile, &st)
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("读取引擎状态失败: %w", err)
+	}
+	s.state = st
+	return nil
+}
+
+// Reconcile 把上一次进程退出时悬挂的任务收敛为 interrupted，避免重复执行。
+// 返回被收敛的任务数量。
+func (s *Store) Reconcile() (int, error) {
+	s.mu.Lock()
+	var changed []*model.Task
+	for _, t := range s.tasks {
+		if t.State == model.StateRunning || t.State == model.StateEvaluating {
+			prev := t.State
+			t.State = model.StateInterrupted
+			t.UpdatedAt = model.Now()
+			changed = append(changed, t)
+			_ = s.audit.Append(AuditRecord{At: model.Now(), TaskID: t.ID, From: string(prev), To: string(model.StateInterrupted), Actor: "system", Kind: "recover", Message: "进程异常退出后恢复"})
+		}
+	}
+	s.mu.Unlock()
+	if len(changed) == 0 {
+		return 0, nil
+	}
+	// 逐个把收敛结果追加进 WAL（而不是整份重写）
+	for _, t := range changed {
+		cp := *t
+		if err := s.record(walRecord{Op: OpTransition, Task: &cp}); err != nil {
+			return len(changed), err
+		}
+	}
+	return len(changed), nil
+}
+
+// Savepoint 立即落盘（供退出前调用）：写全量快照并清空 WAL。
+//
+// 退出前压缩的理由：下次启动直接读快照，省一次 WAL 回放；
+// 顺序必须是"先写快照 → fsync → 再截断 WAL"，任一步崩溃都不丢数据。
+func (s *Store) Savepoint() error {
+	if err := s.persist(); err != nil {
+		return err
+	}
+	if s.wal != nil {
+		return s.wal.reset()
+	}
+	return nil
+}
+
+// record 追加一条 WAL 记录，并在超过阈值时压缩。
+//
+// 这是 P2-3 的核心：把 O(N) 的全量重写降到 O(1) 的追加写；
+// 只有当 WAL 累积到阈值时才做一次全量快照（摊薄成本）。
+func (s *Store) record(rec walRecord) error {
+	if s.wal == nil {
+		// 没有 WAL（例如测试里手工构造的 Store）：退回全量写，行为与旧版一致。
+		return s.persist()
+	}
+	if err := s.wal.append(rec); err != nil {
+		// WAL 写失败是严重问题：退回全量写保证不丢状态，并把错误上抛。
+		if perr := s.persist(); perr != nil {
+			return fmt.Errorf("WAL 写入失败且快照兜底也失败: %v / %w", err, perr)
+		}
+		return fmt.Errorf("WAL 写入失败（已用快照兜底）: %w", err)
+	}
+	if s.wal.needsCompact() {
+		// 压缩失败不阻塞业务：WAL 还在，下次启动照样能回放。
+		if err := s.compact(); err != nil {
+			_ = s.audit.Append(AuditRecord{At: model.Now(), Actor: "system", Kind: "error", Message: "WAL 压缩失败: " + err.Error()})
+		}
+	}
+	return nil
+}
+
+// compact 把当前内存全量写成快照，然后截断 WAL。
+func (s *Store) compact() error {
+	if err := s.persist(); err != nil {
+		return err
+	}
+	if s.wal != nil {
+		return s.wal.reset()
+	}
+	return nil
+}
+
+// Close 关闭 WAL（进程退出前调用）。
+func (s *Store) Close() error {
+	if s.wal != nil {
+		return s.wal.close()
+	}
+	return nil
+}
+
+func (s *Store) persist() error {
+	s.mu.RLock()
+	snap := Snapshot{
+		SchemaVersion: config.SchemaVersion,
+		Tasks:         make([]*model.Task, 0, len(s.tasks)),
+		Chains:        make([]*model.Chain, 0, len(s.chains)),
+		SavedAt:       model.Now(),
+	}
+	ids := make([]string, 0, len(s.tasks))
+	for id := range s.tasks {
+		ids = append(ids, id)
+	}
+	sort.Slice(ids, func(i, j int) bool {
+		return s.tasks[ids[i]].CreatedAt < s.tasks[ids[j]].CreatedAt
+	})
+	for _, id := range ids {
+		cp := *s.tasks[id]
+		snap.Tasks = append(snap.Tasks, &cp)
+	}
+	for _, c := range s.chains {
+		cp := *c
+		snap.Chains = append(snap.Chains, &cp)
+	}
+	s.mu.RUnlock()
+	return config.WriteJSONAtomic(s.layout.QueueFile, snap)
+}
+
+// SaveState 持久化引擎状态。
+func (s *Store) SaveState(st EngineState) error {
+	s.mu.Lock()
+	st.UpdatedAt = model.Now()
+	s.state = st
+	s.mu.Unlock()
+	return config.WriteJSONAtomic(s.layout.StateFile, st)
+}
+
+// State 返回当前引擎状态。
+func (s *Store) State() EngineState {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.state
+}
+
+// Create 新增一个任务并落盘。ID 冲突返回错误。
+func (s *Store) Create(t *model.Task) error {
+	if t == nil || t.ID == "" {
+		return fmt.Errorf("任务缺少 ID")
+	}
+	s.mu.Lock()
+	if _, exists := s.tasks[t.ID]; exists {
+		s.mu.Unlock()
+		return fmt.Errorf("任务已存在: %s", t.ID)
+	}
+	if t.Tags == nil {
+		t.Tags = []string{}
+	}
+	if t.State == "" {
+		t.State = model.StateCandidate
+	}
+	if t.MaxAttempts <= 0 {
+		t.MaxAttempts = 3
+	}
+	if t.CreatedAt == 0 {
+		t.CreatedAt = model.Now()
+	}
+	t.UpdatedAt = model.Now()
+	s.tasks[t.ID] = t
+	dir := s.layout.TaskDir(t.ID)
+	s.mu.Unlock()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return fmt.Errorf("创建任务目录失败: %w", err)
+	}
+	_ = s.audit.Append(AuditRecord{At: model.Now(), TaskID: t.ID, To: string(t.State), Actor: "engine", Kind: "create", Message: t.Title})
+	cp := *t
+	return s.record(walRecord{Op: OpCreate, Task: &cp})
+}
+
+// Get 返回任务副本。
+func (s *Store) Get(id string) (*model.Task, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	t, ok := s.tasks[id]
+	if !ok {
+		return nil, false
+	}
+	cp := *t
+	return &cp, true
+}
+
+// List 返回全部任务副本，按创建时间升序。
+func (s *Store) List() []*model.Task {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]*model.Task, 0, len(s.tasks))
+	for _, t := range s.tasks {
+		cp := *t
+		out = append(out, &cp)
+	}
+	sort.Slice(out, func(i, j int) bool {
+		if out[i].CreatedAt == out[j].CreatedAt {
+			return out[i].ID < out[j].ID
+		}
+		return out[i].CreatedAt < out[j].CreatedAt
+	})
+	return out
+}
+
+// Update 用 mutator 修改任务并落盘。mutator 返回错误时放弃修改。
+func (s *Store) Update(id string, mutator func(*model.Task) error) (*model.Task, error) {
+	s.mu.Lock()
+	t, ok := s.tasks[id]
+	if !ok {
+		s.mu.Unlock()
+		return nil, fmt.Errorf("任务不存在: %s", id)
+	}
+	cp := *t
+	if err := mutator(&cp); err != nil {
+		s.mu.Unlock()
+		return nil, err
+	}
+	cp.UpdatedAt = model.Now()
+	*t = cp
+	result := *t
+	s.mu.Unlock()
+	if err := s.record(walRecord{Op: OpUpdate, Task: &result}); err != nil {
+		return &result, err
+	}
+	return &result, nil
+}
+
+// Transition 执行一次带校验的状态迁移。audit 记录迁移前后状态。
+func (s *Store) Transition(id string, to model.TaskState, actor, note string) (*model.Task, error) {
+	s.mu.Lock()
+	t, ok := s.tasks[id]
+	if !ok {
+		s.mu.Unlock()
+		return nil, fmt.Errorf("任务不存在: %s", id)
+	}
+	from := t.State
+	if from == to {
+		cp := *t
+		s.mu.Unlock()
+		return &cp, nil
+	}
+	if !model.TransitionAllowed(from, to) {
+		s.mu.Unlock()
+		return nil, fmt.Errorf("非法状态迁移 %s -> %s (任务 %s)", from, to, id)
+	}
+	t.State = to
+	t.UpdatedAt = model.Now()
+	cp := *t
+	s.mu.Unlock()
+	_ = s.audit.Append(AuditRecord{At: model.Now(), TaskID: id, From: string(from), To: string(to), Actor: actor, Kind: "transition", Message: note})
+	if err := s.record(walRecord{Op: OpTransition, Task: &cp}); err != nil {
+		return &cp, err
+	}
+	return &cp, nil
+}
+
+// Audit 追加一条审计记录。
+func (s *Store) Audit(rec AuditRecord) {
+	if rec.At == 0 {
+		rec.At = model.Now()
+	}
+	_ = s.audit.Append(rec)
+}
+
+// SaveTaskArtifact 把任务的具名产物写入其目录（原子写）。
+func (s *Store) SaveTaskArtifact(taskID, name string, data []byte) error {
+	if strings.ContainsAny(name, "\\/:*?\"<>|") {
+		return fmt.Errorf("非法产物文件名: %s", name)
+	}
+	dir := s.layout.TaskDir(taskID)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	return config.WriteFileAtomic(filepath.Join(dir, name), data)
+}
+
+// ReadTaskArtifact 读取任务产物。
+func (s *Store) ReadTaskArtifact(taskID, name string) ([]byte, error) {
+	return os.ReadFile(s.layout.TaskFile(taskID, name))
+}
+
+// TaskDir 暴露任务目录路径。
+func (s *Store) TaskDir(taskID string) string { return s.layout.TaskDir(taskID) }
+
+// Layout 暴露布局。
+func (s *Store) Layout() config.Layout { return s.layout }
+
+// UpsertChain 新增或更新链。
+func (s *Store) UpsertChain(c *model.Chain) error {
+	if c == nil || c.ID == "" {
+		return fmt.Errorf("链缺少 ID")
+	}
+	s.mu.Lock()
+	c.UpdatedAt = model.Now()
+	if c.CreatedAt == 0 {
+		c.CreatedAt = c.UpdatedAt
+	}
+	cp := *c
+	s.chains[c.ID] = &cp
+	s.mu.Unlock()
+	return s.record(walRecord{Op: OpChain, Chain: &cp})
+}
+
+// GetChain 返回链副本。
+func (s *Store) GetChain(id string) (*model.Chain, bool) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	c, ok := s.chains[id]
+	if !ok {
+		return nil, false
+	}
+	cp := *c
+	return &cp, true
+}
+
+// ListChains 返回全部链副本。
+func (s *Store) ListChains() []*model.Chain {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	out := make([]*model.Chain, 0, len(s.chains))
+	for _, c := range s.chains {
+		cp := *c
+		out = append(out, &cp)
+	}
+	sort.Slice(out, func(i, j int) bool { return out[i].CreatedAt < out[j].CreatedAt })
+	return out
+}
+
+// AppendTaskEvent 追加一条任务级事件（供面板时间线展示）。
+//
+// 按任务复用 writer：以前每次调用都新建 writer 再追加，同一任务高频写时
+// 反复开关文件；O_APPEND 本身安全，但写放大明显。
+func (s *Store) AppendTaskEvent(taskID string, ev model.Event) {
+	_ = s.eventWriter(taskID).Append(ev)
+}
+
+// eventWriter 返回（并缓存）任务级事件流的追加写入器。
+func (s *Store) eventWriter(taskID string) *config.JSONLWriter {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.events == nil {
+		s.events = make(map[string]*config.JSONLWriter)
+	}
+	if w, ok := s.events[taskID]; ok {
+		return w
+	}
+	w := config.NewJSONLWriter(s.layout.TaskFile(taskID, "events.jsonl"))
+	s.events[taskID] = w
+	return w
+}
+
+// attemptWriter 返回（并缓存）任务级尝试台账的追加写入器。
+func (s *Store) attemptWriter(taskID string) *config.JSONLWriter {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.attempts == nil {
+		s.attempts = make(map[string]*config.JSONLWriter)
+	}
+	if w, ok := s.attempts[taskID]; ok {
+		return w
+	}
+	w := config.NewJSONLWriter(s.layout.TaskFile(taskID, "attempts.jsonl"))
+	s.attempts[taskID] = w
+	return w
+}
+
+// AppendAttempt 追加一条执行尝试台账（失败不阻塞主流程，但会进审计）。
+func (s *Store) AppendAttempt(rec AttemptRecord) {
+	if rec.At == 0 {
+		rec.At = model.Now()
+	}
+	if err := s.attemptWriter(rec.TaskID).Append(rec); err != nil {
+		_ = s.audit.Append(AuditRecord{At: model.Now(), TaskID: rec.TaskID, Actor: "system", Kind: "error", Message: "写入 attempts.jsonl 失败: " + err.Error()})
+	}
+}
+
+// ListAttempts 读取某任务的全部尝试台账。文件不存在时返回空切片与 nil。
+func (s *Store) ListAttempts(taskID string) ([]AttemptRecord, error) {
+	data, err := os.ReadFile(s.layout.TaskFile(taskID, "attempts.jsonl"))
+	if errors.Is(err, os.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var out []AttemptRecord
+	for _, line := range strings.Split(string(data), "\n") {
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		var rec AttemptRecord
+		if err := json.Unmarshal([]byte(line), &rec); err != nil {
+			continue // 单行坏数据不影响其余台账
+		}
+		out = append(out, rec)
+	}
+	return out, nil
+}

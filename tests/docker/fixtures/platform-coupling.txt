@@ -1,0 +1,16 @@
+﻿--- FAIL: TestRepoRootHasRequiredAnchors (0.00s)
+FAIL	workbench/cmd/workbench	0.039s
+--- FAIL: TestMaterializeArtifactsPass (0.06s)
+--- FAIL: TestCompleteTaskDoneOnVerifyPass (0.09s)
+--- FAIL: TestClosedLoopThroughRunOne (5.09s)
+--- FAIL: TestMaterializeArtifactsRespectsGuard (0.02s)
+--- FAIL: TestP3PipelineOfflineE2E (0.00s)
+--- FAIL: TestMaterializeAcceptsShortButReal (0.02s)
+FAIL	workbench/internal/engine	7.923s
+--- FAIL: TestTrashRefusesDangerous (0.00s)
+FAIL	workbench/internal/retention	0.021s
+--- FAIL: TestRunPassAndFail (0.00s)
+--- FAIL: TestRunTimeout (0.00s)
+FAIL	workbench/internal/verify	0.017s
+--- FAIL: TestWorkspaceAPIBrowse (0.01s)
+FAIL	workbench/internal/web	0.538s

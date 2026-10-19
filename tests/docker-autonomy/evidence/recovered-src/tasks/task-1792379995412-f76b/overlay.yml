@@ -1,0 +1,5 @@
+- id: agent-default-model
+  config:
+    provider: our-free-model
+    model: z-ai/glm-5.3
+    reasoningEffort: high

@@ -1,0 +1,9 @@
+{"id":"","at":1792379329592,"goalId":"goal-1792379329585-1dabca0a","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379333635,"goalId":"goal-1792379329585-1dabca0a","taskId":"task-1792379333623-690c","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 立框架","evidence":"目标处于第 0 阶段，按领域推进阶梯执行「立框架」","actor":"autonomy"}
+{"id":"","at":1792379333706,"goalId":"goal-1792379329585-1dabca0a","taskId":"task-1792379333623-690c","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379336638,"goalId":"goal-1792379329585-1dabca0a","taskId":"task-1792379336621-0b0a","kind":"plan","reason":"生成自主任务：容器闭环验收 · 边界用例补强","evidence":"采纳上一阶段自评给出的后继方向（模型自主决策）","actor":"autonomy"}
+{"id":"","at":1792379336714,"goalId":"goal-1792379329585-1dabca0a","taskId":"task-1792379336621-0b0a","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379336714,"goalId":"goal-1792379329585-1dabca0a","kind":"goalDone","reason":"目标自主验收通过：全部 5 条验收标准通过（阶段 2 个 / 均分 9.00 / 总字数 392）","actor":"autonomy"}
+{"id":"","at":1792379336728,"goalId":"goal-1792379336718-6f81f9f6","kind":"nextGoal","reason":"目标完成后自动推导下一目标（闭环续跑）","evidence":"上一目标已完成 2 个阶段；按领域轮转与不足升级规则推导下一目标","actor":"autonomy"}
+{"id":"","at":1792379339635,"goalId":"goal-1792379336718-6f81f9f6","taskId":"task-1792379339623-e5f0","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 深化：自测 · 定接口","evidence":"目标处于第 0 阶段，按领域推进阶梯执行「定接口」","actor":"autonomy"}
+{"id":"","at":1792379339709,"goalId":"goal-1792379336718-6f81f9f6","taskId":"task-1792379339623-e5f0","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}

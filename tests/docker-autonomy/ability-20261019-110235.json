@@ -1,0 +1,318 @@
+[
+  {
+    "exe": "workbench-0744.exe",
+    "bytes": 13277696,
+    "version": "workbench dev (unknown)",
+    "probes": {
+      "version": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "workbench dev (unknown)"
+      },
+      "diagnose": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"buildTime\": \"unknown\", \"config\": { \"schemaVersion\": 1, \"autoResume\": true, \"resumeOnBoot\": true, \"autoStart"
+      },
+      "status": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"done\": 0, \"failed\": 0, \"phase\": \"\", \"total\": 0, \"updatedAt\": 0, \"url\": \"\" }"
+      },
+      "governance": {
+        "exit": 3,
+        "matched": true,
+        "timedOut": false,
+        "head": "治理等级: 未验证 | 契约 0 份（在履约 0，合规均分 0.0，逾期 0，临期 0） 体量: 采样 0 点 | 等级 未验证 | 任务/日 0 | 契约负载 0 | 内存 0.0MB | 句柄 0 预警: 总 0（红"
+      },
+      "acceptance": {
+        "exit": -1,
+        "matched": false,
+        "timedOut": true,
+        "head": "{\"time\":\"2026-10-19T11:02:36.7357941+08:00\",\"level\":\"INFO\",\"msg\":\"模型路由表已更新\",\"component\":\"engine\",\"source\":\"mod"
+      },
+      "autonomySelftest": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "[PASS] 1. 创建带验收标准的 active 目标 [PASS] 2. 从项目目标推导出阶段任务 [PASS] 2b. 草案领域在边界白名单内 [PASS] 3. 需要人工介入的草案被边界拒绝 [PASS] 4. "
+      },
+      "autonomyStatus": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"active\": { \"id\": \"goal-1792378956746-29a6b977\", \"title\": \"持续产出与能力沉淀\", \"intent\": \"围绕个人知识资产持续产出高质量可复用成果：先把主题拆"
+      },
+      "autonomyPlan": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "【当前目标】持续产出与能力沉淀（active） 意图：围绕个人知识资产持续产出高质量可复用成果：先把主题拆透、写出成体系的长文，再拆成卡片/脚本等可复用形态，最后复盘补齐不足。 阶段：0 ／ 进度：0% ／ 回退：0 【"
+      },
+      "workspaceStatus": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"audit\": { \"total\": 0, \"allowed\": 0, \"denied\": 0 }, \"auditPath\": \"D:\\\\app-cache\\\\temp\\\\wbprobe-fb73f4b4\\\\wor"
+      },
+      "poolStatus": {
+        "exit": -1,
+        "matched": true,
+        "timedOut": true,
+        "head": "{\"time\":\"2026-10-19T11:02:56.9590251+08:00\",\"level\":\"INFO\",\"msg\":\"模型路由表已更新\",\"component\":\"engine\",\"source\":\"mod"
+      },
+      "soak": {
+        "exit": -1,
+        "matched": false,
+        "timedOut": true,
+        "head": "{\"time\":\"2026-10-19T11:03:17.0167955+08:00\",\"level\":\"INFO\",\"msg\":\"模型路由表已更新\",\"component\":\"engine\",\"source\":\"mod"
+      },
+      "poolLegacyName": {
+        "exit": -1,
+        "matched": true,
+        "timedOut": true,
+        "head": "{\"time\":\"2026-10-19T11:03:37.0533516+08:00\",\"level\":\"INFO\",\"msg\":\"模型路由表已更新\",\"component\":\"engine\",\"source\":\"mod"
+      }
+    }
+  },
+  {
+    "exe": "workbench-0814.exe",
+    "bytes": 9421312,
+    "version": "workbench 1.3.0-ws (unknown)",
+    "probes": {
+      "version": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "workbench 1.3.0-ws (unknown)"
+      },
+      "diagnose": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"buildTime\": \"unknown\", \"config\": { \"schemaVersion\": 1, \"autoResume\": true, \"resumeOnBoot\": true, \"autoStart"
+      },
+      "status": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"done\": 0, \"failed\": 0, \"phase\": \"\", \"total\": 0, \"updatedAt\": 0, \"url\": \"\" }"
+      },
+      "governance": {
+        "exit": 3,
+        "matched": true,
+        "timedOut": false,
+        "head": "治理等级: 未验证 | 契约 0 份（在履约 0，合规均分 0.0，逾期 0，临期 0） 体量: 采样 0 点 | 等级 未验证 | 任务/日 0 | 契约负载 0 | 内存 0.0MB | 句柄 0 预警: 总 0（红"
+      },
+      "acceptance": {
+        "exit": -1,
+        "matched": false,
+        "timedOut": true,
+        "head": "{\"time\":\"2026-10-19T11:03:57.9967846+08:00\",\"level\":\"INFO\",\"msg\":\"模型路由表已更新\",\"component\":\"engine\",\"source\":\"mod"
+      },
+      "autonomySelftest": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "[PASS] 1. 创建带验收标准的 active 目标 [PASS] 2. 从项目目标推导出阶段任务 [PASS] 2b. 草案领域在边界白名单内 [PASS] 3. 需要人工介入的草案被边界拒绝 [PASS] 4. "
+      },
+      "autonomyStatus": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"active\": { \"id\": \"goal-1792379038007-7d814dc6\", \"title\": \"持续产出与能力沉淀\", \"intent\": \"围绕个人知识资产持续产出高质量可复用成果：先把主题拆"
+      },
+      "autonomyPlan": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "【当前目标】持续产出与能力沉淀（active） 意图：围绕个人知识资产持续产出高质量可复用成果：先把主题拆透、写出成体系的长文，再拆成卡片/脚本等可复用形态，最后复盘补齐不足。 阶段：0 ／ 进度：0% ／ 回退：0 【"
+      },
+      "workspaceStatus": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"audit\": { \"total\": 0, \"allowed\": 0, \"denied\": 0 }, \"auditPath\": \"D:\\\\app-cache\\\\temp\\\\wbprobe-2a5b8004\\\\wor"
+      },
+      "poolStatus": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"available\": 25, \"config\": { \"enabled\": true, \"probeSeconds\": 180, \"syncSeconds\": 600, \"strategy\": \"priority"
+      },
+      "soak": {
+        "exit": -1,
+        "matched": false,
+        "timedOut": true,
+        "head": "{\"time\":\"2026-10-19T11:04:18.2616948+08:00\",\"level\":\"INFO\",\"msg\":\"模型路由表已更新\",\"component\":\"engine\",\"source\":\"mod"
+      },
+      "poolLegacyName": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"available\": 25, \"config\": { \"enabled\": true, \"probeSeconds\": 180, \"syncSeconds\": 600, \"strategy\": \"priority"
+      }
+    }
+  },
+  {
+    "exe": "workbench-v1-with-all-fixes.exe",
+    "bytes": 13664256,
+    "version": "workbench dev (unknown)",
+    "probes": {
+      "version": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "workbench dev (unknown)"
+      },
+      "diagnose": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"buildTime\": \"unknown\", \"config\": { \"schemaVersion\": 5, \"autoResume\": true, \"resumeOnBoot\": true, \"autoStart"
+      },
+      "status": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"done\": 0, \"failed\": 0, \"phase\": \"\", \"total\": 0, \"updatedAt\": 0, \"url\": \"\" }"
+      },
+      "governance": {
+        "exit": 3,
+        "matched": true,
+        "timedOut": false,
+        "head": "治理等级: 未验证 | 契约 0 份（在履约 0，合规均分 0.0，逾期 0，临期 0） 体量: 采样 0 点 | 等级 未验证 | 任务/日 0 | 契约负载 0 | 内存 0.0MB | 句柄 0 预警: 总 0（红"
+      },
+      "acceptance": {
+        "exit": 1,
+        "matched": true,
+        "timedOut": false,
+        "head": "[UNVERIFIED] R1 极简首页：只有一个开始按钮，无配置项/菜单 无法读取首页模板源码: open D:\\app-cache\\temp\\wbprobe-83034a39\\workbench\\internal\\w"
+      },
+      "autonomySelftest": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "[PASS] 1. 创建带验收标准的 active 目标 [PASS] 2. 从项目目标推导出阶段任务 [PASS] 2b. 草案领域在边界白名单内 [PASS] 3. 需要人工介入的草案被边界拒绝 [PASS] 4. "
+      },
+      "autonomyStatus": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"active\": { \"id\": \"goal-1792379079520-c3ebc8f0\", \"title\": \"持续产出与能力沉淀\", \"intent\": \"围绕个人知识资产持续产出高质量可复用成果：先把主题拆"
+      },
+      "autonomyPlan": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "【当前目标】持续产出与能力沉淀（active） 意图：围绕个人知识资产持续产出高质量可复用成果：先把主题拆透、写出成体系的长文，再拆成卡片/脚本等可复用形态，最后复盘补齐不足。 阶段：0 ／ 进度：0% ／ 回退：0 【"
+      },
+      "workspaceStatus": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"audit\": { \"total\": 0, \"allowed\": 0, \"denied\": 0 }, \"auditPath\": \"D:\\\\app-cache\\\\temp\\\\wbprobe-83034a39\\\\wor"
+      },
+      "poolStatus": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"available\": 4, \"config\": { \"enabled\": true, \"probeSeconds\": 180, \"syncSeconds\": 600, \"strategy\": \"priority\""
+      },
+      "soak": {
+        "exit": 3,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"exists\": false, \"exitCode\": 3, \"path\": \"D:\\\\app-cache\\\\temp\\\\wbprobe-83034a39\\\\workbench-output\\\\logs\\\\metr"
+      },
+      "poolLegacyName": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"available\": 4, \"config\": { \"enabled\": true, \"probeSeconds\": 180, \"syncSeconds\": 600, \"strategy\": \"priority\""
+      }
+    }
+  },
+  {
+    "exe": "workbench.exe",
+    "bytes": 13664256,
+    "version": "workbench dev (unknown)",
+    "probes": {
+      "version": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "workbench dev (unknown)"
+      },
+      "diagnose": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"buildTime\": \"unknown\", \"config\": { \"schemaVersion\": 5, \"autoResume\": true, \"resumeOnBoot\": true, \"autoStart"
+      },
+      "status": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"done\": 0, \"failed\": 0, \"phase\": \"\", \"total\": 0, \"updatedAt\": 0, \"url\": \"\" }"
+      },
+      "governance": {
+        "exit": 3,
+        "matched": true,
+        "timedOut": false,
+        "head": "治理等级: 未验证 | 契约 0 份（在履约 0，合规均分 0.0，逾期 0，临期 0） 体量: 采样 0 点 | 等级 未验证 | 任务/日 0 | 契约负载 0 | 内存 0.0MB | 句柄 0 预警: 总 0（红"
+      },
+      "acceptance": {
+        "exit": 1,
+        "matched": true,
+        "timedOut": false,
+        "head": "[UNVERIFIED] R1 极简首页：只有一个开始按钮，无配置项/菜单 无法读取首页模板源码: open D:\\app-cache\\temp\\wbprobe-962f0859\\workbench\\internal\\w"
+      },
+      "autonomySelftest": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "[PASS] 1. 创建带验收标准的 active 目标 [PASS] 2. 从项目目标推导出阶段任务 [PASS] 2b. 草案领域在边界白名单内 [PASS] 3. 需要人工介入的草案被边界拒绝 [PASS] 4. "
+      },
+      "autonomyStatus": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"active\": { \"id\": \"goal-1792379080864-20e2129e\", \"title\": \"持续产出与能力沉淀\", \"intent\": \"围绕个人知识资产持续产出高质量可复用成果：先把主题拆"
+      },
+      "autonomyPlan": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "【当前目标】持续产出与能力沉淀（active） 意图：围绕个人知识资产持续产出高质量可复用成果：先把主题拆透、写出成体系的长文，再拆成卡片/脚本等可复用形态，最后复盘补齐不足。 阶段：0 ／ 进度：0% ／ 回退：0 【"
+      },
+      "workspaceStatus": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"audit\": { \"total\": 0, \"allowed\": 0, \"denied\": 0 }, \"auditPath\": \"D:\\\\app-cache\\\\temp\\\\wbprobe-962f0859\\\\wor"
+      },
+      "poolStatus": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"available\": 4, \"config\": { \"enabled\": true, \"probeSeconds\": 180, \"syncSeconds\": 600, \"strategy\": \"priority\""
+      },
+      "soak": {
+        "exit": 3,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"exists\": false, \"exitCode\": 3, \"path\": \"D:\\\\app-cache\\\\temp\\\\wbprobe-962f0859\\\\workbench-output\\\\logs\\\\metr"
+      },
+      "poolLegacyName": {
+        "exit": 0,
+        "matched": true,
+        "timedOut": false,
+        "head": "{ \"available\": 4, \"config\": { \"enabled\": true, \"probeSeconds\": 180, \"syncSeconds\": 600, \"strategy\": \"priority\""
+      }
+    }
+  }
+]

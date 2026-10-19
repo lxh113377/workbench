@@ -1,0 +1,1 @@
+{schemaVersion:3,autoResume:false,resumeOnBoot:false,autoStart:false,server:{host:127.0.0.1,port:17904,openBrowser:false},pool:{enabled:true,probeSeconds:3600,syncSeconds:3600,strategy:priority,deepProbe:false}}

@@ -1,0 +1,23 @@
+{"at":1792380952058,"kind":"crud","model":"z-ai/glm-5.3","state":"upsert","reason":"优先级 1 / 权重 100 / 启用 true","actor":"cli"}
+{"at":1792380952077,"kind":"crud","model":"openai/gpt-oss-20b","state":"upsert","reason":"优先级 2 / 权重 60 / 启用 true","actor":"cli"}
+{"at":1792380952097,"kind":"crud","model":"z-ai/glm-5.3-flash","state":"upsert","reason":"优先级 3 / 权重 40 / 启用 true","actor":"cli"}
+{"at":1792380952116,"kind":"crud","model":"opencode/glm-5.3-flash-free","state":"upsert","reason":"优先级 100 / 权重 50 / 启用 true","actor":"cli"}
+{"at":1792380952138,"kind":"crud","model":"kilo-auto/free","state":"upsert","reason":"优先级 100 / 权重 50 / 启用 true","actor":"cli"}
+{"at":1792380952162,"kind":"crud","model":"nvidia/nemotron-3.5-super-vl:free","state":"upsert","reason":"优先级 100 / 权重 50 / 启用 true","actor":"cli"}
+{"at":1792380952188,"kind":"crud","model":"beam-free","state":"upsert","reason":"优先级 900 / 权重 5 / 启用 false","actor":"cli"}
+{"at":1792380952214,"kind":"crud","model":"deepseek-official/deepseek-flash","state":"upsert","reason":"优先级 800 / 权重 10 / 启用 false","actor":"cli"}
+{"at":1792380952220,"kind":"sync","state":"gateway","reason":"网关 http://127.0.0.1:8326/v1 广播 8 个模型：新增 5 / 更新 3 / 跳过 0"}
+{"at":1792380952236,"kind":"sync","state":"gateway-ok","reason":"网关 http://127.0.0.1:8326/v1 广播 8 个模型：新增 5 / 更新 3","actor":"cli"}
+{"at":1792380952320,"kind":"probe","model":"beam-free","from":"disabled","to":"healthy","reason":"探测状态变化"}
+{"at":1792380952320,"kind":"probe","model":"deepseek-ai/deepseek-v4.1-flash","from":"unknown","to":"healthy","reason":"探测状态变化"}
+{"at":1792380952320,"kind":"probe","model":"deepseek-official/deepseek-flash","from":"disabled","to":"healthy","reason":"探测状态变化"}
+{"at":1792380952320,"kind":"probe","model":"kilo-auto/free","from":"unknown","to":"healthy","reason":"探测状态变化"}
+{"at":1792380952320,"kind":"probe","model":"nvidia/nemotron-3.5-super-vl:free","from":"unknown","to":"healthy","reason":"探测状态变化"}
+{"at":1792380952320,"kind":"probe","model":"openai/gpt-oss-20b","from":"unknown","to":"healthy","reason":"探测状态变化"}
+{"at":1792380952320,"kind":"probe","model":"opencode/glm-5.3-flash-free","from":"unknown","to":"healthy","reason":"探测状态变化"}
+{"at":1792380952320,"kind":"probe","model":"z-ai/glm-5.3","from":"unknown","to":"healthy","reason":"探测状态变化"}
+{"at":1792380952320,"kind":"probe","model":"z-ai/glm-5.3-flash","from":"unknown","to":"healthy","reason":"探测状态变化"}
+{"at":1792380952448,"kind":"probe-cycle","reason":"本轮探测 9 个：可用 9 / 下线 0 / 未知 0"}
+{"at":1792380952454,"kind":"probe","state":"summary","reason":"探测 9 个模型：可用 9 / 下线 0 / 未知 0"}
+{"at":1792380952683,"kind":"probe-cycle","reason":"本轮探测 9 个：可用 0 / 下线 0 / 未知 9"}
+{"at":1792380952688,"kind":"probe","state":"summary","reason":"探测 9 个模型：可用 0 / 下线 0 / 未知 9"}

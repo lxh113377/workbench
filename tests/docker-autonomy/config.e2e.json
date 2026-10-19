@@ -1,0 +1,146 @@
+{
+  "schemaVersion": 5,
+  "autoResume": false,
+  "resumeOnBoot": false,
+  "autoStart": false,
+  "outputRoot": "",
+  "eval": {
+    "weights": {
+      "value": 0.5,
+      "cost": 0.2,
+      "feasibility": 0.3
+    },
+    "threshold": 20,
+    "semanticOn": false,
+    "repeatGate": false,
+    "similarityCap": 0.99,
+    "dailyCap": 100,
+    "diversityCap": 1
+  },
+  "models": [
+    {
+      "model": "our-free-model/z-ai/glm-5.3",
+      "provider": "our-free-model",
+      "tier": "balanced",
+      "enabled": true,
+      "weight": 100,
+      "maxFail": 5,
+      "cooldownM": 2
+    }
+  ],
+  "executor": {
+    "concurrency": 1,
+    "defaultTimeout": 10,
+    "maxRetries": 1,
+    "retryBackoffMs": [
+      1000
+    ],
+    "maxOutputMB": 32,
+    "stallSeconds": 300,
+    "dshExe": "/tmp/fakedsh",
+    "profileName": "web-desktop",
+    "retryPolicy": {
+      "baseDelayMs": 1000,
+      "maxDelayMs": 30000,
+      "jitter": 0.1,
+      "retryableKinds": [
+        "timeout",
+        "upstream_failed",
+        "bad_exit",
+        "stalled",
+        "unknown"
+      ]
+    },
+    "shutdownGraceSeconds": 5,
+    "appendProtocol": false,
+    "repairRounds": 0,
+    "requestsPerMinute": 600,
+    "requestBurst": 60
+  },
+  "chain": {
+    "enabled": false,
+    "maxDepth": 2,
+    "fanout": 1,
+    "minQuality": 1,
+    "contextChars": 800
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "port": 17890,
+    "openBrowser": false
+  },
+  "supervisor": {
+    "enabled": false,
+    "memLimitMB": 4000,
+    "handleLimit": 20000,
+    "goroutineLimit": 8000,
+    "sampleSeconds": 60,
+    "strikesToRestart": 99
+  },
+  "gov": {
+    "enabled": false,
+    "sampleSeconds": 300,
+    "autoEscalate": false,
+    "expiringDays": 30,
+    "complianceMin": 70
+  },
+  "autonomy": {
+    "enabled": true,
+    "budget": {
+      "maxTasksPerGoal": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "maxRollbacks": 2,
+      "stageEvery": 1
+    },
+    "bounds": {
+      "allowedDomains": [
+        "content",
+        "code",
+        "knowledge",
+        "data",
+        "solution",
+        "report"
+      ],
+      "maxTaskWords": 3000,
+      "maxDraftsPerRound": 1
+    },
+    "plan": {
+      "rootTitle": "容器闭环验收目标",
+      "rootIntent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "defaultDomain": "content",
+      "words": 200,
+      "maxDrafts": 1
+    },
+    "risk": {
+      "escalateMinQuality": 1,
+      "blockOnRepeat": false
+    },
+    "rollback": {
+      "onLowQuality": true,
+      "onCostOverrun": true
+    }
+  },
+  "pool": {
+    "enabled": false,
+    "probeSeconds": 180,
+    "syncSeconds": 600,
+    "strategy": "priority",
+    "deepProbe": false
+  },
+  "workspace": {
+    "mode": "project",
+    "root": "",
+    "maxFiles": 80,
+    "maxBytes": 524288,
+    "maxFileBytes": 131072,
+    "allowDotDirs": false,
+    "since": 0
+  },
+  "retention": {
+    "dshHomeDays": 3,
+    "workspaceDays": 30,
+    "taskDirDays": 90
+  },
+  "updatedAt": 0
+}

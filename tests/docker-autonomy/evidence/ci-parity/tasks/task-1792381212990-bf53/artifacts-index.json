@@ -1,0 +1,18 @@
+{
+  "files": [
+    {
+      "bytes": 667,
+      "lang": "markdown",
+      "path": "result.md",
+      "sha256": "e07d97efc091d0b5f4e02c0e163c10fad4008ecd39a5f75d08322abc6583e940"
+    },
+    {
+      "bytes": 43,
+      "lang": "python",
+      "path": "result.py",
+      "sha256": "aac92a45914932c26d80a62891f8fc86d2866b2599a72f89764d85ae3cf70bf1"
+    }
+  ],
+  "level": "strict",
+  "problems": null
+}

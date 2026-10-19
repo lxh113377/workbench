@@ -1,0 +1,1895 @@
+{
+  "schemaVersion": 1,
+  "activeId": "goal-1792379992410-79e51f26",
+  "goals": [
+    {
+      "id": "goal-1792379844365-27defcee",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 立框架",
+          "taskId": "task-1792379848418-3b14",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379848467
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收 · 边界用例补强",
+          "taskId": "task-1792379851416-d380",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379851465
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 成文",
+          "taskId": "task-1792379854419-b15e",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379854473
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379848467,
+          "taskId": "task-1792379848418-3b14",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379851465,
+          "taskId": "task-1792379851416-d380",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379854473,
+          "taskId": "task-1792379854419-b15e",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379844365,
+      "updatedAt": 1792379854475,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379857417-1f2ad115",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1",
+          "taskId": "task-1792379857425-4c8e",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379857483
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 补证据",
+          "taskId": "task-1792379860417-4f2c",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379860471
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 阶段3",
+          "taskId": "task-1792379863418-7888",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379863476
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379857483,
+          "taskId": "task-1792379857425-4c8e",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379860471,
+          "taskId": "task-1792379860417-4f2c",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379863476,
+          "taskId": "task-1792379863418-7888",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379857417,
+      "updatedAt": 1792379863477,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379866416-a031bf5b",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1（第2次推进）",
+          "taskId": "task-1792379866424-846a",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379866483
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2",
+          "taskId": "task-1792379869417-3bc0",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379869475
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 阶段3（第2次推进）",
+          "taskId": "task-1792379872416-c2c1",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379872477
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379866483,
+          "taskId": "task-1792379866424-846a",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379869475,
+          "taskId": "task-1792379869417-3bc0",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379872477,
+          "taskId": "task-1792379872416-c2c1",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379866416,
+      "updatedAt": 1792379872479,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379875415-b3dc8636",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1（第3次推进）",
+          "taskId": "task-1792379875420-5918",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379875476
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2（第2次推进）",
+          "taskId": "task-1792379878417-9390",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379878475
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 阶段3（第3次推进）",
+          "taskId": "task-1792379881416-2a34",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379881476
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379875476,
+          "taskId": "task-1792379875420-5918",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379878475,
+          "taskId": "task-1792379878417-9390",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379881476,
+          "taskId": "task-1792379881416-2a34",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379875415,
+      "updatedAt": 1792379881478,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379884417-0dd9dd32",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1（第4次推进）",
+          "taskId": "task-1792379884422-6537",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379884479
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2（第3次推进）",
+          "taskId": "task-1792379887416-a096",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379887476
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 阶段3（第4次推进）",
+          "taskId": "task-1792379890415-b33d",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379890477
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379884479,
+          "taskId": "task-1792379884422-6537",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379887476,
+          "taskId": "task-1792379887416-a096",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379890477,
+          "taskId": "task-1792379890415-b33d",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379884417,
+      "updatedAt": 1792379890479,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379893416-8a0973ed",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1（第5次推进）",
+          "taskId": "task-1792379893420-7e68",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379893478
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2（第4次推进）",
+          "taskId": "task-1792379896416-c18b",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379896478
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 阶段3（第5次推进）",
+          "taskId": "task-1792379899416-7793",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379899483
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379893478,
+          "taskId": "task-1792379893420-7e68",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379896478,
+          "taskId": "task-1792379896416-c18b",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379899483,
+          "taskId": "task-1792379899416-7793",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379893416,
+      "updatedAt": 1792379899485,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379902414-b2f735c3",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1（第6次推进）",
+          "taskId": "task-1792379902420-a82c",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379902479
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2（第5次推进）",
+          "taskId": "task-1792379905414-eddb",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379905483
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 阶段3（第6次推进）",
+          "taskId": "task-1792379908415-5e3f",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379908474
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379902479,
+          "taskId": "task-1792379902420-a82c",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379905483,
+          "taskId": "task-1792379905414-eddb",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379908474,
+          "taskId": "task-1792379908415-5e3f",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379902414,
+      "updatedAt": 1792379908476,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379911414-e2ffcfda",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1（第7次推进）",
+          "taskId": "task-1792379911419-0350",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379911477
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2（第6次推进）",
+          "taskId": "task-1792379914415-795c",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379914475
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 阶段3（第7次推进）",
+          "taskId": "task-1792379917414-70c9",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379917475
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379911477,
+          "taskId": "task-1792379911419-0350",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379914475,
+          "taskId": "task-1792379914415-795c",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379917475,
+          "taskId": "task-1792379917414-70c9",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379911414,
+      "updatedAt": 1792379917477,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379920416-8ddd55cc",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1（第8次推进）",
+          "taskId": "task-1792379920422-05b1",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379920486
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2（第7次推进）",
+          "taskId": "task-1792379923415-5c2b",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379923478
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 阶段3（第8次推进）",
+          "taskId": "task-1792379926415-e0ef",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379926475
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379920486,
+          "taskId": "task-1792379920422-05b1",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379923478,
+          "taskId": "task-1792379923415-5c2b",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379926475,
+          "taskId": "task-1792379926415-e0ef",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379920416,
+      "updatedAt": 1792379926477,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379929414-6319d925",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1（第9次推进）",
+          "taskId": "task-1792379929419-a15f",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379929475
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2（第8次推进）",
+          "taskId": "task-1792379932412-d716",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379932483
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 阶段3（第9次推进）",
+          "taskId": "task-1792379935414-fbf4",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379935483
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379929475,
+          "taskId": "task-1792379929419-a15f",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379932483,
+          "taskId": "task-1792379932412-d716",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379935483,
+          "taskId": "task-1792379935414-fbf4",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379929414,
+      "updatedAt": 1792379935486,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379938413-38c07e06",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1（第10次推进）",
+          "taskId": "task-1792379938421-2999",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379938487
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2（第9次推进）",
+          "taskId": "task-1792379941412-c2e2",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379941479
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收 · 边界用例补强",
+          "taskId": "task-1792379944414-54f9",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379944478
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379938487,
+          "taskId": "task-1792379938421-2999",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379941479,
+          "taskId": "task-1792379941412-c2e2",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379944478,
+          "taskId": "task-1792379944414-54f9",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379938413,
+      "updatedAt": 1792379944481,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379947412-97919f09",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 立框架",
+          "taskId": "task-1792379947420-ceae",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379947478
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2（第10次推进）",
+          "taskId": "task-1792379950414-eacf",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379950473
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 成文",
+          "taskId": "task-1792379953412-f9e8",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379953482
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379947478,
+          "taskId": "task-1792379947420-ceae",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379950473,
+          "taskId": "task-1792379950414-eacf",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379953482,
+          "taskId": "task-1792379953412-f9e8",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379947412,
+      "updatedAt": 1792379953484,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379956414-0aa33f4c",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1",
+          "taskId": "task-1792379956418-be1f",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379956482
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 补证据",
+          "taskId": "task-1792379959412-6e78",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379959474
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 阶段3",
+          "taskId": "task-1792379962412-21b6",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379962470
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379956482,
+          "taskId": "task-1792379956418-be1f",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379959474,
+          "taskId": "task-1792379959412-6e78",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379962470,
+          "taskId": "task-1792379962412-21b6",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379956414,
+      "updatedAt": 1792379962472,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379965411-9aa4b2d4",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1（第2次推进）",
+          "taskId": "task-1792379965416-4303",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379965477
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2",
+          "taskId": "task-1792379968411-11bf",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379968470
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 阶段3（第2次推进）",
+          "taskId": "task-1792379971413-e409",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379971476
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379965477,
+          "taskId": "task-1792379965416-4303",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379968470,
+          "taskId": "task-1792379968411-11bf",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379971476,
+          "taskId": "task-1792379971413-e409",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379965411,
+      "updatedAt": 1792379971478,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379974412-cd5227cc",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1（第3次推进）",
+          "taskId": "task-1792379974418-e1dc",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379974479
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2（第2次推进）",
+          "taskId": "task-1792379977411-85e9",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379977474
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 阶段3（第3次推进）",
+          "taskId": "task-1792379980411-31ae",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379980482
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379974479,
+          "taskId": "task-1792379974418-e1dc",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379977474,
+          "taskId": "task-1792379977411-85e9",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379980482,
+          "taskId": "task-1792379980411-31ae",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379974412,
+      "updatedAt": 1792379980484,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379983411-31977815",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "blocked",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1（第4次推进）",
+          "taskId": "task-1792379983430-8d8b",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379983526
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2（第3次推进）",
+          "taskId": "task-1792379986413-c90e",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379986468
+        },
+        {
+          "index": 2,
+          "title": "容器闭环验收目标 · 阶段3（第4次推进）",
+          "taskId": "task-1792379989412-4f3e",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379989479
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379983526,
+          "taskId": "task-1792379983430-8d8b",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379986468,
+          "taskId": "task-1792379986413-c90e",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379989479,
+          "taskId": "task-1792379989412-4f3e",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379983411,
+      "updatedAt": 1792379989482,
+      "blockReason": "风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）"
+    },
+    {
+      "id": "goal-1792379992410-79e51f26",
+      "title": "容器闭环验收目标",
+      "intent": "在隔离容器中用确定性通道验证：目标推导任务、产出落盘并真实验收、目标完成后自动推导下一目标。",
+      "domain": "content",
+      "status": "active",
+      "source": "config",
+      "progress": 60,
+      "criteria": [
+        {
+          "id": "c-done",
+          "desc": "完成不少于 2 个阶段任务",
+          "kind": "tasksDone",
+          "threshold": 2,
+          "current": 2,
+          "passed": true,
+          "detail": "达到阈值（2 ≥ 2）"
+        },
+        {
+          "id": "c-quality",
+          "desc": "阶段自评均分不低于 1.0/10",
+          "kind": "minQuality",
+          "threshold": 1,
+          "current": 9,
+          "passed": true,
+          "detail": "达到阈值（9 ≥ 1）"
+        },
+        {
+          "id": "c-words",
+          "desc": "阶段产出总字数不少于 150",
+          "kind": "minWords",
+          "threshold": 150,
+          "current": 392,
+          "passed": true,
+          "detail": "达到阈值（392 ≥ 150）"
+        },
+        {
+          "id": "c-verified",
+          "desc": "至少 35% 的阶段产出通过真实执行验收（不少于 1 个）",
+          "kind": "verifiedRatio",
+          "threshold": 0.35,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        },
+        {
+          "id": "c-verified-min",
+          "desc": "至少 1 个阶段产出通过真实执行验收",
+          "kind": "verifiedTasks",
+          "threshold": 1,
+          "current": 0,
+          "passed": false,
+          "detail": "未知判据类型，按未通过处理"
+        }
+      ],
+      "stages": [
+        {
+          "index": 0,
+          "title": "容器闭环验收目标 · 阶段1（第5次推进）",
+          "taskId": "task-1792379992414-8b2a",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379992476
+        },
+        {
+          "index": 1,
+          "title": "容器闭环验收目标 · 阶段2（第4次推进）",
+          "taskId": "task-1792379995412-f76b",
+          "quality": 9,
+          "words": 196,
+          "passed": true,
+          "at": 1792379995477
+        }
+      ],
+      "evidence": [
+        {
+          "at": 1792379992476,
+          "taskId": "task-1792379992414-8b2a",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        },
+        {
+          "at": 1792379995477,
+          "taskId": "task-1792379995412-f76b",
+          "kind": "task",
+          "detail": "质量 9/10，196 字"
+        }
+      ],
+      "rollbacks": 0,
+      "maxTasks": 8,
+      "maxStages": 3,
+      "minQuality": 1,
+      "createdAt": 1792379992410,
+      "updatedAt": 1792379995477
+    }
+  ],
+  "savedAt": 1792379995477
+}

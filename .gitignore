@@ -1,0 +1,11 @@
+﻿# Build artifacts
+dist/*.exe
+dist/workbench-linux-amd64
+dist/fakedsh
+dist/mockofm
+dist/workbench-output/
+dist/runtime/
+_recovery/
+src-backup/
+src/
+*.tmp

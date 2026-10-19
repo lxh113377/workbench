@@ -1,0 +1,3 @@
+{"sessionId":"docker-fake-session","type":"session"}
+{"phase":"step_end","type":"status","usage":{"inputTokens":120,"outputTokens":480,"totalTokens":600}}
+{"text":"{\"quality\":9,\"tags\":[\"闭环\",\"容器验收\",\"确定性\"],\"strengths\":[\"步骤可机器判定\",\"产物真实落盘并通过 python3 验收\"],\"gaps\":[\"缺少对超长正文的边界测试\"],\"nextIdeas\":[{\"title\":\"容器闭环验收 · 边界用例补强\",\"prompt\":\"请产出边界用例清单并说明每条的预期结果，包含结论与建议。\",\"domain\":\"knowledge\"}]}","type":"final"}

@@ -1,0 +1,133 @@
+{"id":"","at":1792379844369,"goalId":"goal-1792379844365-27defcee","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379848423,"goalId":"goal-1792379844365-27defcee","taskId":"task-1792379848418-3b14","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 立框架","evidence":"目标处于第 0 阶段，按领域推进阶梯执行「立框架」","actor":"autonomy"}
+{"id":"","at":1792379848467,"goalId":"goal-1792379844365-27defcee","taskId":"task-1792379848418-3b14","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379851424,"goalId":"goal-1792379844365-27defcee","taskId":"task-1792379851416-d380","kind":"plan","reason":"生成自主任务：容器闭环验收 · 边界用例补强","evidence":"采纳上一阶段自评给出的后继方向（模型自主决策）","actor":"autonomy"}
+{"id":"","at":1792379851465,"goalId":"goal-1792379844365-27defcee","taskId":"task-1792379851416-d380","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379854429,"goalId":"goal-1792379844365-27defcee","taskId":"task-1792379854419-b15e","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 成文","evidence":"目标处于第 2 阶段，按领域推进阶梯执行「成文」","actor":"autonomy"}
+{"id":"","at":1792379854473,"goalId":"goal-1792379844365-27defcee","taskId":"task-1792379854419-b15e","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379854474,"goalId":"goal-1792379844365-27defcee","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379857425,"goalId":"goal-1792379857417-1f2ad115","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379857433,"goalId":"goal-1792379857417-1f2ad115","taskId":"task-1792379857425-4c8e","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379857483,"goalId":"goal-1792379857417-1f2ad115","taskId":"task-1792379857425-4c8e","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379860432,"goalId":"goal-1792379857417-1f2ad115","taskId":"task-1792379860417-4f2c","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 补证据","evidence":"目标处于第 1 阶段，按领域推进阶梯执行「补证据」","actor":"autonomy"}
+{"id":"","at":1792379860471,"goalId":"goal-1792379857417-1f2ad115","taskId":"task-1792379860417-4f2c","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379863424,"goalId":"goal-1792379857417-1f2ad115","taskId":"task-1792379863418-7888","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段3","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379863476,"goalId":"goal-1792379857417-1f2ad115","taskId":"task-1792379863418-7888","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379863477,"goalId":"goal-1792379857417-1f2ad115","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379866424,"goalId":"goal-1792379866416-a031bf5b","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379866431,"goalId":"goal-1792379866416-a031bf5b","taskId":"task-1792379866424-846a","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1（第2次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379866483,"goalId":"goal-1792379866416-a031bf5b","taskId":"task-1792379866424-846a","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379869424,"goalId":"goal-1792379866416-a031bf5b","taskId":"task-1792379869417-3bc0","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379869475,"goalId":"goal-1792379866416-a031bf5b","taskId":"task-1792379869417-3bc0","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379872427,"goalId":"goal-1792379866416-a031bf5b","taskId":"task-1792379872416-c2c1","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段3（第2次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379872477,"goalId":"goal-1792379866416-a031bf5b","taskId":"task-1792379872416-c2c1","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379872479,"goalId":"goal-1792379866416-a031bf5b","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379875420,"goalId":"goal-1792379875415-b3dc8636","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379875428,"goalId":"goal-1792379875415-b3dc8636","taskId":"task-1792379875420-5918","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1（第3次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379875476,"goalId":"goal-1792379875415-b3dc8636","taskId":"task-1792379875420-5918","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379878424,"goalId":"goal-1792379875415-b3dc8636","taskId":"task-1792379878417-9390","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2（第2次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379878475,"goalId":"goal-1792379875415-b3dc8636","taskId":"task-1792379878417-9390","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379881423,"goalId":"goal-1792379875415-b3dc8636","taskId":"task-1792379881416-2a34","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段3（第3次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379881476,"goalId":"goal-1792379875415-b3dc8636","taskId":"task-1792379881416-2a34","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379881478,"goalId":"goal-1792379875415-b3dc8636","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379884422,"goalId":"goal-1792379884417-0dd9dd32","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379884430,"goalId":"goal-1792379884417-0dd9dd32","taskId":"task-1792379884422-6537","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1（第4次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379884479,"goalId":"goal-1792379884417-0dd9dd32","taskId":"task-1792379884422-6537","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379887425,"goalId":"goal-1792379884417-0dd9dd32","taskId":"task-1792379887416-a096","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2（第3次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379887476,"goalId":"goal-1792379884417-0dd9dd32","taskId":"task-1792379887416-a096","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379890427,"goalId":"goal-1792379884417-0dd9dd32","taskId":"task-1792379890415-b33d","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段3（第4次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379890477,"goalId":"goal-1792379884417-0dd9dd32","taskId":"task-1792379890415-b33d","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379890479,"goalId":"goal-1792379884417-0dd9dd32","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379893420,"goalId":"goal-1792379893416-8a0973ed","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379893428,"goalId":"goal-1792379893416-8a0973ed","taskId":"task-1792379893420-7e68","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1（第5次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379893478,"goalId":"goal-1792379893416-8a0973ed","taskId":"task-1792379893420-7e68","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379896425,"goalId":"goal-1792379893416-8a0973ed","taskId":"task-1792379896416-c18b","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2（第4次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379896478,"goalId":"goal-1792379893416-8a0973ed","taskId":"task-1792379896416-c18b","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379899428,"goalId":"goal-1792379893416-8a0973ed","taskId":"task-1792379899416-7793","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段3（第5次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379899483,"goalId":"goal-1792379893416-8a0973ed","taskId":"task-1792379899416-7793","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379899485,"goalId":"goal-1792379893416-8a0973ed","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379902420,"goalId":"goal-1792379902414-b2f735c3","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379902429,"goalId":"goal-1792379902414-b2f735c3","taskId":"task-1792379902420-a82c","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1（第6次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379902479,"goalId":"goal-1792379902414-b2f735c3","taskId":"task-1792379902420-a82c","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379905431,"goalId":"goal-1792379902414-b2f735c3","taskId":"task-1792379905414-eddb","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2（第5次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379905483,"goalId":"goal-1792379902414-b2f735c3","taskId":"task-1792379905414-eddb","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379908427,"goalId":"goal-1792379902414-b2f735c3","taskId":"task-1792379908415-5e3f","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段3（第6次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379908474,"goalId":"goal-1792379902414-b2f735c3","taskId":"task-1792379908415-5e3f","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379908476,"goalId":"goal-1792379902414-b2f735c3","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379911419,"goalId":"goal-1792379911414-e2ffcfda","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379911428,"goalId":"goal-1792379911414-e2ffcfda","taskId":"task-1792379911419-0350","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1（第7次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379911477,"goalId":"goal-1792379911414-e2ffcfda","taskId":"task-1792379911419-0350","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379914426,"goalId":"goal-1792379911414-e2ffcfda","taskId":"task-1792379914415-795c","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2（第6次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379914475,"goalId":"goal-1792379911414-e2ffcfda","taskId":"task-1792379914415-795c","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379917426,"goalId":"goal-1792379911414-e2ffcfda","taskId":"task-1792379917414-70c9","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段3（第7次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379917475,"goalId":"goal-1792379911414-e2ffcfda","taskId":"task-1792379917414-70c9","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379917477,"goalId":"goal-1792379911414-e2ffcfda","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379920422,"goalId":"goal-1792379920416-8ddd55cc","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379920432,"goalId":"goal-1792379920416-8ddd55cc","taskId":"task-1792379920422-05b1","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1（第8次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379920486,"goalId":"goal-1792379920416-8ddd55cc","taskId":"task-1792379920422-05b1","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379923425,"goalId":"goal-1792379920416-8ddd55cc","taskId":"task-1792379923415-5c2b","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2（第7次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379923478,"goalId":"goal-1792379920416-8ddd55cc","taskId":"task-1792379923415-5c2b","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379926425,"goalId":"goal-1792379920416-8ddd55cc","taskId":"task-1792379926415-e0ef","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段3（第8次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379926475,"goalId":"goal-1792379920416-8ddd55cc","taskId":"task-1792379926415-e0ef","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379926477,"goalId":"goal-1792379920416-8ddd55cc","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379929419,"goalId":"goal-1792379929414-6319d925","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379929428,"goalId":"goal-1792379929414-6319d925","taskId":"task-1792379929419-a15f","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1（第9次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379929475,"goalId":"goal-1792379929414-6319d925","taskId":"task-1792379929419-a15f","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379932426,"goalId":"goal-1792379929414-6319d925","taskId":"task-1792379932412-d716","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2（第8次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379932483,"goalId":"goal-1792379929414-6319d925","taskId":"task-1792379932412-d716","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379935430,"goalId":"goal-1792379929414-6319d925","taskId":"task-1792379935414-fbf4","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段3（第9次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379935483,"goalId":"goal-1792379929414-6319d925","taskId":"task-1792379935414-fbf4","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379935486,"goalId":"goal-1792379929414-6319d925","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379938421,"goalId":"goal-1792379938413-38c07e06","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379938432,"goalId":"goal-1792379938413-38c07e06","taskId":"task-1792379938421-2999","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1（第10次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379938487,"goalId":"goal-1792379938413-38c07e06","taskId":"task-1792379938421-2999","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379941425,"goalId":"goal-1792379938413-38c07e06","taskId":"task-1792379941412-c2e2","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2（第9次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379941479,"goalId":"goal-1792379938413-38c07e06","taskId":"task-1792379941412-c2e2","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379944427,"goalId":"goal-1792379938413-38c07e06","taskId":"task-1792379944414-54f9","kind":"plan","reason":"生成自主任务：容器闭环验收 · 边界用例补强","evidence":"采纳上一阶段自评给出的后继方向（模型自主决策）","actor":"autonomy"}
+{"id":"","at":1792379944478,"goalId":"goal-1792379938413-38c07e06","taskId":"task-1792379944414-54f9","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379944481,"goalId":"goal-1792379938413-38c07e06","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379947419,"goalId":"goal-1792379947412-97919f09","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379947430,"goalId":"goal-1792379947412-97919f09","taskId":"task-1792379947420-ceae","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 立框架","evidence":"目标处于第 0 阶段，按领域推进阶梯执行「立框架」","actor":"autonomy"}
+{"id":"","at":1792379947478,"goalId":"goal-1792379947412-97919f09","taskId":"task-1792379947420-ceae","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379950425,"goalId":"goal-1792379947412-97919f09","taskId":"task-1792379950414-eacf","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2（第10次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379950473,"goalId":"goal-1792379947412-97919f09","taskId":"task-1792379950414-eacf","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379953432,"goalId":"goal-1792379947412-97919f09","taskId":"task-1792379953412-f9e8","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 成文","evidence":"目标处于第 2 阶段，按领域推进阶梯执行「成文」","actor":"autonomy"}
+{"id":"","at":1792379953482,"goalId":"goal-1792379947412-97919f09","taskId":"task-1792379953412-f9e8","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379953484,"goalId":"goal-1792379947412-97919f09","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379956418,"goalId":"goal-1792379956414-0aa33f4c","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379956429,"goalId":"goal-1792379956414-0aa33f4c","taskId":"task-1792379956418-be1f","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379956482,"goalId":"goal-1792379956414-0aa33f4c","taskId":"task-1792379956418-be1f","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379959424,"goalId":"goal-1792379956414-0aa33f4c","taskId":"task-1792379959412-6e78","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 补证据","evidence":"目标处于第 1 阶段，按领域推进阶梯执行「补证据」","actor":"autonomy"}
+{"id":"","at":1792379959474,"goalId":"goal-1792379956414-0aa33f4c","taskId":"task-1792379959412-6e78","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379962425,"goalId":"goal-1792379956414-0aa33f4c","taskId":"task-1792379962412-21b6","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段3","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379962470,"goalId":"goal-1792379956414-0aa33f4c","taskId":"task-1792379962412-21b6","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379962472,"goalId":"goal-1792379956414-0aa33f4c","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379965416,"goalId":"goal-1792379965411-9aa4b2d4","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379965427,"goalId":"goal-1792379965411-9aa4b2d4","taskId":"task-1792379965416-4303","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1（第2次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379965477,"goalId":"goal-1792379965411-9aa4b2d4","taskId":"task-1792379965416-4303","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379968423,"goalId":"goal-1792379965411-9aa4b2d4","taskId":"task-1792379968411-11bf","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379968470,"goalId":"goal-1792379965411-9aa4b2d4","taskId":"task-1792379968411-11bf","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379971426,"goalId":"goal-1792379965411-9aa4b2d4","taskId":"task-1792379971413-e409","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段3（第2次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379971476,"goalId":"goal-1792379965411-9aa4b2d4","taskId":"task-1792379971413-e409","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379971478,"goalId":"goal-1792379965411-9aa4b2d4","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379974418,"goalId":"goal-1792379974412-cd5227cc","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379974430,"goalId":"goal-1792379974412-cd5227cc","taskId":"task-1792379974418-e1dc","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1（第3次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379974479,"goalId":"goal-1792379974412-cd5227cc","taskId":"task-1792379974418-e1dc","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379977426,"goalId":"goal-1792379974412-cd5227cc","taskId":"task-1792379977411-85e9","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2（第2次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379977474,"goalId":"goal-1792379974412-cd5227cc","taskId":"task-1792379977411-85e9","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379980428,"goalId":"goal-1792379974412-cd5227cc","taskId":"task-1792379980411-31ae","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段3（第3次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379980482,"goalId":"goal-1792379974412-cd5227cc","taskId":"task-1792379980411-31ae","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379980484,"goalId":"goal-1792379974412-cd5227cc","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379983430,"goalId":"goal-1792379983411-31977815","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379983473,"goalId":"goal-1792379983411-31977815","taskId":"task-1792379983430-8d8b","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1（第4次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379983526,"goalId":"goal-1792379983411-31977815","taskId":"task-1792379983430-8d8b","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379986426,"goalId":"goal-1792379983411-31977815","taskId":"task-1792379986413-c90e","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2（第3次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379986468,"goalId":"goal-1792379983411-31977815","taskId":"task-1792379986413-c90e","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379989425,"goalId":"goal-1792379983411-31977815","taskId":"task-1792379989412-4f3e","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段3（第4次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379989479,"goalId":"goal-1792379983411-31977815","taskId":"task-1792379989412-4f3e","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379989482,"goalId":"goal-1792379983411-31977815","kind":"block","reason":"风险校验命中高等级项（loop.duplicated,budget.stagesExhausted）","actor":"autonomy"}
+{"id":"","at":1792379992414,"goalId":"goal-1792379992410-79e51f26","kind":"plan","reason":"无活跃目标，按配置初始化项目级目标","evidence":"config.Plan.RootTitle","actor":"autonomy"}
+{"id":"","at":1792379992426,"goalId":"goal-1792379992410-79e51f26","taskId":"task-1792379992414-8b2a","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段1（第5次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379992476,"goalId":"goal-1792379992410-79e51f26","taskId":"task-1792379992414-8b2a","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
+{"id":"","at":1792379995429,"goalId":"goal-1792379992410-79e51f26","taskId":"task-1792379995412-f76b","kind":"plan","reason":"生成自主任务：容器闭环验收目标 · 阶段2（第4次推进）","evidence":"兜底规划：无可用自评且阶梯标题重复，按目标意图直接推进（标题已去重）","actor":"autonomy"}
+{"id":"","at":1792379995477,"goalId":"goal-1792379992410-79e51f26","taskId":"task-1792379995412-f76b","kind":"accept","reason":"自评 9/10 ≥ 下限 1","actor":"autonomy"}
