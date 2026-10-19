@@ -52,16 +52,12 @@ jobs:
           #  Invoke-WebRequest 触发 PS5.1 IE 引擎安全警告，桌面弹窗且任务永久挂起）
           ./tests/check_noninteractive.ps1
           if ($LASTEXITCODE -ne 0) { throw "无人值守静态门禁未通过" }
-          # 模板必须是合法 YAML 且带 name/description/body（缺字段 GitHub 会静默不显示该模板）。
-          # config.yml 是「表单目录配置」（blank_issues_enabled/contact_links），不是表单，必须排除，
-          # 否则它没有 name/body 会把门禁判成假红。
-          foreach ($f in Get-ChildItem .github/ISSUE_TEMPLATE/*.yml | Where-Object { $_.Name -ne 'config.yml' }) {
-            $txt = Get-Content $f.FullName -Raw
-            if ($txt -notmatch '(?m)^name:') { throw "$($f.Name) 缺 name 字段（GitHub 将不显示该模板）" }
-            if ($txt -notmatch '(?m)^description:') { throw "$($f.Name) 缺 description 字段" }
-            if ($txt -notmatch '(?m)^body:') { throw "$($f.Name) 缺 body 字段" }
-            Write-Host "  模板合规: $($f.Name)"
-          }
+          # Issue Forms 结构门禁：查顶层 name/description/body、每块 attributes.label、
+          # dropdown/checkboxes 的 options 必须位于 attributes 之内、contact_links 必须用 about。
+          # 原先只查顶层三键的弱判据放得过真实缺陷：options 位置写错时 GitHub 会
+          # 静默少渲染该字段（页面看着正常，实际问不到关键信息）。已用变异测试验证新判据。
+          ./tests/check_issue_forms.ps1
+          if ($LASTEXITCODE -ne 0) { throw "Issue Forms 结构门禁未通过" }
 
       - name: go vet
         run: go vet ./...

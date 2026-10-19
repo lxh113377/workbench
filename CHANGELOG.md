@@ -38,10 +38,13 @@
   `setup/labels.ps1`（12 个正交标签，含本仓特有的 `flaky` / `platform-coupling` /
   `external-constraint`）。模板把本项目的判据文化写成必填项：
   「取不到数写 UNVERIFIED 不要填 0」「必须贴命令与真实输出」「外部约束另打标签」。
-- **两条仓库级门禁（已挂 CI）**：`tests/check_changelog.ps1`（Unreleased 必须居首 /
-  日期必须 YYYY-MM-DD / 版本降序）、`tests/check_noninteractive.ps1`
-  （禁 `Invoke-WebRequest` 缺 `-UseBasicParsing`、计划任务缺 `-NonInteractive`、
-  以及 Read-Host / Get-Credential / -Confirm 等交互构造）。
+- **三条仓库级门禁（已挂 CI 的 Repo hygiene gates 步骤）**：
+  `tests/check_changelog.ps1`（Unreleased 必须居首 / 日期必须 YYYY-MM-DD / 版本降序）、
+  `tests/check_noninteractive.ps1`（禁 `Invoke-WebRequest` 缺 `-UseBasicParsing`、
+  计划任务缺 `-NonInteractive`、以及 Read-Host / Get-Credential / -Confirm 等交互构造）、
+  `tests/check_issue_forms.ps1`（Issue Forms 结构：顶层三键、每块 attributes.label、
+  dropdown/checkboxes 的 options 必须位于 attributes 之内、contact_links 必须用 about）。
+  三条判据均经**变异测试**验证能抓回对应缺陷（不是"跑过了"就算数）。
 - **CONTRIBUTING 新增三节**：九 协作流程与判据文化、十 零弹窗纪律、十一 延伸文档。
 
 ### Fixed
