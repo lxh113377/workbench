@@ -1,16 +1,18 @@
 package modelpool
 
 import (
+	"sort"
 	"strings"
 	"sync"
 )
 
 // ── 轮询调度 ────────────────────────────────────────────────────
 //
-// 调度策略（三类，面板可切换）：
+// 调度策略（四类，面板可切换）：
 //  1. priority（默认）：严格按 Priority 升序取第一个可用模型，天然实现「主用 + 兜底」；
-//  2. round-robin：在可用集合里轮转起点，配合粘滞窗口让同一任务连续 N 次落在同一模型；
-//  3. weighted：按 Weight 加权随机（沿用 modelroute 的思路），适合多模型分摊负载。
+//  2. round-robin：在可用集合里轮转起点，均匀分摊；
+//  3. weighted：按 Weight 加权轮盘（沿用 modelroute 的思路），快模型多跑；
+//  4. least-loaded：按 Acquire/Release 维护的在飞任务数取最闲模型，高并发分摊负载。
 //
 // 与 modelroute 的区别：本调度器直接消费 Manager 的实时健康状态（探测结果），
 // 且对外提供「取下一个」语义给故障转移使用，不依赖任务失败后的重试循环。
@@ -30,8 +32,6 @@ type Scheduler struct {
 	mu       sync.Mutex
 	strategy Strategy
 	cursor   int
-	// sticky 是轮换策略的粘滞轮数：连续 N 次pick 落在同一模型，减少切换开销。
-	sticky int
 	// inflight 记录每个模型当前正在执行的任务数（least-loaded 用）。
 	inflight map[string]int
 	// rr 是加权随机的确定性轮盘（用累计票数，避免 math/rand 的全局竞争）。
@@ -43,7 +43,7 @@ func NewScheduler(strategy Strategy) *Scheduler {
 	if strategy == "" {
 		strategy = StrategyPriority
 	}
-	return &Scheduler{strategy: strategy, sticky: 3, inflight: map[string]int{}}
+	return &Scheduler{strategy: strategy, inflight: map[string]int{}}
 }
 
 // SetStrategy 切换策略。
@@ -116,7 +116,7 @@ func (s *Scheduler) Pick(specs []Spec, excluded map[string]bool, now int64) (str
 	}
 	sortSpecs(cands)
 	switch s.strategy {
-	case StrategyRoundRobin, StrategyLeastLoaded:
+	case StrategyRoundRobin:
 		// 轮转起点：cursor 记录上次位置，保证每个模型都被均匀使用。
 		if s.cursor >= len(cands) {
 			s.cursor = 0
@@ -124,6 +124,22 @@ func (s *Scheduler) Pick(specs []Spec, excluded map[string]bool, now int64) (str
 		picked := cands[s.cursor]
 		s.cursor = (s.cursor + 1) % len(cands)
 		return picked.ID, string(s.strategy)
+	case StrategyLeastLoaded:
+		// 真正按「在飞任务数」选最闲的模型；并列时用调度序（Priority↑ Weight↓ ID）
+		// 兜底，因为 cands 已经过 sortSpecs 稳定排序，取第一个最小即等价。
+		//
+		// 历史缺陷（2026-10-19 活体面板复验发现）：此分支曾与 round-robin 合并，
+		// inflight 计数只在 Acquire/Release 与 /api/pool 快照里出现，从未参与选择。
+		// 于是面板下拉写着「least-loaded：在飞任务少的优先」、文档同调，
+		// 实跑却是轮转 —— 负载均衡策略名存实亡，用户切过去看不出任何差异。
+		best := cands[0]
+		bestLoad := s.inflight[best.ID]
+		for _, sp := range cands[1:] {
+			if load := s.inflight[sp.ID]; load < bestLoad {
+				best, bestLoad = sp, load
+			}
+		}
+		return best.ID, string(s.strategy)
 	case StrategyWeighted:
 		total := 0
 		for _, sp := range cands {
@@ -171,12 +187,25 @@ func (s *Scheduler) PickChain(specs []Spec, now int64) []string {
 	for _, sp := range cands {
 		ord = append(ord, sp.ID)
 	}
-	if (s.strategy == StrategyRoundRobin || s.strategy == StrategyLeastLoaded) && len(ord) > 1 {
+	if s.strategy == StrategyRoundRobin && len(ord) > 1 {
 		if s.cursor >= len(ord) {
 			s.cursor = 0
 		}
 		ord = append(ord[s.cursor:], ord[:s.cursor]...)
 		s.cursor = (s.cursor + 1) % len(cands)
+	}
+	if s.strategy == StrategyLeastLoaded && len(ord) > 1 {
+		// 兜底链同样要「最闲的先上」：按在飞任务数升序稳定重排（cands 已是调度序，
+		// 并列时保持 Priority↑ Weight↓ ID）。FailoverRunner 用的就是这条链，
+		// 不重排的话高并发下会把任务继续压给最忙的模型。
+		load := func(id string) int { return s.inflight[id] }
+		sort.SliceStable(cands, func(i, j int) bool {
+			return load(cands[i].ID) < load(cands[j].ID)
+		})
+		ord = ord[:0]
+		for _, sp := range cands {
+			ord = append(ord, sp.ID)
+		}
 	}
 	return ord
 }

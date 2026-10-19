@@ -76,6 +76,78 @@ func TestSchedulerRoundRobinRotates(t *testing.T) {
 	}
 }
 
+// TestSchedulerLeastLoadedPicksIdlest 锁住「least-loaded 必须看 in-flight 负载」这一契约。
+//
+// 回归动因（2026-10-19 活体面板复验）：该策略此前与 round-robin 共用一个分支，
+// Acquire/Release 维护的 inflight 计数从未参与选择 —— 用户切到 least-loaded 后，
+// 实跑行为与 round-robin 完全相同，负载均衡名存实亡。
+func TestSchedulerLeastLoadedPicksIdlest(t *testing.T) {
+	sch := NewScheduler(StrategyLeastLoaded)
+	specs := []Spec{
+		spec("a", 10, 10, StateHealthy), // 优先级最高，但最忙
+		spec("b", 20, 10, StateHealthy),
+		spec("c", 30, 10, StateHealthy), // 优先级最低，但最闲
+	}
+	sch.Acquire("a")
+	sch.Acquire("a")
+	sch.Acquire("b")
+
+	if got, st := sch.Pick(specs, nil, nowMs()); got != "c" {
+		t.Fatalf("least-loaded 应选最闲的 c，实际 %q（%s）", got, st)
+	}
+	// c 变忙后应退而选 b（负载 1 < a 的 2）
+	sch.Acquire("c")
+	if got, _ := sch.Pick(specs, nil, nowMs()); got != "b" {
+		t.Fatalf("负载 b=1 < a=2，应选 b，实际 %q", got)
+	}
+	// 负载并列时按调度序（Priority↑）取先者，保证确定性
+	sch.Acquire("b") // a=2 b=2 c=1 → 仍 c
+	if got, _ := sch.Pick(specs, nil, nowMs()); got != "c" {
+		t.Fatalf("c 仍最闲，应选 c，实际 %q", got)
+	}
+	sch.Release("c")
+	sch.Release("c") // a=2 b=2 c=0 → c
+	if got, _ := sch.Pick(specs, nil, nowMs()); got != "c" {
+		t.Fatalf("Release 后 c 应为 0 负载，实际选 %q", got)
+	}
+}
+
+// TestSchedulerLeastLoadedTieBreaksByPriority 验证负载相同时的确定性并列规则。
+func TestSchedulerLeastLoadedTieBreaksByPriority(t *testing.T) {
+	sch := NewScheduler(StrategyLeastLoaded)
+	specs := []Spec{
+		spec("busy2", 20, 10, StateHealthy),
+		spec("busy1", 10, 10, StateHealthy),
+	}
+	sch.Acquire("busy1")
+	sch.Acquire("busy2") // 两边各 1，并列
+	if got, _ := sch.Pick(specs, nil, nowMs()); got != "busy1" {
+		t.Fatalf("并列时应按优先级取 busy1，实际 %q", got)
+	}
+}
+
+// TestSchedulerLeastLoadedChainPrefersIdle 锁住兜底链顺序：故障转移也必须先给最闲的模型。
+func TestSchedulerLeastLoadedChainPrefersIdle(t *testing.T) {
+	sch := NewScheduler(StrategyLeastLoaded)
+	specs := []Spec{
+		spec("a", 10, 10, StateHealthy),
+		spec("b", 20, 10, StateHealthy),
+		spec("c", 30, 10, StateHealthy),
+	}
+	sch.Acquire("a")
+	sch.Acquire("a")
+	sch.Acquire("b")
+	chain := sch.PickChain(specs, nowMs())
+	if len(chain) != 3 || chain[0] != "c" || chain[1] != "b" || chain[2] != "a" {
+		t.Fatalf("兜底链应按负载升序 [c b a]，实际 %v（inflight=%v）", chain, sch.Inflight())
+	}
+	// 全空闲时回到调度序（优先级优先），避免无负载时的随机抖动
+	s2 := NewScheduler(StrategyLeastLoaded)
+	if ch2 := s2.PickChain(specs, nowMs()); ch2[0] != "a" || ch2[2] != "c" {
+		t.Fatalf("零负载时兜底链应保持调度序 [a b c]，实际 %v", ch2)
+	}
+}
+
 func TestSchedulerWeightedProportional(t *testing.T) {
 	sch := NewScheduler(StrategyWeighted)
 	specs := []Spec{
