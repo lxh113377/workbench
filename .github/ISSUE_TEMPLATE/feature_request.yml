@@ -1,0 +1,55 @@
+name: 功能请求
+description: 提出新功能或改进（含对标开源项目可借鉴的做法）
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        本项目定位：**个人 7×24 无人值守 AI 产出工作台**。
+        提案请先回答"没有它，无人值守会在哪一步停下来"——这是本项目的唯一评判轴。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决的问题
+      description: 不是"想要什么功能"，而是"现在做不到什么、代价是什么"
+      placeholder: "进程崩溃后，运行中的任务永远停在 running，重启也不回收 → 队列假死"
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 方案
+      description: 建议含"改哪些包/接口"与"为什么这样分层"
+    validations:
+      required: true
+  - type: textarea
+    id: prior-art
+    attributes:
+      label: 对标参考（可选）
+      description: 同类开源项目怎么做？给到 文件:行 级别的具体出处，不要只给仓库名
+      placeholder: |
+        riverqueue/river internal/jobexecutor/job_executor.go：RescueStuckJobsAfter 由 producer 侧兜底，跨进程生效
+  - type: textarea
+    id: done-criteria
+    attributes:
+      label: 完成判据（可机器判定）
+      description: 必须能被 go test / CI / CLI 退出码验证；不接受"体验更好"
+      placeholder: |
+        新增单测：崩溃残留 running 任务在重启扫描后被置 failed 且写 audit；
+        go test ./internal/engine -run TestRescueStale -count=1 通过
+    validations:
+      required: true
+  - type: dropdown
+    id: constraint
+    attributes:
+      label: 是否触碰硬约束
+      description: 纯标准库 / 不碰桌面端 profile / 删除走回收站 / 产出根固定（见 CONTRIBUTING.md）
+      options:
+        - 不触碰
+        - 需要放宽（请在下方说明理由）
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: 补充

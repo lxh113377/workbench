@@ -1,0 +1,16 @@
+# 仓库行为配置（GitHub 侧）
+# 参考：n8n-io/n8n、langgenius/dify 的 .github 组织方式
+
+# 空白/注释类 issue 不进「无标签」统计，减少维护噪音
+blank_issues_enabled: false
+
+contact_links:
+  - name: 使用与运维文档
+    url: https://github.com/lxh113377/workbench/blob/master/docs/使用说明.md
+    about: 安装、面板操作、模板配置、长时压测作业手册
+  - name: 架构与取舍
+    url: https://github.com/lxh113377/workbench/blob/master/ARCHITECTURE.md
+    about: 为什么是单进程 + 纯标准库 + 原子 JSON/WAL
+  - name: 开源对标报告
+    url: https://github.com/lxh113377/workbench/blob/master/docs/benchmark/WorkBench-开源对标报告.md
+    about: 与 n8n / dify / AutoGPT / autogen / temporal / river / asynq / windmill 的八维对比与差距归因

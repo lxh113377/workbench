@@ -1,0 +1,76 @@
+name: 缺陷报告
+description: 报告一个可复现的问题（崩溃 / 判据不生效 / 弹窗 / 数据错乱等）
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        本项目是 **Windows 单 EXE 无人值守工作台**。填单前请先跑：
+        ```powershell
+        .\dist\workbench.exe --diagnose          # 通道与配置自检，rc=0 为健康
+        .\dist\workbench.exe --autonomy selftest # 自主闭环离线自检
+        ```
+        硬约束（纯标准库 / 不碰桌面端 profile / 删除走回收站）见 CONTRIBUTING.md。
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 现象
+      description: 实际发生了什么；贴日志原文（`<DataRoot>/logs/workbench.jsonl` 单行 JSON）而不是转述
+      placeholder: |
+        期望：…
+        实际：…
+        日志：{"time":"…","level":"ERROR","component":"engine","msg":"…"}
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 最小复现步骤
+      description: 从干净状态开始的命令序列；无人值守场景请注明是否稳定复现
+      placeholder: |
+        1. workbench.exe --silent
+        2. 面板「自主」页签点「启动闭环」
+        3. 等待 …
+        复现率：N 次中 M 次
+    validations:
+      required: true
+  - type: dropdown
+    id: subsystem
+    attributes:
+      label: 涉及子系统
+      options: [engine 调度, executor 执行通道, autonomy 自主闭环, modelpool/modelroute 模型池, store 存储/WAL, web 面板, verify 产物验收, retention 回收, tray/single 桌面集成, 构建/CI, 其他]
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本
+      description: 运行 `.\dist\workbench.exe --version` 的输出（含 commit 请附 `git rev-parse --short HEAD`）
+      placeholder: "workbench 1.3.0"
+    validations:
+      required: true
+  - type: input
+    id: env
+    attributes:
+      label: 环境
+      description: OS 版本 / Go 版本 / 是否 Docker 容器内 / CPU 架构
+      placeholder: "Windows 11 23H2 x64, go1.27.2"
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 证据
+      description: 产物文件路径与关键读数（attempts.jsonl / verify.json / metrics.csv 行）。**取不到数请写 UNVERIFIED，不要填 0** —— 本项目判据把"没测成"与"测得差"严格分开
+      render: shell
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 提交前确认
+      options:
+        - label: 已跑 --diagnose 且已贴出结果
+          required: true
+        - label: 日志与附件中**不含** token / API key / 密码（面板 token 也请打码）
+          required: true
+        - label: 已搜索相似 issue，确认非重复
+          required: false

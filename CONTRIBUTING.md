@@ -58,6 +58,16 @@ pwsh -NoProfile -File tests\e2e.ps1
 # 7) 项目门禁（go vet + go test + 治理 CLI 自检）
 python eval/governance_gate.py
 
+# 7b) 仓库级判据（CI 的 Repo hygiene gates 步骤跑同样两条）
+pwsh -NoProfile -File tests\check_changelog.ps1        # CHANGELOG 结构
+# EXE 不弹窗：已作为硬判据内联在 setup/build.ps1 的 6/6 段（构建即校验，无需单独跑）；
+# 本机另有 tests\check_subsystem.ps1 可单独复检（该件未入库时 build.ps1 自动走内联校验）
+pwsh -NoProfile -File setup\labels.ps1                 # 同步 .github/labels.json 到远端标签
+
+# 7c) 跨平台验证（本机绿不等于 Linux 绿；测试不得硬编码 pwsh/python）
+docker run --rm -v "D:\workdesktop:/src" -w /src golang:1.27-bookworm \
+  bash -c 'export PATH=/usr/local/go/bin:$PATH && cd /src/workbench && go vet ./... && go test ./... -count=1'
+
 # 8) 执行通道自检
 .\dist\workbench.exe --diagnose
 ```
@@ -70,6 +80,8 @@ python eval/governance_gate.py
 - [ ] `go test ./...` 全绿
 - [ ] 改过并发/共享状态 ⇒ `go test -race` 全绿
 - [ ] 改过源码 ⇒ `setup/build.ps1` 覆盖率门禁通过
+- [ ] 改过 `CHANGELOG.md` ⇒ `pwsh -File tests\check_changelog.ps1` 通过（Unreleased 必须居首）
+- [ ] 新增/改动拉起 EXE 的脚本 ⇒ 经 `tests/lib_silent_launch.ps1`，禁止裸 `Win32_Process.Create`（见「十、零弹窗纪律」）
 - [ ] 改过面板/API/执行链路 ⇒ `tests/e2e.ps1` 全绿
 - [ ] 新增导出函数/类型有注释（首行以中文说明用途）
 - [ ] 无凭据硬编码（token/密码/key 用占位符或从配置读）
@@ -139,7 +151,9 @@ docs(v1.2.0): 架构手册补可观测性四小节 + 项目记忆回写 + engine
 
 ## 七、发布流程
 
-1. 更新 `CHANGELOG.md`（`[Unreleased]` 段落整理成新版本号 + 日期）
+1. 更新 `CHANGELOG.md`：把 `[Unreleased]` 整段提升为 `## [x.y.z] - YYYY-MM-DD`，
+   并**立刻在文件顶部补一个空的 `## [Unreleased]`** —— 该段必须是第一个版本段，
+   `tests/check_changelog.ps1`（已挂 CI）校验位置、日期格式与版本降序
 2. `pwsh -File setup/build.ps1 -Version <x.y.z>`
 3. 跑 `tests/e2e.ps1` 确认全绿
 4. 确认 `dist/SHA256SUMS` 已更新，并在 `docs/验收报告.md` 追加本次复验记录
@@ -161,4 +175,46 @@ docs(v1.2.0): 架构手册补可观测性四小节 + 项目记忆回写 + engine
 | 资源越阈自愈 | `logs/workbench.jsonl`（component=supervisor）+ `logs/metrics.csv` |
 | 面板打不开 | `runtime/panel.url` 与 `runtime/panel.port` |
 
-架构与设计决策详见 `docs/架构与运维.md`。
+## 九、协作流程（issue / PR / 标签）
+
+| 环节 | 载体 | 要点 |
+|---|---|---|
+| 报缺陷 | `.github/ISSUE_TEMPLATE/bug_report.yml` | 必填「最小复现步骤 + 复现率」；证据栏要求贴命令与真实输出 |
+| 提功能 | `.github/ISSUE_TEMPLATE/feature_request.yml` | 必答「没有它，无人值守会在哪一步停下来」+ 可机器判定的完成判据 |
+| 提 PR | `.github/pull_request_template.md` | 判据必须贴**命令 + 真实输出**；含硬约束自查表与覆盖率表 |
+| 标签 | `.github/labels.json` + `setup/labels.ps1` | 一标签一维度、维度正交；`flaky` / `platform-coupling` / `external-constraint` 是本仓特有分类 |
+
+**判据文化（三条硬规矩，模板里都写成了必填项）**：
+
+1. **取不到数 ≠ 取到 0**：数据不足要写 `UNVERIFIED` 并说明原因，不得填 0 或"通过"。
+   本项目把「没测成」与「测得差」严格分开（基础设施失败判 UNVERIFIED，不判 FAIL 也不判 PASS）。
+2. **不接受"本地跑过没问题"**：必须给可复算命令。Windows 本机绿不代表 Linux 容器绿 ——
+   历史上 5 个包 13 个用例硬编码 `pwsh`/`python`/`C:\\`，本机全绿而容器必红（issue #2）。
+3. **外部约束如实标注**：上游限流、账号封禁、额度耗尽等根因在外部的问题打
+   `external-constraint`，不得写成代码缺陷，也不得因外部不可用就把判据删掉。
+
+---
+
+## 十、零弹窗纪律
+
+本项目 7×24 无人值守跑在**正在使用的桌面上**，任何弹出窗口都是事故。
+
+- **产物必须是 GUI 子系统**：`setup/build.ps1` 用 `-ldflags "-H=windowsgui"` 构建，
+  并在 6/6 段校验 PE `Subsystem == 2`。裸 `go build` 造出的 `CONSOLE(3)` 产物
+  被拉起时 Windows 必分配可见控制台窗口。
+- **Go 侧拉起子进程**：一律带 `HideWindow: true` + `CREATE_NO_WINDOW(0x08000000)`
+  （见 `executor/job_windows.go` 的 `jobSysProcAttr`）。注意 `cmd.exe` 一类
+  控制台程序即使经 `exec.Command` 也会闪窗，必须走同一套 SysProcAttr。
+- **PowerShell 侧拉起实例**：用 `tests/lib_silent_launch.ps1` 的 `Start-WBInstance`。
+  `Win32_Process.Create` **没有隐藏窗口参数**，对 CONSOLE 产物必弹窗；
+  该共用件按子系统分流（GUI 走 Create 以脱离作业对象，CONSOLE 走
+  `Start-Process -WindowStyle Hidden`）。
+- **计划任务**：注册时带 `-WindowStyle Hidden`，且脚本内不得有裸直调 EXE 的常驻循环。
+
+---
+
+## 十一、延伸文档
+
+架构与设计决策详见 `docs/架构与运维.md` 与 `ARCHITECTURE.md`；与开源同类项目的差距归因见
+`docs/benchmark/WorkBench-开源对标报告.md`；知识盲区与学习路径见
+`docs/知识盲区与学习计划.md`。

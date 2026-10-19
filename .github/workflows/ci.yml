@@ -38,6 +38,26 @@ jobs:
           go-version: "${{ env.GO_VERSION }}"
           cache-dependency-path: workbench/go.mod
 
+      - name: Repo hygiene gates (CHANGELOG / issue templates)
+        shell: pwsh
+        # 本 job 的 defaults 把 cwd 设成了 workbench/，而仓库级判据在仓根 ——
+        # 必须显式覆写，否则 ./tests/... 会解析成 workbench/tests/... 而找不到文件。
+        working-directory: .
+        run: |
+          # 与代码判据同批跑：文档/模板类回归同样是回归，不该只在人眼评审里。
+          ./tests/check_changelog.ps1
+          if ($LASTEXITCODE -ne 0) { throw "CHANGELOG 结构门禁未通过" }
+          # 模板必须是合法 YAML 且带 name/description/body（缺字段 GitHub 会静默不显示该模板）。
+          # config.yml 是「表单目录配置」（blank_issues_enabled/contact_links），不是表单，必须排除，
+          # 否则它没有 name/body 会把门禁判成假红。
+          foreach ($f in Get-ChildItem .github/ISSUE_TEMPLATE/*.yml | Where-Object { $_.Name -ne 'config.yml' }) {
+            $txt = Get-Content $f.FullName -Raw
+            if ($txt -notmatch '(?m)^name:') { throw "$($f.Name) 缺 name 字段（GitHub 将不显示该模板）" }
+            if ($txt -notmatch '(?m)^description:') { throw "$($f.Name) 缺 description 字段" }
+            if ($txt -notmatch '(?m)^body:') { throw "$($f.Name) 缺 body 字段" }
+            Write-Host "  模板合规: $($f.Name)"
+          }
+
       - name: go vet
         run: go vet ./...
 

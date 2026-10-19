@@ -6,6 +6,55 @@
 >
 > 版本与产物对应关系以 `dist/SHA256SUMS` 与 `workbench.exe --version` 的实测输出为准。
 
+## [Unreleased]
+
+> 规则：未发布的变更一律记在本节；发版时把本节整体提升为新的 `## [x.y.z] - YYYY-MM-DD`，
+> 并立刻补一个空的 `## [Unreleased]` 回顶（CI 的 changelog 门禁会校验这一条）。
+
+### Added
+- **开源对标报告入主树**：`docs/benchmark/WorkBench-开源对标报告.md`（8 个 peer：
+  n8n / dify / AutoGPT / autogen / temporal / river / asynq / windmill，八维对比 +
+  P0/P1/P2 清单 + M0-M4 路径），此前只存在于受 `.gitignore` 屏蔽的 `src-backup/`。
+- **知识盲区与学习计划**：`docs/知识盲区与学习计划.md`，B1-B8 盲区绑容器实测读数，
+  L1-L9 学习路径含精读对象与机器判据。
+- **开源化三件套**：`ARCHITECTURE.md`（单页定位/进程模型/包结构/五条架构取舍）、
+  `.github/workflows/ci.yml`（vet + `go test -race` + 覆盖率门禁 + 产物校验）、
+  `autonomy-e2e.yml`（容器内确定性通道跑完整自主闭环）。
+- **issue/PR 协作模板**：`.github/ISSUE_TEMPLATE/`（缺陷报告 / 功能请求 / config.yml）、
+  `.github/pull_request_template.md`（判据必须贴命令与真实输出）、
+  `.github/labels.json` + `setup/labels.ps1`（12 个正交标签）。
+- **零弹窗拉起共用件** `tests/lib_silent_launch.ps1`：按 PE 子系统分流，
+  GUI 走 `Win32_Process.Create`（保持脱离作业对象），CONSOLE 走
+  `Start-Process -WindowStyle Hidden`。
+
+### Fixed
+- **自主闭环决策留痕顺序**（issue #1）：`autonomy.advanceLocked` 与 `bootstrapLocked`
+  的恢复路径原先「先切活跃目标、后写 nextGoal 决策」，而两者写不同文件
+  （goals.json / decisions.jsonl，非原子），留下一个可观测窗口 —— 面板与
+  `--selftest` 判据 7b 会看到「目标已切换但台账无推导记录」，CI 上
+  `TestRunOneDrivesAutonomyClosedLoop` 的偶发红即源于此。现收敛为
+  `writeLedgerThenActivate`（先留痕后生效），并由顺序守卫测试钉死。
+- **非 Windows 删除无安全阀**（issue #2）：`retention.Trash` 的 `!windows` 分支此前是裸
+  `os.RemoveAll`，危险路径判定只存在于 Windows 分支 —— 实测 `Trash("/")` 在 Linux
+  会递归删掉文件系统根。现 `refuseDangerousPath` 上移为平台无关实现，两条删除路径同过闸。
+- **产物子系统门禁**：`setup/build.ps1` 校验 EXE 的 PE `Subsystem` 必须为 2(GUI)，
+  非 GUI 直接判红。控制台子系统 EXE 被计划任务/`Win32_Process.Create` 拉起时
+  Windows 必分配可见控制台窗口（桌面反复弹窗的根因）。
+- **测试硬编码 Windows 工具链**（issue #2）：engine / verify 的 10 个用例改为解释器探针
+  （pwsh→python3→python→node）；Windows 上全缺时 `t.Fatal`，禁止 `t.Skip` 洗绿。
+  Linux 容器 `go test ./...` 从「3 包 10 用例 FAIL」转为全绿。
+- **失败判据被偷换**：`TestMaterializeArtifactsFail` 原先只断言 `Pass == false`，
+  而解释器缺失导致的「启动失败」同样 Pass=false —— 测试绿但什么都没验。
+  现补断 `FailReason` 必须含「退出码 2」。
+
+### Changed
+- **覆盖率提升并固化基线**（issue #3）：`internal/chain` 0% → 88.6%、
+  `internal/judge` 0% → 63.7%（含空输入 / 非法 JSON / 越界钳位 / 40 万字符超长负面用例）；
+  `build.ps1 -PerPackageCover` 新增 `chain=80`、`judge=55` 诚实基线（只许抬不许降）。
+- CI 触发分支补 `master`（建仓默认分支实为 master，此前 workflow 只写 main 导致 push 不触发）。
+- Windows 8.3 短路径（`RUNNER~1`）导致的 CI 假失败：路径比较统一经 `evalExisting` 归一。
+- `store.Update` 由原地写改为换指针，消除与 `runOne` defer 的真 data race（`-race` 哨兵抓出）。
+
 ## [1.3.0] - 2026-10-19
 
 ### Added
@@ -32,11 +81,6 @@
 ### Fixed
 - `store` 在 Windows 上长期持有 WAL 文件句柄会导致测试临时目录清理失败（`unlinkat: file in use`）——
   改为每次追加 open→write→sync→close，不持长期句柄。
-
-## [Unreleased]
-
-### Added
-- （待发布项写这里）
 
 ## [1.2.0] - 2026-10-19
 
