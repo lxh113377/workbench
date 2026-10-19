@@ -40,10 +40,7 @@ func TestCompleteTaskDegradedOnVerifyFail(t *testing.T) {
 	taskDir := layout.TaskDir(taskID)
 	_ = os.MkdirAll(filepath.Join(taskDir, "workspace"), 0o755)
 
-	const fence = "```"
-	finalText := "产出如下。\n\n<<<ARTIFACTS>>>\n" + fence + "manifest\n" +
-		`{"files":[{"path":"bad.py"}],"verify":[{"cmd":"python bad.py","expectExit":0,"timeout":30}]}` +
-		"\n" + fence + "\n" + fence + "file:bad.py\nraise SystemExit(7)\n" + fence + "\n<<<END>>>\n"
+	finalText := failArtifactsFinal(t, pickTestInterp(t), "产出如下。", 7)
 
 	res := &executor.Result{SessionID: "session-test", FinalText: finalText}
 	e.completeTask(task, running, res, "test-model", config.DefaultConfig())
@@ -89,10 +86,7 @@ func TestCompleteTaskDoneOnVerifyPass(t *testing.T) {
 	running, _ := st.Get(taskID)
 	_ = os.MkdirAll(filepath.Join(layout.TaskDir(taskID), "workspace"), 0o755)
 
-	const fence = "```"
-	finalText := "<<<ARTIFACTS>>>\n" + fence + "manifest\n" +
-		`{"files":[{"path":"ok.md"}],"verify":[{"cmd":"pwsh -NoProfile -NonInteractive -Command \"if (Test-Path ok.md) { exit 0 } else { exit 1 }\"","expectExit":0,"timeout":30}]}` +
-		"\n" + fence + "\n" + fence + "file:ok.md\n# ok\n" + fence + "\n<<<END>>>\n"
+	finalText := artifactsFinal(t, pickTestInterp(t), "成果如下。", "ok.md", "# ok\n")
 
 	res := &executor.Result{SessionID: "session-ok", FinalText: finalText}
 	e.completeTask(task, running, res, "test-model", config.DefaultConfig())

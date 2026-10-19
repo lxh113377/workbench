@@ -7,7 +7,6 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
 	"syscall"
 	"unsafe"
 )
@@ -58,7 +57,7 @@ func Trash(path string) error {
 	if _, serr := os.Lstat(abs); serr != nil {
 		return fmt.Errorf("目标不存在: %w", serr)
 	}
-	// 安全阀：拒绝删除盘根、目录根与常见系统路径（宁可报错也不误伤）。
+	// 安全阀：refuseDangerousPath（平台无关实现见 danger.go，非 Windows 的 Trash 同样经过它）。
 	if err := refuseDangerousPath(abs); err != nil {
 		return err
 	}
@@ -86,24 +85,3 @@ func Trash(path string) error {
 	}
 	return nil
 }
-
-// refuseDangerousPath 拒绝明显危险的路径。
-func refuseDangerousPath(abs string) error {
-	clean := filepath.Clean(abs)
-	if len(clean) <= 3 {
-		// 例如 "C:\" 或 "D:"
-		return fmt.Errorf("拒绝操作盘根: %s", clean)
-	}
-	switch strings.ToLower(clean) {
-	case "c:\\", "c:\\windows", "c:\\windows\\system32", "c:\\users", "c:\\program files":
-		return fmt.Errorf("拒绝操作系统路径: %s", clean)
-	}
-	// 用户主目录根也不动（只删它下面的具体子目录）。
-	if home, herr := os.UserHomeDir(); herr == nil {
-		if strings.EqualFold(clean, home) {
-			return fmt.Errorf("拒绝删除用户主目录根: %s", clean)
-		}
-	}
-	return nil
-}
-

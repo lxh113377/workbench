@@ -266,20 +266,15 @@ func TestClosedLoopThroughRunOne(t *testing.T) {
 	if err := e.Autonomy().Store().Upsert(g); err != nil {
 		t.Fatal(err)
 	}
-	// fenceForTest 返回三个反引号（Markdown 围栏）。
-	fenceForTest := func() string { return strings.Repeat(string(rune(96)), 3) }
 	// 假执行器：输出一段带产物协议的文本（会被 materializeArtifacts 解析）。
 	//
 	// 2026-10-19 修正：改造前这里只给一句 45 字的正文，而 materializeArtifacts
 	// 对"既无产物块、正文又极短"的产出判失败（生产数据里 9/77 篇是这类独白），
 	// 于是任务进不了 done、闭环不推进。现在给足长度 + 合规产物块。
-	loopBody := "## 一、结论\n\n" + strings.Repeat("这是用于验证自主闭环推进的正文内容。", 40) +
-		"\n\n## 二、论据\n\n- 论据一\n- 论据二\n\n## 三、建议\n\n执行建议正文。\n\n" +
-		"<<<ARTIFACTS>>>\n" + fenceForTest() + "manifest\n" +
-		"{\"files\":[{\"path\":\"loop.md\"}],\"verify\":[{\"cmd\":\"pwsh -NoProfile -NonInteractive -Command \\\"if (Test-Path loop.md) { exit 0 } else { exit 1 }\\\"\",\"expectExit\":0,\"timeout\":30}]}\n" +
-		fenceForTest() + "\n" +
-		fenceForTest() + "file:loop.md\n# 闭环产出\n\n该文件由闭环验证生成。\n" + fenceForTest() + "\n" +
-		"<<<END>>>\n"
+	loopIP := pickTestInterp(t)
+	loopBody := artifactsFinal(t, loopIP,
+		"## 一、结论\n\n"+strings.Repeat("这是用于验证自主闭环推进的正文内容。", 40)+"\n\n## 二、论据\n\n- 论据一\n- 论据二\n\n## 三、建议\n\n执行建议正文。",
+		"loop.md", "# 闭环产出\n\n该文件由闭环验证生成。\n")
 	e.SetRunner(&fakeRunner{content: loopBody})
 
 	// 造一条自主任务并走完整执行链路

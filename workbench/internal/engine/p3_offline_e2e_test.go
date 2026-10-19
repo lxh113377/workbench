@@ -22,19 +22,27 @@ func TestP3PipelineOfflineE2E(t *testing.T) {
 	fence := strings.Repeat("`", 3)
 	dir := t.TempDir()
 
+	// issue #2 平台解耦：脚本与验收命令按本机可用解释器构造（改造前硬编码
+	// python，Linux 容器无 python 别名 → 真实执行链在容器里从未跑过）。
+	ip := pickTestInterp(t)
+	sPath, sContent, sCmd := ip.scriptCase()
+	cmdLit, err := jsonMarshalLit(sCmd)
+	if err != nil {
+		t.Fatal(err)
+	}
 	answer := "# 完成\n\n以下是可运行的工具。\n\n" +
 		"<<<ARTIFACTS>>>\n" +
 		fence + "manifest\n" +
-		`{"files":[{"path":"hello.py","lang":"python"}],"verify":[{"cmd":"python hello.py","expectExit":0,"timeout":60}]}` + "\n" +
+		`{"files":[{"path":"` + sPath + `"}],"verify":[{"cmd":` + cmdLit + `,"expectExit":0,"timeout":60}]}` + "\n" +
 		fence + "\n" +
-		fence + "file:hello.py\nprint('hello from P3')\n" + fence + "\n" +
+		fence + "file:" + sPath + "\n" + sContent + fence + "\n" +
 		"<<<END>>>\n"
 
 	res := artifact.Parse(answer, artifact.Limits{})
 	if res.Level != artifact.LevelStrict {
 		t.Fatalf("解析层级 = %s, want strict（协议必须被严格层识别）", res.Level)
 	}
-	if len(res.Files) != 1 || res.Files[0].Path != "hello.py" {
+	if len(res.Files) != 1 {
 		t.Fatalf("文件解析错误: %+v", res.Files)
 	}
 	if len(res.Problems) != 0 {
@@ -44,6 +52,9 @@ func TestP3PipelineOfflineE2E(t *testing.T) {
 		t.Fatalf("verify 命令数 = %d, want 1", len(res.Manifest.Verify))
 	}
 
+	if res.Files[0].Path != sPath {
+		t.Fatalf("产物路径 = %s, want %s", res.Files[0].Path, sPath)
+	}
 	for _, f := range res.Files {
 		dst := filepath.Join(dir, filepath.FromSlash(f.Path))
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {

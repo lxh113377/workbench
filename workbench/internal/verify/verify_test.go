@@ -24,9 +24,10 @@ func TestRunRejectsNonWhitelistedInterpreter(t *testing.T) {
 func TestRunRejectsShellInjection(t *testing.T) {
 	dir := t.TempDir()
 	// 分号被当作普通参数（不经 shell），因此不会被解释成命令串联
-	rep := Run(context.Background(), dir, []artifact.Check{{Cmd: "pwsh -Command exit 0; echo pwned", ExpectExit: 0}}, Options{})
-	// 这条会被拆成多个参数；关键是它不会执行 "echo pwned" 之外的 shell 语义
-	// 我们只断言：没有 shell 解释导致的越界文件产生
+	ip := pickInterp(t)
+	// 白名单解释器 + 分号参数：不经 shell，"; echo pwned" 是普通字符
+	rep := Run(context.Background(), dir, []artifact.Check{{Cmd: ip.exe + " -Command exit 0; echo pwned", ExpectExit: 0}}, Options{})
+	// 关键是它不会执行 "echo pwned" 的 shell 语义；我们只断言：没有 shell 解释导致的越界文件产生
 	entries, _ := os.ReadDir(dir)
 	if len(entries) != 0 {
 		t.Fatalf("命令不应在 workspace 里产生副作用文件: %+v", entries)
@@ -49,18 +50,18 @@ func TestRunPathTraversalInArgsRejected(t *testing.T) {
 }
 
 func TestRunPassAndFail(t *testing.T) {
+	ip := pickInterp(t)
 	dir := t.TempDir()
-	// 写一个一定存在的文件，用 pwsh Test-Path 验证
+	// 写一个一定存在的文件，用探测到的解释器验证（issue #2：不再硬编码 pwsh）
 	if err := os.WriteFile(filepath.Join(dir, "a.md"), []byte("hi"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	cmd := `pwsh -NoProfile -NonInteractive -Command "if (Test-Path a.md) { exit 0 } else { exit 1 }"`
-	rep := Run(context.Background(), dir, []artifact.Check{{Cmd: cmd, ExpectExit: 0, TimeoutSec: 60}}, Options{})
+	rep := Run(context.Background(), dir, []artifact.Check{{Cmd: ip.checkFileCmd("a.md"), ExpectExit: 0, TimeoutSec: 60}}, Options{})
 	if !rep.Pass {
 		t.Fatalf("应通过: %+v", rep.Outcomes)
 	}
 
-	badCmd := `pwsh -NoProfile -NonInteractive -Command "exit 3"`
+	badCmd := ip.failCmd(3)
 	rep2 := Run(context.Background(), dir, []artifact.Check{{Cmd: badCmd, ExpectExit: 0, TimeoutSec: 60}}, Options{})
 	if rep2.Pass {
 		t.Fatal("退出码不匹配必须判失败")
@@ -71,9 +72,9 @@ func TestRunPassAndFail(t *testing.T) {
 }
 
 func TestRunTimeout(t *testing.T) {
+	ip := pickInterp(t)
 	dir := t.TempDir()
-	cmd := `pwsh -NoProfile -NonInteractive -Command "Start-Sleep -Seconds 5"`
-	rep := Run(context.Background(), dir, []artifact.Check{{Cmd: cmd, ExpectExit: 0, TimeoutSec: 1}}, Options{})
+	rep := Run(context.Background(), dir, []artifact.Check{{Cmd: ip.sleepCmd(5), ExpectExit: 0, TimeoutSec: 1}}, Options{})
 	if rep.Pass {
 		t.Fatal("超时必须判失败")
 	}

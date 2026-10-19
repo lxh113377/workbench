@@ -3,6 +3,7 @@ package retention
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 )
@@ -159,10 +160,41 @@ func TestPolicyNormalize(t *testing.T) {
 }
 
 // TestTrashRefusesDangerous 危险路径必须被拒（安全阀）。
+//
+// 2026-10-19 平台解耦（issue #2）：改造前用例硬编码 "C:\\"，
+// 于是 ① Linux 容器里 C:\\ 不存在，Trash 在"目标不存在"处就返回错误 ——
+// 安全阀根本没被检验（假绿），② 一旦路径存在，非 Windows 分支直接 os.RemoveAll。
+// 现在拆成两层：纯字符串判定的 refuseDangerousPath 跨平台直接测（不碰文件系统），
+// Trash 集成测只喂"确实存在"的危险路径（OS 根与主目录根）。
 func TestTrashRefusesDangerous(t *testing.T) {
-	for _, p := range []string{"C:\\", "C:\\Windows"} {
-		if err := Trash(p); err == nil {
-			t.Fatalf("危险路径 %q 必须被拒绝", p)
+	// 层 1：安全阀纯判定 —— 两平台同一组断言，Windows 形态路径也必须拒。
+	for _, dp := range []string{"C:\\", "C:\\Windows", "C:\\Program Files", "C:\\Users"} {
+		if err := refuseDangerousPath(dp); err == nil {
+			t.Fatalf("refuseDangerousPath(%q) 必须拒绝", dp)
+		}
+	}
+	for _, dp := range []string{"/", "/etc", "/usr", "/bin", "/boot", "/root", "/home", "/var", "/sys", "/proc"} {
+		if err := refuseDangerousPath(dp); err == nil {
+			t.Fatalf("refuseDangerousPath(%q) 必须拒绝", dp)
+		}
+	}
+	if err := refuseDangerousPath("C:\\workbench-output\\tasks"); err != nil {
+		t.Fatalf("普通任务目录不应被拒: %v", err)
+	}
+	if err := refuseDangerousPath("/tmp/workbench-cache/sub"); err != nil {
+		t.Fatalf("普通深层目录不应被拒: %v", err)
+	}
+
+	// 层 2：Trash 集成 —— 只喂真实存在的危险路径，确保测的是安全阀而不是存在性检查。
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Skip("拿不到主目录:", err)
+	}
+	for _, dp := range []string{string(filepath.Separator), home} {
+		if err := Trash(dp); err == nil {
+			t.Fatalf("Trash(%q) 必须被安全阀拒绝", dp)
+		} else if !strings.Contains(err.Error(), "拒绝") {
+			t.Fatalf("Trash(%q) 应因安全阀被拒，实际: %v", dp, err)
 		}
 	}
 }

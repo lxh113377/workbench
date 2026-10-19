@@ -168,9 +168,8 @@ func TestMaterializeArtifactsRespectsGuard(t *testing.T) {
 	task.WorkRoot = target
 	taskDir := layout.TaskDir(taskID)
 	_ = os.MkdirAll(filepath.Join(taskDir, "workspace"), 0o755)
-	fence := strings.Repeat(string(rune(96)), 3)
-	manifest := "{\"files\":[{\"path\":\"docs/hello.md\"}],\"verify\":[{\"cmd\":\"pwsh -NoProfile -NonInteractive -Command \\\"if (Test-Path docs/hello.md) { exit 0 } else { exit 1 }\\\"\",\"expectExit\":0,\"timeout\":30}]}"
-	final := "<<<ARTIFACTS>>>\n" + fence + "manifest\n" + manifest + "\n" + fence + "\n" + fence + "file:docs/hello.md\n# 外部目录成功\n" + fence + "\n<<<END>>>\n"
+	ip := pickTestInterp(t)
+	final := artifactsFinal(t, ip, "外部目录验证。", "docs/hello.md", "# 外部目录成功\n")
 	rep := e.materializeArtifacts(task, final, taskDir, config.DefaultConfig())
 	if rep == nil || !rep.Pass {
 		t.Fatalf("外部目录产物应落盘并通过验收: %+v", rep)

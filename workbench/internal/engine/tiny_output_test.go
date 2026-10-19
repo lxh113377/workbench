@@ -68,12 +68,9 @@ func TestMaterializeAcceptsShortButReal(t *testing.T) {
 	task, _ := e.store.Get(taskID)
 
 	// 构造一份约 300 字的真实要点清单 + 合规产物块
+	ip := pickTestInterp(t)
 	body := strings.Repeat("这里是正文段落，包含实质性结论与可执行建议。", 15)
-	const fence = "```"
-	answer := "# 要点清单\n\n" + body + "\n\n<<<ARTIFACTS>>>\n" +
-		fence + "manifest\n" +
-		`{"files":[{"path":"out.md"}],"verify":[{"cmd":"pwsh -NoProfile -NonInteractive -Command \"if (Test-Path out.md) { exit 0 } else { exit 1 }\"","expectExit":0,"timeout":30}]}` +
-		"\n" + fence + "\n" + fence + "file:out.md\n# 成果\n" + body + "\n" + fence + "\n<<<END>>>\n"
+	answer := artifactsFinal(t, ip, "# 要点清单\n\n"+body, "out.md", "# 成果\n"+body+"\n")
 
 	rep := e.materializeArtifacts(task, answer, taskDir, config.DefaultConfig())
 	if rep == nil {

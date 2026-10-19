@@ -24,9 +24,8 @@ func TestMaterializeArtifactsPass(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(taskDir, "workspace"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	final := "完成。\n\n<<<ARTIFACTS>>>\n" + tFence + "manifest\n" +
-		`{"files":[{"path":"hello.md"}],"verify":[{"cmd":"pwsh -NoProfile -NonInteractive -Command \"if (Test-Path hello.md) { exit 0 } else { exit 1 }\"","expectExit":0,"timeout":30}]}` +
-		"\n" + tFence + "\n" + tFence + "file:hello.md\n# 你好\n" + tFence + "\n<<<END>>>\n"
+	ip := pickTestInterp(t)
+	final := artifactsFinal(t, ip, "完成。", "hello.md", "# 你好\n")
 
 	task, _ := e.store.Get(taskID)
 	rep := e.materializeArtifacts(task, final, taskDir, config.DefaultConfig())
@@ -62,9 +61,15 @@ func TestMaterializeArtifactsFail(t *testing.T) {
 	}
 	taskDir := layout.TaskDir(taskID)
 	_ = os.MkdirAll(filepath.Join(taskDir, "workspace"), 0o755)
+	ip := pickTestInterp(t)
+	fpath, fcontent, fcmd := ip.failScriptCase()
+	manifestCmd, err := jsonMarshalLit(fcmd)
+	if err != nil {
+		t.Fatal(err)
+	}
 	final := "<<<ARTIFACTS>>>\n" + tFence + "manifest\n" +
-		`{"files":[{"path":"a.py"}],"verify":[{"cmd":"python a.py","expectExit":0,"timeout":30}]}` +
-		"\n" + tFence + "\n" + tFence + "file:a.py\nraise SystemExit(2)\n" + tFence + "\n<<<END>>>\n"
+		`{"files":[{"path":"` + fpath + `"}],"verify":[{"cmd":` + manifestCmd + `,"expectExit":0,"timeout":30}]}` +
+		"\n" + tFence + "\n" + tFence + "file:" + fpath + "\n" + fcontent + tFence + "\n<<<END>>>\n"
 	task, _ := e.store.Get(taskID)
 	rep := e.materializeArtifacts(task, final, taskDir, config.DefaultConfig())
 	if rep == nil {
@@ -72,6 +77,9 @@ func TestMaterializeArtifactsFail(t *testing.T) {
 	}
 	if rep.Pass {
 		t.Fatal("命令退出码不符，必须判失败")
+	}
+	if !strings.Contains(rep.FailReason, "退出码 2") {
+		t.Fatalf("失败必须因脚本真实退出码 2（而非启动失败——判据不许被偷换）: %q", rep.FailReason)
 	}
 	if rep.FailReason == "" {
 		t.Fatal("失败必须带人读原因（返工 prompt 依赖它）")
