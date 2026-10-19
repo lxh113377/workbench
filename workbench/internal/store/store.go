@@ -380,8 +380,11 @@ func (s *Store) Update(id string, mutator func(*model.Task) error) (*model.Task,
 		return nil, err
 	}
 	cp.UpdatedAt = model.Now()
-	*t = cp
-	result := *t
+	// 换指针而非原地写（*t = cp）：原地写会让「持有旧指针的读方」（如 engine runOne
+	// 的 defer 读 running.ChainID）与本次写形成 data race。改为把 map 槽位指向新副本，
+	// 旧指针指向的对象从此不再被写，与 Transition/Get 返回副本的语义一致。
+	s.tasks[id] = &cp
+	result := cp
 	s.mu.Unlock()
 	if err := s.record(walRecord{Op: OpUpdate, Task: &result}); err != nil {
 		return &result, err
