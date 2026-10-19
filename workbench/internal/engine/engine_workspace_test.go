@@ -16,9 +16,19 @@ import (
 // normWP 解析软链接与 Windows 8.3 短路径名，避免 CI（runneradmin 临时目录 RUNNER~1 短名）假失败。
 func normWP(p string) string {
 	if r, err := filepath.EvalSymlinks(p); err == nil && r != "" {
-		return r
+		p = r
 	}
-	return p
+	return strings.ToLower(filepath.Clean(p))
+}
+
+// withinPath 判断 target 是否等于或位于 root 之下。用 filepath.Rel 而非字符串前缀，
+// 并对两侧归一，避免 Windows 8.3 短名（RUNNER~1）与长名（runneradmin）形态差异假失败。
+func withinPath(root, target string) bool {
+	rel, err := filepath.Rel(normWP(root), normWP(target))
+	if err != nil {
+		return false
+	}
+	return rel == "." || (rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)))
 }
 
 func TestWorkspaceProjectModeUnchanged(t *testing.T) {
@@ -85,7 +95,7 @@ func TestWorkspaceSelectExternalPersists(t *testing.T) {
 	if e.Workspace().IsExternal() {
 		t.Fatal("应切回项目模式")
 	}
-	if wd := e.WorkDirFor("task-y"); !strings.HasPrefix(normWP(wd), normWP(layout.DataRoot)) {
+	if wd := e.WorkDirFor("task-y"); !withinPath(layout.DataRoot, wd) {
 		t.Fatalf("切回后工作目录应在数据根下: %q", wd)
 	}
 }
