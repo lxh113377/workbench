@@ -48,6 +48,10 @@ func runModelPoolCLI(args []string) int {
 	switch cmd {
 	case "status":
 		st := svc.Status()
+		// 脱敏后再打印：Manager.Specs() 带明文 APIKey（调度与探测要用），
+		// 但 CLI 输出会进终端、脚本管道与日志文件 —— 密钥绝不能流到那里。
+		// 与面板 /api/pool 同一口径（web.redactSpec）。
+		st["specs"] = modelpool.RedactSpecs(svc.Manager().Specs())
 		b, _ := json.MarshalIndent(st, "", "  ")
 		fmt.Println(string(b))
 		if n, okf := st["available"].(int); okf && n == 0 {

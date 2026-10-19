@@ -405,6 +405,9 @@ func (s *Service) Status() map[string]any {
 		"available": avail,
 		"routable":  routable,
 		"total":     len(specs),
+		// aggregate 是「自填兼容端点能否真被 DSH 调用」的对账视图（含拒绝原因）。
+		// 走缓存，不会因面板轮询而反复读 120KB 清单。
+		"aggregate": s.AggregateView(),
 		"statusLog": s.store.TailLog(120),
 		"now":       nowMs(),
 	}

@@ -42,6 +42,7 @@ type ProviderInfo struct {
 	Auth    string // apiKey / none / oauth / adc
 	Format  string // openai-chat / openai-responses / anthropic-messages
 	BaseURL string // registry 自带默认 base（用户可覆盖）
+	Local   bool   // registry 标记的本地端点（ollama/lmstudio/llamacpp，auth=none）
 }
 
 // AggregateNotice 是一条拒绝或告警（都必须展示到面板，静默丢配置是本模块最不能犯的错）。
@@ -196,16 +197,35 @@ func ProjectAggregate(specs []Spec, registry map[string]ProviderInfo) AggregateP
 }
 
 // aggregateCandidate 判断一个 Spec 是否属于「用户自带端点」范畴。
+//
+// 两道判据缺一不可：
+//
+//  1. 车道：只认 custom / aggregate。曾经的宽松版（default 分支看 Routable）
+//     是**有害的** —— OFM 同步进来的免费/Kilo/EAC 模型也带 BaseURL（本机网关
+//     8326）且 Routable=true，于是它们被当成聚合车道候选、按 provider/model
+//     拆出 cohere/poolside 等 id 投影进 aggregate，并把**网关密钥**写进那份
+//     配置。一旦接线，这些模型会从免费车道改道成「用网关密钥打网关的
+//     aggregate 路由」，既绕过车道隔离又外溢凭据。实测真实账本下产生
+//     22 条伪拒绝与 2 个被污染的 provider 条目。
+//
+//  2. 来源：必须是人工添加（user/panel）。lane=aggregate 不等于「用户自填」——
+//     网关专属车道 deepseek-official/* 同步进来时也落在 aggregate 车道，
+//     但它是 source=gateway-sync 的机器清单产物，不是用户配置的端点；
+//     把它当候选会在每次面板刷新时刷出「providerId 不在 registry」的噪声拒绝。
 func aggregateCandidate(sp Spec) bool {
 	if !sp.Enabled || strings.TrimSpace(sp.BaseURL) == "" {
 		return false
 	}
 	switch sp.Lane {
 	case LaneCustom, LaneAggregate:
+	default:
+		return false
+	}
+	switch strings.TrimSpace(sp.Source) {
+	case "user", "panel", "":
 		return true
 	default:
-		// 用户显式声明可路由且带自建 BaseURL 的（例如把网关地址填进 OFM 车道）也允许投影。
-		return sp.Routable
+		return false
 	}
 }
 
