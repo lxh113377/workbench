@@ -122,11 +122,16 @@ func TestInjectionReachesChildProcess(t *testing.T) {
 	}
 	dir := t.TempDir()
 	script := filepath.Join(dir, "cmdline.ps1")
-	// 把自身进程的命令行写进文件（PowerShell 的 $PID + WMI 查询）。
-	body := "$ErrorActionPreference=\"SilentlyContinue\"\n" +
-		"$cl = (Get-CimInstance Win32_Process -Filter \"ProcessId=$PID\").CommandLine\n" +
-		"Set-Content -Path cmdline.txt -Value $cl -Encoding UTF8\n" +
-		"exit 0\n"
+	// 用纯 .NET 的 GetCommandLineArgs 把自身命令行打到 stdout。
+	//
+	// 曾经这里用 Get-CimInstance Win32_Process 查 $PID 的 CommandLine，
+	// 三包并发跑时会**偶发失败**（WMI 忙/返回 null → 写出的文件为空 →
+	// 断言拿到空串）。WMI 是有状态的外部依赖，测试不该依赖它。
+	//
+	// 也不得用「匹配 stderr/错误文本」当判据：PowerShell 的报错会回显调用行，
+	// 里面本来就含 -NonInteractive，会造成假阳性（本轮实测踩过一次）。
+	// 这里读的是子进程**自己的 stdout**（verify 分管道捕获），不受宿主回显污染。
+	body := "[Environment]::GetCommandLineArgs() -join \"|\"\n"
 	if err := os.WriteFile(script, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -136,11 +141,10 @@ func TestInjectionReachesChildProcess(t *testing.T) {
 	if len(rep.Outcomes) != 1 || !rep.Outcomes[0].Pass {
 		t.Fatalf("探测脚本未成功执行：%+v", rep.Outcomes)
 	}
-	data, err := os.ReadFile(filepath.Join(dir, "cmdline.txt"))
-	if err != nil {
-		t.Fatal(err)
+	line := rep.Outcomes[0].Stdout
+	if strings.TrimSpace(line) == "" {
+		t.Fatal("子进程 stdout 为空，无法判断命令行（脚本可能没跑起来）")
 	}
-	line := string(data)
 	if !strings.Contains(strings.ToLower(line), "-noninteractive") {
 		t.Fatalf("注入没到达子进程，命令行实为：%s", strings.TrimSpace(line))
 	}
