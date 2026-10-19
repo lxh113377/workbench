@@ -1,4 +1,0 @@
-{"time":"2026-10-19T03:48:30.718278238Z","level":"INFO","msg":"模型路由表已更新","component":"engine","source":"modelpool","routes":4,"changed":true}
-{"time":"2026-10-19T03:48:30.771658917Z","level":"INFO","msg":"自主目标就绪","component":"engine","goalId":"goal-1792381710736-49d3cf4c","title":"持续产出与能力沉淀","domain":"content","stages":0}
-{"time":"2026-10-19T03:48:36.629204258Z","level":"INFO","msg":"模型路由表已更新","component":"engine","source":"modelpool","routes":5,"changed":true}
-{"time":"2026-10-19T03:48:36.698849072Z","level":"INFO","msg":"模型路由表已更新","component":"engine","source":"modelpool","routes":4,"changed":true}

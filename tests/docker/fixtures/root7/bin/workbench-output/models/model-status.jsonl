@@ -1,7 +1,0 @@
-{"at":1792381712224,"kind":"sync","state":"gateway-fail","reason":"端口未监听: dial tcp 127.0.0.1:8326: connect: connection refused","actor":"startup"}
-{"at":1792381712235,"kind":"sync","state":"gateway","reason":"网关  广播 0 个模型：新增 0 / 更新 0 / 跳过 0"}
-{"at":1792381712240,"kind":"sync","state":"discover-warn","reason":"catalog.json 不可读: open /w/root7/bin/runtime/dsh-home/our-free-model/catalog.json: no such file or directory；availability.json 不可读: open /w/root7/bin/runtime/dsh-home/our-free-model/availability.json: no such file or directory�","actor":"startup"}
-{"at":1792381712278,"kind":"probe-cycle","reason":"本轮探测 4 个：可用 0 / 下线 0 / 未知 4"}
-{"at":1792381712283,"kind":"probe","state":"summary","reason":"探测 4 个模型：可用 0 / 下线 0 / 未知 4"}
-{"at":1792381716624,"kind":"crud","model":"vendor/e2e-model","state":"upsert","reason":"优先级 5 / 权重 10 / 启用 true","actor":"panel"}
-{"at":1792381716693,"kind":"crud","model":"vendor/e2e-model","state":"delete","reason":"面板删除","actor":"panel"}
