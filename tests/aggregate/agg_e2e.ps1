@@ -1,0 +1,17 @@
+# agg_e2e.ps1 -- 聚合车道端到端验收的可复跑入口（Windows）
+#
+# 证明链：池内自填兼容端点 → OFM aggregate 车道 → 真实 DSH headless → 请求真打到该端点。
+# 判据：mock 的 chatHits>=1（不是静默改道免费车道）+ DSH 退出码 0 + 产出 final 文本。
+# 用法: powershell -NoProfile -ExecutionPolicy Bypass -File tests\aggregate\agg_e2e.ps1
+# 退出码: 0 = 证据齐全；非 0 = 证据不足（详见末行 RESULT）
+param([int]$Port = 18434)
+$ErrorActionPreference = "Stop"
+if (-not (Test-Path "D:\workdesktop\dist\mockofm.exe")) { throw "缺 dist\mockofm.exe（先跑 setup\docker\build-mockofm.sh 或 go build tests\docker\mockofm）" }
+$env:AGG_E2E_PORT = "$Port"
+$env:AGG_E2E_ROOT = Join-Path $env:TEMP "wb-agg-e2e"
+$py = (Get-Command python.exe -ErrorAction SilentlyContinue)
+if (-not $py) { throw "需要本机 python.exe（仅用于派生进程与轮询，不参与产品链路）" }
+& $py.Source "$PSScriptRoot\agg_e2e.py"
+$rc = $LASTEXITCODE
+"AGG_E2E_RC=$rc"
+exit $rc

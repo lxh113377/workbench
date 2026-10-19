@@ -24,6 +24,7 @@ import (
 //	--model-pool enable  <modelID>    # 启用
 //	--model-pool disable <modelID>    # 停用
 //	--model-pool strategy <name>      # 切换调度策略
+//	--model-pool aggregate            # 自填端点的聚合车道对账（无可用退出码 2）
 //
 // 退出码：0 成功 / 1 命令错误 / 2 池内没有可用模型（供脚本判定）。
 func runModelPoolCLI(args []string) int {
@@ -121,6 +122,21 @@ func runModelPoolCLI(args []string) int {
 		}
 		fmt.Println("调度策略已切换为 " + args[1])
 		return 0
+	case "aggregate":
+		// 聚合车道对账：自填兼容端点能否真被 DSH 调用（providerId 是否在插件清单里、
+		// 密钥是否齐、线协议是否匹配），以及将要写进 settings.json 的 aggregate 段。
+		// 用途：接线前后各跑一次，用退出码判断「有没有真能用的自填端点」。
+		view := svc.AggregateView()
+		b, _ := json.MarshalIndent(view, "", "  ")
+		fmt.Println(string(b))
+		if !view.RegistryLoaded {
+			fmt.Fprintln(os.Stderr, "provider 清单未加载："+view.Error)
+			return 2
+		}
+		if !view.Enabled {
+			return 2 // 没有可用自填端点（或全部被拒），供脚本判定
+		}
+		return 0
 	case "help", "-h", "--help":
 		fmt.Println(modelPoolUsage)
 		return 0
@@ -139,6 +155,7 @@ const modelPoolUsage = `模型池 CLI（多接口统一纳管 + 自动探测 + �
   --model-pool log [N]           最近 N 条状态日志（默认 30）
   --model-pool reset <id>        解除冷却并重置计数
   --model-pool enable|disable <id>
-  --model-pool strategy <name>   priority | round-robin | weighted | least-loaded`
+  --model-pool strategy <name>   priority | round-robin | weighted | least-loaded
+  --model-pool aggregate         自填端点的聚合车道对账（无可用退出码 2）`
 
 var _ = time.Now
