@@ -135,21 +135,42 @@ func TestInjectionReachesChildProcess(t *testing.T) {
 	if err := os.WriteFile(script, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	rep := Run(testCtx(60*time.Second), dir,
-		[]artifact.Check{{Cmd: "powershell -File cmdline.ps1", ExpectExit: 0, TimeoutSec: 30}},
-		Options{DefaultTimeoutSec: 30})
-	if len(rep.Outcomes) != 1 || !rep.Outcomes[0].Pass {
-		t.Fatalf("探测脚本未成功执行：%+v", rep.Outcomes)
+	// 分层判据（本轮实测教训）：环境性抖动与契约破坏必须区别对待。
+	//   · 拿不到 stdout（子进程没起来/管道被抢）= 环境问题 → 允许有限重试；
+	//   · 拿到了 stdout 但缺 -NonInteractive = 契约破坏 → 立即硬失败，
+	//     重试既无意义（它是确定性的）也会掩盖真问题。
+	// 曾把两者混为一谈，导致「重跑就绿」却说不清到底修没修好。
+	var line string
+	var last Outcome
+	for attempt := 1; attempt <= 3; attempt++ {
+		rep := Run(testCtx(60*time.Second), dir,
+			[]artifact.Check{{Cmd: "powershell -File cmdline.ps1", ExpectExit: 0, TimeoutSec: 30}},
+			Options{DefaultTimeoutSec: 30})
+		if len(rep.Outcomes) != 1 {
+			t.Fatalf("应恰有一条结果，实际 %+v", rep.Outcomes)
+		}
+		last = rep.Outcomes[0]
+		if !last.Pass {
+			// 脚本自身退出码非 0：可能是环境（PowerShell 启动失败），也可能是注入
+			// 改坏了参数结构。打印全部事实后按环境处理重试一次，最后一次仍如此则失败。
+			t.Logf("第 %d 次未通过：exit=%d ms=%d skipped=%q stderrTail=%q", attempt, last.Exit, last.Ms, last.Skipped, last.Stderr)
+		} else if strings.TrimSpace(last.Stdout) != "" {
+			line = last.Stdout
+			break
+		} else {
+			t.Logf("第 %d 次 stdout 为空：exit=%d ms=%d timedOut=%v stderrTail=%q", attempt, last.Exit, last.Ms, last.TimedOut, last.Stderr)
+		}
+		time.Sleep(time.Duration(attempt) * 300 * time.Millisecond)
 	}
-	line := rep.Outcomes[0].Stdout
 	if strings.TrimSpace(line) == "" {
-		t.Fatal("子进程 stdout 为空，无法判断命令行（脚本可能没跑起来）")
+		t.Fatalf("重试 3 次仍拿不到子进程命令行，环境不可用（最后一次：%+v）", last)
 	}
+	// 以下是不允许重试的契约断言。
 	if !strings.Contains(strings.ToLower(line), "-noninteractive") {
-		t.Fatalf("注入没到达子进程，命令行实为：%s", strings.TrimSpace(line))
+		t.Fatalf("注入没到达子进程：命令行=%q", strings.TrimSpace(line))
 	}
 	// 同时确认 -File 仍在（注入位置不能把脚本参数挤掉）
 	if !strings.Contains(strings.ToLower(line), "-file") {
-		t.Fatalf("注入破坏了原参数结构：%s", strings.TrimSpace(line))
+		t.Fatalf("注入破坏了原参数结构：%q", strings.TrimSpace(line))
 	}
 }
