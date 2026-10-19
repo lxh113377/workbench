@@ -93,6 +93,29 @@ Pop-Location
 Write-Host "==> 6/6 校验产物" -ForegroundColor Cyan
 $exe = Join-Path $dist "workbench.exe"
 if (-not (Test-Path $exe)) { throw "产物不存在" }
+
+# 子系统门禁（2026-10-19 弹窗事故）：控制台子系统的 EXE 被 Win32_Process.Create
+# 或计划任务拉起时，Windows 会给它分配一个**可见控制台窗口** —— 桌面被反复弹窗。
+# 官方构建必须带 -H=windowsgui（GUI 子系统，不弹窗）；裸 go build 重建会退回 CONSOLE，
+# 这里当场判红，杜绝「会弹窗的产物」进入 dist。
+$subChecker = Join-Path $PSScriptRoot "..\tests\check_subsystem.ps1"
+if (Test-Path $subChecker) {
+  # 必须经子进程 -ExecutionPolicy Bypass 调用：本机默认策略会拒绝加载未签名脚本
+  # （实测 & 直调报 "cannot be loaded... not digitally signed"，门禁会假通过）。
+  $chkHost = if (Get-Command powershell.exe -ErrorAction SilentlyContinue) { "powershell.exe" } else { "pwsh" }
+  & $chkHost -NoProfile -ExecutionPolicy Bypass -File $subChecker -Exe $exe -RequireGui
+  # 注意：此处不能 Pop-Location —— 位置栈已在 5/6 段尾弹出，再弹会抛错并掩盖真实判据。
+  if ($LASTEXITCODE -ne 0) { throw "产物子系统不合规（会弹控制台窗口），见上方 FAIL 提示" }
+  Write-Host "    子系统: GUI（无控制台窗口）OK"
+} else {
+  # 校验器不在（例如 CI 上 tests/check_subsystem.ps1 尚未入库）时**内联自证**，
+  # 而不是跳过 —— 跳过会让门禁在 CI 上静默失效，等于没有门禁。
+  $fs2 = [IO.File]::OpenRead($exe); $b = New-Object byte[] 4096; [void]$fs2.Read($b, 0, 4096); $fs2.Close()
+  $peOff = [BitConverter]::ToInt32($b, 0x3C)
+  $sub = [BitConverter]::ToUInt16($b, ($peOff + 4 + 20 + 68))
+  if ($sub -ne 2) { throw ("产物子系统不合规: Subsystem=" + $sub + "（2=GUI 不弹窗 / 3=CONSOLE 会弹控制台窗口）") }
+  Write-Host "    子系统: GUI（内联校验，无控制台窗口）OK"
+}
 $info = (Get-Item $exe).VersionInfo
 $size = [math]::Round((Get-Item $exe).Length / 1MB, 2)
 Write-Host "    文件: $exe"
