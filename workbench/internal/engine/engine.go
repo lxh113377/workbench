@@ -459,10 +459,11 @@ func (e *Engine) Recover() error {
 				}
 			}
 		case model.StateInterrupted:
-			if _, err := e.store.Transition(t.ID, model.StateQueued, "system", "崩溃恢复重新入队"); err == nil {
-				if nt, ok := e.store.Get(t.ID); ok {
-					requeue = append(requeue, nt)
-				}
+			// L4 卡死救援：不再无条件重新入队。崩溃恢复必须消耗"救援额度"，
+			// 否则"一跑就弄死进程"的任务会配合 KeepAlive 每分钟拉起形成无界崩溃循环。
+			// 额度与分流见 stuck_rescue.go。
+			if nt := e.rescueInterrupted(t); nt != nil {
+				requeue = append(requeue, nt)
 			}
 		}
 	}

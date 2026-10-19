@@ -12,6 +12,7 @@ func TestTransitionTable(t *testing.T) {
 		{StateRunning, StateDone},
 		{StateRunning, StateInterrupted},
 		{StateInterrupted, StateQueued},
+		{StateInterrupted, StateFailed}, // 崩溃救援额度耗尽的判死出口（L4）
 		{StateRunning, StateFailed},
 		{StateFailed, StateQueued},
 		{StateTimeout, StateQueued},

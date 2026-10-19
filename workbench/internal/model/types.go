@@ -58,7 +58,10 @@ func TransitionAllowed(from, to TaskState) bool {
 		StateRunning:     {StateDone, StateFailed, StateTimeout, StateCancelled, StateInterrupted, StateQueued, StateDegraded},
 		// StateDegraded -> StateQueued：返工通道（验收失败后带着报错重做）。
 		StateDegraded: {StateQueued, StateCancelled, StateRejected},
-		StateInterrupted: {StateQueued, StateCancelled, StateRejected},
+		// StateInterrupted -> StateFailed：崩溃救援额度耗尽时的判死出口（L4）。
+		// 没有这条通道时，"一跑就弄死进程"的任务会被无限重新入队
+		// （KeepAlive 每分钟拉起 → 恢复 → 再崩），7×24 无人值守下永不停歇。
+		StateInterrupted: {StateQueued, StateFailed, StateCancelled, StateRejected},
 		StateTimeout:     {StateQueued, StateFailed, StateCancelled},
 		StateFailed:      {StateQueued, StateRejected, StateCancelled},
 		// StateRejected 以前是"只进不出"的孤岛：面板上的"重试被拒任务"
@@ -181,6 +184,10 @@ type Task struct {
 	ParentID     string    `json:"parentId"`
 	ChainDepth   int       `json:"chainDepth"`
 	Attempts     int       `json:"attempts"`
+	// CrashRescues 是「崩溃救援」累计轮次（L4）。不能复用 Attempts：
+	// Attempts 是单次 runOne 内的重试序号（engine.go 每轮直接赋值 t.Attempts = attempt），
+	// 崩溃恢复后重跑会被重置覆盖 —— 拿它当崩溃预算等于没有预算。
+	CrashRescues int       `json:"crashRescues,omitempty"`
 	MaxAttempts  int       `json:"maxAttempts"`
 	Model        string    `json:"model"`
 	OutputFormat string    `json:"outputFormat"`
