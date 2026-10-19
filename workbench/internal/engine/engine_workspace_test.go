@@ -77,7 +77,7 @@ func TestWorkspaceSelectExternalPersists(t *testing.T) {
 	}
 	// 上下文注入：必须包含目录树与协议提示
 	ctx := e.workspaceContextText()
-	if !strings.Contains(ctx, target) || !strings.Contains(ctx, "README.md") || !strings.Contains(ctx, "ARTIFACTS") {
+	if !strings.Contains(normWP(ctx), normWP(target)) || !strings.Contains(ctx, "README.md") || !strings.Contains(ctx, "ARTIFACTS") {
 		t.Fatalf("上下文不完整:\n%s", ctx)
 	}
 	// 切回项目模式
@@ -85,7 +85,7 @@ func TestWorkspaceSelectExternalPersists(t *testing.T) {
 	if e.Workspace().IsExternal() {
 		t.Fatal("应切回项目模式")
 	}
-	if wd := e.WorkDirFor("task-y"); !strings.HasPrefix(wd, layout.DataRoot) {
+	if wd := e.WorkDirFor("task-y"); !strings.HasPrefix(normWP(wd), normWP(layout.DataRoot)) {
 		t.Fatalf("切回后工作目录应在数据根下: %q", wd)
 	}
 }
