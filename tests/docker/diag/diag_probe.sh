@@ -4,9 +4,9 @@ set -u
 ROOT=/w/root4; BIN=$ROOT/bin; WB=$BIN/workbench-linux
 mkdir -p "$BIN/runtime/dsh-home/our-free-model" "$BIN/workbench-output/logs"
 cp /w/workbench-linux "$WB"; chmod +x "$WB"
-cp /test/fixtures-catalog.json "$BIN/runtime/dsh-home/our-free-model/catalog.json"
-cp /test/fixtures-availability.json "$BIN/runtime/dsh-home/our-free-model/availability.json"
-cp /test/fixtures-settings.json "$BIN/runtime/dsh-home/our-free-model/settings.json"
+cp /test/testdata/catalog.json "$BIN/runtime/dsh-home/our-free-model/catalog.json"
+cp /test/testdata/availability.json "$BIN/runtime/dsh-home/our-free-model/availability.json"
+cp /test/testdata/settings.json "$BIN/runtime/dsh-home/our-free-model/settings.json"
 export HOME=/root DSH_OPENAI_GATEWAY_API_KEY=e2e-mock-key-0123456789abcdef DSH_OPENAI_GATEWAY_PORT=8326
 printf normal > /tmp/mode
 /test/bin/mockofm -addr 127.0.0.1:8326 -key e2e-mock-key-0123456789abcdef -mode normal -modefile /tmp/mode > /tmp/mock.log 2>&1 &

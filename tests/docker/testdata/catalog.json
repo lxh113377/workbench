@@ -1,0 +1,7 @@
+{"version":1,"at":1792365506579,
+ "entries":["big-pickle","mimo-v2.6-flash-free"],
+ "sealIds":["z-ai/glm-5.3","openai/gpt-oss-20b","z-ai/glm-5.3-flash","opencode/glm-5.3-flash-free"],
+ "kiloRows":[
+  {"id":"kilo-auto/free","name":"Kilo Auto Free","channel":"kilo","vision":false,"contextWindow":256000,"maxOutput":32768},
+  {"id":"nvidia/nemotron-3.5-super-vl:free","name":"Kilo Nemotron VL","channel":"kilo","vision":true,"contextWindow":1000000,"maxOutput":131072}
+ ]}

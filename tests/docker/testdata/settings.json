@@ -1,0 +1,3 @@
+{"version":1,"enabled":true,"hiddenModelIds":[],"probeIntervalMinutes":240,
+ "forward":{"enabled":false,"host":"127.0.0.1","port":18899},
+ "chanGateway":{"relay":{"enabled":false,"host":"127.0.0.1","port":18326,"key":""}}}

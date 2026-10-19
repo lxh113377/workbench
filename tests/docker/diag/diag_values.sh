@@ -4,9 +4,9 @@ set -u
 ROOT=/w/root3; BIN=$ROOT/bin; WB=$BIN/workbench-linux
 mkdir -p "$BIN/runtime/dsh-home/our-free-model" "$BIN/workbench-output/logs"
 cp /w/workbench-linux "$WB"; chmod +x "$WB"
-cp /test/fixtures-catalog.json "$BIN/runtime/dsh-home/our-free-model/catalog.json"
-cp /test/fixtures-availability.json "$BIN/runtime/dsh-home/our-free-model/availability.json"
-cp /test/fixtures-settings.json "$BIN/runtime/dsh-home/our-free-model/settings.json"
+cp /test/testdata/catalog.json "$BIN/runtime/dsh-home/our-free-model/catalog.json"
+cp /test/testdata/availability.json "$BIN/runtime/dsh-home/our-free-model/availability.json"
+cp /test/testdata/settings.json "$BIN/runtime/dsh-home/our-free-model/settings.json"
 cat > "$BIN/workbench-output/config.json" <<'CONF'
 {"schemaVersion":3,"autoResume":false,"resumeOnBoot":false,"autoStart":false,
  "server":{"host":"127.0.0.1","port":17902,"openBrowser":false},

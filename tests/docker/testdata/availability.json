@@ -1,0 +1,5 @@
+{"version":1,"at":1792365508710,"egress":{"ip":"10.0.0.1","country":"TEST"},
+ "results":{
+  "big-pickle":{"state":"unavailable","detail":"abusive traffic from this IP","latencyMs":292,"at":1792365508710},
+  "mimo-v2.6-flash-free":{"state":"region-blocked","detail":"not available in your country","latencyMs":655,"at":1792365508710}
+ }}

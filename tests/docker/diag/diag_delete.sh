@@ -5,9 +5,9 @@ BIN=/w/root7; WB=$BIN/bin/workbench-linux
 mkdir -p "$BIN/bin/runtime/dsh-home/our-free-model" "$BIN/bin/workbench-output/logs"
 cp /w/workbench-linux "$WB"; chmod +x "$WB"
 OFM=$BIN/bin/runtime/dsh-home/our-free-model
-cp /test/fixtures-catalog.json "$OFM/"
-cp /test/fixtures-availability.json "$OFM/"
-cp /test/fixtures-settings.json "$OFM/"
+cp /test/testdata/catalog.json "$OFM/"
+cp /test/testdata/availability.json "$OFM/"
+cp /test/testdata/settings.json "$OFM/"
 cat > "$BIN/bin/workbench-output/config.json" <<'CONF'
 {"schemaVersion":3,"autoResume":false,"resumeOnBoot":false,"autoStart":false,
  "server":{"host":"127.0.0.1","port":17905,"openBrowser":false},

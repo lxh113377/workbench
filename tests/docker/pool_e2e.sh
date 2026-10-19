@@ -59,32 +59,12 @@ for cand in /w/workbench-linux /test/workbench-linux /test/bin/workbench-linux; 
 done
 [ -x "$WB" ] || bail "找不到可用的 workbench linux 二进制（用 -Binary 指定或先构建）"
 chmod +x "$WB"
-cat > "$OFM/catalog.json" <<'CATALOG'
-{"version":1,"at":1792365506579,
- "entries":["big-pickle","mimo-v2.6-flash-free"],
- "sealIds":["z-ai/glm-5.3","openai/gpt-oss-20b","z-ai/glm-5.3-flash","opencode/glm-5.3-flash-free"],
- "kiloRows":[
-  {"id":"kilo-auto/free","name":"Kilo Auto Free","channel":"kilo","vision":false,"contextWindow":256000,"maxOutput":32768},
-  {"id":"nvidia/nemotron-3.5-super-vl:free","name":"Kilo Nemotron VL","channel":"kilo","vision":true,"contextWindow":1000000,"maxOutput":131072}
- ]}
-CATALOG
-cat > "$OFM/availability.json" <<'AVAIL'
-{"version":1,"at":1792365508710,"egress":{"ip":"10.0.0.1","country":"TEST"},
- "results":{
-  "big-pickle":{"state":"unavailable","detail":"abusive traffic from this IP","latencyMs":292,"at":1792365508710},
-  "mimo-v2.6-flash-free":{"state":"region-blocked","detail":"not available in your country","latencyMs":655,"at":1792365508710}
- }}
-AVAIL
-cat > "$OFM/settings.json" <<'SETTINGS'
-{"version":1,"enabled":true,"hiddenModelIds":[],"probeIntervalMinutes":240,
- "forward":{"enabled":false,"host":"127.0.0.1","port":18899},
- "chanGateway":{"relay":{"enabled":false,"host":"127.0.0.1","port":18326,"key":""}}}
-SETTINGS
-cat > "$OUT/config.json" <<'CONF'
-{"schemaVersion":3,"autoResume":false,"resumeOnBoot":false,"autoStart":false,
- "server":{"host":"127.0.0.1","port":17899,"openBrowser":false},
- "pool":{"enabled":true,"probeSeconds":3600,"syncSeconds":3600,"strategy":"priority","deepProbe":false}}
-CONF
+# 数据面夹具来自 /test/testdata（单一数据源：诊断脚本与 e2e 共用同一份，
+# 早先两边各存一份 heredoc，改一处漏一处必然漂移）
+for f in catalog.json availability.json settings.json; do
+  cp "/test/testdata/$f" "$OFM/$f" || bail "缺 /test/testdata/$f"
+done
+cp /test/testdata/config.json "$OUT/config.json" || bail "缺 config 夹具"
 export DSH_OPENAI_GATEWAY_API_KEY="$MOCK_KEY"
 export DSH_OPENAI_GATEWAY_PORT=8326
 export HOME=/root

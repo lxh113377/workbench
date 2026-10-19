@@ -5,9 +5,9 @@ ROOT=/w/root5; BIN=$ROOT/bin; WB=$BIN/workbench-linux
 DSH=$BIN/runtime/dsh-home; OFM=$DSH/our-free-model; OUT=$BIN/workbench-output
 mkdir -p "$OFM" "$OUT/logs"
 cp /w/workbench-linux "$WB"; chmod +x "$WB"
-cp /test/fixtures-catalog.json "$OFM/catalog.json"
-cp /test/fixtures-availability.json "$OFM/availability.json"
-cp /test/fixtures-settings.json "$OFM/settings.json"
+cp /test/testdata/catalog.json "$OFM/catalog.json"
+cp /test/testdata/availability.json "$OFM/availability.json"
+cp /test/testdata/settings.json "$OFM/settings.json"
 cat > "$OUT/config.json" <<'CONF'
 {"schemaVersion":3,"autoResume":false,"resumeOnBoot":false,"autoStart":false,
  "server":{"host":"127.0.0.1","port":17903,"openBrowser":false},
