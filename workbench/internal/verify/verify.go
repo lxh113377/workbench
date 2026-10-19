@@ -145,9 +145,23 @@ func runOne(ctx context.Context, workDir string, c artifact.Check, opt Options) 
 
 	runCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
+	// 开箱即用的硬要求：验收命令绝不能向人要输入。
+	// 现场事故（2026-10-19 老大桌面）：模型写了 powershell -Command
+	// "Invoke-WebRequest ..."，Windows PowerShell 5.1 默认用 IE 引擎解析页面，
+	// 页面含 <script> 时弹出「Security Warning: Script Execution Risk / [Y]Yes [N]No」，
+	// 默认答案 N 且会**一直挂着等按键** —— 整条验收链卡死，用户看到的就是弹窗。
+	// 两道加固：
+	//   1) 给 powershell/pwsh 注入 -NonInteractive（把「等人输入」变成明确报错）；
+	//   2) Windows 上以 CREATE_NO_WINDOW + HideWindow 派生（根本没有控制台可显示，
+	//      弹窗连出现的载体都没有）。
+	argv = forceNonInteractive(argv)
 	cmd := exec.CommandContext(runCtx, argv[0], argv[1:]...)
 	cmd.Dir = workDir
 	cmd.Env = sanitizedEnv()
+	// 显式切断 stdin：Go 的默认值是 os.DevNull，但这里写出来是为了让
+	// 「子进程读不到任何人工输入」成为可见的契约，而不是依赖库默认行为。
+	cmd.Stdin = nil
+	cmd.SysProcAttr = hiddenCmdAttr()
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &limitedWriter{w: &stdout, max: opt.MaxOutputBytes}
 	cmd.Stderr = &limitedWriter{w: &stderr, max: opt.MaxOutputBytes}
@@ -175,6 +189,51 @@ func runOne(ctx context.Context, workDir string, c artifact.Check, opt Options) 
 	}
 	oc.Pass = oc.Exit == oc.Expect
 	return oc
+}
+
+// shellInterps 是需要额外注入「非交互」开关的解释器。
+// 其余白名单解释器（python/node/go）在 stdin=DevNull 下读输入会立刻抛错，
+// 不存在挂住等人的问题。
+var shellInterps = map[string]bool{
+	"powershell": true, "powershell.exe": true,
+	"pwsh": true, "pwsh.exe": true,
+}
+
+// forceNonInteractive 给 PowerShell 系命令补 -NonInteractive（若调用方没写）。
+//
+// 为什么必须补：交互态下 PowerShell 遇到确认提示（IE 引擎的 Script Execution
+// Risk、Read-Host、Get-Credential、-Confirm 等）会**阻塞等待人工按键**。
+// 加了它，同类情形改为抛 PSInvalidOperationException 直接返回失败退出码 ——
+// 失败可以被回灌成返工理由，卡死不行。
+//
+// 插入位置有讲究：必须在 -File/-Command 之前，否则会把它当成脚本参数。
+// 调用方已显式写了 -NonInteractive（或 /NonInteractive 形式）时保持原样，
+// 不重复注入 —— 尊重显式意图，也避免命令行里出现两个同名开关。
+func forceNonInteractive(argv []string) []string {
+	if len(argv) == 0 {
+		return argv
+	}
+	if !shellInterps[strings.ToLower(baseName(argv[0]))] {
+		return argv
+	}
+	for _, a := range argv[1:] {
+		low := strings.ToLower(a)
+		if low == "-noninteractive" || low == "/noninteractive" {
+			return argv // 调用方已写，保持原样
+		}
+	}
+	out := []string{argv[0], "-NonInteractive"}
+	out = append(out, argv[1:]...)
+	return out
+}
+
+// baseName 取可执行文件名（去掉可能的路径前缀，跨平台分隔符都认）。
+func baseName(p string) string {
+	p = filepath.Base(p)
+	if i := strings.LastIndexAny(p, "/\\"); i >= 0 {
+		p = p[i+1:]
+	}
+	return p
 }
 
 // splitCommand 按空白切分命令（不做 shell 解析，因此无法注入 ; && | 等）。
