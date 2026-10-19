@@ -47,6 +47,11 @@ jobs:
           # 与代码判据同批跑：文档/模板类回归同样是回归，不该只在人眼评审里。
           ./tests/check_changelog.ps1
           if ($LASTEXITCODE -ne 0) { throw "CHANGELOG 结构门禁未通过" }
+          # 无人值守静态门禁：仓库内脚本不得留下会等人工按键的构造
+          # （实测事故：keepalive 计划任务里一条缺 -UseBasicParsing 的
+          #  Invoke-WebRequest 触发 PS5.1 IE 引擎安全警告，桌面弹窗且任务永久挂起）
+          ./tests/check_noninteractive.ps1
+          if ($LASTEXITCODE -ne 0) { throw "无人值守静态门禁未通过" }
           # 模板必须是合法 YAML 且带 name/description/body（缺字段 GitHub 会静默不显示该模板）。
           # config.yml 是「表单目录配置」（blank_issues_enabled/contact_links），不是表单，必须排除，
           # 否则它没有 name/body 会把门禁判成假红。

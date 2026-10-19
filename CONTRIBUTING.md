@@ -209,7 +209,19 @@ docs(v1.2.0): 架构手册补可观测性四小节 + 项目记忆回写 + engine
   `Win32_Process.Create` **没有隐藏窗口参数**，对 CONSOLE 产物必弹窗；
   该共用件按子系统分流（GUI 走 Create 以脱离作业对象，CONSOLE 走
   `Start-Process -WindowStyle Hidden`）。
-- **计划任务**：注册时带 `-WindowStyle Hidden`，且脚本内不得有裸直调 EXE 的常驻循环。
+- **计划任务**：注册命令行必须带 `-NonInteractive`（缺它时任何提示都会等人工按键，任务永久挂起），
+  并设 `-WindowStyle Hidden` + `Settings.Hidden = $true`；脚本内不得有裸直调 EXE 的常驻循环。
+- **HTTP 调用**：PowerShell 5.1 的 `Invoke-WebRequest` **必须带 `-UseBasicParsing`**。
+  不带时它调用 IE 引擎解析响应页，遇到含 `<script>` 的页面会弹
+  `"Security Warning: Script Execution Risk … Do you want to continue?"` 等人工按键
+  —— 工作台面板页实测含 2 处 `<script>`，而守护任务每分钟跑一次，等于每分钟可能挂死一次。
+  （`Invoke-RestMethod` 不走 IE 引擎，无此问题。）
+- **脚本级兜底**：常驻/被计划任务调用的脚本开头设 `$ConfirmPreference = "None"`
+  与 `$ProgressPreference = "SilentlyContinue"`，杜绝任何 cmdlet 弹确认。
+
+以上由 `tests/check_noninteractive.ps1` 静态把关（已挂 CI 的 Repo hygiene gates 步骤），
+装机脚本 `tests/setup-out-of-box.ps1` 的 5.4 段再做一次**运行时**复核
+（直接读已注册任务的 `.Arguments` 是否含 `-NonInteractive`，比静态更硬）。
 
 ---
 

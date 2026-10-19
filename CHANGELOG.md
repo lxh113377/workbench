@@ -28,6 +28,14 @@
   `Start-Process -WindowStyle Hidden`。
 
 ### Fixed
+- **无人值守弹窗挂死**（老大 2026-10-19 17:29 反馈"这个东西后台静默不要弹出窗口"）：
+  守护计划任务每分钟拉起 `tests/keepalive.ps1`，其中一条 `Invoke-WebRequest` 缺
+  `-UseBasicParsing` —— PowerShell 5.1 因此调用 IE 引擎解析响应页，而面板页含 `<script>`
+  （实测 2 处），触发 "Security Warning: Script Execution Risk … Do you want to continue?"
+  等人工按键；同时任务注册命令行缺 `-NonInteractive`，两者叠加 = 桌面弹窗 + 任务永久挂起。
+  修复：`-UseBasicParsing` + `$ConfirmPreference="None"` + `$ProgressPreference` +
+  注册补 `-NonInteractive` 与 `Settings.Hidden`；新增 `tests/check_noninteractive.ps1`
+  静态门禁（已挂 CI，变异测试验证可抓「只在注释里提 flag」的洗绿形态）。
 - **自主闭环决策留痕顺序**（issue #1）：`autonomy.advanceLocked` 与 `bootstrapLocked`
   的恢复路径原先「先切活跃目标、后写 nextGoal 决策」，而两者写不同文件
   （goals.json / decisions.jsonl，非原子），留下一个可观测窗口 —— 面板与
