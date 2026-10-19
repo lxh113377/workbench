@@ -26,6 +26,23 @@
 - **零弹窗拉起共用件** `tests/lib_silent_launch.ps1`：按 PE 子系统分流，
   GUI 走 `Win32_Process.Create`（保持脱离作业对象），CONSOLE 走
   `Start-Process -WindowStyle Hidden`。
+- **崩溃救援额度（L4）**：`model.Task.CrashRescues` 记录跨崩溃的救援轮次，
+  `internal/engine/stuck_rescue.go` 的 `decideRescue` 分流「重新入队 / 判死」，
+  状态机新增 `interrupted → failed` 出口。修的是**无界崩溃循环**：
+  原先 `Recover()` 把 interrupted 无条件转回 queued，而 `Attempts` 是单次 `runOne`
+  内的序号（每轮被覆盖），不能当崩溃预算 —— 于是"一跑就弄死进程"的任务
+  配合 KeepAlive 每分钟拉起会无限重投，看起来"一直在干活"实际零产出。
+  判死写 `ErrorKind=crash_loop`，面板失败原因分布可区分。
+- **社区协作面（L7）**：`.github/ISSUE_TEMPLATE/`（缺陷报告 8 字段 / 功能请求 7 字段 /
+  config.yml）、`.github/pull_request_template.md`、`.github/labels.json` +
+  `setup/labels.ps1`（12 个正交标签，含本仓特有的 `flaky` / `platform-coupling` /
+  `external-constraint`）。模板把本项目的判据文化写成必填项：
+  「取不到数写 UNVERIFIED 不要填 0」「必须贴命令与真实输出」「外部约束另打标签」。
+- **两条仓库级门禁（已挂 CI）**：`tests/check_changelog.ps1`（Unreleased 必须居首 /
+  日期必须 YYYY-MM-DD / 版本降序）、`tests/check_noninteractive.ps1`
+  （禁 `Invoke-WebRequest` 缺 `-UseBasicParsing`、计划任务缺 `-NonInteractive`、
+  以及 Read-Host / Get-Credential / -Confirm 等交互构造）。
+- **CONTRIBUTING 新增三节**：九 协作流程与判据文化、十 零弹窗纪律、十一 延伸文档。
 
 ### Fixed
 - **无人值守弹窗挂死**（老大 2026-10-19 17:29 反馈"这个东西后台静默不要弹出窗口"）：
