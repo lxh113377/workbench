@@ -9,7 +9,7 @@ param(
   # 与子进程强耦合的 engine 包先按当前基线守护、逐步抬升）。
   # 分档基线依据：engine/web/executor 与大块子进程/HTTP 耦合，先按当前水平守护、
   # 每次改造只许抬不许降；logging/retry/queue/model 等纯逻辑包走全局 55% 阈值。
-  [string[]]$PerPackageCover = @("workbench/internal/engine=20", "workbench/internal/web=15", "workbench/internal/executor=26", "workbench/internal/modelpool=49", "workbench/internal/shortcut=30", "workbench/internal/supervisor=46", "workbench/cmd/workbench=3")
+  [string[]]$PerPackageCover = @("workbench/internal/engine=20", "workbench/internal/web=15", "workbench/internal/executor=26", "workbench/internal/modelpool=49", "workbench/internal/supervisor=46", "workbench/cmd/workbench=3", "workbench/internal/evaluate=50", "workbench/internal/modelroute=50", "workbench/internal/shortcut=23")
 )
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
