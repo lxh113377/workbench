@@ -618,6 +618,12 @@ func IsWithin(root, target string) bool {
 
 func normForCompare(p string) string {
 	p = filepath.Clean(p)
+	// Windows 下同一目录可能是 8.3 短名（RUNNER~1）或长名（runneradmin）两种形态，
+	// CI runner 临时目录尤为常见。先做软链接/短名解析，保证同一路径归一到同一形态，
+	// 否则越界包含判定（IsWithin）会把「同目录的另一种写法」误判成越界。
+	if r, err := evalExisting(p); err == nil && r != "" {
+		p = r
+	}
 	if runtime.GOOS == "windows" {
 		p = strings.ToLower(p)
 	}
