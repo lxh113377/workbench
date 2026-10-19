@@ -85,6 +85,20 @@ type Service struct {
 func NewService(store *Store, seed []Spec, cfg ServiceConfig) *Service {
 	cfg.normalize()
 	mgr := NewManager(store, seed)
+	// 优先级：pool.json 已落盘的值 > config.json 的 pool.strategy。
+	// 理由：面板/CLI 切换只写账本（config.json 是出厂默认，不由这两个入口改），
+	// 所以账本代表「用户最新选择」；若让 config 赢，用户切完一重启就回到
+	// priority，需求2 的「可配置」就成了假象（types.go 的 file.Strategy 注释承诺）。
+	// 副作用要说清：运维手工编辑 config.json 改策略会被账本覆盖 ——
+	// 想改就用面板/CLI（--model-pool strategy <name>），那才是有落盘路径的入口。
+	// 只接受四个合法值：手改 pool.json 塞进垃圾字符串时宁可退回配置默认，
+	// 也不能让 Strategy() 报出一个 Pick 不认的策略。
+	if p := Strategy(mgr.Strategy()); p != "" {
+		switch p {
+		case StrategyPriority, StrategyRoundRobin, StrategyWeighted, StrategyLeastLoaded:
+			cfg.Strategy = p
+		}
+	}
 	svc := &Service{
 		cfg:      cfg,
 		mgr:      mgr,
@@ -413,7 +427,7 @@ func (s *Service) Status() map[string]any {
 	}
 }
 
-// SetStrategy 切换调度策略（面板下拉）。
+// SetStrategy 切换调度策略（面板下拉 / CLI），并写进池账本落盘。
 func (s *Service) SetStrategy(st Strategy) error {
 	if err := s.sch.SetStrategy(st); err != nil {
 		return err
@@ -421,6 +435,9 @@ func (s *Service) SetStrategy(st Strategy) error {
 	s.mu.Lock()
 	s.cfg.Strategy = st
 	s.mu.Unlock()
+	// 落盘到 pool.json：账本比 config.json 更贴近「池子当前的真实配置」，
+	// 且 CLI/面板/引擎三个入口都能在同一份账本上看到最终值。
+	s.mgr.SetStrategy(string(st))
 	s.mgr.log(logRecord{Kind: "crud", State: "strategy", Reason: "调度策略切换为 " + string(st), Actor: "panel"})
 	return nil
 }

@@ -50,12 +50,21 @@ type Manager struct {
 	lastSync SyncResult
 	// gatewayKeySet 标记当前是否拿到了可用的网关密钥。
 	gatewayKeySet bool
+	// strategy 是调度策略的落盘值（"" 表示未设置，沿用配置默认）。
+	// 面板/CLI 的切换必须跨进程生效，否则「可配置」是假的 —— 依据 types.go
+	// 里 file.Strategy 的注释与 strategy_persist_test.go 的回归。
+	strategy string
 }
 
 // NewManager 从磁盘加载（不存在则用 seed 初始化），返回可用实例。
 func NewManager(store *Store, seed []Spec) *Manager {
 	m := &Manager{store: store, health: map[string]*Health{}}
 	f, err := store.Load()
+	if f != nil {
+		// 先接住已落盘的策略：即便接下来走 seed 分支（清单为空），
+		// 也不该丢掉用户上一次的选择。
+		m.strategy = f.Strategy
+	}
 	if err != nil || f == nil || len(f.Specs) == 0 {
 		if seed == nil {
 			seed = SeedSpecs()
@@ -105,6 +114,30 @@ func NewManager(store *Store, seed []Spec) *Manager {
 	m.syncSpecStateLocked()
 	m.mu.Unlock()
 	return m
+}
+
+// Strategy 返回已落盘的调度策略（"" 表示从未在面板/CLI 切换过，沿用配置默认）。
+func (m *Manager) Strategy() string {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	return m.strategy
+}
+
+// SetStrategy 把调度策略写进账本并落盘。
+//
+// 为什么必须落盘而不是只改内存：工作台是「面板 + CLI + 引擎」多入口结构，
+// 每个进程都从 config.json 的 pool.strategy 读初值。用户在面板切到 weighted 后，
+// 下一次起 CLI 或重启又回到 priority —— 需求2 的「可配置」就成了假象。
+// types.go 里 file.Strategy 的字段注释写的正是这条约束，此前只有字段没有读写路径。
+func (m *Manager) SetStrategy(st string) {
+	m.mu.Lock()
+	if m.strategy == st {
+		m.mu.Unlock()
+		return
+	}
+	m.strategy = st
+	m.mu.Unlock()
+	m.persist()
 }
 
 // SetRouteSink 注入「路由表变更」回调（引擎热更新）。
@@ -738,7 +771,7 @@ func (m *Manager) NotifyRoutes() {
 
 func (m *Manager) persist() {
 	m.mu.RLock()
-	f := &file{Specs: append([]Spec(nil), m.specs...), Health: map[string]*Health{}}
+	f := &file{Specs: append([]Spec(nil), m.specs...), Health: map[string]*Health{}, Strategy: m.strategy}
 	for id, h := range m.health {
 		if h == nil {
 			continue
