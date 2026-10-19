@@ -29,6 +29,20 @@ type SyncResult struct {
 	At      int64    `json:"at"`
 }
 
+// broadcastRoutable 判断网关是否以「可路由车道」形态广播了该模型。
+//
+// 只有裸 our-free-model/<id> 算可路由；our-free-model-region/<id> 是地区受限、
+// deepseek-official/<m> 是网关专属车道，两者都不能作为"上游判定已过期"的证据。
+func broadcastRoutable(gw Gateway, id string) bool {
+	want := "our-free-model/" + id
+	for _, m := range gw.Models {
+		if m == want {
+			return true
+		}
+	}
+	return false
+}
+
 // SpecFromGatewayModel 把一个网关模型 id 翻译成池内 Spec。
 func SpecFromGatewayModel(gw Gateway, modelID string) (Spec, bool) {
 	id := strings.TrimSpace(modelID)
@@ -177,22 +191,18 @@ func SyncFromGateway(m *Manager, gw Gateway, actor string) SyncResult {
 		if existing.Note == "" {
 			existing.Note = spec.Note
 		}
-		// 自动恢复：网关此刻仍在广播该模型，说明上游判定已过期（availability.json
-		// 是插件按探测周期写的旧快照）。只恢复「当初是我们自动停用的」那些，
-		// 用户手动停用的绝不擅自打开。
-		if !existing.Enabled && existing.AutoDisabled {
-			existing.Enabled = true
-			existing.AutoDisabled = false
-			existing.Note = "网关重新广播，已自动恢复启用"
-			res.Revived = append(res.Revived, existing.ID)
-		}
-		// 自动恢复：网关此刻仍在广播该模型，说明上游判定已过期（availability.json
-		// 是插件按探测周期写的旧快照）。只恢复「当初是我们自动停用的」那些，
-		// 用户手动停用的绝不擅自打开。
+		// 自动恢复：网关此刻仍在**可路由车道**广播该模型，说明上游判定已过期
+		// （availability.json 是插件按探测周期写的旧快照）。只恢复「当初是我们
+		// 自动停用的」那些，用户手动停用的绝不擅自打开。
+		//
+		// 必须看广播形态：地区受限模型被网关广播成 our-free-model-region/<id>，
+		// 对这类模型「仍在广播」是恒真信号 —— 拿它当恢复依据会把地区受限
+		// 模型每轮重新启用，"默认停用"形同虚设（容器 e2e 实测断言翻红，
+		// 回归测试 TestSyncDoesNotReviveRegionLimited）。
 		//
 		// 顺序很重要：UpsertPreserve 会以「磁盘上的当前值」为准保留 Enabled，
 		// 所以必须在写入之后再调 SetEnabled(true)，否则恢复动作会被自己覆盖掉。
-		revive := !existing.Enabled && existing.AutoDisabled
+		revive := !existing.Enabled && existing.AutoDisabled && broadcastRoutable(gw, existing.ID)
 		if revive {
 			existing.AutoDisabled = false
 			existing.Note = "网关重新广播，已自动恢复启用"

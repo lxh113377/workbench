@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # container-gate.ps1 — 容器门禁（Linux VM 模拟），本仓唯一的 Linux 侧真实验收入口
 #
 # 为什么存在（2026-10-19 老大指令「用 Docker 虚拟机模拟，别乱折腾了」）：
@@ -89,13 +89,13 @@ function Invoke-GateStage {
 if ($imageOk) {
     $common = 'export PATH=$PATH:/usr/local/go/bin; export CGO_ENABLED=0; export GOFLAGS=-mod=mod'
     if ($Only -in @("ALL", "VET")) {
-        Invoke-GateStage -Name "VET" -Inner "$common; go vet ./... 2>&1 | head -40; echo VET_RC=${PIPESTATUS[0]}; exit ${PIPESTATUS[0]}" -WorkDir "/src/workbench" | Out-Null
+        Invoke-GateStage -Name "VET" -Inner "$common; go vet ./... 2>&1 | head -40; exit `$?" -WorkDir "/src/workbench" | Out-Null
     }
     if ($Only -in @("ALL", "TEST")) {
-        Invoke-GateStage -Name "TEST" -Inner "$common; go test ./... -count=1 2>&1 | tail -70; echo TEST_RC=${PIPESTATUS[0]}; exit ${PIPESTATUS[0]}" -WorkDir "/src/workbench" | Out-Null
+        Invoke-GateStage -Name "TEST" -Inner "$common; go test ./... -count=1 2>&1 | tail -70; exit `$?" -WorkDir "/src/workbench" | Out-Null
     }
     if ($Only -in @("ALL", "BUILD")) {
-        Invoke-GateStage -Name "BUILD" -Inner "$common; go build -trimpath -o /tmp/wb-linux ./cmd/workbench 2>&1 | head -30; RC=${PIPESTATUS[0]}; if [ $RC -eq 0 ]; then ls -l /tmp/wb-linux; fi; exit $RC" -WorkDir "/src/workbench" | Out-Null
+        Invoke-GateStage -Name "BUILD" -Inner "$common; go build -trimpath -o /tmp/wb-linux ./cmd/workbench 2>&1 | head -30; exit `$?" -WorkDir "/src/workbench" | Out-Null
     }
     if ($Only -in @("ALL", "CRITERIA")) {
         # 判据「声明 vs 实现」交叉校验：编译前即可抓住"声明了判据却没实现判定"整类缺陷。

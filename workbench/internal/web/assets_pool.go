@@ -60,11 +60,17 @@ const poolJS = `(() => {
   // ── 车道 ──────────────────────────────────────────────
   const renderLanes = (d) => {
     const rows = (d.lanes || []).map(l =>
-      '<tr><td>' + esc(l.label || l.lane) + '</td><td>' + esc(l.total) + '</td><td>' + esc(l.available) + '</td><td>' + esc(l.down) + '</td><td>' + esc(l.disabled) + '</td></tr>'
+      '<tr>' +
+      '<td data-label="车道">' + esc(l.label || l.lane) + '</td>' +
+      '<td data-label="总数">' + esc(l.total) + '</td>' +
+      '<td data-label="可用">' + esc(l.available) + '</td>' +
+      '<td data-label="下线">' + esc(l.down) + '</td>' +
+      '<td data-label="停用">' + esc(l.disabled) + '</td>' +
+      '</tr>'
     ).join('');
     document.getElementById('poolLanes').innerHTML =
-      '<div class="card" style="margin-top:16px"><h3>车道水位</h3><table class="pool-table"><thead><tr><th>车道</th><th>总数</th><th>可用</th><th>下线</th><th>停用</th></tr></thead><tbody>' +
-      (rows || '<tr><td colspan="5" class="empty">暂无模型</td></tr>') + '</tbody></table></div>';
+      '<div class="card" style="margin-top:16px"><h3>车道水位</h3><div class="pool-table-wrap"><table class="pool-table"><thead><tr><th>车道</th><th>总数</th><th>可用</th><th>下线</th><th>停用</th></tr></thead><tbody>' +
+      (rows || '<tr><td colspan="5" class="empty">暂无模型</td></tr>') + '</tbody></table></div></div>';
   };
 
   // ── 模型清单 ──────────────────────────────────────────
@@ -75,15 +81,15 @@ const poolJS = `(() => {
     const rows = specs.map((m, i) => {
       const h = health[m.id] || {};
       return '<tr data-id="' + esc(m.id) + '">' +
-        '<td>' + (i+1) + '</td>' +
-        '<td><div>' + esc(m.label || m.id) + '</div><div class="muted">' + esc(m.id) + '</div></td>' +
-        '<td>' + esc(m.group || m.lane) + '</td>' +
-        '<td>' + esc(m.priority) + ' / ' + esc(m.weight) + '</td>' +
-        '<td>' + availBadge(m) + '</td>' +
-        '<td>' + fmtMs(h.latencyMs || m.latencyMs) + '</td>' +
-        '<td>' + esc(h.success||0) + ' / ' + esc(h.failure||0) + '</td>' +
-        '<td class="muted">' + esc(h.lastErr || m.note || '') + '</td>' +
-        '<td><div class="pool-row-actions">' +
+        '<td data-label="#">' + (i+1) + '</td>' +
+        '<td data-label="模型"><div>' + esc(m.label || m.id) + '</div><div class="muted">' + esc(m.id) + '</div></td>' +
+        '<td data-label="分组">' + esc(m.group || m.lane) + '</td>' +
+        '<td data-label="优先级/权重">' + esc(m.priority) + ' / ' + esc(m.weight) + '</td>' +
+        '<td data-label="状态">' + availBadge(m) + '</td>' +
+        '<td data-label="延迟">' + fmtMs(h.latencyMs || m.latencyMs) + '</td>' +
+        '<td data-label="成功/失败">' + esc(h.success||0) + ' / ' + esc(h.failure||0) + '</td>' +
+        '<td data-label="最近错误/备注" class="muted">' + esc(h.lastErr || m.note || '') + '</td>' +
+        '<td data-label="操作" class="pool-ops"><div class="pool-row-actions">' +
           '<button data-act="up" data-id="' + esc(m.id) + '">↑</button>' +
           '<button data-act="down" data-id="' + esc(m.id) + '">↓</button>' +
           '<button data-act="' + (m.enabled?'disable':'enable') + '" data-id="' + esc(m.id) + '">' + (m.enabled?'停用':'启用') + '</button>' +
@@ -94,8 +100,8 @@ const poolJS = `(() => {
     }).join('');
     document.getElementById('poolList').innerHTML =
       '<div class="card" style="margin-top:16px"><h3>模型清单（按调度优先级排序，越靠上越先用）</h3>' +
-      '<table class="pool-table"><thead><tr><th>#</th><th>模型</th><th>分组</th><th>优先级/权重</th><th>状态</th><th>延迟</th><th>成功/失败</th><th>最近错误/备注</th><th>操作</th></tr></thead><tbody>' +
-      (rows || '<tr><td colspan="9" class="empty">暂无模型，点上方「同步网关清单」或下方添加</td></tr>') + '</tbody></table></div>';
+      '<div class="pool-table-wrap"><table class="pool-table"><thead><tr><th>#</th><th>模型</th><th>分组</th><th>优先级/权重</th><th>状态</th><th>延迟</th><th>成功/失败</th><th>最近错误/备注</th><th>操作</th></tr></thead><tbody>' +
+      (rows || '<tr><td colspan="9" class="empty">暂无模型，点上方「同步网关清单」或下方添加</td></tr>') + '</tbody></table></div></div>';
     document.getElementById('poolList').querySelectorAll('button[data-act]').forEach(btn => {
       btn.onclick = () => onRowAction(btn.getAttribute('data-act'), btn.getAttribute('data-id'), d);
     });

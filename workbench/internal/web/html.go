@@ -4,22 +4,28 @@ const indexPage = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="theme-color" content="#0b0d10">
 <title>个人 AI 工作台</title>
 <link rel="stylesheet" href="/assets/app.css">
 </head>
 <body class="home">
 <main class="home-main">
-  <div class="home-badge" id="badge">%s</div>
-  <button id="startBtn" class="start-btn" autofocus>开始运行</button>
-  <p class="home-status" id="status">引擎状态：%s</p>
-  <a class="home-admin" href="/admin?token=%s" title="管理面板" aria-hidden="true" tabindex="-1">·</a>
+<button id="startBtn" class="start-btn" type="button" data-state="%s" aria-busy="false" aria-describedby="homeStatus" title="%s">
+<span class="btn-load btn-spinner" aria-hidden="true"></span>
+<span class="btn-label">%s</span>
+<span class="btn-load btn-arc" aria-hidden="true"></span>
+</button>
+<span id="homeStatus" class="sr-only" role="status" aria-live="polite" aria-atomic="true">%s</span>
+<a class="home-admin" href="/admin?token=%s" title="管理面板" aria-hidden="true" tabindex="-1">·</a>
 </main>
 %s
 <script src="/assets/app.js"></script>
 </body>
 </html>
 `
+
 
 const adminPage = `<!DOCTYPE html>
 <html lang="zh-CN">

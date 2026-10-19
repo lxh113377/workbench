@@ -36,6 +36,20 @@ const modelPoolPage = `<!DOCTYPE html>
   .kv .item .l { font-size: 12px; color: var(--muted, #7b8794); margin-top: 2px; }
   table.pool-table td, table.pool-table th { vertical-align: middle; }
   .muted { color: var(--muted, #7b8794); font-size: 12px; }
+  /* 窄屏可读性：9 列模型表在手机上将挤成一团，所以小屏统一改为卡片式（label:value），
+     而不是靠横向滚动——横向滚动在触屏上会让「操作」列永远够不到。 */
+  @media (max-width:720px) {
+    table.pool-table thead { display: none; }
+    table.pool-table, table.pool-table tbody, table.pool-table tr, table.pool-table td { display: block; width: 100%; }
+    table.pool-table tr { border: 1px solid var(--line, #30363d); border-radius: 10px; padding: 8px 10px; margin-bottom: 10px; }
+    table.pool-table td { border: 0; padding: 3px 0; display: flex; gap: 8px; align-items: center; }
+    table.pool-table td::before { content: attr(data-label); color: var(--dim, #8b97a6); font-size: 12px; min-width: 72px; flex: 0 0 auto; }
+    table.pool-table td.pool-ops::before { content: ''; min-width: 0; }
+    .pool-row-actions { width: 100%; }
+    .pool-inline { grid-template-columns: 1fr; }
+  }
+  /* 中等屏：表格容器允许横滚而不是撑破整页布局 */
+  .pool-table-wrap { overflow-x: auto; }
 </style>
 </head>
 <body class="admin">

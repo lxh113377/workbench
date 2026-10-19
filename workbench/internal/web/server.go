@@ -280,18 +280,15 @@ func (s *Server) handleAdmin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleCSS(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/css; charset=utf-8")
-	_, _ = io.WriteString(w, appCSS)
+	serveAsset(w, r, "text/css; charset=utf-8", appCSS)
 }
 
 func (s *Server) handleJS(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-	_, _ = io.WriteString(w, appJS)
+	serveAsset(w, r, "application/javascript; charset=utf-8", appJS)
 }
 
 func (s *Server) handleGovJS(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-	_, _ = io.WriteString(w, govJS)
+	serveAsset(w, r, "application/javascript; charset=utf-8", govJS)
 }
 
 // ── API ─────────────────────────────────────────────────────────

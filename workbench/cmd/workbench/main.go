@@ -72,6 +72,8 @@ func main() {
 			os.Exit(runSoakCLI(args[1:]))
 		case "--acceptance", "--ac":
 			os.Exit(runAcceptanceCLI(args[1:]))
+		case "--ui-probe":
+			os.Exit(runUIProbeCLI(args[1:]))
 		case "--export-all":
 			dir := ""
 			if len(args) > 1 {

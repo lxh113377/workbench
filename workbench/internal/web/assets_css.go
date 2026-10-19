@@ -38,29 +38,54 @@ body{
 button{font-family:inherit;font-size:inherit;cursor:pointer}
 a{color:inherit;text-decoration:none}
 
-/* ── 极简首页 ─────────────────────────────────── */
+/* ── 极简首页：一个自动按钮 + 零冗余 ─────────────────────── */
 body.home{display:flex;align-items:center;justify-content:center;overflow:hidden}
+body.home::before{
+  content:'';position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(120% 90% at 50% 32%,rgba(79,140,255,.16),rgba(11,13,16,0) 62%);
+}
 .home-main{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  gap:28px;width:100%;height:100%;position:relative;
+  display:flex;align-items:center;justify-content:center;
+  width:100%;height:100%;position:relative;
 }
-.home-badge{
-  position:absolute;top:28px;font-size:13px;letter-spacing:.14em;
-  color:var(--dim);text-transform:uppercase;
+.sr-only{
+  position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+  clip:rect(0 0 0 0);white-space:nowrap;border:0;
 }
+/* 唯一的交互元素：自动按钮。点击前必须自己完成加载，点击后自己给出状态反馈。 */
 .start-btn{
-  width:240px;height:96px;border-radius:18px;border:1px solid #2e6fd4;
+  position:relative;width:min(260px,72vw);min-height:104px;border-radius:20px;
+  border:1px solid var(--btn-line,#2e6fd4);
   background:linear-gradient(180deg,#5b95ff,#3b74e0);
-  color:#fff;font-size:30px;font-weight:600;letter-spacing:.08em;
+  color:#fff;font-size:clamp(22px,5.4vw,30px);font-weight:600;letter-spacing:.08em;
+  display:flex;align-items:center;justify-content:center;gap:10px;
   box-shadow:0 18px 48px rgba(59,116,224,.34),inset 0 1px 0 rgba(255,255,255,.24);
-  transition:transform .16s ease,box-shadow .16s ease,filter .16s ease;
+  transition:transform .16s ease,box-shadow .16s ease,filter .16s ease,background .2s ease,border-color .2s ease;
+  touch-action:manipulation;-webkit-tap-highlight-color:transparent;
 }
 .start-btn:hover{transform:translateY(-2px);box-shadow:0 24px 60px rgba(59,116,224,.44)}
 .start-btn:active{transform:translateY(0)}
-.start-btn:disabled{filter:grayscale(.4) brightness(.82);cursor:default;box-shadow:none}
-.home-status{margin:0;color:var(--dim);font-size:14px;letter-spacing:.04em}
-/* 隐藏式后门（目标要求 6）：视觉上右下角只是一个几乎不可见的点，悬停/聚焦才显形。
-   首页不得出现可见的配置入口，但配置面必须可达（不允许只能靠改配置或命令行进入）。 */
+.start-btn:focus-visible{outline:2px solid #9dc0ff;outline-offset:4px}
+.start-btn:disabled{cursor:progress;filter:grayscale(.25) brightness(.9)}
+/* 阶段反馈：每个状态有自己的配色与文案（由 JS 写 data-state） */
+.start-btn[data-state=paused]{background:linear-gradient(180deg,#3d4654,#2b323d);border-color:#3a4350;box-shadow:0 14px 36px rgba(20,24,30,.42)}
+.start-btn[data-state=stopped]{background:linear-gradient(180deg,#4a4030,#33291c);border-color:#5a4a2c}
+.start-btn[data-state=running]:disabled{cursor:default}
+/* 加载环：三段共用一个旋转环，空/静态态自动隐藏 */
+.btn-load{position:absolute;width:22px;height:22px;border-radius:50%;opacity:0;transition:opacity .18s ease}
+.btn-spinner{
+  border:2px solid rgba(255,255,255,.28);border-top-color:#fff;
+  animation:btnspin .8s linear infinite;left:22px;
+}
+.btn-arc{border:2px solid rgba(255,255,255,.14);border-top-color:rgba(255,255,255,.55);animation:btnspin 2.4s linear infinite;right:22px}
+@keyframes btnspin{to{transform:rotate(360deg)}}
+.start-btn[data-state=idle] .btn-spinner,
+.start-btn[data-state=stopped] .btn-spinner,
+.start-btn[data-state=paused] .btn-arc,
+.start-btn[data-state=running] .btn-arc{opacity:1}
+.start-btn[data-state=busy]{filter:saturate(.85)}
+.start-btn[data-state=error]{background:linear-gradient(180deg,#d45a5a,#a63b3b);border-color:#8f2f2f}
+/* 隐藏式后门（配置面可达但不占视觉）：右下角一个几乎不可见的点 */
 .home-admin{
   position:absolute;bottom:14px;right:16px;font-size:11px;line-height:1;
   color:transparent;padding:6px 10px;border-radius:6px;
@@ -69,7 +94,6 @@ body.home{display:flex;align-items:center;justify-content:center;overflow:hidden
 .home-admin:hover,.home-admin:focus-visible{
   color:var(--dim);background:rgba(255,255,255,.04);outline:none;
 }
-
 /* ── 管理面板 ─────────────────────────────────── */
 body.admin{display:flex;flex-direction:column}
 .topbar{
@@ -146,4 +170,58 @@ pre{background:#0f1318;border:1px solid var(--line);border-radius:8px;padding:12
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 .empty{color:var(--dim);font-size:13px;padding:18px 0;text-align:center}
+
+/* ── 响应式适配（目标要求 3）──────────────────────────────
+   断点策略：≥1080 桌面 / 720–1080 小笔电 / 480–720 平板竖屏 / ≤480 手机。
+   首页按钮用 min()/clamp 连续缩放，不依赖断点；子页面在此处做结构重排。 */
+@media (max-width:1080px){
+  .content{padding:16px 16px 32px}
+  .topbar{gap:12px;padding:12px 16px}
+  .tabs{padding:8px 16px 0}
+}
+@media (max-width:720px){
+  .topbar{flex-wrap:wrap;row-gap:10px}
+  .brand{width:100%}
+  .topstat{flex:1 1 100%;order:3}
+  .topactions{flex-wrap:wrap;gap:6px}
+  .tabs{overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;padding:10px 14px}
+  .row{flex-direction:column;align-items:stretch}
+  .grid.c2,.grid.c4{grid-template-columns:1fr}
+  .gov-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  /* 表格固定布局 + 任意位置可断行：审计日志这类「内容长度不可控」的表，
+     在窄屏下也不得把整页撑出横向滚动。 */
+  table{font-size:12px;table-layout:fixed}
+  th,td{padding:8px 6px;word-break:break-word;overflow-wrap:anywhere}
+  /* 窄屏让长日志/长文本换行，而不是把整页撑出横向滚动 */
+  pre{white-space:pre-wrap;word-break:break-word}
+}
+@media (max-width:480px){
+  body{font-size:14px}
+  .content{padding:12px 10px 26px}
+  .card{padding:13px 12px;border-radius:10px}
+  .start-btn{border-radius:18px;letter-spacing:.06em}
+  .home-admin{bottom:max(10px,env(safe-area-inset-bottom));right:12px}
+  .btn{padding:8px 12px}
+  .toast{left:10px;right:10px;transform:translateY(20px);text-align:center}
+  .toast.show{transform:translateY(0)}
+}
+/* 低高度横屏（手机横放 / 小窗口）：保证按钮仍在首屏内且不溢出 */
+@media (max-height:520px){
+  .start-btn{min-height:88px;font-size:clamp(20px,4.6vw,26px)}
+}
+@media (min-width:1600px){
+  .content{padding:24px 32px 48px}
+}
+/* 触屏/窄屏下可点性：主按钮与页签 ≥44px，桌面保持紧凑 */
+@media (pointer:coarse), (max-width:720px){
+  .btn{min-height:44px}
+  .tab{min-height:44px}
+}
+/* 无障碍：尊重系统「减少动态效果」，用静态描边替代旋转动画 */
+@media (prefers-reduced-motion:reduce){
+  *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+  .start-btn[data-state=busy] .btn-load{opacity:1;border-top-color:rgba(255,255,255,.4)}
+}
 `

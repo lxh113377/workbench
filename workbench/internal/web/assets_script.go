@@ -26,39 +26,68 @@ const appJS = `(() => {
   const fmtMin = (ms) => ms ? (ms/60000).toFixed(1) + ' 分钟' : '—';
   const fmtBytes = (b) => { if(!b) return '0 B'; const u=['B','KB','MB','GB']; let i=0,v=b; while(v>=1024&&i<u.length-1){v/=1024;i++;} return v.toFixed(i?1:0)+' '+u[i]; };
 
-  // ── 首页 ──────────────────────────────────────────────
+  // ── 首页：一个自动按钮（自动加载 + 自动响应 + 状态反馈）──
   if (!isAdmin) {
     const btn = document.getElementById('startBtn');
-    const status = document.getElementById('status');
-    const badge = document.getElementById('badge');
-    const PHASE_TEXT = {running:'运行中',paused:'已暂停',stopped:'已停止',idle:'待启动'};
-    const setPhase = (phase) => {
-      status.textContent = '引擎状态：' + (PHASE_TEXT[phase] || phase);
-      if (badge) badge.textContent = 'PERSONAL AI WORKBENCH';
-      if (phase === 'running' || phase === 'paused') {
-        btn.disabled = true;
-        btn.textContent = phase === 'running' ? '运行中…' : '已暂停';
-      } else {
-        btn.disabled = false;
-        btn.textContent = '开始运行';
+    if (!btn) { return; }
+    const label = btn.querySelector('.btn-label');
+    const live = document.getElementById('homeStatus');
+    const PHASES = {
+      idle:    { text: '开始运行', hint: '待启动',     busy: false, lock: false },
+      busy:    { text: '启动中',   hint: '正在启动引擎', busy: true,  lock: true  },
+      running: { text: '运行中',   hint: '引擎运行中',   busy: false, lock: true  },
+      paused:  { text: '已暂停',   hint: '引擎已暂停',   busy: false, lock: true  },
+      stopped: { text: '重新启动', hint: '引擎已停止',   busy: false, lock: false },
+      error:   { text: '重试',     hint: '启动失败，可重试', busy: false, lock: false },
+    };
+    let current = btn.getAttribute('data-state') || 'idle';
+    let inflight = false;
+    const paint = (state) => {
+      const p = PHASES[state] || PHASES.error;
+      current = state;
+      btn.setAttribute('data-state', state);
+      btn.setAttribute('aria-busy', p.busy ? 'true' : 'false');
+      btn.disabled = p.lock;
+      btn.title = p.hint;
+      if (label) { label.textContent = p.text; }
+      if (live) { live.textContent = p.hint; }
+    };
+    let fails = 0;
+    const ping = async () => {
+      try {
+        const st = await api('/api/status');
+        fails = 0;
+        const phase = (st && st.phase) || 'idle';
+        paint(PHASES[phase] ? phase : 'idle');
+      } catch (e) {
+        fails += 1;
+        if (current !== 'busy' && current !== 'error') { paint(fails >= 3 ? 'error' : current); }
       }
     };
-    const ping = async () => {
-      try { const st = await api('/api/status'); setPhase(st.phase); } catch (e) { /* 未启动时静默 */ }
-    };
-    if (btn) btn.addEventListener('click', async () => {
-      btn.disabled = true; btn.textContent = '启动中…';
+    const start = async () => {
+      if (inflight) { return; }
+      inflight = true;
+      paint('busy');
       try {
-        const r = await api('/api/engine/start', { method: 'POST', body: '{}' });
-        setPhase(r.phase);
+        await api('/api/engine/start', { method: 'POST', body: '{}' });
+        paint('running');
         toast('引擎已启动，正在自动产出');
       } catch (e) {
+        paint('error');
         toast('启动失败：' + e.message);
-        btn.disabled = false; btn.textContent = '开始运行';
+        setTimeout(() => { if (current === 'error') { ping(); } }, 2500);
+      } finally {
+        inflight = false;
       }
-    });
+    };
+    btn.addEventListener('click', start);
+    // 自动加载：脚本一执行就进入加载态（不等任何网络返回）；
+    // 随后由 /api/status 自动收敛到真实阶段。
+    paint('busy');
     ping();
     setInterval(ping, 4000);
+    // 自动触发：开屏发现引擎未在运行即自动点一次（仅一次，失败不循环）。
+    setTimeout(() => { if (current === 'idle' || current === 'stopped') { start(); } }, 900);
     return;
   }
 
