@@ -27,8 +27,15 @@ package modelpool
 // format 决定**（entryOf 里 format/wire 都取 provider 的）。填错不报错、只会
 // 走成 registry 那条线 —— 所以这里作为 Warning 如实上报。
 //
-// 纯函数设计：registry 由调用方注入（executor 侧才知道 DSH 安装路径），
-// 本包因此零 IO、可单测；Lead 在 executor.taskHome 里一行调用即可接线。
+// 纯函数设计：registry 由调用方注入（DSH 安装路径由组合根决定），
+// 本包因此零 IO、可单测。
+//
+// 接线方式的重要提醒（我此前在这里写过「executor.taskHome 里一行调用即可」，
+// 那是错的）：executor **不能** import 本包 —— 本包的 failover.go 已 import
+// executor（FailoverRunner 包装 executor.RunnerContract），反向依赖会
+// "import cycle not allowed"（已在 HEAD 快照实测）。正确做法是由组合根
+// cmd/workbench 用回调注入，与 Manager.SetRouteSink 同模式。
+// 完整写法（三处、已编译验证）见 docs/模型池-聚合车道接通补丁.md §2.4。
 
 import (
 	"sort"

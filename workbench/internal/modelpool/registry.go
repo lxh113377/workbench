@@ -160,10 +160,14 @@ func InvalidateProviderRegistryCache() {
 	registryCacheMu.Unlock()
 }
 
-// AggregateForDSHHome 是执行器接线用的便捷入口：一次调用拿到可落盘的 aggregate 段
-// 与「哪些池内模型真的可路由」。executor.taskHome 里两步即可接：
-// 用返回值替换硬编码的 {"enabled":false,"providers":{}}，
-// 并只把 modelIDs 里存在的自定义模型标 Routable=true。
+// AggregateForDSHHome 是接线用的便捷入口：一次调用拿到可落盘的 aggregate 段
+// 与「哪些池内模型真的可路由」。
+//
+// 调用方是组合根 cmd/workbench，**不是** internal/executor：executor 不能 import
+// 本包（本包 failover.go 已 import executor，反向依赖会 import cycle not allowed）。
+// 接线由 main.go 取到返回值后经 executor.SetAggregateSource 注入闭包，
+// executor.taskHome 只调那个闭包。三处改法与编译验证结论见
+// docs/模型池-聚合车道接通补丁.md §2.4。
 //
 // registry 读不到时返回 enabled:false 与空映射 —— 与改造前行为等价，
 // 绝不因为清单缺失而把请求静默改道。
