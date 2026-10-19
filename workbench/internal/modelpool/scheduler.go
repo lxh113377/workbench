@@ -103,7 +103,14 @@ func (s *Scheduler) Pick(specs []Spec, excluded map[string]bool, now int64) (str
 	defer s.mu.Unlock()
 	cands := make([]Spec, 0, len(specs))
 	for _, sp := range specs {
-		if !sp.Enabled || excluded[sp.ID] {
+		// Routable=false 的模型「面板可见但绝不派给任务」：DSH 执行器只认
+		// provider our-free-model，网关专属车道（deepseek-official/*）与不可路由
+		// 自定义端点写进 overlay 会被判成未知 provider，必然失败。
+		// 历史缺陷：此处只过滤 Enabled+健康，不过滤 Routable，于是
+		// FailoverRunner 的兜底链会把不可路由模型也派出去（活体面板复验实测：
+		// 面板新增 routable:false 的模型后被顶到链首）。Manager.Routes() 一直
+		// 有这道过滤，调度器与它口径不一致 —— 账本与选择器对不上。
+		if !sp.Enabled || !sp.Routable || excluded[sp.ID] {
 			continue
 		}
 		if sp.HealthState() == StateDown || sp.HealthCooldown() > now {
@@ -177,7 +184,7 @@ func (s *Scheduler) PickChain(specs []Spec, now int64) []string {
 	defer s.mu.Unlock()
 	cands := make([]Spec, 0, len(specs))
 	for _, sp := range specs {
-		if !sp.Enabled || sp.HealthState() == StateDown || sp.HealthCooldown() > now {
+		if !sp.Enabled || !sp.Routable || sp.HealthState() == StateDown || sp.HealthCooldown() > now {
 			continue
 		}
 		cands = append(cands, sp)

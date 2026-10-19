@@ -148,6 +148,38 @@ func TestSchedulerLeastLoadedChainPrefersIdle(t *testing.T) {
 	}
 }
 
+// TestSchedulerSkipsNonRoutable 锁住「面板可见但绝不派给任务」这条承诺。
+//
+// 回归动因：Manager.Routes() 一直过滤 !Routable（网关专属车道 deepseek-official/*
+// 写进 DSH overlay 会被判未知 provider，必然失败），但 Pick/PickChain 只过滤
+// Enabled+健康。于是 FailoverRunner 的兜底链会把不可路由模型也派出去 ——
+// 活体面板复验实测：面板新增 routable:false 的模型后被顶到链首。账本与选择器口径不一致。
+func TestSchedulerSkipsNonRoutable(t *testing.T) {
+	gateOnly := Spec{ID: "deepseek-official/deepseek-v3", Label: "网关专属", Provider: "our-free-model",
+		Lane: LaneFree, Tier: "balanced", Priority: 1, Weight: 100, Enabled: true, Routable: false,
+		Format: FormatChat, Runtime: &specRuntime{State: StateHealthy}}
+	normal := spec("ok", 50, 10, StateHealthy)
+
+	for _, st := range []Strategy{StrategyPriority, StrategyRoundRobin, StrategyWeighted, StrategyLeastLoaded} {
+		sch := NewScheduler(st)
+		if got, _ := sch.Pick([]Spec{gateOnly, normal}, nil, nowMs()); got != "ok" {
+			t.Fatalf("%s 策略不得派不可路由模型，实际 %q", st, got)
+		}
+		if chain := sch.PickChain([]Spec{gateOnly, normal}, nowMs()); len(chain) != 1 || chain[0] != "ok" {
+			t.Fatalf("%s 策略兜底链应只含可路由模型，实际 %v", st, chain)
+		}
+	}
+
+	// 全池都不可路由时应返回空（调用方走等待逻辑），而不是硬派一个必挂的
+	empty, strategy := NewScheduler(StrategyPriority).Pick([]Spec{gateOnly}, nil, nowMs())
+	if empty != "" {
+		t.Fatalf("无可用可路由模型时应返回空，实际 %q（%s）", empty, strategy)
+	}
+	if c := NewScheduler(StrategyPriority).PickChain([]Spec{gateOnly}, nowMs()); len(c) != 0 {
+		t.Fatalf("无可用可路由模型时兜底链应为空，实际 %v", c)
+	}
+}
+
 func TestSchedulerWeightedProportional(t *testing.T) {
 	sch := NewScheduler(StrategyWeighted)
 	specs := []Spec{
