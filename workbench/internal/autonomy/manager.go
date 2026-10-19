@@ -129,9 +129,15 @@ func (m *Manager) bootstrapLocked() (*Goal, error) {
 		if last != nil {
 			if draft := m.deriveNextLocked(last, c); draft != nil {
 				g := m.createGoalLocked(draft.title, draft.intent, draft.domain, "derived", last.ID, c)
-				_ = m.store.SetActive(g.ID)
-				_ = m.store.AppendDecision(Decision{At: m.now(), GoalID: g.ID, Kind: DecisionNextGoal,
-					Reason: "启动恢复：上一目标已完成，自动推导下一目标", Evidence: draft.reasons, Actor: "autonomy"})
+				// 同 advanceLocked：先留痕再生效（issue #1 / D6），否则重启后观察者
+				// 可能看到 active 已恢复为新目标而台账缺 nextGoal。
+				_ = writeLedgerThenActivate(
+					func() error {
+						return m.store.AppendDecision(Decision{At: m.now(), GoalID: g.ID, Kind: DecisionNextGoal,
+							Reason: "启动恢复：上一目标已完成，自动推导下一目标", Evidence: draft.reasons, Actor: "autonomy"})
+					},
+					func() error { return m.store.SetActive(g.ID) },
+				)
 				return g, nil
 			}
 		}
@@ -447,6 +453,23 @@ func (m *Manager) CompleteStage(goalID string, t *model.Task, words int, recent 
 	return out
 }
 
+// writeLedgerThenActivate 固化「决策留痕先于状态生效」的顺序（issue #1 / D6）。
+//
+// 为什么需要这个函数而不是就地两行：SetActive 写 goals.json、AppendDecision 写
+// decisions.jsonl，两个文件天然非原子。若先生效后留痕，观察者（面板自主总览、
+// --selftest 判据 7b、闭环回归测试）会看到一个真实窗口 —— active 已切到新目标，
+// 台账里却还没有 nextGoal，被误读为「闭环没推导」；CI 上
+// TestRunOneDrivesAutonomyClosedLoop 的偶发红就是撞进这个窗口。
+//
+// 语义：留痕失败**不阻断**生效（台账写不进不该让自主线停摆，且 AppendDecision
+// 的错误在生产路径上原本就被丢弃）；生效的错误照常返回给调用方。
+// 反向失效（已生效但无留痕）比正向失效（有留痕但未生效）更坏 —— 前者是审计缺失
+// 且会被判成"功能没跑"，后者只是多一条仍为真的记录（目标确已推导，只是未激活）。
+func writeLedgerThenActivate(appendDecision func() error, setActive func() error) error {
+	_ = appendDecision()
+	return setActive()
+}
+
 // advanceLocked 在当前目标完成后推导、创建并激活下一个目标。
 func (m *Manager) advanceLocked(prev *Goal, c config.AutonomyConfig) (*Goal, error) {
 	draft := m.deriveNextLocked(prev, c)
@@ -464,11 +487,14 @@ func (m *Manager) advanceLocked(prev *Goal, c config.AutonomyConfig) (*Goal, err
 		g.Criteria = draft.criteria
 		_ = m.store.Upsert(g)
 	}
-	if err := m.store.SetActive(g.ID); err != nil {
-		return g, err
-	}
-	_ = m.store.AppendDecision(Decision{At: m.now(), GoalID: g.ID, Kind: DecisionNextGoal,
-		Reason: "目标完成后自动推导下一目标（闭环续跑）", Evidence: draft.reasons, Actor: "autonomy"})
+	// 顺序硬要求（issue #1 / D6）：**决策留痕必须先于状态生效**，见 writeLedgerThenActivate。
+	_ = writeLedgerThenActivate(
+		func() error {
+			return m.store.AppendDecision(Decision{At: m.now(), GoalID: g.ID, Kind: DecisionNextGoal,
+				Reason: "目标完成后自动推导下一目标（闭环续跑）", Evidence: draft.reasons, Actor: "autonomy"})
+		},
+		func() error { return m.store.SetActive(g.ID) },
+	)
 	m.log.Info("自动推导下一目标", "prevGoalId", prev.ID, "nextGoalId", g.ID, "title", g.Title)
 	return g, nil
 }
