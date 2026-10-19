@@ -89,6 +89,12 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 
 	var lastRes *executor.Result
 	var lastErr error
+	// from 必须是「上一个失败让位的模型」，不是本次尝试的首发模型。
+	// 历史缺陷（2026-10-19）：这里写成 from := order[0] 且循环内从不更新，
+	// 于是 a 失败、b 也失败、c 成功时，两条切换记录都记 from=a（a→b、a→c）。
+	// 功能没坏（切换确实发生了），只有留痕是错的 —— 拿这份日志排查会以为
+	// b 从没被调用过，恰好违背需求4「保留模型状态日志便于排查问题」。
+	// 每次失败后推进到当前模型（见循环末尾）。
 	from := order[0]
 	for i, id := range order {
 		if i > 0 {
@@ -121,6 +127,9 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 				Reason: "任务级失败，不计入模型健康度: " + trim(detail, 160)})
 		}
 		lastRes, lastErr = res, err
+		// 推进 from：下一次切换是「从当前这个失败模型」换走，
+		// 而不是从首发模型换走（多跳时这一点决定日志是否可信）。
+		from = id
 		// 用户取消 / 上下文结束：不再换模型，原样返回。
 		if ctx.Err() != nil || kind == string(executor.KindCancelled) {
 			return lastRes, lastErr
