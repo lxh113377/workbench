@@ -19,7 +19,13 @@ $build = Join-Path $wb "build"
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
 Write-Host "==> 1/6 生成图标" -ForegroundColor Cyan
-& (Join-Path $PSScriptRoot "make-icon.ps1") -Out (Join-Path $build "app.ico") | Out-Null
+$makeIcon = Join-Path $PSScriptRoot "make-icon.ps1"
+if (Test-Path $makeIcon) {
+  New-Item -ItemType Directory -Force -Path $build | Out-Null
+  & $makeIcon -Out (Join-Path $build "app.ico") | Out-Null
+} else {
+  Write-Warning "    make-icon.ps1 不存在，跳过图标生成（EXE 仍可用）"
+}
 
 Write-Host "==> 2/6 编译资源（图标 + 版本信息）" -ForegroundColor Cyan
 $windres = Get-ChildItem "C:\Users\$env:USERNAME\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs*" -Recurse -Filter windres.exe -ErrorAction SilentlyContinue | Select-Object -First 1
