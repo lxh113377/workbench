@@ -279,7 +279,7 @@
           "score_total": 22
         }
       ],
-      "recorded_version": "v0.22.2+canary.20261019T071120Z",
+      "recorded_version": "0.22.2+canary.20261020T065957Z",
       "last_checked": "2026-10-20",
       "discovery_query": "technical spike skill agent prototype",
       "candidates": [
@@ -312,7 +312,7 @@
           "score_total": 15
         }
       ],
-      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六） | 2026-10-20 轮9 裁决=更新候选基线（v0.22.2+canary.20261019T071120Z → 0.22.2+canary.20261020T065957Z）：候选池条目版本腿 RED=候选仓发新版，证明候选活跃维护中；非吸收（候选非同源，仅刷新对表基线）",
       "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)",
       "upstream_role": "candidate_pool(轮3 重分类，非同源)"
     },
@@ -1659,7 +1659,7 @@
       "upstream_repo": "NanmiCoder/cc-haha",
       "upstream_path": null,
       "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
-      "recorded_version": "Claude Code Haha v0.7.4",
+      "recorded_version": "Claude Code Haha v0.7.5",
       "last_checked": "2026-10-20",
       "discovery_query": "batch-C 提词检索",
       "candidates": [
@@ -1671,7 +1671,7 @@
           "score_total": null
         }
       ],
-      "notes": "",
+      "notes": " | 2026-10-20 轮9 裁决=更新候选基线（Claude Code Haha v0.7.4 → Claude Code Haha v0.7.5）：候选池条目版本腿 RED=候选仓发新版，证明候选活跃维护中；非吸收（候选非同源，仅刷新对表基线）",
       "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
@@ -1680,7 +1680,7 @@
       "upstream_repo": "plugin87/ux-ui-agent-skills",
       "upstream_path": null,
       "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
-      "recorded_version": "v2.9.10",
+      "recorded_version": "2.10.0",
       "last_checked": "2026-10-20",
       "discovery_query": "batch-C 提词检索",
       "candidates": [
@@ -1692,7 +1692,7 @@
           "score_total": null
         }
       ],
-      "notes": "",
+      "notes": " | 2026-10-20 轮9 裁决=更新候选基线（v2.9.10 → 2.10.0）：候选池条目版本腿 RED=候选仓发新版，证明候选活跃维护中；非吸收（候选非同源，仅刷新对表基线）",
       "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
@@ -1848,7 +1848,7 @@
       "upstream_repo": "NanmiCoder/cc-haha",
       "upstream_path": null,
       "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
-      "recorded_version": "Claude Code Haha v0.7.4",
+      "recorded_version": "Claude Code Haha v0.7.5",
       "last_checked": "2026-10-20",
       "discovery_query": "batch-C 提词检索",
       "candidates": [
@@ -1860,7 +1860,7 @@
           "score_total": null
         }
       ],
-      "notes": "",
+      "notes": " | 2026-10-20 轮9 裁决=更新候选基线（Claude Code Haha v0.7.4 → Claude Code Haha v0.7.5）：候选池条目版本腿 RED=候选仓发新版，证明候选活跃维护中；非吸收（候选非同源，仅刷新对表基线）",
       "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
