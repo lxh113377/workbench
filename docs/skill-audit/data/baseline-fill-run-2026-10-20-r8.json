@@ -1,0 +1,41 @@
+{
+ "filled": [
+  {
+   "local_skill": "A-prompt-better",
+   "repo": "gaasher/Agent-Loop-Skills",
+   "tag": "sha-HEAD@2026-06-30",
+   "src": "commits.atom"
+  },
+  {
+   "local_skill": "hyperframes",
+   "repo": "nexu-io/html-anything",
+   "tag": "sha-HEAD@2026-10-13",
+   "src": "commits.atom"
+  },
+  {
+   "local_skill": "mcp-builder",
+   "repo": "Appllama/appllama-skills",
+   "tag": "sha-HEAD@2026-09-06",
+   "src": "commits.atom"
+  },
+  {
+   "local_skill": "story-cover",
+   "repo": "danderfer/Comp_Sci_Sem_2",
+   "tag": "sha-HEAD@2022-06-07",
+   "src": "commits.atom"
+  },
+  {
+   "local_skill": "story-long-write",
+   "repo": "danderfer/Comp_Sci_Sem_2",
+   "tag": "sha-HEAD@2022-06-07",
+   "src": "commits.atom"
+  },
+  {
+   "local_skill": "workbuddy-mcp",
+   "repo": "hujjun/mcd-saver-strategist",
+   "tag": "sha-HEAD@2026-10-19",
+   "src": "commits.atom"
+  }
+ ],
+ "failed": []
+}

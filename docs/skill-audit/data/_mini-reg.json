@@ -4,14 +4,14 @@
  "active_days": 400,
  "watchlist": [
   {
-   "local_skill": "code-review",
-   "local_skill_md": "D:/global_skills/code-review/SKILL.md",
+   "local_skill": "first-principles-decomposer",
+   "local_skill_md": "D:/global_skills/first-principles-decomposer/SKILL.md",
    "upstream_repo": "addyosmani/agent-skills",
-   "upstream_path": "skills/code-review-and-quality/SKILL.md",
+   "upstream_path": "skills/doubt-driven-development/SKILL.md",
    "ledger": [
     {
      "repo": "addyosmani/agent-skills",
-     "entry_path": "skills/code-review-and-quality/SKILL.md",
+     "entry_path": "skills/doubt-driven-development/SKILL.md",
      "stars": 108473,
      "license": "MIT",
      "score_total": 22
@@ -19,228 +19,38 @@
    ],
    "recorded_version": "Agent Skills 0.6.13",
    "last_checked": "2026-10-20",
-   "discovery_query": "code review skill agent claude",
+   "discovery_query": "first principles reasoning skill agent",
    "candidates": [
     {
      "repo": "addyosmani/agent-skills",
-     "entry_path": "skills/code-review-and-quality/SKILL.md",
+     "entry_path": "skills/doubt-driven-development/SKILL.md",
      "stars": 108473,
      "license": "MIT",
      "score_total": 22
     },
     {
-     "repo": "obra/superpowers",
-     "entry_path": "skills/requesting-code-review/SKILL.md",
-     "stars": 301953,
+     "repo": "mrchou1/first-principles-reasoning",
+     "entry_path": "SKILL.md",
+     "stars": 0,
+     "license": null,
+     "score_total": 15
+    },
+    {
+     "repo": "weiliu1031/first-principles-thinking",
+     "entry_path": null,
+     "stars": 4,
      "license": "MIT",
-     "score_total": 19
+     "score_total": 5
     },
     {
-     "repo": "trailofbits/skills",
-     "entry_path": "plugins/differential-review/skills/differential-review/SKILL.md",
-     "stars": 7641,
-     "license": "CC-BY-SA-4.0",
-     "score_total": 18
-    },
-    {
-     "repo": "amirbena/code-review-skill",
-     "entry_path": "skills/local-code-review/SKILL.md",
-     "stars": 8,
-     "license": "Apache-2.0",
-     "score_total": 18
-    }
-   ],
-   "notes": "未检索到与本地六字段报告模板同源的上游；awesome-copilot 的 skills 目录未见独立 code-review 技能（仅 codeql 等相邻项）。 | 2026-10-20(轮13 补录覆盖丢失) 裁决=吸收 依据=字节比0.236→1.045"
-  },
-  {
-   "local_skill": "security-audit",
-   "local_skill_md": "D:/global_skills/security-audit/SKILL.md",
-   "upstream_repo": "github/awesome-copilot",
-   "upstream_path": "skills/agent-owasp-compliance/SKILL.md",
-   "ledger": [
-    {
-     "repo": "trailofbits/skills",
-     "entry_path": "plugins/audit-context-building/skills/audit-context-building/SKILL.md",
-     "stars": 7641,
-     "license": "CC-BY-SA-4.0",
-     "score_total": 15
-    }
-   ],
-   "recorded_version": null,
-   "last_checked": "2026-10-20",
-   "discovery_query": "security audit skill agent owasp",
-   "candidates": [
-    {
-     "repo": "github/awesome-copilot",
-     "entry_path": "skills/agent-owasp-compliance/SKILL.md",
-     "stars": 40184,
+     "repo": "v1r3n/first-principles-skills",
+     "entry_path": null,
+     "stars": 0,
      "license": "MIT",
-     "score_total": 20
-    },
-    {
-     "repo": "trailofbits/skills",
-     "entry_path": "plugins/audit-context-building/skills/audit-context-building/SKILL.md",
-     "stars": 7641,
-     "license": "CC-BY-SA-4.0",
-     "score_total": 15
-    },
-    {
-     "repo": "trailofbits/skills",
-     "entry_path": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/SKILL.md",
-     "stars": 7641,
-     "license": "CC-BY-SA-4.0",
-     "score_total": 15
-    },
-    {
-     "repo": "trailofbits/skills",
-     "entry_path": "plugins/agentic-actions-auditor/skills/agentic-actions-auditor/SKILL.md",
-     "stars": 7641,
-     "license": "CC-BY-SA-4.0",
-     "score_total": 15
-    },
-    {
-     "repo": "netresearch/security-audit-skill",
-     "entry_path": "README.md",
-     "stars": 47,
-     "license": "NOASSERTION",
-     "score_total": 15
+     "score_total": 5
     }
    ],
-   "notes": "license 字段 API 返回 NOASSERTION，README 内 SPDX 声明为 CC-BY-SA-4.0。 | 2026-10-20 裁决=吸收(ASI十项 b8c7440)；trailofbits 误配曾致假 RED 0.395",
-   "upstream_role": "same_origin_upstream(轮13 重钉: 吸收源；trailofbits 为方法论出处非件级上游)"
-  },
-  {
-   "local_skill": "agent-browser",
-   "local_skill_md": "D:/global_skills/agent-browser/SKILL.md",
-   "upstream_repo": "vercel-labs/agent-browser",
-   "upstream_path": "skill-data/core/SKILL.md",
-   "ledger": [
-    {
-     "repo": null,
-     "entry_path": null,
-     "stars": null,
-     "license": null,
-     "score_total": null
-    }
-   ],
-   "recorded_version": "v0.39.1",
-   "last_checked": "2026-10-20",
-   "discovery_query": "agent browser skill agent",
-   "candidates": [
-    {
-     "repo": "browser-use/browser-use",
-     "entry_path": "skills/qa/SKILL.md",
-     "stars": 118543,
-     "license": null,
-     "score_total": 7
-    },
-    {
-     "repo": "vercel-labs/agent-browser",
-     "entry_path": "skills/agent-browser/SKILL.md",
-     "stars": 44260,
-     "license": null,
-     "score_total": 6
-    },
-    {
-     "repo": "microsoft/playwright-mcp",
-     "entry_path": "README.md",
-     "stars": 38379,
-     "license": null,
-     "score_total": 6
-    }
-   ],
-   "notes": " | 轮11 曾钉回 v0.39.1；本仓已 v3.0.0 薄壳化(并行会话 e6b5032c)——委托上游=结构上的终解",
-   "upstream_role": "same_origin_upstream(轮13 重钉: 轮12 exec 覆盖回归修复)"
-  },
-  {
-   "local_skill": "dogfood",
-   "local_skill_md": "D:/global_skills/dogfood/SKILL.md",
-   "upstream_repo": "vercel-labs/agent-browser",
-   "upstream_path": "skill-data/dogfood/SKILL.md",
-   "ledger": [
-    {
-     "repo": null,
-     "entry_path": null,
-     "stars": null,
-     "license": null,
-     "score_total": null
-    }
-   ],
-   "recorded_version": "v0.39.1",
-   "last_checked": "2026-10-20",
-   "discovery_query": "dogfood skill agent",
-   "candidates": [
-    {
-     "repo": "browser-use/browser-use",
-     "entry_path": "skills/qa/SKILL.md",
-     "stars": 118543,
-     "license": null,
-     "score_total": 7
-    },
-    {
-     "repo": "vercel-labs/agent-browser",
-     "entry_path": "skill-data/dogfood/SKILL.md",
-     "stars": 44260,
-     "license": null,
-     "score_total": 6
-    }
-   ],
-   "notes": " | 2026-10-20 裁决=吸收 依据=networkidle 反模式修正已入库(27752cd)，漂移腿合并口径曾 GREEN(0.966/独有0)",
-   "upstream_role": "same_origin_upstream(轮13 重钉: 轮12 测试 exec 误全量重建覆盖)"
-  },
-  {
-   "local_skill": "electron",
-   "local_skill_md": "D:/global_skills/electron/SKILL.md",
-   "upstream_repo": "vercel-labs/agent-browser",
-   "upstream_path": "skill-data/electron/SKILL.md",
-   "ledger": [
-    {
-     "repo": null,
-     "entry_path": null,
-     "stars": null,
-     "license": null,
-     "score_total": null
-    }
-   ],
-   "recorded_version": "v0.39.1",
-   "last_checked": "2026-10-20",
-   "discovery_query": "electron skill agent",
-   "candidates": [
-    {
-     "repo": "vercel-labs/agent-browser",
-     "entry_path": "skill-data/electron/SKILL.md",
-     "stars": 44260,
-     "license": null,
-     "score_total": 6
-    },
-    {
-     "repo": "vercel-labs/agent-browser",
-     "entry_path": "skill-data/dogfood/SKILL.md",
-     "stars": 44260,
-     "license": null,
-     "score_total": 6
-    },
-    {
-     "repo": "microsoft/playwright-mcp",
-     "entry_path": "README.md",
-     "stars": 38379,
-     "license": null,
-     "score_total": 6
-    }
-   ],
-   "notes": " | 2026-10-20 复核=与上游字节完全一致(SHA256 同)→不迁移，纳入防回退清单",
-   "upstream_role": "same_origin_upstream(轮13 重钉: 轮12 exec 覆盖回归修复)"
-  },
-  {
-   "local_skill": "subagent-driven-development",
-   "local_skill_md": "D:/global_skills/subagent-driven-development/SKILL.md",
-   "upstream_repo": "obra/superpowers",
-   "upstream_path": "skills/executing-plans/SKILL.md",
-   "recorded_version": "7.0.0",
-   "last_checked": "2026-10-20",
-   "discovery_query": "executing plans skill agent",
-   "candidates": [],
-   "notes": "2026-10-20 轮1 新建（B4 自行决策落地）：吸收上游 executing-plans 20405B 内核四段（inline 理由/Rulings-not-stalls/ledger 存活/四项 stop 条件）；旧名 executing-plans 在退役名册，以本名注册。references/plan-execution-contract.md 定义 ledger 与 completion contract 格式。"
+   "notes": "明确缺口：该方向缺少高 star/活跃维护的上游，现有专项仓库多为 0-4 star 个人项目。 | 2026-10-20 轮3 裁决=吸收增量（sim 0.773 同源成立）：上游 doubt-driven 五步闭环 12 标题全量入 references/upstream-doubt-driven.md"
   }
  ]
 }

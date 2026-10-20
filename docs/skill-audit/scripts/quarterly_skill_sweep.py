@@ -144,12 +144,18 @@ def fetch_upstream_text(repo, path, offline):
     if offline or not path or not repo:
         return None, "offline 或未登记 upstream_path", 0
     url = "https://raw.githubusercontent.com/" + repo + "/HEAD/" + str(path).lstrip("/")
-    try:
-        return http_bytes(url), url, 1
-    except urllib.error.HTTPError as e:
-        return None, "raw 拉取 HTTP %s（路径可能已改名）" % e.code, 1
-    except Exception as e:
-        return None, "raw 拉取失败: %r" % (e,), 1
+    # 轮8：SSL 瞬断重试一次（短退避 1s）。只重试一次+短退避是实测定的：
+    # 轮8 首版用 3 次×1.5s，把 ungh.cc 候选腿挤爆（10 条候选读数失败）——
+    # 修一处抖制造十处抖。raw 失败重试一次足够覆盖瞬断，再失败就让条目 UNVERIFIED（诚实）。
+    for attempt in range(2):
+        try:
+            return http_bytes(url), url, 1
+        except urllib.error.HTTPError as e:
+            return None, "raw 拉取 HTTP %s（路径可能已改名）" % e.code, 1
+        except Exception as e:
+            if attempt == 1:
+                return None, "raw 拉取失败(2 次尝试): %r" % (e,), 1
+            time.sleep(1.0)
 
 
 def leg_version(recorded, live, note):

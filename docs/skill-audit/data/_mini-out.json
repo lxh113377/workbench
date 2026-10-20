@@ -1,20 +1,20 @@
 {
   "schema": "skill-sweep-v1",
-  "generated_at": "2026-10-20T11:32:44",
+  "generated_at": "2026-10-20T14:11:14",
   "offline": false,
   "fuse_days": 100,
   "active_days": 400,
-  "registry": "D:\\workdesktop\\docs\\skill-audit\\data\\_mini-reg.json",
-  "http_calls": 38,
-  "worst_state": "UNVERIFIED",
+  "registry": "D:/workdesktop/docs/skill-audit/data/_mini-reg.json",
+  "http_calls": 8,
+  "worst_state": "GREEN",
   "rows": [
     {
-      "local_skill": "code-review",
+      "local_skill": "first-principles-decomposer",
       "upstream_repo": "addyosmani/agent-skills",
-      "upstream_path": "skills/code-review-and-quality/SKILL.md",
+      "upstream_path": "skills/doubt-driven-development/SKILL.md",
       "recorded_version": "Agent Skills 0.6.13",
       "live_version": "Agent Skills 0.6.13",
-      "local_main_bytes": 5200,
+      "local_main_bytes": 3517,
       "live_source": "releases.atom",
       "leg_version": {
         "state": "GREEN",
@@ -22,7 +22,7 @@
       },
       "leg_drift": {
         "state": "GREEN",
-        "note": "本地(含references卷) 22405B / 上游 20976B / 相似度 0.354 / 上游独有标题 原始 2 / 归一化 0"
+        "note": "本地(含references卷) 16323B / 上游 16647B / 相似度 0.776 / 上游独有标题 原始 14 / 归一化 0"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -30,43 +30,43 @@
         "detail": [
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108611,
+            "stars": 108694,
             "pushed_days": 7,
             "archived": false,
-            "license": null,
-            "source": "ungh.cc",
+            "license": "MIT",
+            "source": "api.github.com",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108694，来源 api.github.com）"
           },
           {
-            "repo": "obra/superpowers",
-            "stars": 301816,
-            "pushed_days": 10,
+            "repo": "mrchou1/first-principles-reasoning",
+            "stars": 0,
+            "pushed_days": 178,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=301816，来源 ungh.cc）"
+            "note": "活跃（178 天前推送，stars=0，来源 ungh.cc）"
           },
           {
-            "repo": "trailofbits/skills",
-            "stars": 7647,
-            "pushed_days": 1,
+            "repo": "weiliu1031/first-principles-thinking",
+            "stars": 4,
+            "pushed_days": 206,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=7647，来源 ungh.cc）"
+            "note": "活跃（206 天前推送，stars=4，来源 ungh.cc）"
           },
           {
-            "repo": "amirbena/code-review-skill",
-            "stars": 8,
-            "pushed_days": 1,
+            "repo": "v1r3n/first-principles-skills",
+            "stars": 0,
+            "pushed_days": 197,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=8，来源 ungh.cc）"
+            "note": "活跃（197 天前推送，stars=0，来源 ungh.cc）"
           }
         ]
       },
@@ -80,300 +80,6 @@
       "days_since_check": 0,
       "stale": false,
       "overall": "GREEN"
-    },
-    {
-      "local_skill": "security-audit",
-      "upstream_repo": "github/awesome-copilot",
-      "upstream_path": "skills/agent-owasp-compliance/SKILL.md",
-      "recorded_version": null,
-      "live_version": "sha-HEAD",
-      "local_main_bytes": 12084,
-      "live_source": "commits.atom",
-      "leg_version": {
-        "state": "UNVERIFIED",
-        "note": "登记表无 recorded_version，对表无基线"
-      },
-      "leg_drift": {
-        "state": "GREEN",
-        "note": "本地(含references卷) 19861B / 上游 11894B / 相似度 0.836 / 上游独有标题 原始 1 / 归一化 0"
-      },
-      "leg_candidates": {
-        "state": "GREEN",
-        "note": "5 个候选全部在活跃窗内",
-        "detail": [
-          {
-            "repo": "github/awesome-copilot",
-            "stars": 40185,
-            "pushed_days": 4,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（4 天前推送，stars=40185，来源 ungh.cc）"
-          },
-          {
-            "repo": "trailofbits/skills",
-            "stars": 7647,
-            "pushed_days": 1,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=7647，来源 ungh.cc）"
-          },
-          {
-            "repo": "trailofbits/skills",
-            "stars": 7647,
-            "pushed_days": 1,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=7647，来源 ungh.cc）"
-          },
-          {
-            "repo": "trailofbits/skills",
-            "stars": 7647,
-            "pushed_days": 1,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=7647，来源 ungh.cc）"
-          },
-          {
-            "repo": "netresearch/security-audit-skill",
-            "stars": 47,
-            "pushed_days": 1,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=47，来源 ungh.cc）"
-          }
-        ]
-      },
-      "leg_discovery": {
-        "state": "SKIP",
-        "note": "本次未启用替代发现（--discover 0）；该腿为可选增强，不计入总判定",
-        "detail": [],
-        "optional": true
-      },
-      "last_checked": "2026-10-20",
-      "days_since_check": 0,
-      "stale": false,
-      "overall": "UNVERIFIED"
-    },
-    {
-      "local_skill": "agent-browser",
-      "upstream_repo": "vercel-labs/agent-browser",
-      "upstream_path": "skill-data/core/SKILL.md",
-      "recorded_version": "v0.39.1",
-      "live_version": "0.39.1",
-      "local_main_bytes": 4858,
-      "live_source": "releases.atom",
-      "leg_version": {
-        "state": "GREEN",
-        "note": "登记 0.39.1 == 上游观测（releases.atom 最新 tag v0.39.1（2026-10-13T19:52:20Z））"
-      },
-      "leg_drift": {
-        "state": "GREEN",
-        "note": "委托壳[skills get,委托上游,薄壳,上游锚点]：命令面运行时随版获取，漂移由版本腿跟踪（原始壳-上游对比不计判：RED/144）"
-      },
-      "leg_candidates": {
-        "state": "GREEN",
-        "note": "3 个候选全部在活跃窗内",
-        "detail": [
-          {
-            "repo": "browser-use/browser-use",
-            "stars": 118543,
-            "pushed_days": 3,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（3 天前推送，stars=118543，来源 ungh.cc）"
-          },
-          {
-            "repo": "vercel-labs/agent-browser",
-            "stars": 44260,
-            "pushed_days": 1,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=44260，来源 ungh.cc）"
-          },
-          {
-            "repo": "microsoft/playwright-mcp",
-            "stars": 38368,
-            "pushed_days": 1,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=38368，来源 ungh.cc）"
-          }
-        ]
-      },
-      "leg_discovery": {
-        "state": "SKIP",
-        "note": "本次未启用替代发现（--discover 0）；该腿为可选增强，不计入总判定",
-        "detail": [],
-        "optional": true
-      },
-      "last_checked": "2026-10-20",
-      "days_since_check": 0,
-      "stale": false,
-      "overall": "GREEN"
-    },
-    {
-      "local_skill": "dogfood",
-      "upstream_repo": "vercel-labs/agent-browser",
-      "upstream_path": "skill-data/dogfood/SKILL.md",
-      "recorded_version": "v0.39.1",
-      "live_version": "0.39.1",
-      "local_main_bytes": 11882,
-      "live_source": "releases.atom",
-      "leg_version": {
-        "state": "GREEN",
-        "note": "登记 0.39.1 == 上游观测（releases.atom 最新 tag v0.39.1（2026-10-13T19:52:20Z））"
-      },
-      "leg_drift": {
-        "state": "GREEN",
-        "note": "委托壳[skills get,.upstream,上游锚点]：命令面运行时随版获取，漂移由版本腿跟踪（原始壳-上游对比不计判：GREEN/69）"
-      },
-      "leg_candidates": {
-        "state": "GREEN",
-        "note": "2 个候选全部在活跃窗内",
-        "detail": [
-          {
-            "repo": "browser-use/browser-use",
-            "stars": 118543,
-            "pushed_days": 3,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（3 天前推送，stars=118543，来源 ungh.cc）"
-          },
-          {
-            "repo": "vercel-labs/agent-browser",
-            "stars": 44260,
-            "pushed_days": 1,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=44260，来源 ungh.cc）"
-          }
-        ]
-      },
-      "leg_discovery": {
-        "state": "SKIP",
-        "note": "本次未启用替代发现（--discover 0）；该腿为可选增强，不计入总判定",
-        "detail": [],
-        "optional": true
-      },
-      "last_checked": "2026-10-20",
-      "days_since_check": 0,
-      "stale": false,
-      "overall": "GREEN"
-    },
-    {
-      "local_skill": "electron",
-      "upstream_repo": "vercel-labs/agent-browser",
-      "upstream_path": "skill-data/electron/SKILL.md",
-      "recorded_version": "v0.39.1",
-      "live_version": "0.39.1",
-      "local_main_bytes": 2625,
-      "live_source": "releases.atom",
-      "leg_version": {
-        "state": "GREEN",
-        "note": "登记 0.39.1 == 上游观测（releases.atom 最新 tag v0.39.1（2026-10-13T19:52:20Z））"
-      },
-      "leg_drift": {
-        "state": "GREEN",
-        "note": "委托壳[skills get,委托上游,.upstream,上游锚点]：命令面运行时随版获取，漂移由版本腿跟踪（原始壳-上游对比不计判：RED/174）"
-      },
-      "leg_candidates": {
-        "state": "GREEN",
-        "note": "3 个候选全部在活跃窗内",
-        "detail": [
-          {
-            "repo": "vercel-labs/agent-browser",
-            "stars": 44260,
-            "pushed_days": 1,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=44260，来源 ungh.cc）"
-          },
-          {
-            "repo": "vercel-labs/agent-browser",
-            "stars": 44260,
-            "pushed_days": 1,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=44260，来源 ungh.cc）"
-          },
-          {
-            "repo": "microsoft/playwright-mcp",
-            "stars": 38368,
-            "pushed_days": 1,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=38368，来源 ungh.cc）"
-          }
-        ]
-      },
-      "leg_discovery": {
-        "state": "SKIP",
-        "note": "本次未启用替代发现（--discover 0）；该腿为可选增强，不计入总判定",
-        "detail": [],
-        "optional": true
-      },
-      "last_checked": "2026-10-20",
-      "days_since_check": 0,
-      "stale": false,
-      "overall": "GREEN"
-    },
-    {
-      "local_skill": "subagent-driven-development",
-      "upstream_repo": "obra/superpowers",
-      "upstream_path": "skills/executing-plans/SKILL.md",
-      "recorded_version": "7.0.0",
-      "live_version": "7.0.0",
-      "local_main_bytes": 3846,
-      "live_source": "releases.atom",
-      "leg_version": {
-        "state": "GREEN",
-        "note": "登记 7.0.0 == 上游观测（releases.atom 最新 tag v7.0.0（2026-10-10T00:28:58Z））"
-      },
-      "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 9158B / 上游 20405B / 相似度 0.261 / 上游独有标题 原始 13 / 归一化 12（例：1. take the task; 2. work the steps; 3. the completion contract）"
-      },
-      "leg_candidates": {
-        "state": "UNVERIFIED",
-        "note": "登记表无 candidates",
-        "detail": []
-      },
-      "leg_discovery": {
-        "state": "SKIP",
-        "note": "本次未启用替代发现（--discover 0）；该腿为可选增强，不计入总判定",
-        "detail": [],
-        "optional": true
-      },
-      "last_checked": "2026-10-20",
-      "days_since_check": 0,
-      "stale": false,
-      "overall": "RED"
     }
   ]
 }
