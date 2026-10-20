@@ -301,6 +301,17 @@ def sweep(registry, offline=False, discover=0, active_days=None):
         path = e.get("upstream_path")
         local_path = Path(e.get("local_skill_md") or "")
         local_text, main_bytes, lnote = load_local_merged(local_path)
+        # 委托壳识别（轮13 教训：agent-browser v3.0.0 / electron v1.1.0 薄壳化后内容随版委托上游，
+        #   拿壳文本对厚上游比标题=假红）。壳必须有显式锚点（>=2 标记且含 skills get 或 .upstream），
+        #   命中后漂移腿转记「委托」态 GREEN，上游漂移改由版本腿跟踪（版本腿仍可比 recorded_version）。
+        _delegated = False
+        _dmark = ''
+        if local_text:
+            _markers = ('skills get', '委托上游', '薄壳', '.upstream', '上游锚点')
+            _hits = [mk for mk in _markers if mk in local_text]
+            if len(_hits) >= 2 and ('skills get' in local_text or '.upstream' in local_text):
+                _delegated = True
+                _dmark = ','.join(_hits)
 
         val, note, src, c = live_version(repo, offline); api_calls += c
         legv = leg_version(e.get("recorded_version"), val, note)
@@ -310,7 +321,11 @@ def sweep(registry, offline=False, discover=0, active_days=None):
         else:
             up_text, up_note, c2 = None, "未登记 upstream_path", 0
         api_calls += c2
-        legd = leg_drift(local_text, lnote, up_text, up_note)
+        if _delegated:
+            _ds, _dn = leg_drift(local_text, lnote, up_text, up_note)
+            legd = (GREEN, '委托壳[%s]：命令面运行时随版获取，漂移由版本腿跟踪（原始壳-上游对比不计判：%s/%s）' % (_dmark, STATE_NAME[_ds], str(len(_dn))))
+        else:
+            legd = leg_drift(local_text, lnote, up_text, up_note)
 
         legc = leg_candidates(e.get("candidates") or [], today, offline, ad)
         api_calls += legc[3]

@@ -53,7 +53,7 @@
           "score_total": 18
         }
       ],
-      "notes": "未检索到与本地六字段报告模板同源的上游；awesome-copilot 的 skills 目录未见独立 code-review 技能（仅 codeql 等相邻项）。"
+      "notes": "未检索到与本地六字段报告模板同源的上游；awesome-copilot 的 skills 目录未见独立 code-review 技能（仅 codeql 等相邻项）。 | 2026-10-20(轮13 补录覆盖丢失) 裁决=吸收 依据=字节比0.236→1.045"
     },
     {
       "local_skill": "debugging-fixing",
@@ -102,7 +102,7 @@
           "score_total": 5
         }
       ],
-      "notes": "上游同源为 obra/superpowers 的 systematic-debugging；本地已含自有 references 扩展。"
+      "notes": "上游同源为 obra/superpowers 的 systematic-debugging；本地已含自有 references 扩展。 | 2026-10-20(轮13 补录覆盖丢失) 裁决=吸收 依据=字节比0.586→1.434"
     },
     {
       "local_skill": "testing",
@@ -158,7 +158,7 @@
           "score_total": 15
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20(轮13 补录覆盖丢失) 裁决=保持分叉"
     },
     {
       "local_skill": "test-driven-development",
@@ -263,7 +263,7 @@
           "score_total": 5
         }
       ],
-      "notes": "obra/superpowers 的 skills/ 目录实测无 refactoring，本地该技能为自研。"
+      "notes": "obra/superpowers 的 skills/ 目录实测无 refactoring，本地该技能为自研。 | 2026-10-20(轮13 补录覆盖丢失) 裁决=吸收 依据=字节比0.355→1.201"
     },
     {
       "local_skill": "spike",
@@ -464,8 +464,8 @@
     {
       "local_skill": "security-audit",
       "local_skill_md": "D:/global_skills/security-audit/SKILL.md",
-      "upstream_repo": "trailofbits/skills",
-      "upstream_path": "plugins/audit-context-building/skills/audit-context-building/SKILL.md",
+      "upstream_repo": "github/awesome-copilot",
+      "upstream_path": "skills/agent-owasp-compliance/SKILL.md",
       "ledger": [
         {
           "repo": "trailofbits/skills",
@@ -515,7 +515,8 @@
           "score_total": 15
         }
       ],
-      "notes": "license 字段 API 返回 NOASSERTION，README 内 SPDX 声明为 CC-BY-SA-4.0。"
+      "notes": "license 字段 API 返回 NOASSERTION，README 内 SPDX 声明为 CC-BY-SA-4.0。 | 2026-10-20 裁决=吸收(ASI十项 b8c7440)；trailofbits 误配曾致假 RED 0.395",
+      "upstream_role": "same_origin_upstream(轮13 重钉: 吸收源；trailofbits 为方法论出处非件级上游)"
     },
     {
       "local_skill": "ci-pipeline-debugging",
@@ -564,7 +565,7 @@
           "score_total": 5
         }
       ],
-      "notes": "明确缺口：GitHub 未检索到与本地『六类归因决策树』同源的技能仓库。"
+      "notes": "明确缺口：GitHub 未检索到与本地『六类归因决策树』同源的技能仓库。 | 2026-10-20(轮13 补录覆盖丢失) 裁决=保持分叉"
     },
     {
       "local_skill": "writing-plans",
@@ -676,7 +677,7 @@
           "score_total": 15
         }
       ],
-      "notes": "结构差异证据：上游 skills/brainstorming/ 含 builder-check-prompt.md，本地对应文件为 spec-document-reviewer-prompt.md（已产生分叉漂移）。"
+      "notes": "结构差异证据：上游 skills/brainstorming/ 含 builder-check-prompt.md，本地对应文件为 spec-document-reviewer-prompt.md（已产生分叉漂移）。 | 2026-10-20(轮13 补录覆盖丢失) 裁决=吸收 依据=漂移腿RED(独有8)→吸收上游7节→复验漂移GREEN(独有0)"
     },
     {
       "local_skill": "A-dynamic-workflow",
@@ -774,7 +775,7 @@
           "score_total": 5
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20(轮13 补录覆盖丢失) 裁决=吸收 依据=漂移腿RED(独有9)→吸收上游9节→复验GREEN(独有0)"
     },
     {
       "local_skill": "A-skill-manager",
@@ -956,7 +957,7 @@
           "score_total": 3
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20(轮13 补录覆盖丢失) 裁决=保持本地(不替换)"
     },
     {
       "local_skill": "executing-plans",
@@ -1192,8 +1193,8 @@
     {
       "local_skill": "agent-browser",
       "local_skill_md": "D:/global_skills/agent-browser/SKILL.md",
-      "upstream_repo": null,
-      "upstream_path": null,
+      "upstream_repo": "vercel-labs/agent-browser",
+      "upstream_path": "skill-data/core/SKILL.md",
       "ledger": [
         {
           "repo": null,
@@ -1203,7 +1204,7 @@
           "score_total": null
         }
       ],
-      "recorded_version": null,
+      "recorded_version": "v0.39.1",
       "last_checked": "2026-10-20",
       "discovery_query": "agent browser skill agent",
       "candidates": [
@@ -1229,13 +1230,14 @@
           "score_total": 6
         }
       ],
-      "notes": null
+      "notes": " | 轮11 曾钉回 v0.39.1；本仓已 v3.0.0 薄壳化(并行会话 e6b5032c)——委托上游=结构上的终解",
+      "upstream_role": "same_origin_upstream(轮13 重钉: 轮12 exec 覆盖回归修复)"
     },
     {
       "local_skill": "dogfood",
       "local_skill_md": "D:/global_skills/dogfood/SKILL.md",
-      "upstream_repo": null,
-      "upstream_path": null,
+      "upstream_repo": "vercel-labs/agent-browser",
+      "upstream_path": "skill-data/dogfood/SKILL.md",
       "ledger": [
         {
           "repo": null,
@@ -1245,7 +1247,7 @@
           "score_total": null
         }
       ],
-      "recorded_version": null,
+      "recorded_version": "v0.39.1",
       "last_checked": "2026-10-20",
       "discovery_query": "dogfood skill agent",
       "candidates": [
@@ -1264,13 +1266,14 @@
           "score_total": 6
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20 裁决=吸收 依据=networkidle 反模式修正已入库(27752cd)，漂移腿合并口径曾 GREEN(0.966/独有0)",
+      "upstream_role": "same_origin_upstream(轮13 重钉: 轮12 测试 exec 误全量重建覆盖)"
     },
     {
       "local_skill": "electron",
       "local_skill_md": "D:/global_skills/electron/SKILL.md",
-      "upstream_repo": null,
-      "upstream_path": null,
+      "upstream_repo": "vercel-labs/agent-browser",
+      "upstream_path": "skill-data/electron/SKILL.md",
       "ledger": [
         {
           "repo": null,
@@ -1280,7 +1283,7 @@
           "score_total": null
         }
       ],
-      "recorded_version": null,
+      "recorded_version": "v0.39.1",
       "last_checked": "2026-10-20",
       "discovery_query": "electron skill agent",
       "candidates": [
@@ -1306,7 +1309,8 @@
           "score_total": 6
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20 复核=与上游字节完全一致(SHA256 同)→不迁移，纳入防回退清单",
+      "upstream_role": "same_origin_upstream(轮13 重钉: 轮12 exec 覆盖回归修复)"
     },
     {
       "local_skill": "gstack",

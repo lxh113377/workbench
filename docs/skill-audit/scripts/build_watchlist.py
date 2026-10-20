@@ -102,7 +102,35 @@ reg = {"schema": "skill-watchlist-v1",
        "fuse_days": 100,
        "active_days": 400,
        "watchlist": entries}
-open(BASE + "/data/skill-watchlist.json", "w", encoding="utf-8").write(json.dumps(reg, ensure_ascii=False, indent=2))
+# 手工钉保护 + 默认 dry-run（轮13 教训：测试 import 本脚本曾触发全量重建，覆盖 dogfood/electron/agent-browser/security-audit 四条人工血缘钉与 8 条裁决注记，repair_watchlist_r13.py 修复）
+# 防线1：写盘需显式 --write（防被 import/exec 意外触发）；防线2：写前从现存文件保留 upstream_role 含「轮13 重钉/人工钉回/same_origin」条目的血缘与 notes/last_checked/recorded_version
+import sys as _sys
+PRESERVE_KEYS = ("upstream_repo", "upstream_path", "upstream_role", "recorded_version", "notes", "last_checked")
+_prev = {}
+_ppath = BASE + "/data/skill-watchlist.json"
+if os.path.isfile(_ppath):
+    try:
+        _old = json.load(open(_ppath, encoding="utf-8"))
+        for e in _old.get("watchlist", []):
+            role = str(e.get("upstream_role") or "")
+            if any(k in role for k in ("轮13 重钉", "修正", "钉回", "same_origin", "discovered_strong_candidate")):
+                _prev[e.get("local_skill")] = {k: e.get(k) for k in PRESERVE_KEYS}
+    except Exception as _e:
+        print("WARN preserve-read:", repr(_e)[:80])
+_kept = 0
+for e in entries:
+    _sv = _prev.get(e["local_skill"])
+    if _sv:
+        for k in PRESERVE_KEYS:
+            if _sv.get(k) not in (None, ""):
+                e[k] = _sv[k]
+        _kept += 1
+print("manual-pin entries preserved:", _kept, "of", len(_prev))
+if "--write" in _sys.argv:
+    open(_ppath, "w", encoding="utf-8").write(json.dumps(reg, ensure_ascii=False, indent=2))
+    print("WROTE skill-watchlist.json")
+else:
+    print("DRY-RUN（未写盘；正式重建需 --write）")
 print("entries=%d with_tag=%d no_tag=%d" % (len(entries), len(withtag), len(notag)))
 # 聚类告警（轮10 升级建议自动闭环）：同上游仓被 ≥2 技能共享时提示按仓巡检，防整族漏登（obsidian 族/vercel-labs 族实证）
 _cluster = {}
