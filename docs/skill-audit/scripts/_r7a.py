@@ -1,0 +1,23 @@
+import json, os, glob, datetime
+BASE = 'D:/workdesktop/docs/skill-audit'
+files = sorted(glob.glob(BASE + '/data/*.json'))
+print('=== data files mtime ===')
+for f in files:
+    st = os.stat(f)
+    print('%-52s %8d B  %s' % (os.path.basename(f), st.st_size, datetime.datetime.fromtimestamp(st.st_mtime).strftime('%m-%d %H:%M')))
+print()
+print('=== cross-file consistency ===')
+inv = json.load(open(BASE + '/data/inventory.json', encoding='utf-8'))
+reg = json.load(open(BASE + '/data/skill-watchlist.json', encoding='utf-8'))
+m = json.load(open(BASE + '/data/score-matrix.json', encoding='utf-8'))
+d = json.load(open(BASE + '/data/sweep-report.json', encoding='utf-8'))
+names_inv = set(i['name'] for i in inv['items'] if i.get('has_skill_md'))
+names_reg = set(e['local_skill'] for e in reg['watchlist'])
+names_mx = set(s['local_skill'] for s in m['skills'])
+names_sw = set(r['local_skill'] for r in d['rows'])
+print('inv=%d reg=%d mx=%d sweep=%d' % (len(names_inv), len(names_reg), len(names_mx), len(names_sw)))
+print('reg entries not in inventory:', sorted(names_reg - names_inv))
+print('inventory not in reg:', len(names_inv - names_reg))
+print('matrix not in reg:', sorted(names_mx - names_reg))
+print('sweep rows not in reg:', sorted(names_sw - names_reg))
+print('reg not in sweep:', sorted(names_reg - names_sw))

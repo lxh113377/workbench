@@ -977,55 +977,6 @@
       "upstream_role": "candidate_pool(轮3 重分类，非同源)"
     },
     {
-      "local_skill": "executing-plans",
-      "local_skill_md": "D:/global_skills/executing-plans/SKILL.md",
-      "upstream_repo": "obra/superpowers",
-      "upstream_path": "skills/executing-plans/SKILL.md",
-      "ledger": [
-        {
-          "repo": "obra/superpowers",
-          "entry_path": "skills/executing-plans/SKILL.md",
-          "stars": 301953,
-          "license": "MIT",
-          "score_total": 17
-        }
-      ],
-      "recorded_version": "v7.0.0",
-      "last_checked": "2026-10-20",
-      "discovery_query": "executing plans skill agent task tracking subagent",
-      "candidates": [
-        {
-          "repo": "obra/superpowers",
-          "entry_path": "skills/executing-plans/SKILL.md",
-          "stars": 302151,
-          "license": "MIT",
-          "score_total": 17
-        },
-        {
-          "repo": "obra/superpowers",
-          "entry_path": "skills/subagent-driven-development/SKILL.md",
-          "stars": 302151,
-          "license": "MIT",
-          "score_total": 17
-        },
-        {
-          "repo": "addyosmani/agent-skills",
-          "entry_path": "skills/incremental-implementation/SKILL.md",
-          "stars": 108473,
-          "license": "MIT",
-          "score_total": 17
-        },
-        {
-          "repo": "github/awesome-copilot",
-          "entry_path": "skills/breakdown-feature-implementation/SKILL.md",
-          "stars": 40184,
-          "license": "MIT",
-          "score_total": 8
-        }
-      ],
-      "notes": "恢复该能力建议以上游 obra/superpowers 的 executing-plans 或 subagent-driven-development 为源。"
-    },
-    {
       "local_skill": "A-memory-start",
       "local_skill_md": "D:/global_skills/A-memory-start/SKILL.md",
       "upstream_repo": "yonatangross/orchestkit",
@@ -2275,8 +2226,42 @@
       "recorded_version": "7.0.0",
       "last_checked": "2026-10-20",
       "discovery_query": "executing plans skill agent",
-      "candidates": [],
-      "notes": "2026-10-20 轮1 新建（B4 自行决策落地）：吸收上游 executing-plans 20405B 内核四段（inline 理由/Rulings-not-stalls/ledger 存活/四项 stop 条件）；旧名 executing-plans 在退役名册，以本名注册。references/plan-execution-contract.md 定义 ledger 与 completion contract 格式。 | 2026-10-20 轮1 裁决=吸收分叉（05 §五）：漂移腿 RED 系本地中文精选吸收(3846B)对上游全文(20405B)的预期差异，上游独有段按需增量吸收，不做全文镜像；版本腿 GREEN(7.0.0)。S1 结构自检 PASS(3 卷全 ≤4096B)、冒烟 PASS(分卷无死链/新名不在退役册)。"
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/executing-plans/SKILL.md",
+          "stars": 302151,
+          "license": "MIT",
+          "score_total": 17,
+          "merged_from": "executing-plans(轮7 合并，旧名注销前移交接管)"
+        },
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/subagent-driven-development/SKILL.md",
+          "stars": 302151,
+          "license": "MIT",
+          "score_total": 17,
+          "merged_from": "executing-plans(轮7 合并，旧名注销前移交接管)"
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/incremental-implementation/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 17,
+          "merged_from": "executing-plans(轮7 合并，旧名注销前移交接管)"
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "entry_path": "skills/breakdown-feature-implementation/SKILL.md",
+          "stars": 40184,
+          "license": "MIT",
+          "score_total": 8,
+          "merged_from": "executing-plans(轮7 合并，旧名注销前移交接管)"
+        }
+      ],
+      "notes": "2026-10-20 轮1 新建（B4 自行决策落地）：吸收上游 executing-plans 20405B 内核四段（inline 理由/Rulings-not-stalls/ledger 存活/四项 stop 条件）；旧名 executing-plans 在退役名册，以本名注册。references/plan-execution-contract.md 定义 ledger 与 completion contract 格式。 | 2026-10-20 轮1 裁决=吸收分叉（05 §五）：漂移腿 RED 系本地中文精选吸收(3846B)对上游全文(20405B)的预期差异，上游独有段按需增量吸收，不做全文镜像；版本腿 GREEN(7.0.0)。S1 结构自检 PASS(3 卷全 ≤4096B)、冒烟 PASS(分卷无死链/新名不在退役册)。 | 2026-10-20 轮7：注销同名旧条目 executing-plans（其 4 候选中 4 个未在本条目的已并入；该旧条目 local_skill_md 指向不存在的目录，sweep local_main_bytes=0，职责由本条取代）",
+      "candidate_count": 4
     }
   ],
   "_policy_notes": " | 2026-10-20 轮2：entry_kind 三分法——same_origin_upstream(同源上游，漂移腿判)/candidate_pool(候选池，仅候选活性腿)/self_developed(自研，版本腿跳过)。依据：batch-C 提词检索的 STRONG 候选与本地技能名常无对应（xlsx→genoffice 套件、pdf→seo-* 族），硬填 upstream_path=造假血缘。"
