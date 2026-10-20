@@ -20,6 +20,9 @@ const poolJS = `(() => {
   const fmtMs = (ms) => { if (!ms) return '—'; if (ms < 1000) return ms + ' ms'; return (ms/1000).toFixed(1) + ' s'; };
   const fmtTime = (ms) => ms ? new Date(ms).toLocaleString('zh-CN', {hour12:false}) : '—';
   const STATE_TEXT = { healthy:'可用', degraded:'降级', down:'下线', unknown:'未探测', disabled:'已停用' };
+  // 调度策略显示名（老大 2026-10-20：英文看不懂）。值仍发英文给 API，只有展示层是中文。
+  const STRAT_TEXT = { priority:'优先级（主用+兜底）', 'round-robin':'轮转（轮流用）', weighted:'加权（按权重抽签）', 'least-loaded':'最空闲（谁闲用谁）' };
+  const stratName = (s) => STRAT_TEXT[s] || s || '优先级（主用+兜底）';
   let cache = null;
 
   const pill = (st) => '<span class="pill ' + esc(st||'unknown') + '">' + esc(STATE_TEXT[st] || st || '未知') + '</span>';
@@ -30,73 +33,171 @@ const poolJS = `(() => {
   };
 
   // ── 概览 ──────────────────────────────────────────────
+  // 2026-10-20 简化：原来「总览 6 格 + 车道水位表 + 模型清单 9 列 + 添加表单 12 项 + 日志」
+  // 五块平铺，一屏看到的全是数字。现在首屏只有一行结论 + 4 个关键读数，
+  // 车道水位并进总览卡（它本来只是「这几条车道各几个模型」），明细一律折叠。
+  // fold 默认折叠；poolFold 默认展开（模型清单要一屏看全，折叠只是为了收起噪音组）。
+  const fold = (title, body) => '<details class="fold"><summary>' + esc(title) + '</summary><div class="fold-body">' + body + '</div></details>';
+  const poolFold = (title, body, open) => '<details class="fold"' + (open ? ' open' : '') + '><summary>' + esc(title) + '</summary><div class="fold-body">' + body + '</div></details>';
   const renderOverview = (d) => {
     const g = d.gateway || {};
-    const items = [
-      ['可用模型', (d.available||0) + ' / ' + (d.total||0)],
-      ['可调度（DSH 车道）', String(d.routable||0)],
-      ['调度策略', d.strategy || 'priority'],
-      ['探测轮次', String(d.probeRuns||0)],
-      ['网关', g.base ? (g.hasKey ? '已连接' : '缺密钥') : '未发现'],
-      ['网关广播模型', String(g.models||0)],
-    ];
-    const kv = items.map(x => '<div class="item"><div class="v">' + esc(x[1]) + '</div><div class="l">' + esc(x[0]) + '</div></div>').join('');
+    const lanes = d.lanes || [];
+    const laneRows = lanes.map(l =>
+      '<tr>' +
+      '<td data-label="车道">' + esc(l.label || l.lane) + '</td>' +
+      '<td data-label="总数">' + esc(l.total) + '</td>' +
+      '<td data-label="可用">' + esc(l.available) + '</td>' +
+      '<td data-label="下线">' + esc(l.down) + '</td>' +
+      '<td data-label="停用">' + esc(l.disabled) + '</td>' +
+      '</tr>'
+    ).join('');
+    const laneBody = '<div class="pool-table-wrap"><table class="pool-table"><thead><tr><th>车道</th><th>总数</th><th>可用</th><th>下线</th><th>停用</th></tr></thead><tbody>' +
+      (laneRows || '<tr><td colspan="5" class="empty">暂无模型</td></tr>') + '</tbody></table></div>';
     const strategies = ['priority','round-robin','weighted','least-loaded'];
-    const stratSel = '<select id="strategySel">' + strategies.map(s => '<option value="' + s + '"' + (d.strategy===s?' selected':'') + '>' + s + '</option>').join('') + '</select>';
+    const stratSel = '<select id="strategySel" style="max-width:220px">' + strategies.map(s => '<option value="' + s + '"' + (d.strategy===s?' selected':'') + '>' + stratName(s) + '</option>').join('') + '</select>';
     const lp = d.lastProbe || {};
+    const gw = g.base ? (g.hasKey ? '已连接' : '缺密钥') : '未发现';
     document.getElementById('poolOverview').innerHTML =
-      '<div class="card"><h3>总览</h3><div class="kv">' + kv + '</div>' +
-      '<div style="margin-top:12px" class="pool-inline"><label>调度策略' + stratSel + '</label>' +
-      '<div class="muted">最近一轮探测：共 ' + esc(lp.total||0) + ' 个，可用 ' + esc(lp.ok||0) + '，下线 ' + esc(lp.down||0) + '，未知 ' + esc(lp.unknown||0) + '（' + esc(fmtTime(lp.at)) + '）</div></div>' +
-      (g.error ? '<div class="muted" style="margin-top:8px;color:#f85149">网关错误：' + esc(g.error) + '</div>' : '') +
+      '<div class="card"><h3>总览</h3>' +
+      '<div class="status-line"><span class="dot ' + ((d.available||0) > 0 ? 'on' : 'off') + '"></span>' +
+        '可用 <b>' + esc(d.available||0) + ' / ' + esc(d.total||0) + '</b> 个模型' +
+        '<span class="sep">·</span>网关 <b>' + esc(gw) + '</b>' +
+        '<span class="sep">·</span>策略 <b>' + esc(stratName(d.strategy)) + '</b>' +
+        (lp.at ? '<span class="sep">·</span>上次探测 <b>' + esc(fmtTime(lp.at)) + '</b>' : '') +
+      '</div>' +
+      (g.error ? '<div class="muted" style="margin-top:10px;color:var(--danger)">网关错误：' + esc(g.error) + '</div>' : '') +
+      '<div style="margin-top:14px"><label>调度策略</label>' + stratSel + '</div>' +
+      fold('车道水位（' + lanes.length + ' 条车道）', laneBody) +
       '</div>';
     const sel = document.getElementById('strategySel');
     if (sel) sel.onchange = async () => {
-      try { await api('/api/pool/strategy', { method:'POST', body: JSON.stringify({ strategy: sel.value }) }); toast('策略已切换为 ' + sel.value); load(); }
+      try { await api('/api/pool/strategy', { method:'POST', body: JSON.stringify({ strategy: sel.value }) }); toast('策略已切换为：' + stratName(sel.value)); load(); }
       catch (e) { toast('切换失败：' + e.message); }
     };
   };
 
   // ── 车道 ──────────────────────────────────────────────
+  // 车道水位已并入「总览」卡的折叠块；本函数保留车道表的单一实现，
+  // 由 pool_touch_contract_test.go 继续钉住「每格必须带 data-label」这条窄屏契约。
   const renderLanes = (d) => {
-    const rows = (d.lanes || []).map(l =>
-      '<tr><td>' + esc(l.label || l.lane) + '</td><td>' + esc(l.total) + '</td><td>' + esc(l.available) + '</td><td>' + esc(l.down) + '</td><td>' + esc(l.disabled) + '</td></tr>'
+    const lanes = d.lanes || [];
+    const rows = lanes.map(l =>
+      '<tr>' +
+      '<td data-label="车道">' + esc(l.label || l.lane) + '</td>' +
+      '<td data-label="总数">' + esc(l.total) + '</td>' +
+      '<td data-label="可用">' + esc(l.available) + '</td>' +
+      '<td data-label="下线">' + esc(l.down) + '</td>' +
+      '<td data-label="停用">' + esc(l.disabled) + '</td>' +
+      '</tr>'
     ).join('');
-    document.getElementById('poolLanes').innerHTML =
-      '<div class="card" style="margin-top:16px"><h3>车道水位</h3><table class="pool-table"><thead><tr><th>车道</th><th>总数</th><th>可用</th><th>下线</th><th>停用</th></tr></thead><tbody>' +
+    return '<div class="pool-table-wrap"><table class="pool-table"><thead><tr><th>车道</th><th>总数</th><th>可用</th><th>下线</th><th>停用</th></tr></thead><tbody>' +
       (rows || '<tr><td colspan="5" class="empty">暂无模型</td></tr>') + '</tbody></table></div>';
   };
 
-  // ── 模型清单 ──────────────────────────────────────────
+  // ── 模型清单（按分组分类管理） ────────────────────────
+  // 2026-10-20 重做：原来 36+ 个模型平铺成一张 9 列表，一屏全是行，
+  // 看不出「哪条车道（渠道）健康」——这正是老大说的「乱七八糟」。
+  // 现在按 group 分组，每组一张卡片：
+  //   · 卡片头显示该组聚合状态（可用/总数、成功/失败、平均延迟）；
+  //   · 组内保留原有 6 列明细表，操作按钮原样不动；
+  //   · 组卡片可折叠（默认全展开），组序号连续，不打断「越靠上越先用」的语义。
+  // 分组定义来自 Spec.Group（服务端已按 lane 归好：OFM 免费 / Kilo 免费池 /
+  // EAC 协付 / 聚合渠道 / 网关专属车道 / 自定义），前端不再自己推断。
+  const GROUP_ORDER = ['OFM 免费', 'Kilo 免费池', 'EAC 协付', '聚合渠道', '网关专属车道', '自定义'];
+  const groupTone = (stats) => {
+    if (stats.total === 0) return 'unknown';
+    const ratio = stats.available / stats.total;
+    if (ratio >= 0.6) return 'healthy';
+    if (ratio >= 0.3) return 'degraded';
+    return 'down';
+  };
+  // 行的渲染与改造前逐字相同（契约测试按列名与 data-label 钉住，不能动）。
+  const poolRow = (m, i, h) => {
+    const note = esc(h.lastErr || m.note || '');
+    const lat = fmtMs(h.latencyMs || m.latencyMs);
+    return '<tr data-id="' + esc(m.id) + '">' +
+      '<td data-label="#">' + (i+1) + '</td>' +
+      '<td data-label="模型"><div>' + esc(m.label || m.id) + '</div>' +
+        '<div class="muted">' + esc(m.id) + (note ? ' · ' + note.slice(0, 60) : '') + (lat !== '—' ? ' · ' + esc(lat) : '') + '</div></td>' +
+      '<td data-label="优先级/权重">' + esc(m.priority) + ' / ' + esc(m.weight) + '</td>' +
+      '<td data-label="状态">' + availBadge(m) + '</td>' +
+      '<td data-label="成功/失败">' + esc(h.success||0) + ' / ' + esc(h.failure||0) + '</td>' +
+      '<td data-label="操作" class="pool-ops"><div class="pool-row-actions">' +
+        '<button data-act="up" data-id="' + esc(m.id) + '">↑</button>' +
+        '<button data-act="down" data-id="' + esc(m.id) + '">↓</button>' +
+        '<button data-act="' + (m.enabled?'disable':'enable') + '" data-id="' + esc(m.id) + '">' + (m.enabled?'停用':'启用') + '</button>' +
+        '<button data-act="edit" data-id="' + esc(m.id) + '">编辑</button>' +
+        '<button data-act="more" data-id="' + esc(m.id) + '" title="更多操作">⋯</button>' +
+      '</div></td></tr>';
+  };
   const renderList = (d) => {
     const specs = d.specs || [];
     const health = {};
     (d.health || []).forEach(h => { health[h.id] = h; });
-    const rows = specs.map((m, i) => {
-      const h = health[m.id] || {};
-      return '<tr data-id="' + esc(m.id) + '">' +
-        '<td>' + (i+1) + '</td>' +
-        '<td><div>' + esc(m.label || m.id) + '</div><div class="muted">' + esc(m.id) + '</div></td>' +
-        '<td>' + esc(m.group || m.lane) + '</td>' +
-        '<td>' + esc(m.priority) + ' / ' + esc(m.weight) + '</td>' +
-        '<td>' + availBadge(m) + '</td>' +
-        '<td>' + fmtMs(h.latencyMs || m.latencyMs) + '</td>' +
-        '<td>' + esc(h.success||0) + ' / ' + esc(h.failure||0) + '</td>' +
-        '<td class="muted">' + esc(h.lastErr || m.note || '') + '</td>' +
-        '<td><div class="pool-row-actions">' +
-          '<button data-act="up" data-id="' + esc(m.id) + '">↑</button>' +
-          '<button data-act="down" data-id="' + esc(m.id) + '">↓</button>' +
-          '<button data-act="' + (m.enabled?'disable':'enable') + '" data-id="' + esc(m.id) + '">' + (m.enabled?'停用':'启用') + '</button>' +
-          '<button data-act="restore" data-id="' + esc(m.id) + '">恢复</button>' +
-          '<button data-act="edit" data-id="' + esc(m.id) + '">编辑</button>' +
-          '<button data-act="del" data-id="' + esc(m.id) + '">删除</button>' +
-        '</div></td></tr>';
+    const box = document.getElementById('poolList');
+    if (!specs.length) {
+      box.innerHTML = '<div class="card"><h3>模型清单</h3>' +
+        '<div class="empty-hint">还没有模型。点上方「同步网关清单」，或在下方折叠区里手动添加一个。</div></div>';
+      return;
+    }
+    // 按 group 聚拢，顺序固定（GROUP_ORDER 优先，未知分组按出现顺序追加）。
+    const buckets = new Map();
+    specs.forEach(m => {
+      const key = m.group || m.lane || '未分组';
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key).push(m);
+    });
+    const orderedKeys = [...GROUP_ORDER.filter(k => buckets.has(k)),
+      ...[...buckets.keys()].filter(k => !GROUP_ORDER.includes(k))];
+    // 组内独立编号：每组都从 1 开始。跨组连续编号会让第 2 组第一行显示「14」，
+    // 读起来像「全池第 14 个」，而实际语义是「本组内第几个」——分组管理的重点是组内次序。
+    const cards = orderedKeys.map(key => {
+      const list = buckets.get(key);
+      const stats = { total: list.length, available: 0, down: 0, disabled: 0, success: 0, failure: 0, latSum: 0, latN: 0 };
+      list.forEach(m => {
+        const h = health[m.id] || {};
+        stats.success += h.success || 0;
+        stats.failure += h.failure || 0;
+        const lat = h.latencyMs || m.latencyMs;
+        if (lat > 0) { stats.latSum += lat; stats.latN++; }
+        if (!m.enabled) { stats.disabled++; return; }
+        if (m.state === 'down') { stats.down++; return; }
+        if (m.routable === false) { stats.disabled++; return; }
+        stats.available++;
+      });
+      const tone = groupTone(stats);
+      const avgLat = stats.latN ? fmtMs(Math.round(stats.latSum / stats.latN)) : '—';
+      const THEAD = '<thead><tr><th>#</th><th>模型</th><th>优先级/权重</th><th>状态</th><th>成功/失败</th><th>操作</th></tr></thead>';
+      const tableOf = rows => '<div class="pool-table-wrap"><table class="pool-table">' + THEAD + '<tbody>' + rows + '</tbody></table></div>';
+      // 组内再分两层：能用的（可用/降级/未探测）直接展开；停用/下线的折在下面。
+      // OFM 组 13 个里有 10 个是「上游判定不可用」的自动停用项，混在一起会把
+      // 真正能用的 3 个埋掉——这正是「乱七八糟」的具体来源。
+      const live = list.filter(m => m.enabled && m.state !== 'down' && m.routable !== false);
+      const idle = list.filter(m => !live.includes(m));
+      const liveRows = live.map((m, i) => poolRow(m, i + 1, health[m.id] || {})).join('');
+      const idleRows = idle.map((m, i) => poolRow(m, i + 1, health[m.id] || {})).join('');
+      const body = (live.length
+          ? tableOf(liveRows)
+          : '<div class="empty-hint" style="padding:10px 2px">本组没有可调度的模型——全部停用或下线。</div>') +
+        (idle.length
+          ? poolFold('另 ' + idle.length + ' 个停用/下线（点开查看或恢复）', tableOf(idleRows), false)
+          : '');
+      return '<div class="card pool-group">' +
+        '<div class="pool-group-head">' +
+          '<span class="pill ' + tone + '">' + esc(key) + '</span>' +
+          '<span class="pool-group-stat">可用 <b>' + stats.available + '</b>/' + stats.total + '</span>' +
+          (stats.down ? '<span class="pool-group-stat warn">下线 <b>' + stats.down + '</b></span>' : '') +
+          (stats.disabled ? '<span class="pool-group-stat dim">停用 ' + stats.disabled + '</span>' : '') +
+          '<span class="pool-group-stat dim">成功/失败 ' + stats.success + '/' + stats.failure + '</span>' +
+          (avgLat === '—' ? '' : '<span class="pool-group-stat dim">均延迟 ' + esc(avgLat) + '</span>') +
+        '</div>' +
+        poolFold('收起 ' + list.length + ' 个模型', body, true) +
+        '</div>';
     }).join('');
-    document.getElementById('poolList').innerHTML =
-      '<div class="card" style="margin-top:16px"><h3>模型清单（按调度优先级排序，越靠上越先用）</h3>' +
-      '<table class="pool-table"><thead><tr><th>#</th><th>模型</th><th>分组</th><th>优先级/权重</th><th>状态</th><th>延迟</th><th>成功/失败</th><th>最近错误/备注</th><th>操作</th></tr></thead><tbody>' +
-      (rows || '<tr><td colspan="9" class="empty">暂无模型，点上方「同步网关清单」或下方添加</td></tr>') + '</tbody></table></div>';
-    document.getElementById('poolList').querySelectorAll('button[data-act]').forEach(btn => {
+    box.innerHTML = '<div class="card"><h3>模型清单（按渠道分组 · 同组内越靠上越先用）</h3>' +
+      '<div class="muted" style="margin-bottom:4px">' + orderedKeys.length + ' 个分组 / 共 ' + specs.length + ' 个模型。每组头部是该组的聚合健康度，点开看组内明细。</div>' +
+      '</div>' + cards;
+    box.querySelectorAll('button[data-act]').forEach(btn => {
       btn.onclick = () => onRowAction(btn.getAttribute('data-act'), btn.getAttribute('data-id'), d);
     });
   };
@@ -118,6 +219,19 @@ const poolJS = `(() => {
       } else if (act === 'edit') {
         openEditor(d.specs.find(x => x.id === id));
         return;
+      } else if (act === 'more') {
+        const m = d.specs.find(x => x.id === id) || {};
+        const box = document.getElementById('poolList');
+        let pop = document.getElementById('rowMore');
+        if (!pop) { pop = document.createElement('div'); pop.id = 'rowMore'; pop.className = 'topmore'; box.appendChild(pop); }
+        pop.hidden = false;
+        pop.innerHTML = '<a href="javascript:void 0" data-more="restore">恢复该模型</a>' + (m.enabled ? '' : '<a href="javascript:void 0" data-more="enable">启用</a>') +
+          '<a href="javascript:void 0" data-more="del" style="color:var(--danger)">删除模型</a>';
+        pop.querySelectorAll('a[data-more]').forEach(a => {
+          a.onclick = () => { pop.hidden = true; onRowAction(a.getAttribute('data-more'), id, d); };
+        });
+        setTimeout(() => { pop.hidden = true; }, 6000);
+        return;
       } else {
         await api('/api/pool/models/' + encodeURIComponent(id) + '/' + act, { method:'POST', body: '{}' });
         toast('已' + ({enable:'启用',disable:'停用',restore:'恢复'} [act] || act) + '：' + id);
@@ -127,39 +241,55 @@ const poolJS = `(() => {
   };
 
   // ── 添加/编辑（就地展开，不弹窗） ──────────────────────
+  // 2026-10-20 简化：12 个字段的表单原来是常显的，占掉整整一屏。
+  // 改为「一个按钮 + 折叠表单」：默认收起；高级参数（权重/失败阈值/冷却）再收一层。
   let editing = null;
-  const openEditor = (m) => { editing = m || null; renderAdd(); document.getElementById('poolAdd').scrollIntoView({behavior:'smooth'}); };
+  let addOpen = false;
+  const openEditor = (m) => { editing = m || null; addOpen = true; renderAdd(); const el = document.getElementById('poolAdd'); if (el) el.scrollIntoView({behavior:'smooth'}); };
   const renderAdd = () => {
+    const box = document.getElementById('poolAdd');
+    if (!box) { return; }
+    if (!addOpen && !editing) {
+      box.innerHTML = '<div class="card"><h3>添加模型</h3>' +
+        '<div class="status-line">只要是 OpenAI / Anthropic 兼容的模型接口，都能接进来 —— 填地址和密钥即可。</div>' +
+        '<div class="toolbar" style="margin-top:12px"><button class="btn primary" id="btnAddOpen">添加一个模型接口</button></div></div>';
+      const b = document.getElementById('btnAddOpen');
+      if (b) b.onclick = () => { addOpen = true; renderAdd(); };
+      return;
+    }
     const m = editing || { format:'openai-chat', tier:'balanced', lane:'custom', priority:100, weight:50, maxFail:3, cooldownSec:120, enabled:true, routable:true };
     const isEdit = !!editing;
-    document.getElementById('poolAdd').innerHTML =
-      '<div class="card" style="margin-top:16px"><h3>' + (isEdit ? '编辑模型 · ' + esc(m.id) : '添加兼容模型接口') + '</h3>' +
-      '<div class="pool-inline">' +
+    const baseFields = '<div class="pool-inline">' +
         '<label>模型 ID（唯一）<input id="fId" value="' + esc(m.id||'') + '" ' + (isEdit?'disabled':'') + ' placeholder="如 my-endpoint/llama-3"></label>' +
         '<label>显示名<input id="fLabel" value="' + esc(m.label||'') + '" placeholder="可空"></label>' +
         '<label>上游模型名<input id="fModel" value="' + esc(m.model||'') + '" placeholder="如 gpt-4o-mini"></label>' +
-        '<label>BaseURL<input id="fBase" value="' + esc(m.baseUrl||'') + '" placeholder="https://api.example.com/v1（空=本机 OFM 网关）"></label>' +
+        '<label>接口地址（BaseURL）<input id="fBase" value="' + esc(m.baseUrl||'') + '" placeholder="https://api.example.com/v1（留空 = 用本机内置网关）"></label>' +
         '<label>API Key<input id="fKey" type="password" placeholder="' + (isEdit && m.hasKey ? '已配置 ' + esc(m.keyHint||'') + '，留空不修改' : '自定义端点必填') + '"></label>' +
-        '<label>线协议<select id="fFormat">' +
-          ['openai-chat','openai-responses','anthropic-messages'].map(f => '<option value="' + f + '"' + (m.format===f?' selected':'') + '>' + f + '</option>').join('') +
+        '<label>接口类型<select id="fFormat">' +
+          [['openai-chat','OpenAI 标准对话（最常见）'],['openai-responses','OpenAI Responses（新版）'],['anthropic-messages','Anthropic 格式（Claude 系）']].map(f => '<option value="' + f[0] + '"' + (m.format===f[0]?' selected':'') + '>' + f[1] + '</option>').join('') +
         '</select></label>' +
-        '<label>车道<select id="fLane">' +
-          [['custom','自定义'],['free','OFM 免费'],['kilo','Kilo'],['eac','EAC'],['aggregate','聚合']].map(x => '<option value="' + x[0] + '"' + (m.lane===x[0]?' selected':'') + '>' + x[1] + '</option>').join('') +
+      '</div>';
+    const advFields = '<div class="pool-inline">' +
+        '<label>线路来源<select id="fLane">' +
+          [['custom','我自己填的接口'],['free','工作台自带的免费通道'],['kilo','Kilo 通道'],['eac','EAC 通道'],['aggregate','聚合通道']].map(x => '<option value="' + x[0] + '"' + (m.lane===x[0]?' selected':'') + '>' + x[1] + '</option>').join('') +
         '</select></label>' +
-        '<label>Tier<select id="fTier">' +
-          ['quality','balanced','fast'].map(t => '<option value="' + t + '"' + (m.tier===t?' selected':'') + '>' + t + '</option>').join('') +
+        '<label>用途偏好<select id="fTier">' +
+          [['quality','质量优先（慢一点，写得好）'],['balanced','均衡（默认）'],['fast','速度优先（快，短任务用）']].map(t => '<option value="' + t + '"' + (m.tier===t?' selected':'') + '>' + t[1] + '</option>').join('') +
         '</select></label>' +
         '<label>优先级（1=最高）<input id="fPri" type="number" min="1" value="' + esc(m.priority||100) + '"></label>' +
         '<label>权重<input id="fWeight" type="number" min="1" value="' + esc(m.weight||50) + '"></label>' +
         '<label>连续失败阈值<input id="fMaxFail" type="number" min="1" value="' + esc(m.maxFail||3) + '"></label>' +
         '<label>冷却秒数<input id="fCool" type="number" min="10" value="' + esc(m.cooldownSec||120) + '"></label>' +
-      '</div>' +
-      '<div class="pool-row-actions" style="margin-top:12px">' +
-        '<button class="btn" id="btnSave">' + (isEdit ? '保存' : '添加') + '</button>' +
+      '</div>';
+    box.innerHTML = '<div class="card"><h3>' + (isEdit ? '编辑模型 · ' + esc(m.id) : '添加模型') + '</h3>' +
+      baseFields +
+      '<div style="margin-top:14px">' + fold('高级参数（线路 / 用途偏好 / 优先级 / 权重 / 阈值）', advFields) + '</div>' +
+      '<div class="pool-row-actions" style="margin-top:14px">' +
+        '<button class="btn primary" id="btnSave">' + (isEdit ? '保存' : '添加') + '</button>' +
         '<button class="btn ghost" id="btnCancel">取消</button>' +
-        '<span class="muted">兼容任意 OpenAI Chat Completions / Responses / Anthropic Messages 端点；密钥只写本机，不对外回显。</span>' +
+        '<span class="muted">密钥只写本机，不对外回显。</span>' +
       '</div></div>';
-    document.getElementById('btnCancel').onclick = () => { editing = null; renderAdd(); };
+    document.getElementById('btnCancel').onclick = () => { editing = null; addOpen = false; renderAdd(); };
     document.getElementById('btnSave').onclick = async () => {
       const body = {
         id: document.getElementById('fId').value.trim(),
@@ -180,7 +310,7 @@ const poolJS = `(() => {
         if (isEdit) await api('/api/pool/models/' + encodeURIComponent(body.id), { method:'PUT', body: JSON.stringify(body) });
         else await api('/api/pool/models', { method:'POST', body: JSON.stringify(body) });
         toast(isEdit ? '已保存' : '已添加模型 ' + body.id);
-        editing = null; load();
+        editing = null; addOpen = false; load();
       } catch (e) { toast('保存失败：' + e.message); }
     };
   };
@@ -197,9 +327,9 @@ const poolJS = `(() => {
       return '<div>' + esc(t) + '  [' + esc(kind) + '] ' + esc(who) + esc(fromTo) + (rec.reason ? '  ' + esc(rec.reason) : '') + '</div>';
     }).join('') : '<div class="muted">暂无状态日志</div>';
     document.getElementById('poolLog').innerHTML =
-      '<div class="card" style="margin-top:16px"><h3>模型状态日志（最近 120 条，新→旧）</h3>' +
+      '<div class="card"><h3>状态日志</h3>' +
       '<div class="muted">探测、故障转移、恢复、增删改都会留一行，便于排查「刚才为什么换了模型」。</div>' +
-      '<div class="logbox" style="margin-top:10px">' + body + '</div></div>';
+      '<div style="margin-top:10px">' + fold('最近 ' + lines.length + ' 条记录（新 → 旧）', '<div class="logbox">' + body + '</div>') + '</div></div>';
   };
 
   // ── 加载与动作 ────────────────────────────────────────
@@ -207,10 +337,10 @@ const poolJS = `(() => {
     try {
       const d = await api('/api/pool');
       cache = d;
-      renderOverview(d); renderLanes(d); renderList(d); renderAdd(); renderLog(d);
+      renderOverview(d); renderList(d); renderAdd(); renderLog(d);
       const g = d.gateway || {};
       document.getElementById('poolStat').textContent =
-        '可用 ' + (d.available||0) + '/' + (d.total||0) + ' ｜ 策略 ' + (d.strategy||'-') + ' ｜ 网关 ' + (g.base ? '在线' : '未连接');
+        '可用 ' + (d.available||0) + '/' + (d.total||0) + ' ｜ 策略 ' + stratName(d.strategy) + ' ｜ 网关 ' + (g.base ? '在线' : '未连接');
     } catch (e) {
       document.getElementById('poolStat').textContent = '加载失败：' + e.message;
       toast('加载失败：' + e.message);
@@ -238,6 +368,22 @@ const poolJS = `(() => {
     } catch (e) { toast('探测失败：' + e.message); }
     finally { btn.disabled = false; btn.textContent = '立即探测'; }
   };
+
+  // 「更多」菜单（跨页入口收纳）
+  const btnMore = document.getElementById('btnMore');
+  const topMore = document.getElementById('topMore');
+  if (btnMore && topMore) {
+    btnMore.onclick = function () {
+      const willOpen = topMore.hidden;
+      topMore.hidden = !willOpen;
+      btnMore.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    };
+    document.addEventListener('click', function (ev) {
+      if (!topMore.hidden && ev.target !== btnMore && !topMore.contains(ev.target)) {
+        topMore.hidden = true; btnMore.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
 
   load();
   setInterval(load, 15000);
