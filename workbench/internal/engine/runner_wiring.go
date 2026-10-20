@@ -5,7 +5,9 @@ package engine
 // 事故复盘在册（docs/缺陷-dailyCap自锁空转 / 外部事件-OFM上游IP阻断）：全局限速
 // 闸门在 2026-10-19 写好（internal/ratelimit + executor.SetLimiter + 面板可观测的
 // RateLimiterSnapshot），但**生产从未把它装上去** —— 实测证据：
-//   - grep 全仓（排除 _test.go）ratelimit.New 的调用点为 0；
+//   - 修复**前**grep 全仓（排除 _test.go 并排除注释行）ratelimit.New 的调用点为 0；
+//     （写取证必须带时点：本行的 0 是修复前状态，修复后为 1 —— 见本文件 buildRateLimiter；
+//      复核脚本若不过滤注释行，会把我这条注释也数进去而读成 2）
 //   - executor.Runner.SetLimiter 的调用点也只有测试（limiter_integration_test.go、
 //     limiter_snapshot_test.go）；
 //   - RateLimiterSnapshot 的注释写着"main 里先把限流器装在内层 *executor.Runner 上"，
