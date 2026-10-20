@@ -1,0 +1,1098 @@
+{
+  "schema": "top1-cumulative-ledger-v1",
+  "built_at": "2026-10-20T09:22:33",
+  "windows": {
+    "pre": "inventory@1d54832 (trace 10.06MB 轮转前窗口)",
+    "post": "inventory 2026-10-20 (trace 轮转后 168KB)"
+  },
+  "cum_zero_count": 67,
+  "cum_covered": 114,
+  "rows": [
+    {
+      "skill": "video-whisper-transcribe",
+      "pre": 1917,
+      "post": 6,
+      "cum": 1923
+    },
+    {
+      "skill": "consulting-analysis",
+      "pre": 1698,
+      "post": 10,
+      "cum": 1708
+    },
+    {
+      "skill": "A-skill-manager",
+      "pre": 1134,
+      "post": 55,
+      "cum": 1189
+    },
+    {
+      "skill": "data-analysis",
+      "pre": 758,
+      "post": 9,
+      "cum": 767
+    },
+    {
+      "skill": "prompt-system-audit",
+      "pre": 693,
+      "post": 4,
+      "cum": 697
+    },
+    {
+      "skill": "utf8-encoding-fix",
+      "pre": 614,
+      "post": 8,
+      "cum": 622
+    },
+    {
+      "skill": "screenshot",
+      "pre": 513,
+      "post": 11,
+      "cum": 524
+    },
+    {
+      "skill": "byted-seedream-image-generate",
+      "pre": 481,
+      "post": 25,
+      "cum": 506
+    },
+    {
+      "skill": "bigfile-split",
+      "pre": 431,
+      "post": 6,
+      "cum": 437
+    },
+    {
+      "skill": "A-memory-start",
+      "pre": 429,
+      "post": 6,
+      "cum": 435
+    },
+    {
+      "skill": "agent-browser",
+      "pre": 424,
+      "post": 11,
+      "cum": 435
+    },
+    {
+      "skill": "pdf",
+      "pre": 427,
+      "post": 7,
+      "cum": 434
+    },
+    {
+      "skill": "windows-cli-utf8-wrapper",
+      "pre": 432,
+      "post": 2,
+      "cum": 434
+    },
+    {
+      "skill": "github",
+      "pre": 426,
+      "post": 6,
+      "cum": 432
+    },
+    {
+      "skill": "first-principles-decomposer",
+      "pre": 420,
+      "post": 7,
+      "cum": 427
+    },
+    {
+      "skill": "debugging-fixing",
+      "pre": 392,
+      "post": 16,
+      "cum": 408
+    },
+    {
+      "skill": "A-get-memory",
+      "pre": 372,
+      "post": 21,
+      "cum": 393
+    },
+    {
+      "skill": "local-asr",
+      "pre": 340,
+      "post": 5,
+      "cum": 345
+    },
+    {
+      "skill": "chaoshi-admin-inline-edit",
+      "pre": 337,
+      "post": 2,
+      "cum": 339
+    },
+    {
+      "skill": "cloudbase-db-optimize",
+      "pre": 335,
+      "post": 2,
+      "cum": 337
+    },
+    {
+      "skill": "html-to-docx-win-fix",
+      "pre": 333,
+      "post": 2,
+      "cum": 335
+    },
+    {
+      "skill": "local-tts",
+      "pre": 333,
+      "post": 2,
+      "cum": 335
+    },
+    {
+      "skill": "ican-frontend-design-system",
+      "pre": 332,
+      "post": 2,
+      "cum": 334
+    },
+    {
+      "skill": "local-computer-use",
+      "pre": 332,
+      "post": 2,
+      "cum": 334
+    },
+    {
+      "skill": "windows-gitbash-chinese-path-pit",
+      "pre": 332,
+      "post": 2,
+      "cum": 334
+    },
+    {
+      "skill": "local-txt2img",
+      "pre": 331,
+      "post": 2,
+      "cum": 333
+    },
+    {
+      "skill": "ican-deploy",
+      "pre": 331,
+      "post": 0,
+      "cum": 331
+    },
+    {
+      "skill": "win-toolchain-pitfalls",
+      "pre": 318,
+      "post": 0,
+      "cum": 318
+    },
+    {
+      "skill": "chaoshi-web-deploy",
+      "pre": 292,
+      "post": 16,
+      "cum": 308
+    },
+    {
+      "skill": "chart-visualization",
+      "pre": 292,
+      "post": 15,
+      "cum": 307
+    },
+    {
+      "skill": "windows-native-ocr",
+      "pre": 282,
+      "post": 15,
+      "cum": 297
+    },
+    {
+      "skill": "video-frames",
+      "pre": 278,
+      "post": 13,
+      "cum": 291
+    },
+    {
+      "skill": "algorithmic-art",
+      "pre": 274,
+      "post": 13,
+      "cum": 287
+    },
+    {
+      "skill": "A-prompt-better",
+      "pre": 269,
+      "post": 13,
+      "cum": 282
+    },
+    {
+      "skill": "fenjue-lessons-hitrate",
+      "pre": 237,
+      "post": 7,
+      "cum": 244
+    },
+    {
+      "skill": "shell-encoding-pitfalls",
+      "pre": 241,
+      "post": 3,
+      "cum": 244
+    },
+    {
+      "skill": "refactoring",
+      "pre": 198,
+      "post": 8,
+      "cum": 206
+    },
+    {
+      "skill": "byted-mediakit-shared",
+      "pre": 197,
+      "post": 8,
+      "cum": 205
+    },
+    {
+      "skill": "ppt-master",
+      "pre": 187,
+      "post": 12,
+      "cum": 199
+    },
+    {
+      "skill": "testing",
+      "pre": 190,
+      "post": 9,
+      "cum": 199
+    },
+    {
+      "skill": "天眼一下",
+      "pre": 190,
+      "post": 8,
+      "cum": 198
+    },
+    {
+      "skill": "diagram-maker",
+      "pre": 188,
+      "post": 9,
+      "cum": 197
+    },
+    {
+      "skill": "defuddle",
+      "pre": 182,
+      "post": 10,
+      "cum": 192
+    },
+    {
+      "skill": "test-driven-development",
+      "pre": 183,
+      "post": 9,
+      "cum": 192
+    },
+    {
+      "skill": "coding-agent",
+      "pre": 182,
+      "post": 8,
+      "cum": 190
+    },
+    {
+      "skill": "fenjue-memory-audit",
+      "pre": 188,
+      "post": 2,
+      "cum": 190
+    },
+    {
+      "skill": "node-inspect-debugger",
+      "pre": 177,
+      "post": 10,
+      "cum": 187
+    },
+    {
+      "skill": "audit-runner-safe-aggregate",
+      "pre": 176,
+      "post": 10,
+      "cum": 186
+    },
+    {
+      "skill": "python-debugpy",
+      "pre": 177,
+      "post": 9,
+      "cum": 186
+    },
+    {
+      "skill": "report-generator-skill",
+      "pre": 176,
+      "post": 10,
+      "cum": 186
+    },
+    {
+      "skill": "wechat-automation",
+      "pre": 106,
+      "post": 4,
+      "cum": 110
+    },
+    {
+      "skill": "xlsx",
+      "pre": 100,
+      "post": 7,
+      "cum": 107
+    },
+    {
+      "skill": "docx",
+      "pre": 100,
+      "post": 4,
+      "cum": 104
+    },
+    {
+      "skill": "figma",
+      "pre": 99,
+      "post": 5,
+      "cum": 104
+    },
+    {
+      "skill": "c-cleanup",
+      "pre": 97,
+      "post": 5,
+      "cum": 102
+    },
+    {
+      "skill": "cross-platform-agent-sync",
+      "pre": 94,
+      "post": 5,
+      "cum": 99
+    },
+    {
+      "skill": "canvas-design",
+      "pre": 94,
+      "post": 4,
+      "cum": 98
+    },
+    {
+      "skill": "data-visualization",
+      "pre": 93,
+      "post": 4,
+      "cum": 97
+    },
+    {
+      "skill": "spike",
+      "pre": 92,
+      "post": 4,
+      "cum": 96
+    },
+    {
+      "skill": "doc-coauthoring",
+      "pre": 88,
+      "post": 5,
+      "cum": 93
+    },
+    {
+      "skill": "research-documentation",
+      "pre": 88,
+      "post": 5,
+      "cum": 93
+    },
+    {
+      "skill": "security-audit",
+      "pre": 89,
+      "post": 4,
+      "cum": 93
+    },
+    {
+      "skill": "discover-agent-cli",
+      "pre": 88,
+      "post": 4,
+      "cum": 92
+    },
+    {
+      "skill": "electron",
+      "pre": 88,
+      "post": 4,
+      "cum": 92
+    },
+    {
+      "skill": "json-canvas",
+      "pre": 88,
+      "post": 4,
+      "cum": 92
+    },
+    {
+      "skill": "openai-whisper-api",
+      "pre": 87,
+      "post": 5,
+      "cum": 92
+    },
+    {
+      "skill": "openclaw-task-supervision",
+      "pre": 88,
+      "post": 4,
+      "cum": 92
+    },
+    {
+      "skill": "story",
+      "pre": 88,
+      "post": 4,
+      "cum": 92
+    },
+    {
+      "skill": "9b-lightworkflow",
+      "pre": 84,
+      "post": 2,
+      "cum": 86
+    },
+    {
+      "skill": "A-dynamic-workflow",
+      "pre": 67,
+      "post": 5,
+      "cum": 72
+    },
+    {
+      "skill": "wb-git-commit-recipe",
+      "pre": 17,
+      "post": 3,
+      "cum": 20
+    },
+    {
+      "skill": "A-project-handoff",
+      "pre": 13,
+      "post": 5,
+      "cum": 18
+    },
+    {
+      "skill": "A-project-better",
+      "pre": 15,
+      "post": 1,
+      "cum": 16
+    },
+    {
+      "skill": "vp-perspective-audit",
+      "pre": 16,
+      "post": 0,
+      "cum": 16
+    },
+    {
+      "skill": "code-review",
+      "pre": 10,
+      "post": 3,
+      "cum": 13
+    },
+    {
+      "skill": "office-automation-pro",
+      "pre": 10,
+      "post": 0,
+      "cum": 10
+    },
+    {
+      "skill": "A-ask-questions",
+      "pre": 6,
+      "post": 3,
+      "cum": 9
+    },
+    {
+      "skill": "internal-comms",
+      "pre": 9,
+      "post": 0,
+      "cum": 9
+    },
+    {
+      "skill": "chaoshi-image-optimization",
+      "pre": 4,
+      "post": 3,
+      "cum": 7
+    },
+    {
+      "skill": "dingtalk-wiki",
+      "pre": 6,
+      "post": 0,
+      "cum": 6
+    },
+    {
+      "skill": "frontend-skill",
+      "pre": 6,
+      "post": 0,
+      "cum": 6
+    },
+    {
+      "skill": "html-ppt",
+      "pre": 6,
+      "post": 0,
+      "cum": 6
+    },
+    {
+      "skill": "obsidian-markdown",
+      "pre": 6,
+      "post": 0,
+      "cum": 6
+    },
+    {
+      "skill": "taskflow",
+      "pre": 5,
+      "post": 1,
+      "cum": 6
+    },
+    {
+      "skill": "browser-voice-call",
+      "pre": 5,
+      "post": 0,
+      "cum": 5
+    },
+    {
+      "skill": "byted-seedance-video-generate",
+      "pre": 5,
+      "post": 0,
+      "cum": 5
+    },
+    {
+      "skill": "writing-plans",
+      "pre": 5,
+      "post": 0,
+      "cum": 5
+    },
+    {
+      "skill": "dingtalk-doc",
+      "pre": 4,
+      "post": 0,
+      "cum": 4
+    },
+    {
+      "skill": "wechat-voice-transcription",
+      "pre": 4,
+      "post": 0,
+      "cum": 4
+    },
+    {
+      "skill": "A-java-problem",
+      "pre": 3,
+      "post": 0,
+      "cum": 3
+    },
+    {
+      "skill": "audio-deliverable-pipeline",
+      "pre": 3,
+      "post": 0,
+      "cum": 3
+    },
+    {
+      "skill": "hermes-installer",
+      "pre": 3,
+      "post": 0,
+      "cum": 3
+    },
+    {
+      "skill": "obsidian-bases",
+      "pre": 3,
+      "post": 0,
+      "cum": 3
+    },
+    {
+      "skill": "verification-before-completion",
+      "pre": 3,
+      "post": 0,
+      "cum": 3
+    },
+    {
+      "skill": "workflow-preflight-check",
+      "pre": 3,
+      "post": 0,
+      "cum": 3
+    },
+    {
+      "skill": "wps-knowledgebase",
+      "pre": 3,
+      "post": 0,
+      "cum": 3
+    },
+    {
+      "skill": "browser-cdp",
+      "pre": 2,
+      "post": 0,
+      "cum": 2
+    },
+    {
+      "skill": "healthcare-cdss-patterns",
+      "pre": 2,
+      "post": 0,
+      "cum": 2
+    },
+    {
+      "skill": "workbuddy-mcp",
+      "pre": 2,
+      "post": 0,
+      "cum": 2
+    },
+    {
+      "skill": "ci-pipeline-debugging",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "dingtalk-drive",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "docker-e2e-gate",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "dogfood",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "elon-musk-perspective",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "find-skills",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "healthcare-emr-patterns",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "knowledge-capture",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "local-ocr-npu",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "openclaw-dual-gate-quality-audit",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "openclaw-fenjue-weekly",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "pixelle-api-ensure",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "prompt-consolidation",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "web-access",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "web-design-guidelines",
+      "pre": 1,
+      "post": 0,
+      "cum": 1
+    },
+    {
+      "skill": "ai-video-homework-pipeline",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "brainstorming",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "brand-guidelines",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "byted-bp-cdn-pagesdeploy",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "cloudbase",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "codebuddy-chat-web",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "commit-archaeologist",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "computer-use-guidance-windows",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "dingtalk-aisearch",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "dingtalk-aitable",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "dingtalk-calendar",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "dingtalk-chat",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "dingtalk-contact",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "dingtalk-event",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "dingtalk-mail",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "dingtalk-minutes",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "dingtalk-misc",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "dingtalk-shared",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "dingtalk-todo",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "frontend-design",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "frontend-slides",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "grill-me",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "gsap",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "gstack",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "healthcare-eval-harness",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "hook-analyzer-skill",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "hyperframes",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "hyperframes-cli",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "hyperframes-media",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "hyperframes-registry",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "local-img2img",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "local-mineru",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "local-realtime-translator",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "local-screenshot-qa",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "local-vram",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "mcp-builder",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "mcporter",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "meeting-intelligence",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "nano-pdf",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "no-manual-steps",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "notion-cli",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "obsidian-cli",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "oc-dispatch-exec-guard",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "oracle",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "rag-eval",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "scope-creep-detector",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "shadcn",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "spec-to-implementation",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "sq-cleanmgr-c",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "sqlalchemy-loader-criteria-pitfalls",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "static-site-batch-audit-fix",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "story-cover",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "story-deslop",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "story-import",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "story-long-analyze",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "story-long-write",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "story-review",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "story-scan",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "story-setup",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "story-short-analyze",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "story-short-write",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "taskflow-inbox-triage",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "theme-factory",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "ui-ux-pro-max",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "vercel-react-best-practices",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "video-breakdown-skill",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    },
+    {
+      "skill": "windows-bash-cli-interop-pitfalls",
+      "pre": 0,
+      "post": 0,
+      "cum": 0
+    }
+  ]
+}
