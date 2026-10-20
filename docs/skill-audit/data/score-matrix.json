@@ -1,6 +1,6 @@
 {
   "schema": "skill-score-matrix-v1",
-  "generated_at": "2026-10-20T10:32:21",
+  "generated_at": "2026-10-20T13:04:27",
   "rules": {
     "F": "入口件/本地字节比：3 + (>=1.5:+2 / >=1.0:+1 / <0.6:-1)",
     "E": "入口件字节：<=8K:5 <=16K:4 <=32K:3 <=64K:2 else 1",
@@ -297,95 +297,6 @@
       ]
     },
     {
-      "local_skill": "test-driven-development",
-      "local_bytes": 10689,
-      "local_note": "本地 10649B + testing-anti-patterns.md(8251B)，Iron Law + Verify RED。",
-      "remote_note": "本地 description 与 obra/superpowers 上游 description 逐字一致（同源证据）。",
-      "candidate_count": 4,
-      "best": {
-        "repo": "addyosmani/agent-skills",
-        "total": 22
-      },
-      "candidates": [
-        {
-          "ubytes": 16676,
-          "ratio_up_over_local": 1.56,
-          "F": 5,
-          "E": 3,
-          "C": 4,
-          "D": 5,
-          "S": 5,
-          "activity_age_days": 6,
-          "evidence": "skills/test-driven-development/SKILL.md",
-          "confidence": "high",
-          "total_measured": 22,
-          "dims_measured": 5,
-          "repo": "addyosmani/agent-skills",
-          "stars": 108473,
-          "license": "MIT",
-          "last_activity": "2026-10-13",
-          "match_reason": "red-green-refactor 强制循环 + 逐语言示例，补足本地缺的多语言测试骨架"
-        },
-        {
-          "ubytes": 9578,
-          "ratio_up_over_local": 0.896,
-          "F": 3,
-          "E": 4,
-          "C": 4,
-          "D": 4,
-          "S": 5,
-          "activity_age_days": 9,
-          "evidence": "skills/test-driven-development/SKILL.md",
-          "confidence": "high",
-          "total_measured": 20,
-          "dims_measured": 5,
-          "repo": "obra/superpowers",
-          "stars": 301953,
-          "license": "MIT",
-          "last_activity": "2026-10-10",
-          "match_reason": "上游同源分叉：上游 9578B 短于本地 10649B，本地为扩展版，可回溯上游基线"
-        },
-        {
-          "ubytes": 20919,
-          "ratio_up_over_local": 1.957,
-          "F": 5,
-          "E": 3,
-          "C": 4,
-          "D": 5,
-          "S": 1,
-          "activity_age_days": 21,
-          "evidence": "skills/tdd/SKILL.md",
-          "confidence": "medium",
-          "total_measured": 18,
-          "dims_measured": 5,
-          "repo": "oprogramadorreal/optimus-claude",
-          "stars": 74,
-          "license": "MIT",
-          "last_activity": "2026-09-28",
-          "match_reason": "TDD 工作流与项目级接线脚本，补足本地缺的工程落地自动化"
-        },
-        {
-          "ubytes": 6293,
-          "ratio_up_over_local": 0.589,
-          "F": 2,
-          "E": 5,
-          "C": 4,
-          "D": 3,
-          "S": 2,
-          "activity_age_days": 1,
-          "evidence": "tdd/README.md",
-          "confidence": "medium",
-          "total_measured": 16,
-          "dims_measured": 5,
-          "repo": "glebis/claude-skills",
-          "stars": 394,
-          "license": "MIT",
-          "last_activity": "2026-10-18",
-          "match_reason": "轻量 TDD 说明与实践清单，补足本地缺的跨语言最小示例"
-        }
-      ]
-    },
-    {
       "local_skill": "refactoring",
       "local_bytes": 5055,
       "local_note": "本地 4810B，不改行为的结构优化；未见上游同源目录。",
@@ -584,7 +495,7 @@
     },
     {
       "local_skill": "first-principles-decomposer",
-      "local_bytes": 3074,
+      "local_bytes": 3517,
       "local_note": "本地 3034B + references/(framework 2204B、examples 3438B、integrated-frameworks 3659B)。",
       "remote_note": "明确缺口：该方向缺少高 star/活跃维护的上游，现有专项仓库多为 0-4 star 个人项目。",
       "candidate_count": 4,
@@ -595,7 +506,7 @@
       "candidates": [
         {
           "ubytes": 16647,
-          "ratio_up_over_local": 5.415,
+          "ratio_up_over_local": 4.733,
           "F": 5,
           "E": 3,
           "C": 4,
@@ -614,7 +525,7 @@
         },
         {
           "ubytes": 33580,
-          "ratio_up_over_local": 10.924,
+          "ratio_up_over_local": 9.548,
           "F": 5,
           "E": 2,
           "C": 2,
@@ -668,6 +579,125 @@
           "license": "MIT",
           "last_activity": "2026-04-06",
           "match_reason": "第一性原理 agent 技能集（114KB repo），补足本地缺的英文原版表述"
+        }
+      ]
+    },
+    {
+      "local_skill": "subagent-driven-development",
+      "local_bytes": 3846,
+      "remote_note": "batch-E（轮4：轮1 新建技能补入矩阵）",
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "evidence": "skills/executing-plans/SKILL.md",
+          "stars": 302151,
+          "license": "MIT",
+          "last_activity": "2026-10-10",
+          "match_reason": "轮1 血缘钉回：本地新技能即吸收该上游内核四段（B4 自行决策落地）",
+          "confidence": "high",
+          "ubytes": 20405,
+          "ratio_up_over_local": 5.306,
+          "F": 5,
+          "E": 3,
+          "C": 4,
+          "D": 5,
+          "S": 5,
+          "total_measured": 22,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "obra/superpowers",
+        "total": 22
+      }
+    },
+    {
+      "local_skill": "test-driven-development",
+      "local_bytes": 11130,
+      "local_note": "本地 10649B + testing-anti-patterns.md(8251B)，Iron Law + Verify RED。",
+      "remote_note": "本地 description 与 obra/superpowers 上游 description 逐字一致（同源证据）。",
+      "candidate_count": 4,
+      "best": {
+        "repo": "addyosmani/agent-skills",
+        "total": 21
+      },
+      "candidates": [
+        {
+          "ubytes": 16676,
+          "ratio_up_over_local": 1.498,
+          "F": 4,
+          "E": 3,
+          "C": 4,
+          "D": 5,
+          "S": 5,
+          "activity_age_days": 6,
+          "evidence": "skills/test-driven-development/SKILL.md",
+          "confidence": "high",
+          "total_measured": 21,
+          "dims_measured": 5,
+          "repo": "addyosmani/agent-skills",
+          "stars": 108473,
+          "license": "MIT",
+          "last_activity": "2026-10-13",
+          "match_reason": "red-green-refactor 强制循环 + 逐语言示例，补足本地缺的多语言测试骨架"
+        },
+        {
+          "ubytes": 9578,
+          "ratio_up_over_local": 0.861,
+          "F": 3,
+          "E": 4,
+          "C": 4,
+          "D": 4,
+          "S": 5,
+          "activity_age_days": 9,
+          "evidence": "skills/test-driven-development/SKILL.md",
+          "confidence": "high",
+          "total_measured": 20,
+          "dims_measured": 5,
+          "repo": "obra/superpowers",
+          "stars": 301953,
+          "license": "MIT",
+          "last_activity": "2026-10-10",
+          "match_reason": "上游同源分叉：上游 9578B 短于本地 10649B，本地为扩展版，可回溯上游基线"
+        },
+        {
+          "ubytes": 20919,
+          "ratio_up_over_local": 1.88,
+          "F": 5,
+          "E": 3,
+          "C": 4,
+          "D": 5,
+          "S": 1,
+          "activity_age_days": 21,
+          "evidence": "skills/tdd/SKILL.md",
+          "confidence": "medium",
+          "total_measured": 18,
+          "dims_measured": 5,
+          "repo": "oprogramadorreal/optimus-claude",
+          "stars": 74,
+          "license": "MIT",
+          "last_activity": "2026-09-28",
+          "match_reason": "TDD 工作流与项目级接线脚本，补足本地缺的工程落地自动化"
+        },
+        {
+          "ubytes": 6293,
+          "ratio_up_over_local": 0.565,
+          "F": 2,
+          "E": 5,
+          "C": 4,
+          "D": 3,
+          "S": 2,
+          "activity_age_days": 1,
+          "evidence": "tdd/README.md",
+          "confidence": "medium",
+          "total_measured": 16,
+          "dims_measured": 5,
+          "repo": "glebis/claude-skills",
+          "stars": 394,
+          "license": "MIT",
+          "last_activity": "2026-10-18",
+          "match_reason": "轻量 TDD 说明与实践清单，补足本地缺的跨语言最小示例"
         }
       ]
     },
@@ -1156,7 +1186,7 @@
     },
     {
       "local_skill": "frontend-slides",
-      "local_bytes": 19694,
+      "local_bytes": 20073,
       "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
       "candidates": [
         {
@@ -1246,7 +1276,7 @@
     },
     {
       "local_skill": "A-dynamic-workflow",
-      "local_bytes": 8058,
+      "local_bytes": 8803,
       "candidate_count": 3,
       "best": {
         "repo": "wshobson/agents",
@@ -2109,7 +2139,7 @@
     },
     {
       "local_skill": "data-visualization",
-      "local_bytes": 13740,
+      "local_bytes": 13809,
       "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
       "candidates": [
         {
@@ -2169,7 +2199,7 @@
     },
     {
       "local_skill": "A-memory-start",
-      "local_bytes": 19508,
+      "local_bytes": 16333,
       "candidate_count": 3,
       "best": {
         "repo": "yonatangross/orchestkit",
@@ -2627,7 +2657,7 @@
     },
     {
       "local_skill": "agent-browser",
-      "local_bytes": 38626,
+      "local_bytes": 4858,
       "candidate_count": 3,
       "best": {
         "repo": "browser-use/browser-use",
@@ -3485,7 +3515,7 @@
     },
     {
       "local_skill": "A-project-better",
-      "local_bytes": 7956,
+      "local_bytes": 7944,
       "local_note": "本地字节见 data/inventory.json",
       "remote_note": "检索式 project_direction 的 total_count=0；命中 0 个候选",
       "candidate_count": 0,

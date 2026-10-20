@@ -1,0 +1,45 @@
+{
+  "schema": "skill-score-matrix-v1",
+  "batch": "batch-E",
+  "generated_at": "2026-10-20T13:04:26",
+  "rules": {
+    "F": "入口件/本地字节比：3+(>=1.5:+2/>=1.0:+1/<0.6:-1)",
+    "E": "入口件字节：<=8K:5 <=16K:4 <=32K:3 <=64K:2 else 1",
+    "C": "SKILL.md 格式兼容 3；宽松许可+1",
+    "D": "入口件字节：>=15K:5 >=8K:4 >=3K:3 else 2",
+    "S": "stars：>=100k:5 >=10k:4 >=1k:3 >=100:2 else 1；未取证记 null"
+  },
+  "baseline_date": "2026-10-20",
+  "skills": [
+    {
+      "local_skill": "subagent-driven-development",
+      "local_bytes": 3846,
+      "remote_note": "batch-E（轮4：轮1 新建技能补入矩阵）",
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "evidence": "skills/executing-plans/SKILL.md",
+          "stars": 302151,
+          "license": "MIT",
+          "last_activity": "2026-10-10",
+          "match_reason": "轮1 血缘钉回：本地新技能即吸收该上游内核四段（B4 自行决策落地）",
+          "confidence": "high",
+          "ubytes": 20405,
+          "ratio_up_over_local": 5.306,
+          "F": 5,
+          "E": 3,
+          "C": 4,
+          "D": 5,
+          "S": 5,
+          "total_measured": 22,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "obra/superpowers",
+        "total": 22
+      }
+    }
+  ]
+}
