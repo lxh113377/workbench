@@ -470,7 +470,7 @@ Get-ChildItem D:\workdesktop\dist\workbench-output\tasks -Recurse -Filter events
 | # | 依据（证据件行号） | 改进 | 优先级 |
 |---|---|---|---|
 | 1 | `river_job_executor.go:563-571`（策略返回过去时间 ⇒ WARN + 回落默认策略） | `retry.Policy.NextDelay` 对非法值（≤0 / 超单次上限）应**告警并回落默认退避**，而不是静默钳制 | 中 |
-| 2 | `river_client.go:529-532`（`JobTimeout` 与 `RescueStuckJobsAfter` 的跨字段自洽校验） | `config.normalize()` 目前只做单字段钳制，需加**跨字段**约束（stall ↔ timeout ↔ repairRounds ↔ maxAttempts 的时序关系） | 中 |
+| 2 | `river_client.go:623-627`（`RescueStuckJobsAfter < JobTimeout` **直接拒绝启动**；`:528-534` 只是算默认值） | `config.normalize()` 目前只做单字段静默钳制，需加跨字段约束，且矛盾配置应拒绝启动而非静默改好 | 中 |
 | 3 | `asynq_processor.go:336-338`（`errHandler.HandleError` 在状态分流**之前**调用） | 审 `failTask` 是否可能出现「状态已迁、台账未写」的窗口（与已修的 D6/L9 同型，需扩到失败路径） | 高 |
 
 同时明确两条**自评结论**（避免虚高）：
@@ -480,3 +480,36 @@ Get-ChildItem D:\workdesktop\dist\workbench-output\tasks -Recurse -Filter events
 - **确实落后**：卡死救援是「启动时一次扫」而非持续轮询（长生命周期进程里覆盖不到
   「跑着跑着僵了但进程没死」，现仅靠 stall watchdog 兜子进程、不管台账）；
   钩子只有 work 级无 insert 级；配置校验缺跨字段约束；策略无非法值兜底。
+
+---
+
+## 12. 里程碑终态与可追溯清单（2026-10-20 收尾，§0-§11 零改写）
+
+### 12.1 §6 分阶段路径的实测终态
+
+| 阶段 | 原定内容 | §9.2 状态 | **本轮终态（实测依据）** |
+|---|---|---|---|
+| M0 对标 | 8 peer 取数 + 八维对比 + 报告 | ✅ 已入主树 | ✅ 且 §10/§11/§12 三批回补全部入主树受控（HEAD `0ae60ff`） |
+| M1 P0 改造 | P0-1~P0-4 落地并全绿 | ✅ 已入主树且 CI 绿 | ⚠→✅ **曾为假绿**（本机 engine 判红）。本轮根治其落地时暴露的 D7-D12，现已两侧全绿：Windows 30 包 ok + `-race` 5 包 ok；Linux 容器 24 包 ok / 0 FAIL |
+| M2 合并与回归 | 合并回主树、重建 EXE、e2e 复跑 | ✅ | ✅ 提交已推 `origin/master`（ahead/behind 0/0）；CI run 见 §12.3 |
+| M3 P1 工程化 | slog / 执行钩子 / 指标 / 失败分布视图 | 部分完成 | ✅ **全部完成**：P1-1 补 D11/D12（component 断链与构造期静默）logging 82.8→93.9%；P1-2 真正落地（L5：去掉具体类型断言 + `AttachHooks` 能力接口）；P1-3 `GET /metrics` exposition 新建；P1-4 在册 |
+| M4 P2 开源化 | CI / CHANGELOG / 架构单页 | 基本完成 | ✅ 且本轮把 CI 从「能跑」推到「有护栏」：新增 `Perf baseline gate`（三态 0/1/2），产物体积上界改为引用基线数据件 |
+
+### 12.2 本轮四项改造对应的可追溯链（改造 → 提交 → 判据 → issue）
+
+| 改造 | 提交 | 机器判据（可复算） | issue |
+|---|---|---|---|
+| ① P0 可靠性内核（D7-D10）| `e6fc115` | `go test ./internal/engine ./internal/judge ./internal/executor -count=1` 全 ok；`summary-task-*` 残留 = 0；变异逐项判红 | #4 #5 #6（closed）|
+| ①补 D9 构造期接线 | `0ae60ff` | `TestRateLimiterWiredAtConstruction`（走 `newBareEngine` 复刻 CLI 路径）；**变异只让这一条红**，证明非重复劳动 | #5 追加自查留痕 |
+| ② L5 执行层收敛 | `e6fc115` | `hooks_attach_test.go` 4 条（装饰器链 / 普通 / nil 不 panic / BeforeRun 中止归 `boot_failed`）；`engine.go` 真断言行数 = 0（实测 `git show :…` 逐行核） | —（含在 #4）|
+| ③ L6 日志收口（D11/D12）| `e6fc115` | `log_flush_test.go` 3 条 + `attrs_record_test.go` 6 条；`-race` ok；logging 93.9% | #7（closed）|
+| ④ P1-3 + L8 护栏 | `e6fc115` / `8b1b882` | `metrics_prom_test.go` 8 条（逐行 exposition + 重复序列检测）；`check_perf.ps1` 三态 rc=0/2/1 实测 | #8（open，四条判据在册）|
+| 仓库卫生（顺带）| `bce8e53` | untracked 53,751 → 210；`git check-ignore --stdin` 喂全部 1,838 个已跟踪文件 ⇒ 命中 **0** | — |
+
+### 12.3 一句必须写下来的自我纠正
+
+我在交付报告与 issue #5 写过「`New`/恢复/`ReloadConfig`/`SetRunner` 四接线」，
+实测当时只有 **3 处**调用点（`New()` 里没有）。本轮的处理是
+**补代码让表述成立**，而不是改文档迁就代码 —— 因为查的过程发现了真实缺口：
+`cmd/workbench/main.go:419` 那个不调 `ReloadConfig` 的 CLI 入口此前不受限速约束。
+「表述与代码不符」在这里不只是文字问题，它掩盖了一个漏网路径。
