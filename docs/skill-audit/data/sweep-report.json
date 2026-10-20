@@ -1,6 +1,6 @@
 {
   "schema": "skill-sweep-v1",
-  "generated_at": "2026-10-20T08:33:52",
+  "generated_at": "2026-10-20T09:14:16",
   "offline": false,
   "fuse_days": 100,
   "active_days": 400,
@@ -29,23 +29,23 @@
         "detail": [
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108626,
+            "stars": 108633,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108626，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108633，来源 ungh.cc）"
           },
           {
             "repo": "obra/superpowers",
-            "stars": 302131,
+            "stars": 302140,
             "pushed_days": 10,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=302131，来源 ungh.cc）"
+            "note": "活跃（10 天前推送，stars=302140，来源 ungh.cc）"
           },
           {
             "repo": "trailofbits/skills",
@@ -93,7 +93,7 @@
       },
       "leg_drift": {
         "state": "GREEN",
-        "note": "本地 15644B / 上游 10913B / 相似度 0.589 / 上游独有标题 原始 2 / 归一化 0"
+        "note": "本地 15652B / 上游 10913B / 相似度 0.590 / 上游独有标题 原始 2 / 归一化 0"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -101,23 +101,23 @@
         "detail": [
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108626,
+            "stars": 108633,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108626，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108633，来源 ungh.cc）"
           },
           {
             "repo": "obra/superpowers",
-            "stars": 302131,
+            "stars": 302140,
             "pushed_days": 10,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=302131，来源 ungh.cc）"
+            "note": "活跃（10 天前推送，stars=302140，来源 ungh.cc）"
           },
           {
             "repo": "plus8bit/agent-postmortem-skill",
@@ -173,23 +173,23 @@
         "detail": [
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108626,
+            "stars": 108611,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108626，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
           },
           {
             "repo": "github/awesome-copilot",
-            "stars": 40192,
+            "stars": 40191,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=40192，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=40191，来源 ungh.cc）"
           },
           {
             "repo": "trailofbits/skills",
@@ -250,28 +250,28 @@
         "note": "本地 10649B / 上游 16676B / 相似度 0.755 / 上游独有标题 原始 26 / 归一化 25（例：browser testing with devtools; damp over dry in tests; decision guide）"
       },
       "leg_candidates": {
-        "state": "GREEN",
-        "note": "4 个候选全部在活跃窗内",
+        "state": "UNVERIFIED",
+        "note": "1/4 个候选未取到读数",
         "detail": [
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108626,
+            "stars": 108611,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108626，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
           },
           {
             "repo": "obra/superpowers",
-            "stars": 302131,
+            "stars": 301816,
             "pushed_days": 10,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=302131，来源 ungh.cc）"
+            "note": "活跃（10 天前推送，stars=301816，来源 ungh.cc）"
           },
           {
             "repo": "oprogramadorreal/optimus-claude",
@@ -285,13 +285,13 @@
           },
           {
             "repo": "glebis/claude-skills",
-            "stars": 394,
-            "pushed_days": 2,
-            "archived": false,
+            "stars": null,
+            "pushed_days": null,
+            "archived": null,
             "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（2 天前推送，stars=394，来源 ungh.cc）"
+            "source": "-",
+            "state": "UNVERIFIED",
+            "note": "读数失败：ungh: <HTTPError 429: 'Too Many Requests'> / api: <HTTPError 403: 'rate limit exceeded'>"
           }
         ]
       },
@@ -319,21 +319,21 @@
       },
       "leg_drift": {
         "state": "GREEN",
-        "note": "本地 16261B / 上游 13545B / 相似度 0.726 / 上游独有标题 原始 1 / 归一化 0"
+        "note": "本地 16436B / 上游 13545B / 相似度 0.728 / 上游独有标题 原始 1 / 归一化 0"
       },
       "leg_candidates": {
-        "state": "GREEN",
-        "note": "5 个候选全部在活跃窗内",
+        "state": "UNVERIFIED",
+        "note": "2/5 个候选未取到读数",
         "detail": [
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108626,
+            "stars": 108611,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108626，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
           },
           {
             "repo": "solatis/claude-config",
@@ -347,13 +347,13 @@
           },
           {
             "repo": "asteria-jacky/skills",
-            "stars": 0,
-            "pushed_days": 1,
-            "archived": false,
+            "stars": null,
+            "pushed_days": null,
+            "archived": null,
             "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=0，来源 ungh.cc）"
+            "source": "-",
+            "state": "UNVERIFIED",
+            "note": "读数失败：ungh: <HTTPError 429: 'Too Many Requests'> / api: <HTTPError 403: 'rate limit exceeded'>"
           },
           {
             "repo": "45ck/refactoring-code-smells-skills",
@@ -367,13 +367,13 @@
           },
           {
             "repo": "cskwork/clean-code",
-            "stars": 3,
-            "pushed_days": 43,
-            "archived": false,
+            "stars": null,
+            "pushed_days": null,
+            "archived": null,
             "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（43 天前推送，stars=3，来源 ungh.cc）"
+            "source": "-",
+            "state": "UNVERIFIED",
+            "note": "读数失败：ungh: <HTTPError 403: 'Forbidden'> / api: <HTTPError 403: 'rate limit exceeded'>"
           }
         ]
       },
@@ -386,7 +386,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "GREEN"
+      "overall": "UNVERIFIED"
     },
     {
       "local_skill": "spike",
@@ -404,48 +404,48 @@
         "note": "本地 2075B / 上游 8723B / 相似度 0.354 / 上游独有标题 原始 12 / 归一化 12（例：1. decompose; 2. align; 3. research）"
       },
       "leg_candidates": {
-        "state": "GREEN",
-        "note": "4 个候选全部在活跃窗内",
+        "state": "UNVERIFIED",
+        "note": "2/4 个候选未取到读数",
         "detail": [
           {
             "repo": "NousResearch/hermes-agent",
-            "stars": 255269,
-            "pushed_days": 0,
+            "stars": 255261,
+            "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（0 天前推送，stars=255269，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=255261，来源 ungh.cc）"
           },
           {
             "repo": "github/awesome-copilot",
-            "stars": 40192,
-            "pushed_days": 1,
+            "stars": 40185,
+            "pushed_days": 4,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=40192，来源 ungh.cc）"
+            "note": "活跃（4 天前推送，stars=40185，来源 ungh.cc）"
           },
           {
             "repo": "OpenBMB/PilotDeck",
-            "stars": 4800,
-            "pushed_days": 1,
-            "archived": false,
+            "stars": null,
+            "pushed_days": null,
+            "archived": null,
             "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=4800，来源 ungh.cc）"
+            "source": "-",
+            "state": "UNVERIFIED",
+            "note": "读数失败：ungh: <HTTPError 403: 'Forbidden'> / api: <HTTPError 403: 'rate limit exceeded'>"
           },
           {
             "repo": "haris-admin/skills-rules-repo",
-            "stars": 0,
-            "pushed_days": 1,
-            "archived": false,
+            "stars": null,
+            "pushed_days": null,
+            "archived": null,
             "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=0，来源 ungh.cc）"
+            "source": "-",
+            "state": "UNVERIFIED",
+            "note": "读数失败：ungh: <HTTPError 403: 'Forbidden'> / api: <HTTPError 403: 'rate limit exceeded'>"
           }
         ]
       },
@@ -476,18 +476,18 @@
         "note": "本地 3034B / 上游 16647B / 相似度 0.292 / 上游独有标题 原始 14 / 归一化 13（例：common rationalizations; cross model escalation; doubt driven development）"
       },
       "leg_candidates": {
-        "state": "GREEN",
-        "note": "4 个候选全部在活跃窗内",
+        "state": "UNVERIFIED",
+        "note": "1/4 个候选未取到读数",
         "detail": [
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108627,
+            "stars": 108611,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108627，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
           },
           {
             "repo": "mrchou1/first-principles-reasoning",
@@ -501,13 +501,13 @@
           },
           {
             "repo": "weiliu1031/first-principles-thinking",
-            "stars": 4,
-            "pushed_days": 206,
-            "archived": false,
+            "stars": null,
+            "pushed_days": null,
+            "archived": null,
             "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（206 天前推送，stars=4，来源 ungh.cc）"
+            "source": "-",
+            "state": "UNVERIFIED",
+            "note": "读数失败：ungh: <HTTPError 429: 'Too Many Requests'> / api: <HTTPError 403: 'rate limit exceeded'>"
           },
           {
             "repo": "v1r3n/first-principles-skills",
@@ -553,23 +553,23 @@
         "detail": [
           {
             "repo": "Shubhamsaboo/awesome-llm-apps",
-            "stars": 142328,
+            "stars": 142325,
             "pushed_days": 2,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（2 天前推送，stars=142328，来源 ungh.cc）"
+            "note": "活跃（2 天前推送，stars=142325，来源 ungh.cc）"
           },
           {
             "repo": "github/awesome-copilot",
-            "stars": 40192,
-            "pushed_days": 1,
+            "stars": 40185,
+            "pushed_days": 4,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=40192，来源 ungh.cc）"
+            "note": "活跃（4 天前推送，stars=40185，来源 ungh.cc）"
           },
           {
             "repo": "Naveja00/OverReach",
@@ -583,13 +583,13 @@
           },
           {
             "repo": "garrytan/gstack",
-            "stars": 136966,
-            "pushed_days": 0,
+            "stars": 136960,
+            "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（0 天前推送，stars=136966，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=136960，来源 ungh.cc）"
           }
         ]
       },
@@ -620,28 +620,28 @@
         "note": "本地 5496B / 上游 5496B / 相似度 1.000 / 上游独有标题 原始 0 / 归一化 0"
       },
       "leg_candidates": {
-        "state": "UNVERIFIED",
-        "note": "1/4 个候选未取到读数",
+        "state": "GREEN",
+        "note": "4 个候选全部在活跃窗内",
         "detail": [
           {
             "repo": "Shubhamsaboo/awesome-llm-apps",
-            "stars": 142328,
+            "stars": 142325,
             "pushed_days": 2,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（2 天前推送，stars=142328，来源 ungh.cc）"
+            "note": "活跃（2 天前推送，stars=142325，来源 ungh.cc）"
           },
           {
             "repo": "github/awesome-copilot",
-            "stars": 40192,
-            "pushed_days": 1,
+            "stars": 40185,
+            "pushed_days": 4,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=40192，来源 ungh.cc）"
+            "note": "活跃（4 天前推送，stars=40185，来源 ungh.cc）"
           },
           {
             "repo": "CodeAlive-AI/ai-driven-development",
@@ -655,13 +655,13 @@
           },
           {
             "repo": "mistykoyalzoho/git-archaeologist",
-            "stars": null,
-            "pushed_days": null,
-            "archived": null,
+            "stars": 2,
+            "pushed_days": 141,
+            "archived": false,
             "license": null,
-            "source": "-",
-            "state": "UNVERIFIED",
-            "note": "读数失败：ungh: <HTTPError 429: 'Too Many Requests'> / api: <HTTPError 403: 'rate limit exceeded'>"
+            "source": "ungh.cc",
+            "state": "GREEN",
+            "note": "活跃（141 天前推送，stars=2，来源 ungh.cc）"
           }
         ]
       },
@@ -688,8 +688,8 @@
         "note": "登记表无 recorded_version，对表无基线"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地 11841B / 上游 11894B / 相似度 0.860 / 上游独有标题 原始 16 / 归一化 16（例：agent owasp asi compliance check; check asi 01 prompt injection protection; check asi 02 insecure tool use）"
+        "state": "GREEN",
+        "note": "本地 19366B / 上游 11894B / 相似度 0.844 / 上游独有标题 原始 1 / 归一化 0"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -756,7 +756,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "UNVERIFIED"
     },
     {
       "local_skill": "ci-pipeline-debugging",
@@ -789,13 +789,13 @@
           },
           {
             "repo": "github/awesome-copilot",
-            "stars": 40185,
-            "pushed_days": 4,
+            "stars": 40192,
+            "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（4 天前推送，stars=40185，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=40192，来源 ungh.cc）"
           },
           {
             "repo": "rjmurillo/ai-agents",
@@ -809,13 +809,13 @@
           },
           {
             "repo": "trailofbits/skills",
-            "stars": 7647,
+            "stars": 7649,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=7647，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=7649，来源 ungh.cc）"
           }
         ]
       },
@@ -846,8 +846,8 @@
         "note": "本地 11226B / 上游 10335B / 相似度 0.959 / 上游独有标题 原始 1 / 归一化 1（例：what a step contains）"
       },
       "leg_candidates": {
-        "state": "UNVERIFIED",
-        "note": "1/5 个候选未取到读数",
+        "state": "GREEN",
+        "note": "5 个候选全部在活跃窗内",
         "detail": [
           {
             "repo": "obra/superpowers",
@@ -861,13 +861,13 @@
           },
           {
             "repo": "addyosmani/agent-skills",
-            "stars": null,
-            "pushed_days": null,
-            "archived": null,
+            "stars": 108611,
+            "pushed_days": 7,
+            "archived": false,
             "license": null,
-            "source": "-",
-            "state": "UNVERIFIED",
-            "note": "读数失败：ungh: <HTTPError 429: 'Too Many Requests'> / api: <HTTPError 403: 'rate limit exceeded'>"
+            "source": "ungh.cc",
+            "state": "GREEN",
+            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
           },
           {
             "repo": "github/awesome-copilot",
@@ -910,7 +910,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "UNVERIFIED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "brainstorming",
@@ -943,13 +943,13 @@
           },
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108611,
+            "stars": 108633,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108633，来源 ungh.cc）"
           },
           {
             "repo": "addyosmani/agent-skills",
@@ -1015,23 +1015,23 @@
         "detail": [
           {
             "repo": "wshobson/agents",
-            "stars": 41160,
+            "stars": 41150,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=41160，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=41150，来源 ungh.cc）"
           },
           {
             "repo": "wshobson/agents",
-            "stars": 41160,
+            "stars": 41164,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=41160，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=41164，来源 ungh.cc）"
           },
           {
             "repo": "yonatangross/orchestkit",
@@ -1077,13 +1077,13 @@
         "detail": [
           {
             "repo": "obra/superpowers",
-            "stars": 302131,
+            "stars": 302140,
             "pushed_days": 10,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=302131，来源 ungh.cc）"
+            "note": "活跃（10 天前推送，stars=302140，来源 ungh.cc）"
           },
           {
             "repo": "github/awesome-copilot",
@@ -1169,23 +1169,23 @@
           },
           {
             "repo": "obra/superpowers",
-            "stars": 302131,
+            "stars": 302140,
             "pushed_days": 10,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=302131，来源 ungh.cc）"
+            "note": "活跃（10 天前推送，stars=302140，来源 ungh.cc）"
           },
           {
             "repo": "anthropics/skills",
-            "stars": 182236,
+            "stars": 182021,
             "pushed_days": 11,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（11 天前推送，stars=182236，来源 ungh.cc）"
+            "note": "活跃（11 天前推送，stars=182021，来源 ungh.cc）"
           }
         ]
       },
@@ -1241,13 +1241,13 @@
           },
           {
             "repo": "anthropics/skills",
-            "stars": 182236,
+            "stars": 182240,
             "pushed_days": 11,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（11 天前推送，stars=182236，来源 ungh.cc）"
+            "note": "活跃（11 天前推送，stars=182240，来源 ungh.cc）"
           }
         ]
       },
@@ -1377,13 +1377,13 @@
         "detail": [
           {
             "repo": "anthropics/skills",
-            "stars": 182236,
+            "stars": 182240,
             "pushed_days": 11,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（11 天前推送，stars=182236，来源 ungh.cc）"
+            "note": "活跃（11 天前推送，stars=182240，来源 ungh.cc）"
           },
           {
             "repo": "tfriedel/claude-office-skills",
@@ -1429,33 +1429,33 @@
         "detail": [
           {
             "repo": "obra/superpowers",
-            "stars": 302131,
+            "stars": 302140,
             "pushed_days": 10,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=302131，来源 ungh.cc）"
+            "note": "活跃（10 天前推送，stars=302140，来源 ungh.cc）"
           },
           {
             "repo": "obra/superpowers",
-            "stars": 302131,
+            "stars": 302140,
             "pushed_days": 10,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=302131，来源 ungh.cc）"
+            "note": "活跃（10 天前推送，stars=302140，来源 ungh.cc）"
           },
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108628,
+            "stars": 108611,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108628，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
           },
           {
             "repo": "github/awesome-copilot",
@@ -1496,8 +1496,8 @@
         "note": "本地 19508B / 上游 8268B / 相似度 0.515 / 上游独有标题 原始 23 / 归一化 23（例：architecture overview; configuration; entity extraction）"
       },
       "leg_candidates": {
-        "state": "UNVERIFIED",
-        "note": "1/3 个候选未取到读数",
+        "state": "GREEN",
+        "note": "3 个候选全部在活跃窗内",
         "detail": [
           {
             "repo": "yonatangross/orchestkit",
@@ -1521,13 +1521,13 @@
           },
           {
             "repo": "anthropics/skills",
-            "stars": null,
-            "pushed_days": null,
-            "archived": null,
+            "stars": 182021,
+            "pushed_days": 11,
+            "archived": false,
             "license": null,
-            "source": "-",
-            "state": "UNVERIFIED",
-            "note": "读数失败：ungh: <HTTPError 403: 'Forbidden'> / api: <HTTPError 403: 'rate limit exceeded'>"
+            "source": "ungh.cc",
+            "state": "GREEN",
+            "note": "活跃（11 天前推送，stars=182021，来源 ungh.cc）"
           }
         ]
       },
@@ -1555,11 +1555,11 @@
       },
       "leg_drift": {
         "state": "RED",
-        "note": "本地 6303B / 上游 5920B / 相似度 0.594 / 上游独有标题 原始 9 / 归一化 9（例：architecture; claude cdp debugger; cli reference）"
+        "note": "本地 2858B / 上游 5920B / 相似度 0.395 / 上游独有标题 原始 9 / 归一化 9（例：architecture; claude cdp debugger; cli reference）"
       },
       "leg_candidates": {
-        "state": "UNVERIFIED",
-        "note": "1/3 个候选未取到读数",
+        "state": "GREEN",
+        "note": "3 个候选全部在活跃窗内",
         "detail": [
           {
             "repo": "Colgate13/claude-cdp-debugger",
@@ -1583,13 +1583,13 @@
           },
           {
             "repo": "microsoft/playwright-mcp",
-            "stars": null,
-            "pushed_days": null,
-            "archived": null,
+            "stars": 38368,
+            "pushed_days": 1,
+            "archived": false,
             "license": null,
-            "source": "-",
-            "state": "UNVERIFIED",
-            "note": "读数失败：ungh: <HTTPError 429: 'Too Many Requests'> / api: <HTTPError 403: 'rate limit exceeded'>"
+            "source": "ungh.cc",
+            "state": "GREEN",
+            "note": "活跃（1 天前推送，stars=38368，来源 ungh.cc）"
           }
         ]
       },
@@ -1620,28 +1620,28 @@
         "note": "本地 5654B / 上游 19489B / 相似度 0.212 / 上游独有标题 原始 17 / 归一化 17（例：60 second install; compatibility; detection boundary）"
       },
       "leg_candidates": {
-        "state": "UNVERIFIED",
-        "note": "2/4 个候选未取到读数",
+        "state": "GREEN",
+        "note": "4 个候选全部在活跃窗内",
         "detail": [
           {
             "repo": "skills-lock/skil-lock",
-            "stars": null,
-            "pushed_days": null,
-            "archived": null,
+            "stars": 6,
+            "pushed_days": 27,
+            "archived": false,
             "license": null,
-            "source": "-",
-            "state": "UNVERIFIED",
-            "note": "读数失败：ungh: <HTTPError 429: 'Too Many Requests'> / api: <HTTPError 403: 'rate limit exceeded'>"
+            "source": "ungh.cc",
+            "state": "GREEN",
+            "note": "活跃（27 天前推送，stars=6，来源 ungh.cc）"
           },
           {
             "repo": "mohitagw15856/pm-claude-skills",
-            "stars": null,
-            "pushed_days": null,
-            "archived": null,
-            "license": null,
-            "source": "-",
-            "state": "UNVERIFIED",
-            "note": "读数失败：ungh: <HTTPError 403: 'Forbidden'> / api: <HTTPError 403: 'rate limit exceeded'>"
+            "stars": 1471,
+            "pushed_days": 1,
+            "archived": false,
+            "license": "MIT",
+            "source": "api.github.com",
+            "state": "GREEN",
+            "note": "活跃（1 天前推送，stars=1471，来源 api.github.com）"
           },
           {
             "repo": "github/awesome-copilot",
@@ -1692,8 +1692,8 @@
         "note": "本地 2691B / 上游 1615B / 相似度 0.751 / 上游独有标题 原始 2 / 归一化 2（例：flow; how to ask questions）"
       },
       "leg_candidates": {
-        "state": "UNVERIFIED",
-        "note": "2/4 个候选未取到读数",
+        "state": "GREEN",
+        "note": "4 个候选全部在活跃窗内",
         "detail": [
           {
             "repo": "RobMitt/grill-me-skill",
@@ -1707,23 +1707,23 @@
           },
           {
             "repo": "obra/superpowers",
-            "stars": null,
-            "pushed_days": null,
-            "archived": null,
+            "stars": 301816,
+            "pushed_days": 10,
+            "archived": false,
             "license": null,
-            "source": "-",
-            "state": "UNVERIFIED",
-            "note": "读数失败：ungh: <HTTPError 429: 'Too Many Requests'> / api: <HTTPError 403: 'rate limit exceeded'>"
+            "source": "ungh.cc",
+            "state": "GREEN",
+            "note": "活跃（10 天前推送，stars=301816，来源 ungh.cc）"
           },
           {
             "repo": "addyosmani/agent-skills",
-            "stars": null,
-            "pushed_days": null,
-            "archived": null,
+            "stars": 108611,
+            "pushed_days": 7,
+            "archived": false,
             "license": null,
-            "source": "-",
-            "state": "UNVERIFIED",
-            "note": "读数失败：ungh: <HTTPError 403: 'Forbidden'> / api: <HTTPError 403: 'rate limit exceeded'>"
+            "source": "ungh.cc",
+            "state": "GREEN",
+            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
           },
           {
             "repo": "TimothyVang/Grill-me",
@@ -1761,7 +1761,7 @@
       },
       "leg_drift": {
         "state": "RED",
-        "note": "本地 38048B / 上游 9154B / 相似度 0.378 / 上游独有标题 原始 6 / 归一化 6（例：can you see images?; dependency browser harness; inputs）"
+        "note": "本地 29313B / 上游 9154B / 相似度 0.462 / 上游独有标题 原始 6 / 归一化 6（例：can you see images?; dependency browser harness; inputs）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -1769,13 +1769,13 @@
         "detail": [
           {
             "repo": "browser-use/browser-use",
-            "stars": 118546,
+            "stars": 118543,
             "pushed_days": 3,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（3 天前推送，stars=118546，来源 ungh.cc）"
+            "note": "活跃（3 天前推送，stars=118543，来源 ungh.cc）"
           },
           {
             "repo": "vercel-labs/agent-browser",
@@ -1789,13 +1789,13 @@
           },
           {
             "repo": "microsoft/playwright-mcp",
-            "stars": 38380,
+            "stars": 38368,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=38380，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=38368，来源 ungh.cc）"
           }
         ]
       },
@@ -1812,60 +1812,8 @@
     },
     {
       "local_skill": "dogfood",
-      "upstream_repo": "browser-use/browser-use",
-      "upstream_path": "skills/qa/SKILL.md",
-      "recorded_version": "0.13.13: OpenAI browser tools and Cloud fixes",
-      "live_version": "0.13.13: OpenAI browser tools and Cloud fixes",
-      "live_source": "releases.atom",
-      "leg_version": {
-        "state": "GREEN",
-        "note": "登记 0.13.13: OpenAI browser tools and Cloud fixes == 上游观测（releases.atom 最新 tag 0.13.13: OpenAI browser tools and Cloud fixes（2026-10-15T23:50:45Z））"
-      },
-      "leg_drift": {
-        "state": "RED",
-        "note": "本地 10428B / 上游 9154B / 相似度 0.864 / 上游独有标题 原始 6 / 归一化 6（例：can you see images?; dependency browser harness; inputs）"
-      },
-      "leg_candidates": {
-        "state": "GREEN",
-        "note": "2 个候选全部在活跃窗内",
-        "detail": [
-          {
-            "repo": "browser-use/browser-use",
-            "stars": 118546,
-            "pushed_days": 3,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（3 天前推送，stars=118546，来源 ungh.cc）"
-          },
-          {
-            "repo": "vercel-labs/agent-browser",
-            "stars": 44268,
-            "pushed_days": 1,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=44268，来源 ungh.cc）"
-          }
-        ]
-      },
-      "leg_discovery": {
-        "state": "SKIP",
-        "note": "本次未启用替代发现（--discover 0）；该腿为可选增强，不计入总判定",
-        "detail": [],
-        "optional": true
-      },
-      "last_checked": "2026-10-20",
-      "days_since_check": 0,
-      "stale": false,
-      "overall": "RED"
-    },
-    {
-      "local_skill": "electron",
       "upstream_repo": "vercel-labs/agent-browser",
-      "upstream_path": "skill-data/electron/SKILL.md",
+      "upstream_path": "skill-data/dogfood/SKILL.md",
       "recorded_version": "v0.39.1",
       "live_version": "0.39.1",
       "live_source": "releases.atom",
@@ -1875,41 +1823,31 @@
       },
       "leg_drift": {
         "state": "GREEN",
-        "note": "本地 6727B / 上游 6727B / 相似度 1.000 / 上游独有标题 原始 0 / 归一化 0"
+        "note": "本地 11882B / 上游 10845B / 相似度 0.966 / 上游独有标题 原始 0 / 归一化 0"
       },
       "leg_candidates": {
         "state": "GREEN",
-        "note": "3 个候选全部在活跃窗内",
+        "note": "2 个候选全部在活跃窗内",
         "detail": [
           {
-            "repo": "vercel-labs/agent-browser",
-            "stars": 44268,
-            "pushed_days": 1,
+            "repo": "browser-use/browser-use",
+            "stars": 118543,
+            "pushed_days": 3,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=44268，来源 ungh.cc）"
+            "note": "活跃（3 天前推送，stars=118543，来源 ungh.cc）"
           },
           {
             "repo": "vercel-labs/agent-browser",
-            "stars": 44268,
+            "stars": 44260,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=44268，来源 ungh.cc）"
-          },
-          {
-            "repo": "microsoft/playwright-mcp",
-            "stars": 38380,
-            "pushed_days": 1,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=38380，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=44260，来源 ungh.cc）"
           }
         ]
       },
@@ -1923,6 +1861,68 @@
       "days_since_check": 0,
       "stale": false,
       "overall": "GREEN"
+    },
+    {
+      "local_skill": "electron",
+      "upstream_repo": "vercel-labs/agent-browser",
+      "upstream_path": "skill-data/electron/SKILL.md",
+      "recorded_version": "v0.39.1",
+      "live_version": "0.39.1",
+      "live_source": "releases.atom",
+      "leg_version": {
+        "state": "GREEN",
+        "note": "登记 0.39.1 == 上游观测（releases.atom 最新 tag v0.39.1（2026-10-13T19:52:20Z））"
+      },
+      "leg_drift": {
+        "state": "RED",
+        "note": "本地 2625B / 上游 6727B / 相似度 0.408 / 上游独有标题 原始 21 / 归一化 21（例：\"connection refused\" or \"cannot connect\"; app launches but connect fails; cannot type in input fields）"
+      },
+      "leg_candidates": {
+        "state": "GREEN",
+        "note": "3 个候选全部在活跃窗内",
+        "detail": [
+          {
+            "repo": "vercel-labs/agent-browser",
+            "stars": 44260,
+            "pushed_days": 1,
+            "archived": false,
+            "license": null,
+            "source": "ungh.cc",
+            "state": "GREEN",
+            "note": "活跃（1 天前推送，stars=44260，来源 ungh.cc）"
+          },
+          {
+            "repo": "vercel-labs/agent-browser",
+            "stars": 44260,
+            "pushed_days": 1,
+            "archived": false,
+            "license": null,
+            "source": "ungh.cc",
+            "state": "GREEN",
+            "note": "活跃（1 天前推送，stars=44260，来源 ungh.cc）"
+          },
+          {
+            "repo": "microsoft/playwright-mcp",
+            "stars": 38368,
+            "pushed_days": 1,
+            "archived": false,
+            "license": null,
+            "source": "ungh.cc",
+            "state": "GREEN",
+            "note": "活跃（1 天前推送，stars=38368，来源 ungh.cc）"
+          }
+        ]
+      },
+      "leg_discovery": {
+        "state": "SKIP",
+        "note": "本次未启用替代发现（--discover 0）；该腿为可选增强，不计入总判定",
+        "detail": [],
+        "optional": true
+      },
+      "last_checked": "2026-10-20",
+      "days_since_check": 0,
+      "stale": false,
+      "overall": "RED"
     },
     {
       "local_skill": "gstack",
@@ -1945,13 +1945,13 @@
         "detail": [
           {
             "repo": "garrytan/gstack",
-            "stars": 136966,
-            "pushed_days": 0,
+            "stars": 136960,
+            "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（0 天前推送，stars=136966，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=136960，来源 ungh.cc）"
           }
         ]
       },
@@ -1987,13 +1987,13 @@
         "detail": [
           {
             "repo": "anthropics/skills",
-            "stars": 182021,
+            "stars": 182240,
             "pushed_days": 11,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（11 天前推送，stars=182021，来源 ungh.cc）"
+            "note": "活跃（11 天前推送，stars=182240，来源 ungh.cc）"
           },
           {
             "repo": "wshobson/agents",
@@ -2010,10 +2010,10 @@
             "stars": 163,
             "pushed_days": 162,
             "archived": false,
-            "license": null,
-            "source": "ungh.cc",
+            "license": "MIT",
+            "source": "api.github.com",
             "state": "GREEN",
-            "note": "活跃（162 天前推送，stars=163，来源 ungh.cc）"
+            "note": "活跃（162 天前推送，stars=163，来源 api.github.com）"
           }
         ]
       },

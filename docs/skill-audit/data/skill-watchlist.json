@@ -158,7 +158,7 @@
           "score_total": 15
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20 裁决=保持分叉 依据=候选browser-testing-with-devtools是浏览器向，本地已含property-based/mutation/coverage；浏览器QA已由dogfood+browser-cdp+agent-browser+gstack承载，整灌=重复资产（缺23标题实测19个属浏览器域(accessibility/available tools/console/network/perf/ui/installation/profile isolation/screenshot/security boundaries/devtools mcp/debugging workflow/untrusted data/test plans/what to look for/clean console/overview/red flags)，4个通用项(overview/verification/red flags/rationalizations)本地已有等价）"
     },
     {
       "local_skill": "test-driven-development",
@@ -515,7 +515,7 @@
           "score_total": 15
         }
       ],
-      "notes": "license 字段 API 返回 NOASSERTION，README 内 SPDX 声明为 CC-BY-SA-4.0。"
+      "notes": "license 字段 API 返回 NOASSERTION，README 内 SPDX 声明为 CC-BY-SA-4.0。 | 2026-10-20 裁决=吸收 依据=本地七Phase仅覆盖Web向OWASP Top10，agent向ASI Top10为真缺口→吸收16节，字节比0.996→1.628(commit b8c7440)；UNVERIFIED 成因=代表上游 github/awesome-copilot 无 release tag（版本腿结构性失明，非能力问题）；漂移腿已 GREEN（独有 16→0，字节比 0.996→1.628）"
     },
     {
       "local_skill": "ci-pipeline-debugging",
@@ -564,7 +564,7 @@
           "score_total": 5
         }
       ],
-      "notes": "明确缺口：GitHub 未检索到与本地『六类归因决策树』同源的技能仓库。"
+      "notes": "明确缺口：GitHub 未检索到与本地『六类归因决策树』同源的技能仓库。 | 2026-10-20 裁决=保持分叉 依据=候选ci-cd-and-automation是「建CI」向(11332B/缺23标题含Basic CI/Preview/Feature flags)，本地是「排障六类归因决策树」向，定位不同非能力缺口；字节比已1.141"
     },
     {
       "local_skill": "writing-plans",
@@ -1234,8 +1234,8 @@
     {
       "local_skill": "dogfood",
       "local_skill_md": "D:/global_skills/dogfood/SKILL.md",
-      "upstream_repo": "browser-use/browser-use",
-      "upstream_path": "skills/qa/SKILL.md",
+      "upstream_repo": "vercel-labs/agent-browser",
+      "upstream_path": "skill-data/dogfood/SKILL.md",
       "ledger": [
         {
           "repo": "browser-use/browser-use",
@@ -1245,7 +1245,7 @@
           "score_total": 7
         }
       ],
-      "recorded_version": "0.13.13: OpenAI browser tools and Cloud fixes",
+      "recorded_version": "v0.39.1",
       "last_checked": "2026-10-20",
       "discovery_query": "dogfood skill agent",
       "candidates": [
@@ -1264,7 +1264,8 @@
           "score_total": 6
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20 裁决=吸收 依据=上游417B差异经hunk定位为networkidle反模式修正，本地CLI实测支持--url/--text/--fn→落地(commit 27752cd)；保留本地中文description",
+      "upstream_role": "true_same_origin_upstream(修正0852: 自动选品误选 browser-use/qa 相邻件)"
     },
     {
       "local_skill": "electron",

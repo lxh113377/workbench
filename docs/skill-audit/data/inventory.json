@@ -1,6 +1,6 @@
 {
   "schema": "skill-inventory-v1",
-  "generated_at": "2026-10-20T08:36:26",
+  "generated_at": "2026-10-20T09:15:45",
   "skills_root": "D:\\global_skills",
   "facts_source": {
     "truth_constants": "C:\\Users\\37533\\Desktop\\workspace\\焚诀\\eval\\truth_constants.json",
@@ -9,7 +9,7 @@
   },
   "soft_limit_bytes": 12288,
   "retired_count": 73,
-  "route_trace_skills": 115,
+  "route_trace_skills": 76,
   "items": [
     {
       "name": "9b-lightworkflow",
@@ -26,7 +26,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 84,
+      "route_top1_count": 2,
       "memory_mentions": 0
     },
     {
@@ -44,7 +44,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 6,
+      "route_top1_count": 3,
       "memory_mentions": 107
     },
     {
@@ -62,8 +62,8 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 67,
-      "memory_mentions": 92
+      "route_top1_count": 5,
+      "memory_mentions": 93
     },
     {
       "name": "A-get-memory",
@@ -73,7 +73,7 @@
       "description_len": 200,
       "triggers_count": 0,
       "skill_md_bytes": 12055,
-      "dir_bytes": 320138,
+      "dir_bytes": 298813,
       "ref_files": 17,
       "over_soft_limit": false,
       "retired_on_disk": false,
@@ -82,7 +82,7 @@
       "declared_refs": [
         "step7_project_handoff.md"
       ],
-      "route_top1_count": 372,
+      "route_top1_count": 21,
       "memory_mentions": 81
     },
     {
@@ -100,7 +100,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 3,
+      "route_top1_count": 0,
       "memory_mentions": 8
     },
     {
@@ -111,15 +111,15 @@
       "description_len": 33,
       "triggers_count": 10,
       "skill_md_bytes": 19508,
-      "dir_bytes": 846922,
-      "ref_files": 28,
+      "dir_bytes": 572776,
+      "ref_files": 23,
       "over_soft_limit": true,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 429,
-      "memory_mentions": 274
+      "route_top1_count": 6,
+      "memory_mentions": 275
     },
     {
       "name": "A-project-better",
@@ -136,8 +136,8 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 15,
-      "memory_mentions": 103
+      "route_top1_count": 1,
+      "memory_mentions": 104
     },
     {
       "name": "A-project-handoff",
@@ -147,15 +147,15 @@
       "description_len": 400,
       "triggers_count": 30,
       "skill_md_bytes": 9664,
-      "dir_bytes": 4893621,
+      "dir_bytes": 2786398,
       "ref_files": 9,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 13,
-      "memory_mentions": 219
+      "route_top1_count": 5,
+      "memory_mentions": 220
     },
     {
       "name": "A-prompt-better",
@@ -172,7 +172,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 269,
+      "route_top1_count": 13,
       "memory_mentions": 0
     },
     {
@@ -183,33 +183,33 @@
       "description_len": 292,
       "triggers_count": 0,
       "skill_md_bytes": 11749,
-      "dir_bytes": 308229,
+      "dir_bytes": 259375,
       "ref_files": 18,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1134,
-      "memory_mentions": 106
+      "route_top1_count": 55,
+      "memory_mentions": 109
     },
     {
       "name": "agent-browser",
       "dir": "agent-browser",
       "has_skill_md": true,
-      "version": "2.0.0",
-      "description_len": 186,
-      "triggers_count": 8,
-      "skill_md_bytes": 38626,
-      "dir_bytes": 150577,
+      "version": "1.0.0",
+      "description_len": 152,
+      "triggers_count": 0,
+      "skill_md_bytes": 29313,
+      "dir_bytes": 98577,
       "ref_files": 11,
       "over_soft_limit": true,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 424,
-      "memory_mentions": 107
+      "route_top1_count": 11,
+      "memory_mentions": 111
     },
     {
       "name": "ai-video-homework-pipeline",
@@ -244,7 +244,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 274,
+      "route_top1_count": 13,
       "memory_mentions": 0
     },
     {
@@ -262,7 +262,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 3,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -280,7 +280,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 176,
+      "route_top1_count": 10,
       "memory_mentions": 1
     },
     {
@@ -298,7 +298,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 431,
+      "route_top1_count": 6,
       "memory_mentions": 1
     },
     {
@@ -317,7 +317,7 @@
       "loose_refs": [],
       "declared_refs": [],
       "route_top1_count": 0,
-      "memory_mentions": 4
+      "memory_mentions": 5
     },
     {
       "name": "brand-guidelines",
@@ -341,19 +341,19 @@
       "name": "browser-cdp",
       "dir": "browser-cdp",
       "has_skill_md": true,
-      "version": null,
-      "description_len": 389,
+      "version": "1.1.0",
+      "description_len": 419,
       "triggers_count": 0,
-      "skill_md_bytes": 6474,
-      "dir_bytes": 48327,
+      "skill_md_bytes": 2858,
+      "dir_bytes": 44772,
       "ref_files": 0,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 2,
-      "memory_mentions": 0
+      "route_top1_count": 0,
+      "memory_mentions": 1
     },
     {
       "name": "browser-voice-call",
@@ -370,7 +370,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 5,
+      "route_top1_count": 0,
       "memory_mentions": 6
     },
     {
@@ -406,7 +406,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 197,
+      "route_top1_count": 8,
       "memory_mentions": 0
     },
     {
@@ -424,7 +424,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 5,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -442,7 +442,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 481,
+      "route_top1_count": 25,
       "memory_mentions": 0
     },
     {
@@ -460,7 +460,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 97,
+      "route_top1_count": 5,
       "memory_mentions": 7
     },
     {
@@ -478,7 +478,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 94,
+      "route_top1_count": 4,
       "memory_mentions": 0
     },
     {
@@ -496,7 +496,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 337,
+      "route_top1_count": 2,
       "memory_mentions": 0
     },
     {
@@ -516,7 +516,7 @@
       "declared_refs": [
         "verify-live-and-sources.md"
       ],
-      "route_top1_count": 4,
+      "route_top1_count": 3,
       "memory_mentions": 0
     },
     {
@@ -534,7 +534,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 292,
+      "route_top1_count": 16,
       "memory_mentions": 1
     },
     {
@@ -552,7 +552,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 292,
+      "route_top1_count": 15,
       "memory_mentions": 0
     },
     {
@@ -570,8 +570,8 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
-      "memory_mentions": 8
+      "route_top1_count": 0,
+      "memory_mentions": 13
     },
     {
       "name": "cloudbase",
@@ -609,7 +609,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 335,
+      "route_top1_count": 2,
       "memory_mentions": 0
     },
     {
@@ -627,8 +627,8 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 10,
-      "memory_mentions": 9
+      "route_top1_count": 3,
+      "memory_mentions": 11
     },
     {
       "name": "codebuddy-chat-web",
@@ -663,7 +663,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 182,
+      "route_top1_count": 8,
       "memory_mentions": 0
     },
     {
@@ -717,7 +717,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1698,
+      "route_top1_count": 10,
       "memory_mentions": 8
     },
     {
@@ -735,7 +735,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 94,
+      "route_top1_count": 5,
       "memory_mentions": 0
     },
     {
@@ -753,7 +753,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 758,
+      "route_top1_count": 9,
       "memory_mentions": 0
     },
     {
@@ -771,7 +771,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 93,
+      "route_top1_count": 4,
       "memory_mentions": 0
     },
     {
@@ -781,34 +781,34 @@
       "version": "2.4.0",
       "description_len": 391,
       "triggers_count": 0,
-      "skill_md_bytes": 15644,
-      "dir_bytes": 22153,
+      "skill_md_bytes": 15652,
+      "dir_bytes": 22161,
       "ref_files": 2,
       "over_soft_limit": true,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 392,
-      "memory_mentions": 20
+      "route_top1_count": 16,
+      "memory_mentions": 22
     },
     {
       "name": "defuddle",
       "dir": "defuddle",
       "has_skill_md": true,
-      "version": null,
-      "description_len": 260,
-      "triggers_count": 0,
-      "skill_md_bytes": 1034,
-      "dir_bytes": 1034,
+      "version": "1.1.0",
+      "description_len": 372,
+      "triggers_count": 3,
+      "skill_md_bytes": 2608,
+      "dir_bytes": 2642,
       "ref_files": 0,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 182,
-      "memory_mentions": 1
+      "route_top1_count": 10,
+      "memory_mentions": 3
     },
     {
       "name": "diagram-maker",
@@ -825,7 +825,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 188,
+      "route_top1_count": 9,
       "memory_mentions": 0
     },
     {
@@ -935,7 +935,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 4,
+      "route_top1_count": 0,
       "memory_mentions": 1
     },
     {
@@ -953,7 +953,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
+      "route_top1_count": 0,
       "memory_mentions": 1
     },
     {
@@ -1087,7 +1087,7 @@
       "declared_refs": [
         "lite-recipes.md"
       ],
-      "route_top1_count": 6,
+      "route_top1_count": 0,
       "memory_mentions": 1
     },
     {
@@ -1105,7 +1105,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 88,
+      "route_top1_count": 4,
       "memory_mentions": 0
     },
     {
@@ -1123,7 +1123,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 88,
+      "route_top1_count": 5,
       "memory_mentions": 3
     },
     {
@@ -1141,7 +1141,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
+      "route_top1_count": 0,
       "memory_mentions": 4
     },
     {
@@ -1152,51 +1152,51 @@
       "description_len": 824,
       "triggers_count": 0,
       "skill_md_bytes": 28922,
-      "dir_bytes": 1309439,
+      "dir_bytes": 1187281,
       "ref_files": 0,
       "over_soft_limit": true,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 100,
-      "memory_mentions": 2
+      "route_top1_count": 4,
+      "memory_mentions": 3
     },
     {
       "name": "dogfood",
       "dir": "dogfood",
       "has_skill_md": true,
-      "version": "1.0.0",
+      "version": "1.1.0",
       "description_len": 104,
       "triggers_count": 0,
-      "skill_md_bytes": 10428,
-      "dir_bytes": 15524,
+      "skill_md_bytes": 11882,
+      "dir_bytes": 17026,
       "ref_files": 1,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
-      "memory_mentions": 2
+      "route_top1_count": 0,
+      "memory_mentions": 3
     },
     {
       "name": "electron",
       "dir": "electron",
       "has_skill_md": true,
-      "version": null,
-      "description_len": 505,
+      "version": "1.1.0",
+      "description_len": 520,
       "triggers_count": 0,
-      "skill_md_bytes": 6727,
-      "dir_bytes": 6727,
+      "skill_md_bytes": 2625,
+      "dir_bytes": 2672,
       "ref_files": 0,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 88,
-      "memory_mentions": 2
+      "route_top1_count": 4,
+      "memory_mentions": 4
     },
     {
       "name": "elon-musk-perspective",
@@ -1213,7 +1213,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -1231,7 +1231,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 237,
+      "route_top1_count": 7,
       "memory_mentions": 0
     },
     {
@@ -1249,7 +1249,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 188,
+      "route_top1_count": 2,
       "memory_mentions": 1
     },
     {
@@ -1267,26 +1267,26 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 99,
+      "route_top1_count": 5,
       "memory_mentions": 0
     },
     {
       "name": "find-skills",
       "dir": "find-skills",
       "has_skill_md": true,
-      "version": "1.0.4",
-      "description_len": 440,
+      "version": "1.1.0",
+      "description_len": 444,
       "triggers_count": 0,
-      "skill_md_bytes": 21192,
-      "dir_bytes": 42605,
-      "ref_files": 0,
-      "over_soft_limit": true,
+      "skill_md_bytes": 2674,
+      "dir_bytes": 44542,
+      "ref_files": 1,
+      "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
-      "memory_mentions": 1
+      "route_top1_count": 0,
+      "memory_mentions": 2
     },
     {
       "name": "first-principles-decomposer",
@@ -1303,7 +1303,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 420,
+      "route_top1_count": 7,
       "memory_mentions": 0
     },
     {
@@ -1339,7 +1339,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 6,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -1375,7 +1375,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 426,
+      "route_top1_count": 6,
       "memory_mentions": 39
     },
     {
@@ -1422,7 +1422,7 @@
       "description_len": 1,
       "triggers_count": 0,
       "skill_md_bytes": 27329,
-      "dir_bytes": 2082849,
+      "dir_bytes": 2082865,
       "ref_files": 0,
       "over_soft_limit": true,
       "retired_on_disk": false,
@@ -1447,7 +1447,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 2,
+      "route_top1_count": 0,
       "memory_mentions": 1
     },
     {
@@ -1465,7 +1465,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
+      "route_top1_count": 0,
       "memory_mentions": 1
     },
     {
@@ -1501,7 +1501,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 3,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -1537,7 +1537,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 6,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -1555,7 +1555,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 333,
+      "route_top1_count": 2,
       "memory_mentions": 0
     },
     {
@@ -1645,7 +1645,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 331,
+      "route_top1_count": 0,
       "memory_mentions": 1
     },
     {
@@ -1656,14 +1656,14 @@
       "description_len": 288,
       "triggers_count": 0,
       "skill_md_bytes": 59503,
-      "dir_bytes": 408452,
+      "dir_bytes": 277755,
       "ref_files": 2,
       "over_soft_limit": true,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 332,
+      "route_top1_count": 2,
       "memory_mentions": 3
     },
     {
@@ -1681,7 +1681,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 9,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -1699,7 +1699,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 88,
+      "route_top1_count": 4,
       "memory_mentions": 0
     },
     {
@@ -1717,7 +1717,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -1728,14 +1728,14 @@
       "description_len": 1,
       "triggers_count": 0,
       "skill_md_bytes": 4882,
-      "dir_bytes": 5850468,
+      "dir_bytes": 5713280,
       "ref_files": 1,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 340,
+      "route_top1_count": 5,
       "memory_mentions": 11
     },
     {
@@ -1746,14 +1746,14 @@
       "description_len": 1,
       "triggers_count": 0,
       "skill_md_bytes": 5837,
-      "dir_bytes": 4921232,
+      "dir_bytes": 4908179,
       "ref_files": 1,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 332,
+      "route_top1_count": 2,
       "memory_mentions": 0
     },
     {
@@ -1764,7 +1764,7 @@
       "description_len": 1,
       "triggers_count": 0,
       "skill_md_bytes": 3760,
-      "dir_bytes": 14137751,
+      "dir_bytes": 14098045,
       "ref_files": 1,
       "over_soft_limit": false,
       "retired_on_disk": false,
@@ -1807,7 +1807,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -1854,14 +1854,14 @@
       "description_len": 1,
       "triggers_count": 0,
       "skill_md_bytes": 6543,
-      "dir_bytes": 4222494,
+      "dir_bytes": 4164485,
       "ref_files": 1,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 333,
+      "route_top1_count": 2,
       "memory_mentions": 0
     },
     {
@@ -1872,14 +1872,14 @@
       "description_len": 1,
       "triggers_count": 0,
       "skill_md_bytes": 5242,
-      "dir_bytes": 13282453,
+      "dir_bytes": 13220420,
       "ref_files": 1,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 331,
+      "route_top1_count": 2,
       "memory_mentions": 0
     },
     {
@@ -1979,8 +1979,8 @@
       "version": null,
       "description_len": 232,
       "triggers_count": 0,
-      "skill_md_bytes": 4099,
-      "dir_bytes": 7449,
+      "skill_md_bytes": 3410,
+      "dir_bytes": 6760,
       "ref_files": 0,
       "over_soft_limit": false,
       "retired_on_disk": false,
@@ -2005,7 +2005,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 177,
+      "route_top1_count": 10,
       "memory_mentions": 0
     },
     {
@@ -2041,7 +2041,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 3,
+      "route_top1_count": 0,
       "memory_mentions": 2
     },
     {
@@ -2077,7 +2077,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 6,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -2113,7 +2113,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 10,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -2131,7 +2131,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 87,
+      "route_top1_count": 5,
       "memory_mentions": 1
     },
     {
@@ -2149,7 +2149,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -2167,7 +2167,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
+      "route_top1_count": 0,
       "memory_mentions": 1
     },
     {
@@ -2185,7 +2185,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 88,
+      "route_top1_count": 4,
       "memory_mentions": 0
     },
     {
@@ -2214,15 +2214,15 @@
       "description_len": 550,
       "triggers_count": 0,
       "skill_md_bytes": 11374,
-      "dir_bytes": 88951,
+      "dir_bytes": 88969,
       "ref_files": 0,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 427,
-      "memory_mentions": 3
+      "route_top1_count": 7,
+      "memory_mentions": 4
     },
     {
       "name": "pixelle-api-ensure",
@@ -2232,14 +2232,14 @@
       "description_len": 124,
       "triggers_count": 0,
       "skill_md_bytes": 3519,
-      "dir_bytes": 13314,
+      "dir_bytes": 7407,
       "ref_files": 0,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -2250,14 +2250,14 @@
       "description_len": 1,
       "triggers_count": 8,
       "skill_md_bytes": 10339,
-      "dir_bytes": 88940045,
+      "dir_bytes": 84595213,
       "ref_files": 165,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 187,
+      "route_top1_count": 12,
       "memory_mentions": 13
     },
     {
@@ -2275,8 +2275,8 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
-      "memory_mentions": 0
+      "route_top1_count": 0,
+      "memory_mentions": 6
     },
     {
       "name": "prompt-system-audit",
@@ -2293,7 +2293,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 693,
+      "route_top1_count": 4,
       "memory_mentions": 0
     },
     {
@@ -2311,7 +2311,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 177,
+      "route_top1_count": 9,
       "memory_mentions": 1
     },
     {
@@ -2354,19 +2354,19 @@
       "name": "refactoring",
       "dir": "refactoring",
       "has_skill_md": true,
-      "version": "2.0.0",
+      "version": "2.1.0",
       "description_len": 233,
       "triggers_count": 0,
-      "skill_md_bytes": 16261,
-      "dir_bytes": 16261,
+      "skill_md_bytes": 16436,
+      "dir_bytes": 16436,
       "ref_files": 0,
       "over_soft_limit": true,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 198,
-      "memory_mentions": 7
+      "route_top1_count": 8,
+      "memory_mentions": 10
     },
     {
       "name": "report-generator-skill",
@@ -2383,7 +2383,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 176,
+      "route_top1_count": 10,
       "memory_mentions": 0
     },
     {
@@ -2401,7 +2401,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 88,
+      "route_top1_count": 5,
       "memory_mentions": 0
     },
     {
@@ -2437,26 +2437,26 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 513,
+      "route_top1_count": 11,
       "memory_mentions": 0
     },
     {
       "name": "security-audit",
       "dir": "security-audit",
       "has_skill_md": true,
-      "version": "1.1.0",
+      "version": "2.0.0",
       "description_len": 513,
       "triggers_count": 15,
-      "skill_md_bytes": 11841,
-      "dir_bytes": 11841,
+      "skill_md_bytes": 19366,
+      "dir_bytes": 19366,
       "ref_files": 0,
-      "over_soft_limit": false,
+      "over_soft_limit": true,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 89,
-      "memory_mentions": 2
+      "route_top1_count": 4,
+      "memory_mentions": 8
     },
     {
       "name": "shadcn",
@@ -2491,7 +2491,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 241,
+      "route_top1_count": 3,
       "memory_mentions": 6
     },
     {
@@ -2527,7 +2527,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 92,
+      "route_top1_count": 4,
       "memory_mentions": 19
     },
     {
@@ -2548,7 +2548,7 @@
         "dotnet_uninstall_guide.md"
       ],
       "route_top1_count": 0,
-      "memory_mentions": 0
+      "memory_mentions": 2
     },
     {
       "name": "sqlalchemy-loader-criteria-pitfalls",
@@ -2601,7 +2601,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 88,
+      "route_top1_count": 4,
       "memory_mentions": 0
     },
     {
@@ -2807,19 +2807,19 @@
       "name": "taskflow",
       "dir": "taskflow",
       "has_skill_md": true,
-      "version": null,
+      "version": "1.1.0",
       "description_len": 97,
       "triggers_count": 0,
-      "skill_md_bytes": 4893,
-      "dir_bytes": 7527,
+      "skill_md_bytes": 6146,
+      "dir_bytes": 8798,
       "ref_files": 0,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 5,
-      "memory_mentions": 1
+      "route_top1_count": 1,
+      "memory_mentions": 2
     },
     {
       "name": "taskflow-inbox-triage",
@@ -2854,7 +2854,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 183,
+      "route_top1_count": 9,
       "memory_mentions": 1
     },
     {
@@ -2872,8 +2872,8 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 190,
-      "memory_mentions": 1
+      "route_top1_count": 9,
+      "memory_mentions": 6
     },
     {
       "name": "theme-factory",
@@ -2901,7 +2901,7 @@
       "description_len": 573,
       "triggers_count": 0,
       "skill_md_bytes": 3055,
-      "dir_bytes": 1030967,
+      "dir_bytes": 961127,
       "ref_files": 2,
       "over_soft_limit": false,
       "retired_on_disk": false,
@@ -2926,7 +2926,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 614,
+      "route_top1_count": 8,
       "memory_mentions": 1
     },
     {
@@ -2944,8 +2944,8 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 3,
-      "memory_mentions": 11
+      "route_top1_count": 0,
+      "memory_mentions": 12
     },
     {
       "name": "video-breakdown-skill",
@@ -2980,7 +2980,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 278,
+      "route_top1_count": 13,
       "memory_mentions": 1
     },
     {
@@ -2998,7 +2998,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1917,
+      "route_top1_count": 6,
       "memory_mentions": 0
     },
     {
@@ -3016,7 +3016,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 16,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -3036,7 +3036,7 @@
       "declared_refs": [
         "concurrent-index-lock.md"
       ],
-      "route_top1_count": 17,
+      "route_top1_count": 3,
       "memory_mentions": 1
     },
     {
@@ -3047,14 +3047,14 @@
       "description_len": 132,
       "triggers_count": 0,
       "skill_md_bytes": 18657,
-      "dir_bytes": 86895,
+      "dir_bytes": 86976,
       "ref_files": 2,
       "over_soft_limit": true,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -3072,7 +3072,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 1,
+      "route_top1_count": 0,
       "memory_mentions": 1
     },
     {
@@ -3090,7 +3090,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 106,
+      "route_top1_count": 4,
       "memory_mentions": 2
     },
     {
@@ -3108,7 +3108,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 4,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -3126,7 +3126,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 318,
+      "route_top1_count": 0,
       "memory_mentions": 8
     },
     {
@@ -3162,7 +3162,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 432,
+      "route_top1_count": 2,
       "memory_mentions": 0
     },
     {
@@ -3180,7 +3180,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 332,
+      "route_top1_count": 2,
       "memory_mentions": 0
     },
     {
@@ -3198,7 +3198,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 282,
+      "route_top1_count": 15,
       "memory_mentions": 1
     },
     {
@@ -3216,7 +3216,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 2,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -3234,7 +3234,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 3,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -3254,7 +3254,7 @@
       "declared_refs": [
         "workflow.md"
       ],
-      "route_top1_count": 3,
+      "route_top1_count": 0,
       "memory_mentions": 0
     },
     {
@@ -3272,7 +3272,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 5,
+      "route_top1_count": 0,
       "memory_mentions": 9
     },
     {
@@ -3283,15 +3283,15 @@
       "description_len": 977,
       "triggers_count": 0,
       "skill_md_bytes": 11703,
-      "dir_bytes": 1200955,
+      "dir_bytes": 1119147,
       "ref_files": 1,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 100,
-      "memory_mentions": 3
+      "route_top1_count": 7,
+      "memory_mentions": 4
     },
     {
       "name": "天眼一下",
@@ -3308,7 +3308,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 190,
+      "route_top1_count": 8,
       "memory_mentions": 0
     }
   ],
