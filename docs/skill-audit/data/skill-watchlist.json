@@ -34,7 +34,7 @@
         {
           "repo": "obra/superpowers",
           "entry_path": "skills/requesting-code-review/SKILL.md",
-          "stars": 301953,
+          "stars": 302151,
           "license": "MIT",
           "score_total": 19
         },
@@ -83,7 +83,7 @@
         {
           "repo": "obra/superpowers",
           "entry_path": "skills/systematic-debugging/SKILL.md",
-          "stars": 301953,
+          "stars": 302151,
           "license": "MIT",
           "score_total": 21
         },
@@ -188,7 +188,7 @@
         {
           "repo": "obra/superpowers",
           "entry_path": "skills/test-driven-development/SKILL.md",
-          "stars": 301953,
+          "stars": 302151,
           "license": "MIT",
           "score_total": 20
         },
@@ -593,7 +593,7 @@
         {
           "repo": "obra/superpowers",
           "entry_path": "skills/writing-plans/SKILL.md",
-          "stars": 301953,
+          "stars": 302151,
           "license": "MIT",
           "score_total": 20
         },
@@ -649,7 +649,7 @@
         {
           "repo": "obra/superpowers",
           "entry_path": "skills/brainstorming/SKILL.md",
-          "stars": 301953,
+          "stars": 302151,
           "license": "MIT",
           "score_total": 20
         },
@@ -748,7 +748,7 @@
         {
           "repo": "obra/superpowers",
           "entry_path": "skills/verification-before-completion/SKILL.md",
-          "stars": 301953,
+          "stars": 302151,
           "license": "MIT",
           "score_total": 19
         },
@@ -811,7 +811,7 @@
         {
           "repo": "obra/superpowers",
           "entry_path": "skills/writing-skills/SKILL.md",
-          "stars": 301816,
+          "stars": 302151,
           "license": "MIT",
           "score_total": 9
         },
@@ -997,14 +997,14 @@
         {
           "repo": "obra/superpowers",
           "entry_path": "skills/executing-plans/SKILL.md",
-          "stars": 301953,
+          "stars": 302151,
           "license": "MIT",
           "score_total": 17
         },
         {
           "repo": "obra/superpowers",
           "entry_path": "skills/subagent-driven-development/SKILL.md",
-          "stars": 301953,
+          "stars": 302151,
           "license": "MIT",
           "score_total": 17
         },
@@ -1191,7 +1191,7 @@
         {
           "repo": "obra/superpowers",
           "entry_path": "skills/brainstorming/SKILL.md",
-          "stars": 301953,
+          "stars": 302151,
           "license": "MIT",
           "score_total": 9
         },
@@ -1385,21 +1385,21 @@
         {
           "repo": "anthropics/skills",
           "entry_path": "skills/pptx/SKILL.md",
-          "stars": null,
+          "stars": 182156,
           "license": null,
           "score_total": 2
         },
         {
           "repo": "wshobson/agents",
           "entry_path": "plugins/pptx-deck-creation/skills/pptx-quality-gates/SKILL.md",
-          "stars": null,
+          "stars": 41107,
           "license": null,
           "score_total": 2
         },
         {
           "repo": "Akxan/ppt-agent-skill",
           "entry_path": "SKILL.md",
-          "stars": null,
+          "stars": 163,
           "license": null,
           "score_total": 2
         }
