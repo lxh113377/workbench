@@ -9,3 +9,24 @@ _recovery/
 src-backup/
 src/
 *.tmp
+
+# 工具链缓存与可再生工作区（非交付物，2026-10-20 仓库卫生修复）
+# 实测：本仓 untracked 曾达 53,751 个，其中 22,397 在 xtmp/、13,400 在 dist/、
+# 13,353 在 .workbuddy/gocache/（Go 构建缓存）、3,792 在 runtime/。
+# git ls-files 实测这些目录 tracked=0，忽略它们零信息损失；
+# .workbuddy/memory/*.md 是受跟踪的项目记忆，故只忽略 gocache，不忽略整个 .workbuddy。
+/xtmp/
+/runtime/
+/.probe/
+/dist/
+/_recovery/
+/.workbuddy/gocache/
+
+# Go 测试与门禁跑出来的临时产物
+*.test
+coverage.out
+
+# 门禁/容器跑出来的可再生证据产物（每次跑都重新生成，非交付物）
+# 实测 tests/docker-autonomy/evidence/ 下单个 gate-* 目录就 500+ 文件
+tests/docker-autonomy/evidence/
+tests/_protoout/
