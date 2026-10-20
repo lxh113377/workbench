@@ -2201,6 +2201,17 @@
         }
       ],
       "notes": ""
+    },
+    {
+      "local_skill": "subagent-driven-development",
+      "local_skill_md": "D:/global_skills/subagent-driven-development/SKILL.md",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/executing-plans/SKILL.md",
+      "recorded_version": "7.0.0",
+      "last_checked": "2026-10-20",
+      "discovery_query": "executing plans skill agent",
+      "candidates": [],
+      "notes": "2026-10-20 轮1 新建（B4 自行决策落地）：吸收上游 executing-plans 20405B 内核四段（inline 理由/Rulings-not-stalls/ledger 存活/四项 stop 条件）；旧名 executing-plans 在退役名册，以本名注册。references/plan-execution-contract.md 定义 ledger 与 completion contract 格式。 | 2026-10-20 轮1 裁决=吸收分叉（05 §五）：漂移腿 RED 系本地中文精选吸收(3846B)对上游全文(20405B)的预期差异，上游独有段按需增量吸收，不做全文镜像；版本腿 GREEN(7.0.0)。S1 结构自检 PASS(3 卷全 ≤4096B)、冒烟 PASS(分卷无死链/新名不在退役册)。"
     }
   ]
 }
