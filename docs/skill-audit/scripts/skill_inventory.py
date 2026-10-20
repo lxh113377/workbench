@@ -214,11 +214,18 @@ def scan():
             ref_files = len([p for p in refdir.rglob("*") if p.is_file()])
         _dr = dead_refs(text, refdir, SKILLS_ROOT, ref_index)
         fm = parse_frontmatter(text)
-        name = fm.get("name") or d.name
+                # 轮14 修幽灵条目：索引键一律用目录名（磁盘事实），frontmatter name 只作 self_name 记录。
+        # 原实现 name 优先 ⇒ react-best-practices/ 目录（frontmatter name=vercel-react-best-practices）
+        # 被记成不存在的 vercel-react-best-practices，实盘目录反而失踪，182/183 永远对不上。
+        name = d.name
+        self_name = fm.get("name") or d.name
+        name_mismatch = bool(self_name and self_name != d.name)
         items.append({
             "name": name,
             "dir": d.name,
             "has_skill_md": True,
+            "self_name": self_name,
+            "name_mismatch": name_mismatch,
             "version": fm.get("version"),
             "description_len": len(fm.get("description") or ""),
             "triggers_count": len(fm.get("triggers") or []),
