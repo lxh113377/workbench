@@ -409,3 +409,74 @@ Get-ChildItem D:\workdesktop\dist\workbench-output\tasks -Recurse -Filter events
 | dist/SHA256SUMS 漂移 | 已发现未修 | 属构建产物一致性，需与 build.ps1 的 6/6 段一起处理 |
 | D7 语义层独立车道 | 未做 | 现与主链路共用执行器；摘要/自评可用更短超时/更廉价模型 |
 | 远程仓库同步 | 本地领先 origin/master | 推送涉及远端写入与 CI 触发，见交付报告「待办」 |
+
+---
+
+## 11. 跨环境同口径比对与 peer 源码精读（2026-10-20 补，§0-§10 正文零改写）
+
+> 本节是 §10.6 登记的两项开放差距（L14 容器侧复跑、D7 后续）被**实际执行**的结果，
+> 也是知识盲区学习计划 L1-L14 里「精读对象」这一栏从「指针」变成「可核验落盘件」。
+> 纪律：L14 判据写的是「与本机读数同表比对，差异 >3 点即登记为口径漂移」—— 自己立的判据自己先过一遍。
+
+### 11.1 容器侧全量复跑（Linux，`golang:1.27-bookworm` @ HEAD `9c7d981`）
+
+命令：`docker run --rm -v D:/workdesktop/xtmp/headwt:/src -w /src golang:1.27-bookworm bash -lc 'cd /src/workbench && go vet ./... && go test ./... -count=1 -cover'`
+
+| 判据 | 结果 |
+|---|---|
+| `go vet ./...` | **VET_RC=0** |
+| `go test ./... -count=1` | **24 包 ok + 4 包无测试文件 / 0 FAIL** |
+| 三项 P0 复验（engine / retention / verify） | 全部 ok（§9.4 记的「三包 FAIL」至此彻底消解） |
+| 本轮四项改造在 Linux 侧同样成立 | 是（同一提交树，非工作区） |
+
+> 关键差异已归因，不再是「跨环境只验一侧」：本轮 engine 判红的根因（Windows 文件占用）**在 Linux 不报错**，
+> 所以容器绿不能证明修复有效 —— **必须两侧都跑，且以「红的那侧」为验收基线**。
+
+### 11.2 覆盖率同口径比对（本机 Windows vs 容器 Linux，同一提交树）
+
+| 包 | Windows | Linux | Δ | 判定与归因 |
+|---|---|---|---|---|
+| shortcut | 37.9 | 0.0 | −37.9 | **平台门控**（`_windows.go` 测试 Linux 不编译），预期内，非缺陷 |
+| tray / single | 17.9 / 16.2 | 0.0 | −17.9 / −16.2 | 同上（GUI/进程锁平台相关，盲区 B2 已登记） |
+| web | 46.0 | 37.4 | **−8.6** | 平台门控件占比高（`autostart_windows.go`/`hiddenproc_windows.go` 等）⇒ 分母不同。**注**：本机另测到 57.7% 是**工作区脏版**（含并行会话未提交的 web 改动），比对一律以提交树 `9c7d981` 为准 |
+| supervisor | 68.0 | 52.9 | **−15.1** | 自愈链依赖真进程拉起，Linux 侧走 skip 分支 |
+| executor | 48.1 | 33.7 | **−14.4** | 本轮 D8 的句柄类判据（改名验证占用）**只在 Windows 有意义**，Linux 上该分支不成立 |
+| evaluate / modelpool | 61.6 / 68.5 | 50.9 / 58.5 | −10.7 / −10.0 | 依赖真模型通道与真文件的用例在容器降级 |
+| engine | 72.4 | 63.9 | −8.5 | 同上（取消/停机依赖 job object 语义） |
+| cmd / verify / modelroute | 11.0 / 92.2 / 54.4 | 6.7 / 88.3 / 50.6 | −4.3 / −3.9 / −3.8 | 小幅，CLI 与解释器探针差异 |
+| 其余 15 包 | — | — | **≤3 或为 0** | 一致（chain / queue / retry / model / logging 等纯逻辑包完全同值） |
+
+**登记为口径漂移（不判为缺陷）**：12 个包差异 >3 点。根因同一类 ——
+**本项目部分判据的可观测面是 Windows 专有语义**（文件占用、job object、junction、控制台窗口）。
+处置口径（写进后续纪律）：
+
+1. 这类判据必须**显式声明平台归属**并在对侧 skip（而非静默少测）；
+2. 覆盖率**只在本机口径内设门禁**（`build.ps1 -PerPackageCover` 取两平台低值再留余量的做法继续保留）；
+3. 容器侧的作用是「证明逻辑不依赖 Windows」，不是「替代本机验收」——
+   §11.1 已证明：容器绿会**放过**本轮 D7/D8 这类 Windows-only 缺陷。
+
+### 11.3 peer 源码精读落盘（目标第一段「阅读核心代码」的交付件）
+
+新增 **[peer源码精读笔记](peer源码精读笔记.md)**，并**补齐 §7.3 承诺却从未入库的 5 个证据件**
+（`river_job_executor.go` / `river_client.go` / `river_job.go` / `asynq_processor.go` / `asynq_server.go`，
+按 commit 固定取数：river `1354a059d7`、asynq `83e0966ab4`，均 2026-10-19 的 HEAD）。
+
+> ⚠ **本轮抓出并如实登记一处文档腐坏**：§7.3 自 2026-10-18 起就列出 6 个证据件，
+> 实盘只有 1 个（`n8n_error_classes.md`）——「引用了不存在的文件」正是本项目在缺陷清单里
+> 抓过两次的老毛病（引用未入库件）。已补齐并固定 commit。**新纪律：引用即须入库，入库须带 provenance。**
+
+精读产出的三条**可直接执行的改进**（不是感想，已进交付报告待办）：
+
+| # | 依据（证据件行号） | 改进 | 优先级 |
+|---|---|---|---|
+| 1 | `river_job_executor.go:563-571`（策略返回过去时间 ⇒ WARN + 回落默认策略） | `retry.Policy.NextDelay` 对非法值（≤0 / 超单次上限）应**告警并回落默认退避**，而不是静默钳制 | 中 |
+| 2 | `river_client.go:529-532`（`JobTimeout` 与 `RescueStuckJobsAfter` 的跨字段自洽校验） | `config.normalize()` 目前只做单字段钳制，需加**跨字段**约束（stall ↔ timeout ↔ repairRounds ↔ maxAttempts 的时序关系） | 中 |
+| 3 | `asynq_processor.go:336-338`（`errHandler.HandleError` 在状态分流**之前**调用） | 审 `failTask` 是否可能出现「状态已迁、台账未写」的窗口（与已修的 D6/L9 同型，需扩到失败路径） | 高 |
+
+同时明确两条**自评结论**（避免虚高）：
+
+- **不落后**：重试三分语义（本项目按 11 类 `ErrorKind` 映射，比 asynq 的两个哨兵错误更细）、
+  优雅停机取消语义、错误分类进台账与指标（D2 本轮闭环）、覆盖率门禁 + 变异测试文化。
+- **确实落后**：卡死救援是「启动时一次扫」而非持续轮询（长生命周期进程里覆盖不到
+  「跑着跑着僵了但进程没死」，现仅靠 stall watchdog 兜子进程、不管台账）；
+  钩子只有 work 级无 insert 级；配置校验缺跨字段约束；策略无非法值兜底。
