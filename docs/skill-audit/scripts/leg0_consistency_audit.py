@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# V1.1 | 2026-10-20 轮16 | 第 0 腿：四集对账 + 判据8「RED 必须全部有裁决」
 # V1.0 | 2026-10-20 轮11 | 第 0 腿：跨文件四集对账（05 §十八 立，季度 cron 首步调用）
 """leg0_consistency_audit.py — 巡检第 0 腿：inv/reg/mx/sweep 四集对账。
 
@@ -72,6 +73,17 @@ def main(argv=None):
             problems.append("%s 同源条目有 repo 无 upstream_path（漂移腿将取不到上游）" % name)
         if not kind.startswith('candidate_pool') and not e.get('recorded_version'):
             problems.append("%s 同源条目无 recorded_version（版本腿必然 UNVERIFIED）" % name)
+
+    # 判据 8（轮16 立）：RED 必须全部有裁决记录——未裁决的 RED 比 RED 更坏
+    # （巡检发现了问题却没人拍板，季度报告会反复报同一条红）。
+    for r in sw["rows"]:
+        if r["overall"] != "RED":
+            continue
+        nm = r["local_skill"]
+        _e = next((x for x in reg["watchlist"] if x["local_skill"] == nm), None)
+        _n = (_e or {}).get("notes") or ""
+        if "裁决=" not in _n and "裁决：" not in _n:
+            problems.append("%s 是 RED 但无裁决记录（watchlist.notes 缺 裁决=）" % nm)
 
     if problems:
         print("[GATE:leg0-fail] 四集对账不平，%d 项：" % len(problems))
