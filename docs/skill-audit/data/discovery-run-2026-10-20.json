@@ -1,0 +1,261 @@
+{
+  "schema": "discovery-run-v1",
+  "ran_at": "2026-10-20T09:52:07",
+  "entries": [
+    {
+      "local_skill": "code-review",
+      "query": "code review skill agent claude",
+      "new_active": [
+        {
+          "repo": "wanshuiyin/Auto-claude-code-research-in-sleep",
+          "stars": 17737,
+          "pushed": "2026-10-19",
+          "license": "MIT",
+          "desc": "ARIS ⚔️ (Auto-Research-In-Sleep) — Lightweight Markdown-only skills for autonomous ML research: cross-model re"
+        },
+        {
+          "repo": "Gentleman-Programming/gentle-ai",
+          "stars": 7864,
+          "pushed": "2026-10-19",
+          "license": "MIT",
+          "desc": "Gentle-AI configures the AI coding agents you already use: Claude Code, Cursor, OpenCode, Codex, Pi, and more."
+        },
+        {
+          "repo": "aklofas/kicad-happy",
+          "stars": 1454,
+          "pushed": "2026-10-15",
+          "license": "MIT",
+          "desc": "AI coding agent skills for KiCad electronics design. Works with Claude Code and OpenAI Codex. Analyze schemati"
+        },
+        {
+          "repo": "dzhng/skills",
+          "stars": 1372,
+          "pushed": "2026-10-19",
+          "license": "MIT",
+          "desc": "Reusable AI agent skills for software factories: explore ideas, write specs, implement, review, and run autono"
+        },
+        {
+          "repo": "michaelshimeles/skills",
+          "stars": 1356,
+          "pushed": "2026-10-19",
+          "license": null,
+          "desc": "Agent skills and an AGENTS.md workflow template — isolate in worktrees, build to a service layer, prove with e"
+        }
+      ]
+    },
+    {
+      "local_skill": "debugging-fixing",
+      "query": "systematic debugging skill agent",
+      "new_active": [
+        {
+          "repo": "LerianStudio/ring",
+          "stars": 218,
+          "pushed": "2026-10-13",
+          "license": "Apache-2.0",
+          "desc": "89 skills and 38 specialized agents that enforce proven engineering practices for AI-assisted development. TDD"
+        },
+        {
+          "repo": "alexiolan/craft-skills",
+          "stars": 17,
+          "pushed": "2026-06-23",
+          "license": "GPL-3.0",
+          "desc": "Structured development skills for any project. Provides brainstorming, planning, parallel agent development, b"
+        },
+        {
+          "repo": "JasonFreeLab/dsh-superpowers",
+          "stars": 5,
+          "pushed": "2026-10-04",
+          "license": "NOASSERTION",
+          "desc": "DSH (DeepSeek Harness) port of obra/superpowers — 14 native skills for multi-agent software development: brain"
+        }
+      ]
+    },
+    {
+      "local_skill": "testing",
+      "query": "testing skill agent property based mutation coverage",
+      "new_active": []
+    },
+    {
+      "local_skill": "refactoring",
+      "query": "refactoring code smells skill agent",
+      "new_active": [
+        {
+          "repo": "Zhen-Bo/smell-check",
+          "stars": 240,
+          "pushed": "2026-08-29",
+          "license": "MIT",
+          "desc": "Agent Skill for code and test smell audits. Evidence-ranked findings from Refactoring, Clean Code, and the tes"
+        },
+        {
+          "repo": "rimacias/clean-code-auditor-skill",
+          "stars": 0,
+          "pushed": "2026-09-09",
+          "license": null,
+          "desc": "AI Agent skill & MCP server for SOLID compliance, code smells, refactoring techniques, and GoF design patterns"
+        },
+        {
+          "repo": "cskwork/clean-code-skill",
+          "stars": 0,
+          "pushed": "2026-09-07",
+          "license": "MIT",
+          "desc": "Agent skill for behavior-preserving clean-code refactoring of any codebase, based on Fowler's catalog (refacto"
+        }
+      ]
+    },
+    {
+      "local_skill": "security-audit",
+      "query": "security audit skill agent owasp",
+      "new_active": [
+        {
+          "repo": "gl0di/clawseccheck",
+          "stars": 58,
+          "pushed": "2026-10-19",
+          "license": "MIT",
+          "desc": "🦞  Local, read-only security audit for your OpenClaw agent. Finds config, prompt-injection and supply-chain ri"
+        },
+        {
+          "repo": "harshdhamaniya/mobile-security-skill",
+          "stars": 20,
+          "pushed": "2026-10-08",
+          "license": "MIT",
+          "desc": "Claude Code skill + 18 AI agents for Android & iOS mobile app security audits. OWASP MASVS/MASTG-aligned, with"
+        },
+        {
+          "repo": "Ray0907/security-scan",
+          "stars": 19,
+          "pushed": "2026-10-14",
+          "license": "MIT",
+          "desc": "Security scanning skill for AI coding agents. CVE vulnerability detection, OWASP Top 10 code analysis, and dep"
+        },
+        {
+          "repo": "rusel95/ios-agent-skills",
+          "stars": 12,
+          "pushed": "2026-10-13",
+          "license": "MIT",
+          "desc": "Production-tested iOS Agent Skills for Claude Code, Codex, and 40+ AI coding tools. 8 enterprise-grade skills "
+        }
+      ]
+    },
+    {
+      "local_skill": "ci-pipeline-debugging",
+      "query": "ci pipeline debugging skill agent github actions",
+      "new_active": []
+    },
+    {
+      "local_skill": "brainstorming",
+      "query": "brainstorming skill agent requirements interview",
+      "new_active": []
+    },
+    {
+      "local_skill": "verification-before-completion",
+      "query": "verification before completion skill agent evidence",
+      "new_active": [
+        {
+          "repo": "PyModel/code-max",
+          "stars": 4,
+          "pushed": "2026-10-01",
+          "license": "MIT",
+          "desc": "Agent skill that makes a coding agent verify before it claims done — no stubs, no fabricated test results, evi"
+        },
+        {
+          "repo": "khaichonggg/prove-before-done",
+          "stars": 1,
+          "pushed": "2026-09-30",
+          "license": "NOASSERTION",
+          "desc": "Evidence-first Agent Skill that verifies implementation, tests, automation, migrations, and delivery before re"
+        },
+        {
+          "repo": "ShiYuPro/evidence-bound-execution",
+          "stars": 1,
+          "pushed": "2026-09-12",
+          "license": "MIT",
+          "desc": "Keep AI agents accountable to actual requirements. A Codex and Claude Code skill for mapping corrections to de"
+        },
+        {
+          "repo": "Deep-Sixed/Verification-Ladder",
+          "stars": 1,
+          "pushed": "2026-09-28",
+          "license": "MIT",
+          "desc": "A portable verification skill for coding agents that enforces iterative review, testing, repair, re-verificati"
+        },
+        {
+          "repo": "zero-context/verify-before-claim",
+          "stars": 0,
+          "pushed": "2026-08-29",
+          "license": "MIT",
+          "desc": "A Claude Code skill that stops an agent claiming a fix works when it never ran anything. Fake-evidence taxonom"
+        }
+      ]
+    },
+    {
+      "local_skill": "docx",
+      "query": "docx skill agent",
+      "new_active": [
+        {
+          "repo": "genspark-ai/genoffice",
+          "stars": 10054,
+          "pushed": "2026-10-19",
+          "license": "Apache-2.0",
+          "desc": "Free, open-source AI Office suite: Docs, Sheets, Slides, PDF, Markdown and HTML editors with a built-in AI age"
+        },
+        {
+          "repo": "deusyu/translate-book",
+          "stars": 2128,
+          "pushed": "2026-10-12",
+          "license": "MIT",
+          "desc": "Agent skill for Codex, Claude Code, and OpenClaw that translates entire books (PDF/DOCX/EPUB) into any languag"
+        },
+        {
+          "repo": "Gostyan/docx-skill-4-cn-paper",
+          "stars": 454,
+          "pushed": "2026-07-12",
+          "license": "MIT",
+          "desc": "中文论文常用排版格式Skills，适用于课程论文、数模竞赛、毕业论文等场景，让llm agent写word论文或者将.md转.docx时可调用"
+        },
+        {
+          "repo": "ferdinandobons/brand-docs",
+          "stars": 279,
+          "pushed": "2026-07-10",
+          "license": "MIT",
+          "desc": "BrandDocs is a set of agent skills that learn your existing Word, PowerPoint and Excel templates and generate "
+        },
+        {
+          "repo": "bowenliang123/markdown-exporter",
+          "stars": 274,
+          "pushed": "2026-08-13",
+          "license": "Apache-2.0",
+          "desc": "An Agent Skill and Dify plugin to transform Markdown to files of DOCX, PPTX, XLSX, PNG, PDF, HTML, MD, CSV, JS"
+        }
+      ]
+    },
+    {
+      "local_skill": "dogfood",
+      "query": "dogfood skill agent",
+      "new_active": [
+        {
+          "repo": "HomenShum/BetterPRHandoff",
+          "stars": 1,
+          "pushed": "2026-10-09",
+          "license": "MIT",
+          "desc": "BetterPRHandoff: drop-in protocol for readable agent/dev handoffs, verified demo artifacts, QA dogfood, and ru"
+        },
+        {
+          "repo": "iizcm/dogfood-skill",
+          "stars": 0,
+          "pushed": "2026-07-26",
+          "license": null,
+          "desc": "AI Agent Skill: dogfood"
+        },
+        {
+          "repo": "jonthewayne/mega-skills",
+          "stars": 0,
+          "pushed": "2026-09-16",
+          "license": null,
+          "desc": "Mega skills for Claude Code + Codex: plan / build / review / auto / mind — cross-model convergence loops, e2e "
+        }
+      ]
+    }
+  ],
+  "ok": 10,
+  "err": 0
+}
