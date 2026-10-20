@@ -12,6 +12,8 @@ import (
 	"workbench/internal/executor"
 	"workbench/internal/model"
 	"workbench/internal/ratelimit"
+	"workbench/internal/store"
+	"workbench/internal/templates"
 )
 
 // semSpyRunner 记录每次调用的任务 id（语义子任务是否走到注入的执行器）。
@@ -67,6 +69,53 @@ func TestPostProcessUsesInjectedRunner(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(layout.TaskDir(id))); err == nil {
 			t.Fatalf("语义子任务 %s 建了任务目录 = 真子进程被拉起（D7 回归）", id)
 		}
+	}
+}
+
+// newBareEngine 复刻 cmd/workbench/main.go:419 那条一次性 CLI 路径：
+// 只 engine.New(...)，**全程不调 ReloadConfig**。
+// 这是 D9「四接线」里最容易被漏的一条 —— 若闸门只挂在 ReloadConfig 上，
+// 这条路径就静默不限速，而生产主路径（New→SetLogger→ReloadConfig）看不出问题。
+func newBareEngine(t *testing.T) *Engine {
+	t.Helper()
+	dir := t.TempDir()
+	layout, err := config.BuildLayout(dir, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := layout.EnsureDirs(); err != nil {
+		t.Fatal(err)
+	}
+	cstore, err := config.NewStore(layout.ConfigFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg, err := templates.Open(layout.DataRoot + string(os.PathSeparator) + "templates.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+	st, err := store.Open(layout)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = st.Close() })
+	e, err := New(layout, cstore, st, reg, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return e
+}
+
+// TestRateLimiterWiredAtConstruction 锁死「构造期即装闸门」（不依赖 ReloadConfig）。
+// 判据两面：非零 + 数值等于默认配置换算值（20/分钟≈0.333）。
+func TestRateLimiterWiredAtConstruction(t *testing.T) {
+	e := newBareEngine(t)
+	snap := e.RateLimiterSnapshot()
+	if snap.RatePerSecond <= 0 {
+		t.Fatalf("只经 New() 的引擎限速快照 = %+v，必须非零（闸门若只挂 ReloadConfig，CLI 路径就不限速）", snap)
+	}
+	if got := snap.RatePerSecond; got < 0.30 || got > 0.35 {
+		t.Fatalf("构造期 RatePerSecond = %v, 期望 20/分钟≈0.333", got)
 	}
 }
 

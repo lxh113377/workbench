@@ -147,6 +147,11 @@ func New(layout config.Layout, cstore *config.Store, st *store.Store, reg *templ
 	// FailoverRunner（模型故障转移+车道健康度）与全局限速闸门，单测里还绕过
 	// SetRunner 注入的假执行器 —— 直接后果是 go test 会真的拉起 DSH 子进程。
 	e.sem.SetRunner(e.runner)
+	// 闸门必须在**构造期**就装上（不能只等 ReloadConfig）：cmd/workbench/main.go 有第二个引擎
+	// 入口（一次性 CLI 自检路径，只 engine.New 后直接 SelfTestArtifactPipeline，全程不调
+	// ReloadConfig），那里若不装就等于该路径不限速。生产主路径随后还会 ReloadConfig 再装一次：
+	// applyRateLimit 幂等（替换令牌桶而非叠加），且 New→SetLogger→ReloadConfig 之间不发请求。
+	e.applyRateLimit(cfg.Executor)
 	e.retryPol = buildRetryPolicy(cfg.Executor)
 	// 自主子系统：初始化失败只降级，不阻断引擎构造。
 	// 这里**不能**重设 e.log = logging.Nop()（改造前有这行）：结构体初始化已把 log
