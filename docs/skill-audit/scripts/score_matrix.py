@@ -164,6 +164,22 @@ for _mf in MATRIX_MERGE:
         else:
             print("merge =", s["local_skill"], "保持原值", _total(skills[_idx]))
 
+# 轮11 断根：以 watchlist 为唯一准入口径过滤——raw/batch-*.json 与 MATRIX_MERGE 是历史候选源，
+# 可能含已注销条目（executing-plans 第三次复活：轮7 删 watchlist、轮8 删矩阵本体、轮10 重生成又被 raw/batch-B.json 带回来）。
+# 凡 local_skill 不在 watchlist 的，一律不进矩阵（这正是第 0 腿判据 2 的机器化）。
+_reg_path = BASE + "/data/skill-watchlist.json"
+_allowed = None
+if os.path.isfile(_reg_path):
+    _allowed = set(e["local_skill"] for e in json.load(open(_reg_path, encoding="utf-8"))["watchlist"])
+if _allowed is not None:
+    _before = len(skills)
+    _dropped = [s["local_skill"] for s in skills if s["local_skill"] not in _allowed]
+    skills = [s for s in skills if s["local_skill"] in _allowed]
+    if _dropped:
+        print("watchlist-gate dropped:", _dropped)
+    else:
+        print("watchlist-gate: all %d entries in registry" % len(skills))
+
 skills.sort(key=lambda x: -(x["best"]["total"] if x["best"] else 0))
 
 # 轮10 固化：生成后自动补候选星值（源＝watchlist 已实测值；没有再探 ungh.cc）
