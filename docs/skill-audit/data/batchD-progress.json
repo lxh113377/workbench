@@ -1,0 +1,713 @@
+{
+ "schema": "batchD-entry-verify-v1",
+ "ran_at": "2026-10-20T10:25:11",
+ "checked": [
+  {
+   "local_skill": "A-prompt-better",
+   "repo": "gaasher/Agent-Loop-Skills",
+   "stars": 175,
+   "pushed": "2026-06-30",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/A-prompt-better/SKILL.md",
+     404
+    ],
+    [
+     "A-prompt-better/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "brand-guidelines",
+   "repo": "Wholiver/swiftui-design-skill",
+   "stars": 209,
+   "pushed": "2026-05-01",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/brand-guidelines/SKILL.md",
+     404
+    ],
+    [
+     "brand-guidelines/SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": "SKILL.md",
+   "bytes": 11227,
+   "sha16": "3047b0543e0b7ab0",
+   "http": 200
+  },
+  {
+   "local_skill": "canvas-design",
+   "repo": "ZSeven-W/openpencil",
+   "stars": 6283,
+   "pushed": "2026-10-19",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/canvas-design/SKILL.md",
+     404
+    ],
+    [
+     "canvas-design/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "chart-visualization",
+   "repo": "larashero3-dotcom/lieflat-charts",
+   "stars": 6269,
+   "pushed": "2026-10-15",
+   "license": "NOASSERTION",
+   "tried": [
+    [
+     "skills/chart-visualization/SKILL.md",
+     404
+    ],
+    [
+     "chart-visualization/SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": "SKILL.md",
+   "bytes": 39903,
+   "sha16": "8bbb3eced0a0f72a",
+   "http": 200
+  },
+  {
+   "local_skill": "cloudbase",
+   "repo": "TencentCloudBase/CloudBase-AI-Toolkit",
+   "stars": 1140,
+   "pushed": "2026-10-19",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/cloudbase/SKILL.md",
+     404
+    ],
+    [
+     "cloudbase/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "coding-agent",
+   "repo": "obra/superpowers",
+   "stars": 302151,
+   "pushed": "2026-10-10",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/coding-agent/SKILL.md",
+     404
+    ],
+    [
+     "coding-agent/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "data-analysis",
+   "repo": "aipoch/medical-research-skills",
+   "stars": 1971,
+   "pushed": "2026-09-17",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/data-analysis/SKILL.md",
+     404
+    ],
+    [
+     "data-analysis/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "data-visualization",
+   "repo": "larashero3-dotcom/lieflat-charts",
+   "stars": 6269,
+   "pushed": "2026-10-15",
+   "license": "NOASSERTION",
+   "tried": [
+    [
+     "skills/data-visualization/SKILL.md",
+     404
+    ],
+    [
+     "data-visualization/SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": "SKILL.md",
+   "bytes": 39903,
+   "sha16": "8bbb3eced0a0f72a",
+   "http": 200
+  },
+  {
+   "local_skill": "defuddle",
+   "repo": "kepano/obsidian-skills",
+   "stars": 49784,
+   "pushed": "2026-09-15",
+   "license": "MIT",
+   "tried": [],
+   "resolved_path": "skills/defuddle/SKILL.md",
+   "bytes": 831,
+   "sha16": "8669cdcc9f7b4679",
+   "http": 200
+  },
+  {
+   "local_skill": "dingtalk-chat",
+   "repo": "zhimaAi/ChatClaw",
+   "stars": 309,
+   "pushed": "2026-05-13",
+   "license": "GPL-3.0",
+   "tried": [
+    [
+     "skills/dingtalk-chat/SKILL.md",
+     404
+    ],
+    [
+     "dingtalk-chat/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "discover-agent-cli",
+   "repo": "NanmiCoder/cc-haha",
+   "stars": 15078,
+   "pushed": "2026-10-20",
+   "license": "NOASSERTION",
+   "tried": [
+    [
+     "skills/discover-agent-cli/SKILL.md",
+     404
+    ],
+    [
+     "discover-agent-cli/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "figma",
+   "repo": "plugin87/ux-ui-agent-skills",
+   "stars": 2402,
+   "pushed": "2026-10-19",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/figma/SKILL.md",
+     404
+    ],
+    [
+     "figma/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "find-skills",
+   "repo": "davepoon/buildwithclaude",
+   "stars": 3654,
+   "pushed": "2026-10-19",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/find-skills/SKILL.md",
+     404
+    ],
+    [
+     "find-skills/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "frontend-skill",
+   "repo": "Leonxlnx/taste-skill",
+   "stars": 99396,
+   "pushed": "2026-10-19",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/frontend-skill/SKILL.md",
+     404
+    ],
+    [
+     "frontend-skill/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "frontend-slides",
+   "repo": "zarazhangrui/frontend-slides",
+   "stars": 30926,
+   "pushed": "2026-06-23",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/frontend-slides/SKILL.md",
+     404
+    ],
+    [
+     "frontend-slides/SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": "SKILL.md",
+   "bytes": 28187,
+   "sha16": "832994fe1dfcce2a",
+   "http": 200
+  },
+  {
+   "local_skill": "hyperframes",
+   "repo": "nexu-io/html-anything",
+   "stars": 9181,
+   "pushed": "2026-10-13",
+   "license": "Apache-2.0",
+   "tried": [
+    [
+     "skills/hyperframes/SKILL.md",
+     404
+    ],
+    [
+     "hyperframes/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "json-canvas",
+   "repo": "kepano/obsidian-skills",
+   "stars": 49784,
+   "pushed": "2026-09-15",
+   "license": "MIT",
+   "tried": [],
+   "resolved_path": "skills/json-canvas/SKILL.md",
+   "bytes": 7624,
+   "sha16": "97d1ae0728955c42",
+   "http": 200
+  },
+  {
+   "local_skill": "knowledge-capture",
+   "repo": "0xranx/OpenContext",
+   "stars": 1269,
+   "pushed": "2026-06-16",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/knowledge-capture/SKILL.md",
+     404
+    ],
+    [
+     "knowledge-capture/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "local-asr",
+   "repo": "XimilalaXiang/DeLive",
+   "stars": 274,
+   "pushed": "2026-10-11",
+   "license": "Apache-2.0",
+   "tried": [
+    [
+     "skills/local-asr/SKILL.md",
+     404
+    ],
+    [
+     "local-asr/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "local-computer-use",
+   "repo": "NanmiCoder/cc-haha",
+   "stars": 15078,
+   "pushed": "2026-10-20",
+   "license": "NOASSERTION",
+   "tried": [
+    [
+     "skills/local-computer-use/SKILL.md",
+     404
+    ],
+    [
+     "local-computer-use/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "mcp-builder",
+   "repo": "Appllama/appllama-skills",
+   "stars": 2895,
+   "pushed": "2026-09-06",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/mcp-builder/SKILL.md",
+     404
+    ],
+    [
+     "mcp-builder/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "obsidian-bases",
+   "repo": "kepano/obsidian-skills",
+   "stars": 49784,
+   "pushed": "2026-09-15",
+   "license": "MIT",
+   "tried": [],
+   "resolved_path": "skills/obsidian-bases/SKILL.md",
+   "bytes": 13027,
+   "sha16": "c0037f20926c7d85",
+   "http": 200
+  },
+  {
+   "local_skill": "obsidian-cli",
+   "repo": "kepano/obsidian-skills",
+   "stars": 49784,
+   "pushed": "2026-09-15",
+   "license": "MIT",
+   "tried": [],
+   "resolved_path": "skills/obsidian-cli/SKILL.md",
+   "bytes": 3183,
+   "sha16": "b54257cdc0e5d044",
+   "http": 200
+  },
+  {
+   "local_skill": "obsidian-markdown",
+   "repo": "kepano/obsidian-skills",
+   "stars": 49784,
+   "pushed": "2026-09-15",
+   "license": "MIT",
+   "tried": [],
+   "resolved_path": "skills/obsidian-markdown/SKILL.md",
+   "bytes": 5367,
+   "sha16": "7ad72e1f0a9081ed",
+   "http": 200
+  },
+  {
+   "local_skill": "oracle",
+   "repo": "komako-workshop/digital-oracle",
+   "stars": 902,
+   "pushed": "2026-07-26",
+   "license": "MIT",
+   "tried": [
+    [
+     "digital_oracle/SKILL.md",
+     404
+    ],
+    [
+     "skills/oracle/SKILL.md",
+     404
+    ],
+    [
+     "oracle/SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": "SKILL.md",
+   "bytes": 23611,
+   "sha16": "75ce71b29dc5e27a",
+   "http": 200
+  },
+  {
+   "local_skill": "pdf",
+   "repo": "AgriciDaniel/claude-seo",
+   "stars": 19323,
+   "pushed": "2026-10-04",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/pdf/SKILL.md",
+     404
+    ],
+    [
+     "pdf/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "rag-eval",
+   "repo": "calmrocks/ai-engineer-notebooks",
+   "stars": 706,
+   "pushed": "2026-10-08",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/rag-eval/SKILL.md",
+     404
+    ],
+    [
+     "rag-eval/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "shadcn",
+   "repo": "bitjaru/styleseed",
+   "stars": 980,
+   "pushed": "2026-10-14",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/shadcn/SKILL.md",
+     404
+    ],
+    [
+     "shadcn/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "spec-to-implementation",
+   "repo": "AkoliteZA/hermes-agent-idea-workflow",
+   "stars": 274,
+   "pushed": "2026-05-05",
+   "license": "MIT",
+   "tried": [
+    [
+     "skills/spec-to-implementation/SKILL.md",
+     404
+    ],
+    [
+     "spec-to-implementation/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "story",
+   "repo": "zenstory-ai/oh-story-claudecode",
+   "stars": 7759,
+   "pushed": "2026-10-18",
+   "license": "MIT",
+   "tried": [],
+   "resolved_path": "skills/story/SKILL.md",
+   "bytes": 13849,
+   "sha16": "558ce7f44cba4f42",
+   "http": 200
+  },
+  {
+   "local_skill": "story-cover",
+   "repo": "danderfer/Comp_Sci_Sem_2",
+   "stars": 215,
+   "pushed": "2023-04-03",
+   "license": null,
+   "tried": [
+    [
+     "skills/story-cover/SKILL.md",
+     404
+    ],
+    [
+     "story-cover/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  },
+  {
+   "local_skill": "story-long-write",
+   "repo": "danderfer/Comp_Sci_Sem_2",
+   "stars": 215,
+   "pushed": "2023-04-03",
+   "license": null,
+   "tried": [
+    [
+     "skills/story-long-write/SKILL.md",
+     404
+    ],
+    [
+     "story-long-write/SKILL.md",
+     404
+    ],
+    [
+     "SKILL.md",
+     404
+    ]
+   ],
+   "resolved_path": null,
+   "bytes": null,
+   "sha16": null,
+   "http": null
+  }
+ ],
+ "progress": 32
+}

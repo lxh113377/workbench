@@ -119,7 +119,7 @@ for f in sorted(glob.glob(BASE + "/raw/batch-*.json")):
                        "remote_note": s.get("notes"), "candidate_count": len(cands),
                        "best": ({"repo": best["repo"], "total": best.get("total_measured")} if best else None),
                        "candidates": cands})
-MATRIX_MERGE = ["/data/score-matrix-batchA.json"]
+MATRIX_MERGE = ["/data/score-matrix-batchA.json", "/data/score-matrix-batchD.json"]
 
 
 def _total(s):

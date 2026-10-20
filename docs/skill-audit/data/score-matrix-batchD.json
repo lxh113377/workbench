@@ -1,0 +1,1125 @@
+{
+  "schema": "skill-score-matrix-v1",
+  "batch": "batch-D",
+  "generated_at": "2026-10-20T10:31:59",
+  "rules": {
+    "F": "入口件/本地字节比：3+(>=1.5:+2/>=1.0:+1/<0.6:-1)",
+    "E": "入口件字节：<=8K:5 <=16K:4 <=32K:3 <=64K:2 else 1",
+    "C": "SKILL.md 格式兼容 3；宽松许可+1；CC-BY-SA/GPL/无声明-1",
+    "D": "入口件字节：>=15K:5 >=8K:4 >=3K:3 else 2",
+    "S": "stars：>=100k:5 >=10k:4 >=1k:3 >=100:2 else 1；>180天未活跃 -1；未取证记 null"
+  },
+  "baseline_date": "2026-10-20",
+  "skills": [
+    {
+      "local_skill": "A-prompt-better",
+      "local_bytes": 28761,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "gaasher/Agent-Loop-Skills",
+          "evidence": null,
+          "stars": 175,
+          "license": "MIT",
+          "last_activity": "2026-06-30",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 2,
+          "total_measured": 6,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "gaasher/Agent-Loop-Skills",
+        "total": 6
+      }
+    },
+    {
+      "local_skill": "brand-guidelines",
+      "local_bytes": 2275,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "Wholiver/swiftui-design-skill",
+          "evidence": "SKILL.md",
+          "stars": 209,
+          "license": "MIT",
+          "last_activity": "2026-05-01",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 11227,
+          "ratio_up_over_local": 4.935,
+          "F": 5,
+          "E": 4,
+          "C": 4,
+          "D": 4,
+          "S": 2,
+          "total_measured": 19,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "Wholiver/swiftui-design-skill",
+        "total": 19
+      }
+    },
+    {
+      "local_skill": "canvas-design",
+      "local_bytes": 12416,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "ZSeven-W/openpencil",
+          "evidence": null,
+          "stars": 6283,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 3,
+          "total_measured": 7,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "ZSeven-W/openpencil",
+        "total": 7
+      }
+    },
+    {
+      "local_skill": "chart-visualization",
+      "local_bytes": 3395,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "larashero3-dotcom/lieflat-charts",
+          "evidence": "SKILL.md",
+          "stars": 6269,
+          "license": "NOASSERTION",
+          "last_activity": "2026-10-15",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 39903,
+          "ratio_up_over_local": 11.753,
+          "F": 5,
+          "E": 2,
+          "C": 2,
+          "D": 5,
+          "S": 3,
+          "total_measured": 17,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "larashero3-dotcom/lieflat-charts",
+        "total": 17
+      }
+    },
+    {
+      "local_skill": "cloudbase",
+      "local_bytes": 19814,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "TencentCloudBase/CloudBase-AI-Toolkit",
+          "evidence": null,
+          "stars": 1140,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 3,
+          "total_measured": 7,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "TencentCloudBase/CloudBase-AI-Toolkit",
+        "total": 7
+      }
+    },
+    {
+      "local_skill": "coding-agent",
+      "local_bytes": 4965,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "evidence": null,
+          "stars": 302151,
+          "license": "MIT",
+          "last_activity": "2026-10-10",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 5,
+          "total_measured": 9,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "obra/superpowers",
+        "total": 9
+      }
+    },
+    {
+      "local_skill": "data-analysis",
+      "local_bytes": 8969,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "aipoch/medical-research-skills",
+          "evidence": null,
+          "stars": 1971,
+          "license": "MIT",
+          "last_activity": "2026-09-17",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 3,
+          "total_measured": 7,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "aipoch/medical-research-skills",
+        "total": 7
+      }
+    },
+    {
+      "local_skill": "data-visualization",
+      "local_bytes": 13740,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "larashero3-dotcom/lieflat-charts",
+          "evidence": "SKILL.md",
+          "stars": 6269,
+          "license": "NOASSERTION",
+          "last_activity": "2026-10-15",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 39903,
+          "ratio_up_over_local": 2.904,
+          "F": 5,
+          "E": 2,
+          "C": 2,
+          "D": 5,
+          "S": 3,
+          "total_measured": 17,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "larashero3-dotcom/lieflat-charts",
+        "total": 17
+      }
+    },
+    {
+      "local_skill": "defuddle",
+      "local_bytes": 2608,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "kepano/obsidian-skills",
+          "evidence": "skills/defuddle/SKILL.md",
+          "stars": 49784,
+          "license": "MIT",
+          "last_activity": "2026-09-15",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 831,
+          "ratio_up_over_local": 0.319,
+          "F": 2,
+          "E": 5,
+          "C": 4,
+          "D": 2,
+          "S": 4,
+          "total_measured": 17,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "kepano/obsidian-skills",
+        "total": 17
+      }
+    },
+    {
+      "local_skill": "dingtalk-chat",
+      "local_bytes": 9764,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "zhimaAi/ChatClaw",
+          "evidence": null,
+          "stars": 309,
+          "license": "GPL-3.0",
+          "last_activity": "2026-05-13",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 2,
+          "total_measured": 4,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "zhimaAi/ChatClaw",
+        "total": 4
+      }
+    },
+    {
+      "local_skill": "discover-agent-cli",
+      "local_bytes": 8531,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "NanmiCoder/cc-haha",
+          "evidence": null,
+          "stars": 15078,
+          "license": "NOASSERTION",
+          "last_activity": "2026-10-20",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 4,
+          "total_measured": 6,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "NanmiCoder/cc-haha",
+        "total": 6
+      }
+    },
+    {
+      "local_skill": "figma",
+      "local_bytes": 3210,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "plugin87/ux-ui-agent-skills",
+          "evidence": null,
+          "stars": 2402,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 3,
+          "total_measured": 7,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "plugin87/ux-ui-agent-skills",
+        "total": 7
+      }
+    },
+    {
+      "local_skill": "find-skills",
+      "local_bytes": 2674,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "davepoon/buildwithclaude",
+          "evidence": null,
+          "stars": 3654,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 3,
+          "total_measured": 7,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "davepoon/buildwithclaude",
+        "total": 7
+      }
+    },
+    {
+      "local_skill": "frontend-skill",
+      "local_bytes": 7711,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "Leonxlnx/taste-skill",
+          "evidence": null,
+          "stars": 99396,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 4,
+          "total_measured": 8,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "Leonxlnx/taste-skill",
+        "total": 8
+      }
+    },
+    {
+      "local_skill": "frontend-slides",
+      "local_bytes": 19694,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "zarazhangrui/frontend-slides",
+          "evidence": "SKILL.md",
+          "stars": 30926,
+          "license": "MIT",
+          "last_activity": "2026-06-23",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 28187,
+          "ratio_up_over_local": 1.431,
+          "F": 4,
+          "E": 3,
+          "C": 4,
+          "D": 5,
+          "S": 4,
+          "total_measured": 20,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "zarazhangrui/frontend-slides",
+        "total": 20
+      }
+    },
+    {
+      "local_skill": "hyperframes",
+      "local_bytes": 33071,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "nexu-io/html-anything",
+          "evidence": null,
+          "stars": 9181,
+          "license": "Apache-2.0",
+          "last_activity": "2026-10-13",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 3,
+          "total_measured": 7,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "nexu-io/html-anything",
+        "total": 7
+      }
+    },
+    {
+      "local_skill": "json-canvas",
+      "local_bytes": 7664,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "kepano/obsidian-skills",
+          "evidence": "skills/json-canvas/SKILL.md",
+          "stars": 49784,
+          "license": "MIT",
+          "last_activity": "2026-09-15",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 7624,
+          "ratio_up_over_local": 0.995,
+          "F": 3,
+          "E": 5,
+          "C": 4,
+          "D": 3,
+          "S": 4,
+          "total_measured": 19,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "kepano/obsidian-skills",
+        "total": 19
+      }
+    },
+    {
+      "local_skill": "knowledge-capture",
+      "local_bytes": 7377,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "0xranx/OpenContext",
+          "evidence": null,
+          "stars": 1269,
+          "license": "MIT",
+          "last_activity": "2026-06-16",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 3,
+          "total_measured": 7,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "0xranx/OpenContext",
+        "total": 7
+      }
+    },
+    {
+      "local_skill": "local-asr",
+      "local_bytes": 4908,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "XimilalaXiang/DeLive",
+          "evidence": null,
+          "stars": 274,
+          "license": "Apache-2.0",
+          "last_activity": "2026-10-11",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 2,
+          "total_measured": 6,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "XimilalaXiang/DeLive",
+        "total": 6
+      }
+    },
+    {
+      "local_skill": "local-computer-use",
+      "local_bytes": 5863,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "NanmiCoder/cc-haha",
+          "evidence": null,
+          "stars": 15078,
+          "license": "NOASSERTION",
+          "last_activity": "2026-10-20",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 4,
+          "total_measured": 6,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "NanmiCoder/cc-haha",
+        "total": 6
+      }
+    },
+    {
+      "local_skill": "mcp-builder",
+      "local_bytes": 9132,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "Appllama/appllama-skills",
+          "evidence": null,
+          "stars": 2895,
+          "license": "MIT",
+          "last_activity": "2026-09-06",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 3,
+          "total_measured": 7,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "Appllama/appllama-skills",
+        "total": 7
+      }
+    },
+    {
+      "local_skill": "obsidian-bases",
+      "local_bytes": 13067,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "kepano/obsidian-skills",
+          "evidence": "skills/obsidian-bases/SKILL.md",
+          "stars": 49784,
+          "license": "MIT",
+          "last_activity": "2026-09-15",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 13027,
+          "ratio_up_over_local": 0.997,
+          "F": 3,
+          "E": 4,
+          "C": 4,
+          "D": 4,
+          "S": 4,
+          "total_measured": 19,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "kepano/obsidian-skills",
+        "total": 19
+      }
+    },
+    {
+      "local_skill": "obsidian-cli",
+      "local_bytes": 3223,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "kepano/obsidian-skills",
+          "evidence": "skills/obsidian-cli/SKILL.md",
+          "stars": 49784,
+          "license": "MIT",
+          "last_activity": "2026-09-15",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 3183,
+          "ratio_up_over_local": 0.988,
+          "F": 3,
+          "E": 5,
+          "C": 4,
+          "D": 3,
+          "S": 4,
+          "total_measured": 19,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "kepano/obsidian-skills",
+        "total": 19
+      }
+    },
+    {
+      "local_skill": "obsidian-markdown",
+      "local_bytes": 5407,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "kepano/obsidian-skills",
+          "evidence": "skills/obsidian-markdown/SKILL.md",
+          "stars": 49784,
+          "license": "MIT",
+          "last_activity": "2026-09-15",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 5367,
+          "ratio_up_over_local": 0.993,
+          "F": 3,
+          "E": 5,
+          "C": 4,
+          "D": 3,
+          "S": 4,
+          "total_measured": 19,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "kepano/obsidian-skills",
+        "total": 19
+      }
+    },
+    {
+      "local_skill": "oracle",
+      "local_bytes": 5016,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "komako-workshop/digital-oracle",
+          "evidence": "SKILL.md",
+          "stars": 902,
+          "license": "MIT",
+          "last_activity": "2026-07-26",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 23611,
+          "ratio_up_over_local": 4.707,
+          "F": 5,
+          "E": 3,
+          "C": 4,
+          "D": 5,
+          "S": 2,
+          "total_measured": 19,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "komako-workshop/digital-oracle",
+        "total": 19
+      }
+    },
+    {
+      "local_skill": "pdf",
+      "local_bytes": 11399,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "AgriciDaniel/claude-seo",
+          "evidence": null,
+          "stars": 19323,
+          "license": "MIT",
+          "last_activity": "2026-10-04",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 4,
+          "total_measured": 8,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "AgriciDaniel/claude-seo",
+        "total": 8
+      }
+    },
+    {
+      "local_skill": "rag-eval",
+      "local_bytes": 9732,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "calmrocks/ai-engineer-notebooks",
+          "evidence": null,
+          "stars": 706,
+          "license": "MIT",
+          "last_activity": "2026-10-08",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 2,
+          "total_measured": 6,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "calmrocks/ai-engineer-notebooks",
+        "total": 6
+      }
+    },
+    {
+      "local_skill": "shadcn",
+      "local_bytes": 16512,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "bitjaru/styleseed",
+          "evidence": null,
+          "stars": 980,
+          "license": "MIT",
+          "last_activity": "2026-10-14",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 2,
+          "total_measured": 6,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "bitjaru/styleseed",
+        "total": 6
+      }
+    },
+    {
+      "local_skill": "spec-to-implementation",
+      "local_bytes": 8848,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "AkoliteZA/hermes-agent-idea-workflow",
+          "evidence": null,
+          "stars": 274,
+          "license": "MIT",
+          "last_activity": "2026-05-05",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 2,
+          "total_measured": 6,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "AkoliteZA/hermes-agent-idea-workflow",
+        "total": 6
+      }
+    },
+    {
+      "local_skill": "story",
+      "local_bytes": 9047,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "zenstory-ai/oh-story-claudecode",
+          "evidence": "skills/story/SKILL.md",
+          "stars": 7759,
+          "license": "MIT",
+          "last_activity": "2026-10-18",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 13849,
+          "ratio_up_over_local": 1.531,
+          "F": 5,
+          "E": 4,
+          "C": 4,
+          "D": 4,
+          "S": 3,
+          "total_measured": 20,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "zenstory-ai/oh-story-claudecode",
+        "total": 20
+      }
+    },
+    {
+      "local_skill": "story-cover",
+      "local_bytes": 1698,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "danderfer/Comp_Sci_Sem_2",
+          "evidence": null,
+          "stars": 215,
+          "license": null,
+          "last_activity": "2023-04-03",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 1,
+          "total_measured": 3,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "danderfer/Comp_Sci_Sem_2",
+        "total": 3
+      }
+    },
+    {
+      "local_skill": "story-long-write",
+      "local_bytes": 2438,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "danderfer/Comp_Sci_Sem_2",
+          "evidence": null,
+          "stars": 215,
+          "license": null,
+          "last_activity": "2023-04-03",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 1,
+          "total_measured": 3,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "danderfer/Comp_Sci_Sem_2",
+        "total": 3
+      }
+    },
+    {
+      "local_skill": "video-frames",
+      "local_bytes": 1231,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "JimmySadek/video-fetcher-to-markdown",
+          "evidence": "SKILL.md",
+          "stars": 494,
+          "license": "MIT",
+          "last_activity": "2026-10-07",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 12260,
+          "ratio_up_over_local": 9.959,
+          "F": 5,
+          "E": 4,
+          "C": 4,
+          "D": 4,
+          "S": 2,
+          "total_measured": 19,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "JimmySadek/video-fetcher-to-markdown",
+        "total": 19
+      }
+    },
+    {
+      "local_skill": "web-access",
+      "local_bytes": 20014,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "teng-lin/notebooklm-py",
+          "evidence": "SKILL.md",
+          "stars": 19815,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 16376,
+          "ratio_up_over_local": 0.818,
+          "F": 3,
+          "E": 4,
+          "C": 4,
+          "D": 5,
+          "S": 4,
+          "total_measured": 20,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "teng-lin/notebooklm-py",
+        "total": 20
+      }
+    },
+    {
+      "local_skill": "wechat-automation",
+      "local_bytes": 20209,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "LAVARONG/wechat-automation-api",
+          "evidence": "SKILL.md",
+          "stars": 186,
+          "license": null,
+          "last_activity": "2026-09-18",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件实测 HTTP 200",
+          "confidence": "high",
+          "ubytes": 9954,
+          "ratio_up_over_local": 0.493,
+          "F": 2,
+          "E": 4,
+          "C": 2,
+          "D": 4,
+          "S": 2,
+          "total_measured": 14,
+          "dims_measured": 5
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "LAVARONG/wechat-automation-api",
+        "total": 14
+      }
+    },
+    {
+      "local_skill": "workbuddy-mcp",
+      "local_bytes": 4299,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "hujjun/mcd-saver-strategist",
+          "evidence": null,
+          "stars": 708,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 2,
+          "total_measured": 6,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "hujjun/mcd-saver-strategist",
+        "total": 6
+      }
+    },
+    {
+      "local_skill": "xlsx",
+      "local_bytes": 11728,
+      "remote_note": "batch-D（STRONG 桶最强候选，repo 级实测）",
+      "candidates": [
+        {
+          "repo": "genspark-ai/genoffice",
+          "evidence": null,
+          "stars": 10056,
+          "license": "Apache-2.0",
+          "last_activity": "2026-10-19",
+          "match_reason": "batch-C 检索 STRONG 候选，入口件未定位（保留 stars/活跃读数）",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 4,
+          "total_measured": 8,
+          "dims_measured": 2
+        }
+      ],
+      "candidate_count": 1,
+      "best": {
+        "repo": "genspark-ai/genoffice",
+        "total": 8
+      }
+    }
+  ]
+}

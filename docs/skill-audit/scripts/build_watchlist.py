@@ -62,7 +62,20 @@ for s in m["skills"]:
         continue
     SEEN.add(local)
     scored = [c for c in s["candidates"] if c.get("ubytes")]
-    rep = scored[0] if scored else (s["candidates"][0] if s.get("candidates") else None)
+    # 血缘优先（2026-10-20 轮10 教训自动闭环）：若本地 SKILL.md 自述 Provenance 指向某仓，代表上游必须选该仓，不被分数压制
+    _prov = set()
+    _sk = 'D:/global_skills/' + s['local_skill'] + '/SKILL.md'
+    if os.path.isfile(_sk):
+        try:
+            _txt = open(_sk, encoding='utf-8', errors='replace').read(16384)
+            if 'Provenance' in _txt or '吸收上游' in _txt or '受控吸收' in _txt:
+                import re as _re
+                for _m in _re.finditer(r'([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)', _txt):
+                    _prov.add(_m.group(1))
+        except OSError:
+            pass
+    _lin = [c for c in scored if c.get('repo') in _prov]
+    rep = (_lin or scored or [None])[0]
     repo = rep["repo"] if rep else None
     tag = atom_tag(repo) if repo else None
     rec = {"repo": repo, "entry_path": (rep["evidence"] if rep else None), "stars": (rep["stars"] if rep else None),
@@ -91,4 +104,12 @@ reg = {"schema": "skill-watchlist-v1",
        "watchlist": entries}
 open(BASE + "/data/skill-watchlist.json", "w", encoding="utf-8").write(json.dumps(reg, ensure_ascii=False, indent=2))
 print("entries=%d with_tag=%d no_tag=%d" % (len(entries), len(withtag), len(notag)))
+# 聚类告警（轮10 升级建议自动闭环）：同上游仓被 ≥2 技能共享时提示按仓巡检，防整族漏登（obsidian 族/vercel-labs 族实证）
+_cluster = {}
+for e in entries:
+    if e["upstream_repo"]:
+        _cluster.setdefault(e["upstream_repo"], []).append(e["local_skill"])
+for _rp, _ls in sorted(_cluster.items()):
+    if len(_ls) >= 2:
+        print("CLUSTER", _rp, "<-", ", ".join(_ls))
 print("NO_TAG:", ", ".join(notag))

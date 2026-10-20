@@ -53,7 +53,7 @@
           "score_total": 18
         }
       ],
-      "notes": "未检索到与本地六字段报告模板同源的上游；awesome-copilot 的 skills 目录未见独立 code-review 技能（仅 codeql 等相邻项）。 | 2026-10-20 裁决=吸收 依据=字节比0.236/上游独有36标题→吸收24节至1.045(独有0)，commit b3e189c；复扫 08:18 总判定 GREEN；2026-10-20 轮9 B3b 吸收卷迁 references/upstream-*.md（合并口径漂移腿 missing=0，主文件已回 12KB 内，commit 1890a42）"
+      "notes": "未检索到与本地六字段报告模板同源的上游；awesome-copilot 的 skills 目录未见独立 code-review 技能（仅 codeql 等相邻项）。"
     },
     {
       "local_skill": "debugging-fixing",
@@ -102,7 +102,7 @@
           "score_total": 5
         }
       ],
-      "notes": "上游同源为 obra/superpowers 的 systematic-debugging；本地已含自有 references 扩展。 | 2026-10-20 裁决=吸收 依据=字节比0.586→1.434(commit f2dbf14),上游独有标题→0；2026-10-20 轮9 B3b 吸收卷迁 references/upstream-*.md（合并口径漂移腿 missing=0，主文件已回 12KB 内，commit 1890a42）"
+      "notes": "上游同源为 obra/superpowers 的 systematic-debugging；本地已含自有 references 扩展。"
     },
     {
       "local_skill": "testing",
@@ -158,7 +158,7 @@
           "score_total": 15
         }
       ],
-      "notes": " | 2026-10-20 裁决=保持分叉 依据=候选browser-testing-with-devtools是浏览器向，本地已含property-based/mutation/coverage；浏览器QA已由dogfood+browser-cdp+agent-browser+gstack承载，整灌=重复资产（缺23标题实测19个属浏览器域(accessibility/available tools/console/network/perf/ui/installation/profile isolation/screenshot/security boundaries/devtools mcp/debugging workflow/untrusted data/test plans/what to look for/clean console/overview/red flags)，4个通用项(overview/verification/red flags/rationalizations)本地已有等价）"
+      "notes": null
     },
     {
       "local_skill": "test-driven-development",
@@ -263,7 +263,7 @@
           "score_total": 5
         }
       ],
-      "notes": "obra/superpowers 的 skills/ 目录实测无 refactoring，本地该技能为自研。 | 2026-10-20 裁决=吸收 依据=字节比0.355→1.201(commit f2dbf14),上游独有标题24→0；2026-10-20 轮9 B3b 吸收卷迁 references/upstream-*.md（合并口径漂移腿 missing=0，主文件已回 12KB 内，commit 1890a42）"
+      "notes": "obra/superpowers 的 skills/ 目录实测无 refactoring，本地该技能为自研。"
     },
     {
       "local_skill": "spike",
@@ -464,15 +464,15 @@
     {
       "local_skill": "security-audit",
       "local_skill_md": "D:/global_skills/security-audit/SKILL.md",
-      "upstream_repo": "github/awesome-copilot",
-      "upstream_path": "skills/agent-owasp-compliance/SKILL.md",
+      "upstream_repo": "trailofbits/skills",
+      "upstream_path": "plugins/audit-context-building/skills/audit-context-building/SKILL.md",
       "ledger": [
         {
-          "repo": "github/awesome-copilot",
-          "entry_path": "skills/agent-owasp-compliance/SKILL.md",
-          "stars": 40184,
-          "license": "MIT",
-          "score_total": 20
+          "repo": "trailofbits/skills",
+          "entry_path": "plugins/audit-context-building/skills/audit-context-building/SKILL.md",
+          "stars": 7641,
+          "license": "CC-BY-SA-4.0",
+          "score_total": 15
         }
       ],
       "recorded_version": null,
@@ -515,7 +515,7 @@
           "score_total": 15
         }
       ],
-      "notes": "license 字段 API 返回 NOASSERTION，README 内 SPDX 声明为 CC-BY-SA-4.0。 | 2026-10-20 裁决=吸收 依据=本地七Phase仅覆盖Web向OWASP Top10，agent向ASI Top10为真缺口→吸收16节，字节比0.996→1.628(commit b8c7440)；UNVERIFIED 成因=代表上游 github/awesome-copilot 无 release tag（版本腿结构性失明，非能力问题）；漂移腿已 GREEN（独有 16→0，字节比 0.996→1.628）；2026-10-20 轮9 B3b 吸收卷迁 references/upstream-*.md（合并口径漂移腿 missing=0，主文件已回 12KB 内，commit 1890a42）"
+      "notes": "license 字段 API 返回 NOASSERTION，README 内 SPDX 声明为 CC-BY-SA-4.0。"
     },
     {
       "local_skill": "ci-pipeline-debugging",
@@ -564,7 +564,7 @@
           "score_total": 5
         }
       ],
-      "notes": "明确缺口：GitHub 未检索到与本地『六类归因决策树』同源的技能仓库。 | 2026-10-20 裁决=保持分叉 依据=候选ci-cd-and-automation是「建CI」向(11332B/缺23标题含Basic CI/Preview/Feature flags)，本地是「排障六类归因决策树」向，定位不同非能力缺口；字节比已1.141"
+      "notes": "明确缺口：GitHub 未检索到与本地『六类归因决策树』同源的技能仓库。"
     },
     {
       "local_skill": "writing-plans",
@@ -676,7 +676,7 @@
           "score_total": 15
         }
       ],
-      "notes": "结构差异证据：上游 skills/brainstorming/ 含 builder-check-prompt.md，本地对应文件为 spec-document-reviewer-prompt.md（已产生分叉漂移）。 | 2026-10-20 裁决=吸收 依据=漂移腿RED(独有8)→吸收上游7节→复验漂移GREEN(独有0)；候选腿1个ungh瞬时限流属取数失败非失活；2026-10-20 轮9 B3b 吸收卷迁 references/upstream-*.md（合并口径漂移腿 missing=0，主文件已回 12KB 内，commit 1890a42）"
+      "notes": "结构差异证据：上游 skills/brainstorming/ 含 builder-check-prompt.md，本地对应文件为 spec-document-reviewer-prompt.md（已产生分叉漂移）。"
     },
     {
       "local_skill": "A-dynamic-workflow",
@@ -774,7 +774,7 @@
           "score_total": 5
         }
       ],
-      "notes": " | 2026-10-20 裁决=吸收 依据=漂移腿RED(独有9)→吸收上游9节→复验GREEN(独有0)"
+      "notes": null
     },
     {
       "local_skill": "A-skill-manager",
@@ -956,7 +956,7 @@
           "score_total": 3
         }
       ],
-      "notes": " | 2026-10-20 裁决=保持本地(不替换) 依据=结构对账：本地 42 标题(含 Part A-F 全管线) 覆盖官方 docx 9 标题；官方全部脚本面(office/soffice/validate --auto-repair/accept_changes/comment/merge-runs)本地 15 脚本实存且更多(doctor/md_to_docx/preview/fill_template)；官方禁 pretty-print 与本地两阶段设计(unpack 美化→pack 压缩)不矛盾；4.19x 属完整非堆料"
+      "notes": null
     },
     {
       "local_skill": "executing-plans",
@@ -1192,18 +1192,18 @@
     {
       "local_skill": "agent-browser",
       "local_skill_md": "D:/global_skills/agent-browser/SKILL.md",
-      "upstream_repo": "vercel-labs/agent-browser",
-      "upstream_path": "skill-data/core/SKILL.md",
+      "upstream_repo": null,
+      "upstream_path": null,
       "ledger": [
         {
-          "repo": "browser-use/browser-use",
-          "entry_path": "skills/qa/SKILL.md",
-          "stars": 118543,
+          "repo": null,
+          "entry_path": null,
+          "stars": null,
           "license": null,
-          "score_total": 7
+          "score_total": null
         }
       ],
-      "recorded_version": "v0.39.1",
+      "recorded_version": null,
       "last_checked": "2026-10-20",
       "discovery_query": "agent browser skill agent",
       "candidates": [
@@ -1229,24 +1229,23 @@
           "score_total": 6
         }
       ],
-      "notes": " | 2026-10-20 轮11 血缘钉回+重基线 v0.39.1（此前登记为相邻件 browser-use）",
-      "upstream_role": "same_origin_upstream(轮11钉回: 并行会话 ff6fb8c8 自述对齐 v0.39.1 skill-data/core；本地38626B vs 上游38018B，差异=两处已留痕本地分叉 fork-provenance.md)"
+      "notes": null
     },
     {
       "local_skill": "dogfood",
       "local_skill_md": "D:/global_skills/dogfood/SKILL.md",
-      "upstream_repo": "vercel-labs/agent-browser",
-      "upstream_path": "skill-data/dogfood/SKILL.md",
+      "upstream_repo": null,
+      "upstream_path": null,
       "ledger": [
         {
-          "repo": "browser-use/browser-use",
-          "entry_path": "skills/qa/SKILL.md",
-          "stars": 118543,
+          "repo": null,
+          "entry_path": null,
+          "stars": null,
           "license": null,
-          "score_total": 7
+          "score_total": null
         }
       ],
-      "recorded_version": "v0.39.1",
+      "recorded_version": null,
       "last_checked": "2026-10-20",
       "discovery_query": "dogfood skill agent",
       "candidates": [
@@ -1265,24 +1264,23 @@
           "score_total": 6
         }
       ],
-      "notes": " | 2026-10-20 裁决=吸收 依据=上游417B差异经hunk定位为networkidle反模式修正，本地CLI实测支持--url/--text/--fn→落地(commit 27752cd)；保留本地中文description",
-      "upstream_role": "true_same_origin_upstream(修正0852: 自动选品误选 browser-use/qa 相邻件)"
+      "notes": null
     },
     {
       "local_skill": "electron",
       "local_skill_md": "D:/global_skills/electron/SKILL.md",
-      "upstream_repo": "vercel-labs/agent-browser",
-      "upstream_path": "skill-data/electron/SKILL.md",
+      "upstream_repo": null,
+      "upstream_path": null,
       "ledger": [
         {
-          "repo": "vercel-labs/agent-browser",
-          "entry_path": "skill-data/electron/SKILL.md",
-          "stars": 44260,
+          "repo": null,
+          "entry_path": null,
+          "stars": null,
           "license": null,
-          "score_total": 6
+          "score_total": null
         }
       ],
-      "recorded_version": "v0.39.1",
+      "recorded_version": null,
       "last_checked": "2026-10-20",
       "discovery_query": "electron skill agent",
       "candidates": [
@@ -1313,15 +1311,15 @@
     {
       "local_skill": "gstack",
       "local_skill_md": "D:/global_skills/gstack/SKILL.md",
-      "upstream_repo": "garrytan/gstack",
+      "upstream_repo": null,
       "upstream_path": null,
       "ledger": [
         {
-          "repo": "garrytan/gstack",
+          "repo": null,
           "entry_path": null,
           "stars": null,
           "license": null,
-          "score_total": 2
+          "score_total": null
         }
       ],
       "recorded_version": null,
@@ -1341,15 +1339,15 @@
     {
       "local_skill": "ppt-master",
       "local_skill_md": "D:/global_skills/ppt-master/SKILL.md",
-      "upstream_repo": "anthropics/skills",
-      "upstream_path": "skills/pptx/SKILL.md",
+      "upstream_repo": null,
+      "upstream_path": null,
       "ledger": [
         {
-          "repo": "anthropics/skills",
-          "entry_path": "skills/pptx/SKILL.md",
+          "repo": null,
+          "entry_path": null,
           "stars": null,
           "license": null,
-          "score_total": 2
+          "score_total": null
         }
       ],
       "recorded_version": null,
@@ -1459,6 +1457,746 @@
       "discovery_query": "office automation pro skill agent",
       "candidates": [],
       "notes": "检索式 office_automation 的 total_count=0；命中 0 个候选"
+    },
+    {
+      "local_skill": "A-prompt-better",
+      "local_skill_md": "D:/global_skills/A-prompt-better/SKILL.md",
+      "upstream_repo": "gaasher/Agent-Loop-Skills",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "gaasher/Agent-Loop-Skills",
+          "entry_path": null,
+          "stars": 175,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "brand-guidelines",
+      "local_skill_md": "D:/global_skills/brand-guidelines/SKILL.md",
+      "upstream_repo": "Wholiver/swiftui-design-skill",
+      "upstream_path": "SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": "v1.0.0 — SwiftUI Design Skill",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "Wholiver/swiftui-design-skill",
+          "entry_path": "SKILL.md",
+          "stars": 209,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "canvas-design",
+      "local_skill_md": "D:/global_skills/canvas-design/SKILL.md",
+      "upstream_repo": "ZSeven-W/openpencil",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "OpenPencil v0.8.4 — The Relay Works, and Agents Can Reach the Rest",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "ZSeven-W/openpencil",
+          "entry_path": null,
+          "stars": 6283,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "chart-visualization",
+      "local_skill_md": "D:/global_skills/chart-visualization/SKILL.md",
+      "upstream_repo": "larashero3-dotcom/lieflat-charts",
+      "upstream_path": "SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": "Lieflat Charts v1.2.0 · 增加报告模式",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "larashero3-dotcom/lieflat-charts",
+          "entry_path": "SKILL.md",
+          "stars": 6269,
+          "license": "NOASSERTION",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "cloudbase",
+      "local_skill_md": "D:/global_skills/cloudbase/SKILL.md",
+      "upstream_repo": "TencentCloudBase/CloudBase-AI-Toolkit",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "v2.36.0",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "TencentCloudBase/CloudBase-AI-Toolkit",
+          "entry_path": null,
+          "stars": 1140,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "coding-agent",
+      "local_skill_md": "D:/global_skills/coding-agent/SKILL.md",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "v7.0.0",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "entry_path": null,
+          "stars": 302151,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "data-analysis",
+      "local_skill_md": "D:/global_skills/data-analysis/SKILL.md",
+      "upstream_repo": "aipoch/medical-research-skills",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "last-packaged",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "aipoch/medical-research-skills",
+          "entry_path": null,
+          "stars": 1971,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "data-visualization",
+      "local_skill_md": "D:/global_skills/data-visualization/SKILL.md",
+      "upstream_repo": "larashero3-dotcom/lieflat-charts",
+      "upstream_path": "SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": "Lieflat Charts v1.2.0 · 增加报告模式",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "larashero3-dotcom/lieflat-charts",
+          "entry_path": "SKILL.md",
+          "stars": 6269,
+          "license": "NOASSERTION",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "defuddle",
+      "local_skill_md": "D:/global_skills/defuddle/SKILL.md",
+      "upstream_repo": "kepano/obsidian-skills",
+      "upstream_path": "skills/defuddle/SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "kepano/obsidian-skills",
+          "entry_path": "skills/defuddle/SKILL.md",
+          "stars": 49784,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "dingtalk-chat",
+      "local_skill_md": "D:/global_skills/dingtalk-chat/SKILL.md",
+      "upstream_repo": "zhimaAi/ChatClaw",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "v0.9.7",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "zhimaAi/ChatClaw",
+          "entry_path": null,
+          "stars": 309,
+          "license": "GPL-3.0",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "discover-agent-cli",
+      "local_skill_md": "D:/global_skills/discover-agent-cli/SKILL.md",
+      "upstream_repo": "NanmiCoder/cc-haha",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "Claude Code Haha v0.7.4",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "NanmiCoder/cc-haha",
+          "entry_path": null,
+          "stars": 15078,
+          "license": "NOASSERTION",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "figma",
+      "local_skill_md": "D:/global_skills/figma/SKILL.md",
+      "upstream_repo": "plugin87/ux-ui-agent-skills",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "v2.9.10",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "plugin87/ux-ui-agent-skills",
+          "entry_path": null,
+          "stars": 2402,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "find-skills",
+      "local_skill_md": "D:/global_skills/find-skills/SKILL.md",
+      "upstream_repo": "davepoon/buildwithclaude",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "bwc-cli@1.2.4",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "davepoon/buildwithclaude",
+          "entry_path": null,
+          "stars": 3654,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "frontend-skill",
+      "local_skill_md": "D:/global_skills/frontend-skill/SKILL.md",
+      "upstream_repo": "Leonxlnx/taste-skill",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "tasteskill v2.1.3",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "Leonxlnx/taste-skill",
+          "entry_path": null,
+          "stars": 99396,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "frontend-slides",
+      "local_skill_md": "D:/global_skills/frontend-slides/SKILL.md",
+      "upstream_repo": "zarazhangrui/frontend-slides",
+      "upstream_path": "SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": "v2.1.0 — Bold Templates and Agent-Neutral Packaging",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "zarazhangrui/frontend-slides",
+          "entry_path": "SKILL.md",
+          "stars": 30926,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "hyperframes",
+      "local_skill_md": "D:/global_skills/hyperframes/SKILL.md",
+      "upstream_repo": "nexu-io/html-anything",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "nexu-io/html-anything",
+          "entry_path": null,
+          "stars": 9181,
+          "license": "Apache-2.0",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "json-canvas",
+      "local_skill_md": "D:/global_skills/json-canvas/SKILL.md",
+      "upstream_repo": "kepano/obsidian-skills",
+      "upstream_path": "skills/json-canvas/SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "kepano/obsidian-skills",
+          "entry_path": "skills/json-canvas/SKILL.md",
+          "stars": 49784,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "knowledge-capture",
+      "local_skill_md": "D:/global_skills/knowledge-capture/SKILL.md",
+      "upstream_repo": "0xranx/OpenContext",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "OpenContext Desktop v0.2.7",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "0xranx/OpenContext",
+          "entry_path": null,
+          "stars": 1269,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "local-asr",
+      "local_skill_md": "D:/global_skills/local-asr/SKILL.md",
+      "upstream_repo": "XimilalaXiang/DeLive",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "DeLive v2.3.0-beta.2",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "XimilalaXiang/DeLive",
+          "entry_path": null,
+          "stars": 274,
+          "license": "Apache-2.0",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "local-computer-use",
+      "local_skill_md": "D:/global_skills/local-computer-use/SKILL.md",
+      "upstream_repo": "NanmiCoder/cc-haha",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "Claude Code Haha v0.7.4",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "NanmiCoder/cc-haha",
+          "entry_path": null,
+          "stars": 15078,
+          "license": "NOASSERTION",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "mcp-builder",
+      "local_skill_md": "D:/global_skills/mcp-builder/SKILL.md",
+      "upstream_repo": "Appllama/appllama-skills",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "Appllama/appllama-skills",
+          "entry_path": null,
+          "stars": 2895,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "obsidian-bases",
+      "local_skill_md": "D:/global_skills/obsidian-bases/SKILL.md",
+      "upstream_repo": "kepano/obsidian-skills",
+      "upstream_path": "skills/obsidian-bases/SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "kepano/obsidian-skills",
+          "entry_path": "skills/obsidian-bases/SKILL.md",
+          "stars": 49784,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "obsidian-cli",
+      "local_skill_md": "D:/global_skills/obsidian-cli/SKILL.md",
+      "upstream_repo": "kepano/obsidian-skills",
+      "upstream_path": "skills/obsidian-cli/SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "kepano/obsidian-skills",
+          "entry_path": "skills/obsidian-cli/SKILL.md",
+          "stars": 49784,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "obsidian-markdown",
+      "local_skill_md": "D:/global_skills/obsidian-markdown/SKILL.md",
+      "upstream_repo": "kepano/obsidian-skills",
+      "upstream_path": "skills/obsidian-markdown/SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "kepano/obsidian-skills",
+          "entry_path": "skills/obsidian-markdown/SKILL.md",
+          "stars": 49784,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "oracle",
+      "local_skill_md": "D:/global_skills/oracle/SKILL.md",
+      "upstream_repo": "komako-workshop/digital-oracle",
+      "upstream_path": "SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "komako-workshop/digital-oracle",
+          "entry_path": "SKILL.md",
+          "stars": 902,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "pdf",
+      "local_skill_md": "D:/global_skills/pdf/SKILL.md",
+      "upstream_repo": "AgriciDaniel/claude-seo",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "v2.4.2: seo-cockpit and Google sign-in",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "AgriciDaniel/claude-seo",
+          "entry_path": null,
+          "stars": 19323,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "rag-eval",
+      "local_skill_md": "D:/global_skills/rag-eval/SKILL.md",
+      "upstream_repo": "calmrocks/ai-engineer-notebooks",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "v0.1.0 — the full applied-LLM track",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "calmrocks/ai-engineer-notebooks",
+          "entry_path": null,
+          "stars": 706,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "shadcn",
+      "local_skill_md": "D:/global_skills/shadcn/SKILL.md",
+      "upstream_repo": "bitjaru/styleseed",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "v5.0.0 — One skill, 22 workflows",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "bitjaru/styleseed",
+          "entry_path": null,
+          "stars": 980,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "spec-to-implementation",
+      "local_skill_md": "D:/global_skills/spec-to-implementation/SKILL.md",
+      "upstream_repo": "AkoliteZA/hermes-agent-idea-workflow",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "v0.1.3 — Optional UI design brief stage",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "AkoliteZA/hermes-agent-idea-workflow",
+          "entry_path": null,
+          "stars": 274,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "story",
+      "local_skill_md": "D:/global_skills/story/SKILL.md",
+      "upstream_repo": "zenstory-ai/oh-story-claudecode",
+      "upstream_path": "skills/story/SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": "v0.9.0 — 资料按写书时刻重组",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "zenstory-ai/oh-story-claudecode",
+          "entry_path": "skills/story/SKILL.md",
+          "stars": 7759,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "story-cover",
+      "local_skill_md": "D:/global_skills/story-cover/SKILL.md",
+      "upstream_repo": "danderfer/Comp_Sci_Sem_2",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "danderfer/Comp_Sci_Sem_2",
+          "entry_path": null,
+          "stars": 215,
+          "license": null,
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "story-long-write",
+      "local_skill_md": "D:/global_skills/story-long-write/SKILL.md",
+      "upstream_repo": "danderfer/Comp_Sci_Sem_2",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "danderfer/Comp_Sci_Sem_2",
+          "entry_path": null,
+          "stars": 215,
+          "license": null,
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "video-frames",
+      "local_skill_md": "D:/global_skills/video-frames/SKILL.md",
+      "upstream_repo": "JimmySadek/video-fetcher-to-markdown",
+      "upstream_path": "SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": "v2.0.1: clearer safety boundaries, no behaviour change",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "JimmySadek/video-fetcher-to-markdown",
+          "entry_path": "SKILL.md",
+          "stars": 494,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "web-access",
+      "local_skill_md": "D:/global_skills/web-access/SKILL.md",
+      "upstream_repo": "teng-lin/notebooklm-py",
+      "upstream_path": "SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": "v0.8.5",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "teng-lin/notebooklm-py",
+          "entry_path": "SKILL.md",
+          "stars": 19815,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "wechat-automation",
+      "local_skill_md": "D:/global_skills/wechat-automation/SKILL.md",
+      "upstream_repo": "LAVARONG/wechat-automation-api",
+      "upstream_path": "SKILL.md",
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "LAVARONG/wechat-automation-api",
+          "entry_path": "SKILL.md",
+          "stars": 186,
+          "license": null,
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "workbuddy-mcp",
+      "local_skill_md": "D:/global_skills/workbuddy-mcp/SKILL.md",
+      "upstream_repo": "hujjun/mcd-saver-strategist",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "hujjun/mcd-saver-strategist",
+          "entry_path": null,
+          "stars": 708,
+          "license": "MIT",
+          "score_total": null
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "local_skill": "xlsx",
+      "local_skill_md": "D:/global_skills/xlsx/SKILL.md",
+      "upstream_repo": "genspark-ai/genoffice",
+      "upstream_path": null,
+      "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件未定位)",
+      "recorded_version": "GenOffice v0.11.919",
+      "last_checked": "2026-10-20",
+      "discovery_query": "batch-C 提词检索",
+      "candidates": [
+        {
+          "repo": "genspark-ai/genoffice",
+          "entry_path": null,
+          "stars": 10056,
+          "license": "Apache-2.0",
+          "score_total": null
+        }
+      ],
+      "notes": ""
     }
   ]
 }
