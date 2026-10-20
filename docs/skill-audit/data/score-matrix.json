@@ -1,6 +1,6 @@
 {
   "schema": "skill-score-matrix-v1",
-  "generated_at": "2026-10-20T13:37:30",
+  "generated_at": "2026-10-20T16:39:33",
   "rules": {
     "F": "入口件/本地字节比：3 + (>=1.5:+2 / >=1.0:+1 / <0.6:-1)",
     "E": "入口件字节：<=8K:5 <=16K:4 <=32K:3 <=64K:2 else 1",
@@ -38,7 +38,8 @@
           "stars": 108473,
           "license": "MIT",
           "last_activity": "2026-10-13",
-          "match_reason": "五轴并行审查含逐轴 rubric 与合并前门禁，补足本地五维扫描缺的轴粒度评分基线"
+          "match_reason": "五轴并行审查含逐轴 rubric 与合并前门禁，补足本地五维扫描缺的轴粒度评分基线",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 2974,
@@ -57,7 +58,8 @@
           "stars": 301953,
           "license": "MIT",
           "last_activity": "2026-10-10",
-          "match_reason": "提供独立 reviewer 子 agent 与 code-reviewer.md 评审提示词，补足本地缺的『派独立审查者』角色分工"
+          "match_reason": "提供独立 reviewer 子 agent 与 code-reviewer.md 评审提示词，补足本地缺的『派独立审查者』角色分工",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 18147,
@@ -127,7 +129,8 @@
           "stars": 108473,
           "license": "MIT",
           "last_activity": "2026-10-13",
-          "match_reason": "系统化 root-cause 调试与回归恢复流程，补足本地缺的『昨天还好今天坏了』定位模板"
+          "match_reason": "系统化 root-cause 调试与回归恢复流程，补足本地缺的『昨天还好今天坏了』定位模板",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 9530,
@@ -146,7 +149,8 @@
           "stars": 301953,
           "license": "MIT",
           "last_activity": "2026-10-10",
-          "match_reason": "Iron Law『无根因调查不得改代码』+ condition-based-waiting/defense-in-depth，补足本地缺的根因调查强制前置"
+          "match_reason": "Iron Law『无根因调查不得改代码』+ condition-based-waiting/defense-in-depth，补足本地缺的根因调查强制前置",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 3591,
@@ -216,7 +220,8 @@
           "stars": 108473,
           "license": "MIT",
           "last_activity": "2026-10-13",
-          "match_reason": "浏览器 DevTools 端到端测试，补足本地纯单元/集成测试之外的 UI 层验证"
+          "match_reason": "浏览器 DevTools 端到端测试，补足本地纯单元/集成测试之外的 UI 层验证",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 14962,
@@ -235,7 +240,8 @@
           "stars": 40184,
           "license": "MIT",
           "last_activity": "2026-10-16",
-          "match_reason": "从测试策略到任务拆解与质量验证计划，补足本地缺的测试计划编排面"
+          "match_reason": "从测试策略到任务拆解与质量验证计划，补足本地缺的测试计划编排面",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 4306,
@@ -324,7 +330,8 @@
           "stars": 108473,
           "license": "MIT",
           "last_activity": "2026-10-13",
-          "match_reason": "不改行为提升可读性的简化手法清单（13545B），补足本地缺的重构手法目录"
+          "match_reason": "不改行为提升可读性的简化手法清单（13545B），补足本地缺的重构手法目录",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 6946,
@@ -432,7 +439,8 @@
           "stars": 255164,
           "license": "MIT",
           "last_activity": "2026-10-19",
-          "match_reason": "一次性原型验证可行性并给结论（8723B），补足本地缺的抛型式原型产出物约定"
+          "match_reason": "一次性原型验证可行性并给结论（8723B），补足本地缺的抛型式原型产出物约定",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 6578,
@@ -451,7 +459,8 @@
           "stars": 40184,
           "license": "MIT",
           "last_activity": "2026-10-16",
-          "match_reason": "技术 spike 计划与产出（6578B），补足本地缺的 spike 计划书结构"
+          "match_reason": "技术 spike 计划与产出（6578B），补足本地缺的 spike 计划书结构",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 2125,
@@ -486,7 +495,7 @@
           "total_measured": 15,
           "dims_measured": 4,
           "repo": "haris-admin/skills-rules-repo",
-          "stars": null,
+          "stars": 0,
           "license": null,
           "last_activity": null,
           "match_reason": "同族 spike 技能（8892B）；该仓库 star/license/更新时间均未取证"
@@ -521,7 +530,8 @@
           "stars": 108473,
           "license": "MIT",
           "last_activity": "2026-10-13",
-          "match_reason": "以怀疑驱动质疑既有假设，补足本地缺的对抗式『质疑→重建』检验"
+          "match_reason": "以怀疑驱动质疑既有假设，补足本地缺的对抗式『质疑→重建』检验",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 33580,
@@ -592,78 +602,25 @@
           "evidence": "skills/executing-plans/SKILL.md",
           "stars": 302151,
           "license": "MIT",
-          "last_activity": null,
-          "match_reason": "轮7 从 executing-plans 旧条目交接并入（05 §十八）",
-          "confidence": "medium",
-          "ubytes": null,
-          "ratio_up_over_local": null,
-          "F": null,
-          "E": null,
-          "C": null,
-          "D": null,
+          "last_activity": "2026-10-10",
+          "match_reason": "轮1 血缘钉回：本地新技能即吸收该上游内核四段（B4 自行决策落地）",
+          "confidence": "high",
+          "ubytes": 20405,
+          "ratio_up_over_local": 5.306,
+          "F": 5,
+          "E": 3,
+          "C": 4,
+          "D": 5,
           "S": 5,
-          "total_measured": 5,
-          "dims_measured": 1
-        },
-        {
-          "repo": "obra/superpowers",
-          "evidence": "skills/subagent-driven-development/SKILL.md",
-          "stars": 302151,
-          "license": "MIT",
-          "last_activity": null,
-          "match_reason": "轮7 从 executing-plans 旧条目交接并入（05 §十八）",
-          "confidence": "medium",
-          "ubytes": null,
-          "ratio_up_over_local": null,
-          "F": null,
-          "E": null,
-          "C": null,
-          "D": null,
-          "S": 5,
-          "total_measured": 5,
-          "dims_measured": 1
-        },
-        {
-          "repo": "addyosmani/agent-skills",
-          "evidence": "skills/incremental-implementation/SKILL.md",
-          "stars": 108473,
-          "license": "MIT",
-          "last_activity": null,
-          "match_reason": "轮7 从 executing-plans 旧条目交接并入（05 §十八）",
-          "confidence": "medium",
-          "ubytes": null,
-          "ratio_up_over_local": null,
-          "F": null,
-          "E": null,
-          "C": null,
-          "D": null,
-          "S": 5,
-          "total_measured": 5,
-          "dims_measured": 1
-        },
-        {
-          "repo": "github/awesome-copilot",
-          "evidence": "skills/breakdown-feature-implementation/SKILL.md",
-          "stars": 40184,
-          "license": "MIT",
-          "last_activity": null,
-          "match_reason": "轮7 从 executing-plans 旧条目交接并入（05 §十八）",
-          "confidence": "medium",
-          "ubytes": null,
-          "ratio_up_over_local": null,
-          "F": null,
-          "E": null,
-          "C": null,
-          "D": null,
-          "S": 4,
-          "total_measured": 4,
-          "dims_measured": 1
+          "total_measured": 22,
+          "dims_measured": 5,
+          "stars_scope": "repo_level"
         }
       ],
-      "candidate_count": 4,
+      "candidate_count": 1,
       "best": {
         "repo": "obra/superpowers",
-        "total": 5
+        "total": 22
       }
     },
     {
@@ -694,7 +651,8 @@
           "stars": 108473,
           "license": "MIT",
           "last_activity": "2026-10-13",
-          "match_reason": "red-green-refactor 强制循环 + 逐语言示例，补足本地缺的多语言测试骨架"
+          "match_reason": "red-green-refactor 强制循环 + 逐语言示例，补足本地缺的多语言测试骨架",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 9578,
@@ -713,7 +671,8 @@
           "stars": 301953,
           "license": "MIT",
           "last_activity": "2026-10-10",
-          "match_reason": "上游同源分叉：上游 9578B 短于本地 10649B，本地为扩展版，可回溯上游基线"
+          "match_reason": "上游同源分叉：上游 9578B 短于本地 10649B，本地为扩展版，可回溯上游基线",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 20919,
@@ -783,7 +742,8 @@
           "stars": 40184,
           "license": "MIT",
           "last_activity": "2026-10-16",
-          "match_reason": "代码库导览定位历史脉络，补足本地缺的仓库级叙事输出"
+          "match_reason": "代码库导览定位历史脉络，补足本地缺的仓库级叙事输出",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 5496,
@@ -802,7 +762,8 @@
           "stars": 142294,
           "license": "Apache-2.0",
           "last_activity": "2026-10-18",
-          "match_reason": "上游同源：上游 SKILL.md 实测 5496B 与本地 5496B 字节量一致，frontmatter description 逐字相同"
+          "match_reason": "上游同源：上游 SKILL.md 实测 5496B 与本地 5496B 字节量一致，frontmatter description 逐字相同",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 7865,
@@ -872,7 +833,8 @@
           "stars": 108473,
           "license": "MIT",
           "last_activity": "2026-10-13",
-          "match_reason": "CI/CD 质量门禁与部署策略配置，补足本地缺的『从零搭 CI 判据』侧"
+          "match_reason": "CI/CD 质量门禁与部署策略配置，补足本地缺的『从零搭 CI 判据』侧",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 13489,
@@ -891,7 +853,8 @@
           "stars": 40184,
           "license": "MIT",
           "last_activity": "2026-10-16",
-          "match_reason": "CodeQL 扫描接入 GitHub Actions，补足本地 CI 判据缺的 SAST 挂载面"
+          "match_reason": "CodeQL 扫描接入 GitHub Actions，补足本地 CI 判据缺的 SAST 挂载面",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 11590,
@@ -961,7 +924,8 @@
           "stars": 301953,
           "license": "MIT",
           "last_activity": "2026-10-10",
-          "match_reason": "上游同源分叉：本地 11226B vs 上游实测 10335B（非批次描述所称 8.9KB），上游 frontmatter 与本地逐字一致"
+          "match_reason": "上游同源分叉：本地 11226B vs 上游实测 10335B（非批次描述所称 8.9KB），上游 frontmatter 与本地逐字一致",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 10564,
@@ -980,7 +944,8 @@
           "stars": 108473,
           "license": "MIT",
           "last_activity": "2026-10-13",
-          "match_reason": "把 spec 拆成有序可实施任务并给估时/并行策略，补足本地缺的估时与并行判断"
+          "match_reason": "把 spec 拆成有序可实施任务并给估时/并行策略，补足本地缺的估时与并行判断",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 15050,
@@ -999,7 +964,8 @@
           "stars": 40184,
           "license": "MIT",
           "last_activity": "2026-10-16",
-          "match_reason": "从需求到实施计划的拆解模板（15050B），补足本地缺的计划颗粒度示例"
+          "match_reason": "从需求到实施计划的拆解模板（15050B），补足本地缺的计划颗粒度示例",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 15050,
@@ -1018,7 +984,8 @@
           "stars": 40184,
           "license": "MIT",
           "last_activity": "2026-10-16",
-          "match_reason": "功能实施级拆解（4837B），补足本地缺的 feature→task 映射"
+          "match_reason": "功能实施级拆解（4837B），补足本地缺的 feature→task 映射",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": null,
@@ -1069,7 +1036,8 @@
           "stars": 301953,
           "license": "MIT",
           "last_activity": "2026-10-10",
-          "match_reason": "上游同源分叉：本地 10634B vs 上游实测 10073B（非批次所称 17.1KB）；上游 description 已外扩到软件之外场景"
+          "match_reason": "上游同源分叉：本地 10634B vs 上游实测 10073B（非批次所称 17.1KB）；上游 description 已外扩到软件之外场景",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 9253,
@@ -1088,7 +1056,8 @@
           "stars": 108473,
           "license": "MIT",
           "last_activity": "2026-10-13",
-          "match_reason": "把模糊想法收敛为可执行方向（9253B），补足本地缺的想法收敛判据"
+          "match_reason": "把模糊想法收敛为可执行方向（9253B），补足本地缺的想法收敛判据",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 9253,
@@ -1107,7 +1076,8 @@
           "stars": 108473,
           "license": "MIT",
           "last_activity": "2026-10-13",
-          "match_reason": "逐问式需求拷问（15080B），补足本地缺的『一次一问』交互约束"
+          "match_reason": "逐问式需求拷问（15080B），补足本地缺的『一次一问』交互约束",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 21192,
@@ -1177,7 +1147,8 @@
           "stars": 142294,
           "license": "Apache-2.0",
           "last_activity": "2026-10-18",
-          "match_reason": "上游同源：上游 SKILL.md 实测 5140B 与本地 5140B 字节量一致，frontmatter description 逐字相同"
+          "match_reason": "上游同源：上游 SKILL.md 实测 5140B 与本地 5140B 字节量一致，frontmatter description 逐字相同",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 6741,
@@ -1196,7 +1167,8 @@
           "stars": 40184,
           "license": "MIT",
           "last_activity": "2026-10-16",
-          "match_reason": "API 破坏性变更检测，补足本地缺的公开接口改名判据"
+          "match_reason": "API 破坏性变更检测，补足本地缺的公开接口改名判据",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 8370,
@@ -1212,7 +1184,7 @@
           "total_measured": 15,
           "dims_measured": 4,
           "repo": "Naveja00/OverReach",
-          "stars": null,
+          "stars": 6,
           "license": null,
           "last_activity": null,
           "match_reason": "越界行为检测（README 8370B），补足本地缺的 overreach 语义维度；star/license 未取证"
@@ -1231,10 +1203,11 @@
           "total_measured": 13,
           "dims_measured": 4,
           "repo": "garrytan/gstack",
-          "stars": null,
+          "stars": 137009,
           "license": null,
           "last_activity": null,
-          "match_reason": "PR diff 对照声明意图的近地评审（80888B），补足本地缺的 GitHub PR 侧执行；star/license 未取证"
+          "match_reason": "PR diff 对照声明意图的近地评审（80888B），补足本地缺的 GitHub PR 侧执行；star/license 未取证",
+          "stars_scope": "repo_level"
         }
       ]
     },
@@ -1259,7 +1232,8 @@
           "D": 5,
           "S": 4,
           "total_measured": 20,
-          "dims_measured": 5
+          "dims_measured": 5,
+          "stars_scope": "repo_level"
         }
       ],
       "candidate_count": 1,
@@ -1319,7 +1293,8 @@
           "D": 5,
           "S": 4,
           "total_measured": 20,
-          "dims_measured": 5
+          "dims_measured": 5,
+          "stars_scope": "repo_level"
         }
       ],
       "candidate_count": 1,
@@ -1353,7 +1328,8 @@
           "D": 3,
           "S": 4,
           "total_measured": 19,
-          "dims_measured": 5
+          "dims_measured": 5,
+          "stars_scope": "repo_level"
         },
         {
           "repo": "wshobson/agents",
@@ -1371,7 +1347,8 @@
           "D": 3,
           "S": 4,
           "total_measured": 18,
-          "dims_measured": 5
+          "dims_measured": 5,
+          "stars_scope": "repo_level"
         },
         {
           "repo": "yonatangross/orchestkit",
@@ -1421,7 +1398,8 @@
           "stars": 301953,
           "license": "MIT",
           "last_activity": "2026-10-10",
-          "match_reason": "上游同源：上游 3646B，本地 7128B 为其扩展版，可回溯核心原则原文"
+          "match_reason": "上游同源：上游 3646B，本地 7128B 为其扩展版，可回溯核心原则原文",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 4028,
@@ -1440,7 +1418,8 @@
           "stars": 40184,
           "license": "MIT",
           "last_activity": "2026-10-16",
-          "match_reason": "审计输出的质量门禁与证据校验，补足本地缺的审计类交付门禁"
+          "match_reason": "审计输出的质量门禁与证据校验，补足本地缺的审计类交付门禁",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 15336,
@@ -1529,7 +1508,8 @@
           "stars": 40184,
           "license": "MIT",
           "last_activity": "2026-10-16",
-          "match_reason": "OWASP Agentic Security Initiative ASI Top10 检查，补足本地仅 OWASP Web Top10 的 agent 维度"
+          "match_reason": "OWASP Agentic Security Initiative ASI Top10 检查，补足本地仅 OWASP Web Top10 的 agent 维度",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": 3991,
@@ -1660,7 +1640,8 @@
           "D": 3,
           "S": 4,
           "total_measured": 19,
-          "dims_measured": 5
+          "dims_measured": 5,
+          "stars_scope": "repo_level"
         }
       ],
       "candidate_count": 1,
@@ -1690,7 +1671,8 @@
           "D": 4,
           "S": 4,
           "total_measured": 19,
-          "dims_measured": 5
+          "dims_measured": 5,
+          "stars_scope": "repo_level"
         }
       ],
       "candidate_count": 1,
@@ -1720,7 +1702,8 @@
           "D": 3,
           "S": 4,
           "total_measured": 19,
-          "dims_measured": 5
+          "dims_measured": 5,
+          "stars_scope": "repo_level"
         }
       ],
       "candidate_count": 1,
@@ -1750,7 +1733,8 @@
           "D": 3,
           "S": 4,
           "total_measured": 19,
-          "dims_measured": 5
+          "dims_measured": 5,
+          "stars_scope": "repo_level"
         }
       ],
       "candidate_count": 1,
@@ -1862,7 +1846,8 @@
           "D": null,
           "S": 5,
           "total_measured": 9,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         },
         {
           "repo": "anthropics/skills",
@@ -1880,7 +1865,8 @@
           "D": null,
           "S": 5,
           "total_measured": 7,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         }
       ]
     },
@@ -1909,7 +1895,8 @@
           "D": 5,
           "S": 4,
           "total_measured": 18,
-          "dims_measured": 5
+          "dims_measured": 5,
+          "stars_scope": "repo_level"
         },
         {
           "repo": "Akxan/ppt-agent-skill",
@@ -1945,7 +1932,8 @@
           "D": null,
           "S": 5,
           "total_measured": 7,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         }
       ]
     },
@@ -2050,7 +2038,8 @@
           "D": 3,
           "S": 5,
           "total_measured": 17,
-          "dims_measured": 5
+          "dims_measured": 5,
+          "stars_scope": "repo_level"
         },
         {
           "repo": "tfriedel/claude-office-skills",
@@ -2069,6 +2058,99 @@
           "S": 1,
           "total_measured": 3,
           "dims_measured": 2
+        }
+      ]
+    },
+    {
+      "local_skill": "executing-plans",
+      "local_bytes": null,
+      "local_note": "本地目录 D:\\global_skills\\executing-plans 实测不存在（已退役），故 skill_md_bytes=null。",
+      "remote_note": "恢复该能力建议以上游 obra/superpowers 的 executing-plans 或 subagent-driven-development 为源。",
+      "candidate_count": 4,
+      "best": {
+        "repo": "obra/superpowers",
+        "total": 17
+      },
+      "candidates": [
+        {
+          "ubytes": 20405,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": 3,
+          "C": 4,
+          "D": 5,
+          "S": 5,
+          "activity_age_days": 9,
+          "evidence": "skills/executing-plans/SKILL.md",
+          "confidence": "high",
+          "total_measured": 17,
+          "dims_measured": 4,
+          "repo": "obra/superpowers",
+          "stars": 301953,
+          "license": "MIT",
+          "last_activity": "2026-10-10",
+          "match_reason": "上游同源：本地已退役，上游实测 20405B（≈19.9KB，与批次描述一致）含 scripts/task-start、task-done",
+          "stars_scope": "repo_level"
+        },
+        {
+          "ubytes": 20405,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": 3,
+          "C": 4,
+          "D": 5,
+          "S": 5,
+          "activity_age_days": 9,
+          "evidence": "skills/subagent-driven-development/SKILL.md",
+          "confidence": "high",
+          "total_measured": 17,
+          "dims_measured": 4,
+          "repo": "obra/superpowers",
+          "stars": 301953,
+          "license": "MIT",
+          "last_activity": "2026-10-10",
+          "match_reason": "派子 agent 执行的实现者/审查者提示词与 review-package 脚本，补足本地退役后缺的执行编排",
+          "stars_scope": "repo_level"
+        },
+        {
+          "ubytes": 9629,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": 4,
+          "C": 4,
+          "D": 4,
+          "S": 5,
+          "activity_age_days": 6,
+          "evidence": "skills/incremental-implementation/SKILL.md",
+          "confidence": "medium",
+          "total_measured": 17,
+          "dims_measured": 4,
+          "repo": "addyosmani/agent-skills",
+          "stars": 108473,
+          "license": "MIT",
+          "last_activity": "2026-10-13",
+          "match_reason": "增量实施与检查点（9629B），补足本地缺的『小步可回退』执行节奏",
+          "stars_scope": "repo_level"
+        },
+        {
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 4,
+          "activity_age_days": 3,
+          "evidence": "skills/breakdown-feature-implementation/SKILL.md",
+          "confidence": "low",
+          "total_measured": 8,
+          "dims_measured": 2,
+          "repo": "github/awesome-copilot",
+          "stars": 40184,
+          "license": "MIT",
+          "last_activity": "2026-10-16",
+          "match_reason": "功能实施级拆解到执行清单，补足本地退役后缺的执行映射",
+          "stars_scope": "repo_level"
         }
       ]
     },
@@ -2153,7 +2235,8 @@
           "D": 2,
           "S": 4,
           "total_measured": 17,
-          "dims_measured": 5
+          "dims_measured": 5,
+          "stars_scope": "repo_level"
         }
       ],
       "candidate_count": 1,
@@ -2223,7 +2306,8 @@
           "D": null,
           "S": 5,
           "total_measured": 7,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         }
       ]
     },
@@ -2270,7 +2354,8 @@
           "D": null,
           "S": 4,
           "total_measured": 6,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         },
         {
           "repo": "microsoft/playwright-mcp",
@@ -2288,7 +2373,8 @@
           "D": null,
           "S": 4,
           "total_measured": 6,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         }
       ]
     },
@@ -2320,7 +2406,8 @@
           "stars": null,
           "license": null,
           "last_activity": null,
-          "match_reason": "锁定 skill 行为并在 CI 阻断未批准漂移（README 19489B），补足本地缺的聚合回归基线；star/license 未取证"
+          "match_reason": "锁定 skill 行为并在 CI 阻断未批准漂移（README 19489B），补足本地缺的聚合回归基线；star/license 未取证",
+          "stars_note": "ungh 403 + api 配额尽（2026-10-20 16:40 实测），双通道限流期间取不到；S 维记 null 不猜分，下季窗口重测"
         },
         {
           "ubytes": 3309,
@@ -2336,7 +2423,7 @@
           "total_measured": 12,
           "dims_measured": 4,
           "repo": "mohitagw15856/pm-claude-skills",
-          "stars": null,
+          "stars": 1472,
           "license": null,
           "last_activity": null,
           "match_reason": "eval-regression-gate 脚本防评分回退，补足本地缺的回归门禁实现参考"
@@ -2358,7 +2445,8 @@
           "stars": 40184,
           "license": "MIT",
           "last_activity": "2026-10-16",
-          "match_reason": "审计输出质量门禁与证据校验（4028B），补足本地缺的审计结论入库门禁"
+          "match_reason": "审计输出质量门禁与证据校验（4028B），补足本地缺的审计结论入库门禁",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": null,
@@ -2374,7 +2462,7 @@
           "total_measured": 2,
           "dims_measured": 1,
           "repo": "oaustegard/claude-skills",
-          "stars": null,
+          "stars": 154,
           "license": null,
           "last_activity": null,
           "match_reason": "含 gating-v0.2.0 发布，补足本地缺的聚合门禁技能；star/license/入口均未取证"
@@ -2458,7 +2546,8 @@
           "stars": 301953,
           "license": "MIT",
           "last_activity": "2026-10-10",
-          "match_reason": "追问式设计澄清，补足本地缺的设计树分支收敛"
+          "match_reason": "追问式设计澄清，补足本地缺的设计树分支收敛",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": null,
@@ -2477,7 +2566,8 @@
           "stars": 108473,
           "license": "MIT",
           "last_activity": "2026-10-13",
-          "match_reason": "一次一问的需求拷问（15080B），补足本地缺的『单问节奏』约束"
+          "match_reason": "一次一问的需求拷问（15080B），补足本地缺的『单问节奏』约束",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": null,
@@ -2521,7 +2611,8 @@
           "D": null,
           "S": 5,
           "total_measured": 9,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level_but_entry_unlocated(套件仓星值属整仓，入口件未定位，仅供参考、不得作为替换依据)"
         }
       ],
       "candidate_count": 1,
@@ -2551,7 +2642,8 @@
           "D": null,
           "S": 4,
           "total_measured": 8,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level_but_entry_unlocated(套件仓星值属整仓，入口件未定位，仅供参考、不得作为替换依据)"
         }
       ],
       "candidate_count": 1,
@@ -2581,7 +2673,8 @@
           "D": null,
           "S": 4,
           "total_measured": 8,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level_but_entry_unlocated(套件仓星值属整仓，入口件未定位，仅供参考、不得作为替换依据)"
         }
       ],
       "candidate_count": 1,
@@ -2611,7 +2704,8 @@
           "D": null,
           "S": 4,
           "total_measured": 8,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level_but_entry_unlocated(套件仓星值属整仓，入口件未定位，仅供参考、不得作为替换依据)"
         }
       ],
       "candidate_count": 1,
@@ -2645,7 +2739,8 @@
           "D": null,
           "S": 5,
           "total_measured": 7,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         },
         {
           "repo": "vercel-labs/agent-browser",
@@ -2663,7 +2758,8 @@
           "D": null,
           "S": 4,
           "total_measured": 6,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         },
         {
           "repo": "microsoft/playwright-mcp",
@@ -2681,7 +2777,8 @@
           "D": null,
           "S": 4,
           "total_measured": 6,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         }
       ]
     },
@@ -2710,7 +2807,8 @@
           "D": null,
           "S": 5,
           "total_measured": 7,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         },
         {
           "repo": "vercel-labs/agent-browser",
@@ -2728,7 +2826,8 @@
           "D": null,
           "S": 4,
           "total_measured": 6,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         }
       ]
     },
@@ -2997,7 +3096,8 @@
           "D": null,
           "S": 4,
           "total_measured": 6,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         },
         {
           "repo": "vercel-labs/agent-browser",
@@ -3015,7 +3115,8 @@
           "D": null,
           "S": 4,
           "total_measured": 6,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         },
         {
           "repo": "microsoft/playwright-mcp",
@@ -3033,7 +3134,8 @@
           "D": null,
           "S": 4,
           "total_measured": 6,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level"
         }
       ]
     },
@@ -3088,7 +3190,8 @@
           "D": null,
           "S": 4,
           "total_measured": 6,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level_but_entry_unlocated(套件仓星值属整仓，入口件未定位，仅供参考、不得作为替换依据)"
         }
       ],
       "candidate_count": 1,
@@ -3148,7 +3251,8 @@
           "D": null,
           "S": 4,
           "total_measured": 6,
-          "dims_measured": 2
+          "dims_measured": 2,
+          "stars_scope": "repo_level_but_entry_unlocated(套件仓星值属整仓，入口件未定位，仅供参考、不得作为替换依据)"
         }
       ],
       "candidate_count": 1,
@@ -3392,10 +3496,11 @@
           "total_measured": 2,
           "dims_measured": 1,
           "repo": "garrytan/gstack",
-          "stars": null,
+          "stars": 137009,
           "license": null,
           "last_activity": null,
-          "match_reason": "检索未命中该仓（由人工点名比对）"
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "stars_scope": "repo_level_but_entry_unlocated(套件仓星值属整仓，入口件未定位，仅供参考、不得作为替换依据)"
         }
       ]
     },
@@ -3424,10 +3529,11 @@
           "total_measured": 2,
           "dims_measured": 1,
           "repo": "anthropics/skills",
-          "stars": null,
+          "stars": 182156,
           "license": null,
           "last_activity": null,
-          "match_reason": "检索未命中该仓（由人工点名比对）"
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": null,
@@ -3443,10 +3549,11 @@
           "total_measured": 2,
           "dims_measured": 1,
           "repo": "wshobson/agents",
-          "stars": null,
+          "stars": 41107,
           "license": null,
           "last_activity": null,
-          "match_reason": "检索未命中该仓（由人工点名比对）"
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "stars_scope": "repo_level"
         },
         {
           "ubytes": null,
@@ -3462,7 +3569,7 @@
           "total_measured": 2,
           "dims_measured": 1,
           "repo": "Akxan/ppt-agent-skill",
-          "stars": null,
+          "stars": 163,
           "license": null,
           "last_activity": null,
           "match_reason": "检索未命中该仓（由人工点名比对）"

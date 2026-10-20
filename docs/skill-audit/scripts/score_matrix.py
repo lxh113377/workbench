@@ -164,6 +164,52 @@ for _mf in MATRIX_MERGE:
             print("merge =", s["local_skill"], "保持原值", _total(skills[_idx]))
 
 skills.sort(key=lambda x: -(x["best"]["total"] if x["best"] else 0))
+
+# 轮10 固化：生成后自动补候选星值（源＝watchlist 已实测值；没有再探 ungh.cc）
+# 背景：轮6 手工刷新过 score-matrix.json，但轮8 重跑本脚本时被 batch 源覆盖回零——
+# 「改派生件不改源」的老坑。固化为生成流程一步，杜绝再被覆盖。
+def _known_stars():
+    _m = {}
+    _wp = BASE + "/data/skill-watchlist.json"
+    if os.path.isfile(_wp):
+        _reg = json.load(open(_wp, encoding="utf-8"))
+        for _e in _reg.get("watchlist", []):
+            for _c in (_e.get("candidates") or []):
+                if _c.get("repo") and _c.get("stars") is not None:
+                    _m[_c["repo"]] = _c["stars"]
+    return _m
+
+def _probe_stars(repo):
+    try:
+        import urllib.request as _u
+        _req = _u.Request("https://ungh.cc/repos/" + repo, headers={"User-Agent": "Mozilla/5.0"})
+        _d = json.loads(_u.urlopen(_req, timeout=15).read().decode("utf-8", "replace"))
+        _r = _d.get("repo") or {}
+        return _r.get("stars")
+    except Exception:
+        return None
+
+_known = _known_stars()
+_filled = _probed = 0
+for _s in skills:
+    for _c in _s.get("candidates", []):
+        _rp = _c.get("repo")
+        if not _rp:
+            continue
+        if _c.get("stars") is None:
+            if _rp in _known:
+                _c["stars"] = _known[_rp]; _filled += 1
+            else:
+                _v = _probe_stars(_rp)
+                if _v is not None:
+                    _c["stars"] = _v; _probed += 1
+        # 套件仓星值两级口径（03 V6.1）
+        if _c.get("stars") is not None and _c["stars"] >= 10000:
+            _c["stars_scope"] = ("repo_level" if _c.get("evidence")
+                                 else "repo_level_but_entry_unlocated(套件仓星值属整仓，入口件未定位，仅供参考、不得作为替换依据)")
+            if not _c.get("evidence"):
+                _c["confidence"] = "low"
+print("stars backfill: from-watchlist=%d probed=%d" % (_filled, _probed))
 out = {"schema": "skill-score-matrix-v1", "generated_at": datetime.datetime.now().isoformat(timespec="seconds"),
        "rules": {"F": "入口件/本地字节比：3 + (>=1.5:+2 / >=1.0:+1 / <0.6:-1)", "E": "入口件字节：<=8K:5 <=16K:4 <=32K:3 <=64K:2 else 1",
                  "C": "SKILL.md 格式兼容 3；宽松许可+1；CC-BY-SA/GPL/无声明-1", "D": "入口件字节：>=15K:5 >=8K:4 >=3K:3 else 2",
