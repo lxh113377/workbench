@@ -1,0 +1,27 @@
+{
+  "brainstorming": {
+    "main": 11467,
+    "state": 0,
+    "note": "本地(含references卷) 17389B / 上游 10073B / 相似度 0.808 / 上游独有标题 原始 8 / 归一化 0"
+  },
+  "code-review": {
+    "main": 5200,
+    "state": 0,
+    "note": "本地(含references卷) 22405B / 上游 20976B / 相似度 0.354 / 上游独有标题 原始 2 / 归一化 0"
+  },
+  "debugging-fixing": {
+    "main": 6640,
+    "state": 0,
+    "note": "本地(含references卷) 22662B / 上游 10913B / 相似度 0.611 / 上游独有标题 原始 2 / 归一化 0"
+  },
+  "refactoring": {
+    "main": 5055,
+    "state": 0,
+    "note": "本地(含references卷) 16930B / 上游 13545B / 相似度 0.732 / 上游独有标题 原始 1 / 归一化 0"
+  },
+  "security-audit": {
+    "main": 12084,
+    "state": 0,
+    "note": "本地(含references卷) 19861B / 上游 11894B / 相似度 0.836 / 上游独有标题 原始 1 / 归一化 0"
+  }
+}

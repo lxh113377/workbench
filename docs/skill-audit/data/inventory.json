@@ -1,6 +1,6 @@
 {
   "schema": "skill-inventory-v1",
-  "generated_at": "2026-10-20T09:24:06",
+  "generated_at": "2026-10-20T09:34:34",
   "skills_root": "D:\\global_skills",
   "facts_source": {
     "truth_constants": "C:\\Users\\37533\\Desktop\\workspace\\焚诀\\eval\\truth_constants.json",
@@ -62,7 +62,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 5,
+      "route_top1_count": 6,
       "memory_mentions": 94
     },
     {
@@ -82,7 +82,7 @@
       "declared_refs": [
         "step7_project_handoff.md"
       ],
-      "route_top1_count": 22,
+      "route_top1_count": 26,
       "memory_mentions": 81
     },
     {
@@ -118,8 +118,8 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 7,
-      "memory_mentions": 277
+      "route_top1_count": 8,
+      "memory_mentions": 279
     },
     {
       "name": "A-project-better",
@@ -137,7 +137,7 @@
       "loose_refs": [],
       "declared_refs": [],
       "route_top1_count": 1,
-      "memory_mentions": 107
+      "memory_mentions": 108
     },
     {
       "name": "A-project-handoff",
@@ -147,7 +147,7 @@
       "description_len": 400,
       "triggers_count": 30,
       "skill_md_bytes": 9689,
-      "dir_bytes": 2812614,
+      "dir_bytes": 2938999,
       "ref_files": 9,
       "over_soft_limit": false,
       "retired_on_disk": false,
@@ -172,7 +172,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 13,
+      "route_top1_count": 16,
       "memory_mentions": 0
     },
     {
@@ -190,26 +190,26 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 55,
-      "memory_mentions": 110
+      "route_top1_count": 67,
+      "memory_mentions": 111
     },
     {
       "name": "agent-browser",
       "dir": "agent-browser",
       "has_skill_md": true,
-      "version": "1.0.0",
-      "description_len": 152,
-      "triggers_count": 0,
-      "skill_md_bytes": 29338,
-      "dir_bytes": 98602,
+      "version": "2.0.0",
+      "description_len": 186,
+      "triggers_count": 8,
+      "skill_md_bytes": 38626,
+      "dir_bytes": 107890,
       "ref_files": 11,
       "over_soft_limit": true,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 13,
-      "memory_mentions": 112
+      "route_top1_count": 14,
+      "memory_mentions": 113
     },
     {
       "name": "ai-video-homework-pipeline",
@@ -244,7 +244,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 13,
+      "route_top1_count": 16,
       "memory_mentions": 0
     },
     {
@@ -280,8 +280,8 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 10,
-      "memory_mentions": 1
+      "route_top1_count": 12,
+      "memory_mentions": 2
     },
     {
       "name": "bigfile-split",
@@ -298,8 +298,8 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 6,
-      "memory_mentions": 1
+      "route_top1_count": 7,
+      "memory_mentions": 3
     },
     {
       "name": "brainstorming",
@@ -308,16 +308,16 @@
       "version": "1.1.0",
       "description_len": 279,
       "triggers_count": 0,
-      "skill_md_bytes": 16917,
-      "dir_bytes": 58260,
-      "ref_files": 0,
-      "over_soft_limit": true,
+      "skill_md_bytes": 11467,
+      "dir_bytes": 58731,
+      "ref_files": 1,
+      "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
       "route_top1_count": 0,
-      "memory_mentions": 6
+      "memory_mentions": 8
     },
     {
       "name": "brand-guidelines",
@@ -406,7 +406,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 8,
+      "route_top1_count": 10,
       "memory_mentions": 0
     },
     {
@@ -442,7 +442,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 25,
+      "route_top1_count": 30,
       "memory_mentions": 0
     },
     {
@@ -460,7 +460,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 5,
+      "route_top1_count": 6,
       "memory_mentions": 7
     },
     {
@@ -478,7 +478,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 4,
+      "route_top1_count": 5,
       "memory_mentions": 0
     },
     {
@@ -534,7 +534,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 16,
+      "route_top1_count": 19,
       "memory_mentions": 1
     },
     {
@@ -552,7 +552,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 15,
+      "route_top1_count": 18,
       "memory_mentions": 0
     },
     {
@@ -619,16 +619,16 @@
       "version": "1.1.0",
       "description_len": 207,
       "triggers_count": 0,
-      "skill_md_bytes": 21936,
-      "dir_bytes": 21936,
-      "ref_files": 0,
-      "over_soft_limit": true,
+      "skill_md_bytes": 5200,
+      "dir_bytes": 22404,
+      "ref_files": 1,
+      "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
       "route_top1_count": 3,
-      "memory_mentions": 12
+      "memory_mentions": 13
     },
     {
       "name": "codebuddy-chat-web",
@@ -663,7 +663,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 8,
+      "route_top1_count": 10,
       "memory_mentions": 0
     },
     {
@@ -735,7 +735,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 5,
+      "route_top1_count": 6,
       "memory_mentions": 0
     },
     {
@@ -753,7 +753,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 11,
+      "route_top1_count": 12,
       "memory_mentions": 0
     },
     {
@@ -771,7 +771,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 4,
+      "route_top1_count": 5,
       "memory_mentions": 0
     },
     {
@@ -781,16 +781,16 @@
       "version": "2.4.0",
       "description_len": 391,
       "triggers_count": 0,
-      "skill_md_bytes": 15677,
-      "dir_bytes": 22186,
-      "ref_files": 2,
-      "over_soft_limit": true,
+      "skill_md_bytes": 6640,
+      "dir_bytes": 22659,
+      "ref_files": 3,
+      "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 16,
-      "memory_mentions": 24
+      "route_top1_count": 20,
+      "memory_mentions": 25
     },
     {
       "name": "defuddle",
@@ -807,7 +807,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 10,
+      "route_top1_count": 12,
       "memory_mentions": 3
     },
     {
@@ -825,7 +825,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 9,
+      "route_top1_count": 11,
       "memory_mentions": 0
     },
     {
@@ -1105,7 +1105,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 4,
+      "route_top1_count": 5,
       "memory_mentions": 0
     },
     {
@@ -1123,7 +1123,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 5,
+      "route_top1_count": 6,
       "memory_mentions": 3
     },
     {
@@ -1148,19 +1148,19 @@
       "name": "docx",
       "dir": "docx",
       "has_skill_md": true,
-      "version": "2.0.0",
+      "version": "2.1.0",
       "description_len": 824,
       "triggers_count": 0,
-      "skill_md_bytes": 28947,
-      "dir_bytes": 1187306,
+      "skill_md_bytes": 29314,
+      "dir_bytes": 1187673,
       "ref_files": 0,
       "over_soft_limit": true,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 4,
-      "memory_mentions": 3
+      "route_top1_count": 5,
+      "memory_mentions": 10
     },
     {
       "name": "dogfood",
@@ -1178,7 +1178,7 @@
       "loose_refs": [],
       "declared_refs": [],
       "route_top1_count": 0,
-      "memory_mentions": 7
+      "memory_mentions": 8
     },
     {
       "name": "electron",
@@ -1195,7 +1195,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 4,
+      "route_top1_count": 5,
       "memory_mentions": 4
     },
     {
@@ -1231,7 +1231,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 8,
+      "route_top1_count": 9,
       "memory_mentions": 0
     },
     {
@@ -1267,7 +1267,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 5,
+      "route_top1_count": 6,
       "memory_mentions": 0
     },
     {
@@ -1286,7 +1286,7 @@
       "loose_refs": [],
       "declared_refs": [],
       "route_top1_count": 0,
-      "memory_mentions": 2
+      "memory_mentions": 3
     },
     {
       "name": "first-principles-decomposer",
@@ -1303,7 +1303,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 8,
+      "route_top1_count": 9,
       "memory_mentions": 0
     },
     {
@@ -1375,7 +1375,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 7,
+      "route_top1_count": 8,
       "memory_mentions": 40
     },
     {
@@ -1418,19 +1418,19 @@
       "name": "gstack",
       "dir": "gstack",
       "has_skill_md": true,
-      "version": "1.1.0",
+      "version": "1.2.0",
       "description_len": 1,
       "triggers_count": 0,
-      "skill_md_bytes": 27355,
-      "dir_bytes": 2082891,
-      "ref_files": 0,
+      "skill_md_bytes": 27814,
+      "dir_bytes": 2109444,
+      "ref_files": 1,
       "over_soft_limit": true,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
       "route_top1_count": 0,
-      "memory_mentions": 0
+      "memory_mentions": 2
     },
     {
       "name": "healthcare-cdss-patterns",
@@ -1699,7 +1699,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 4,
+      "route_top1_count": 5,
       "memory_mentions": 0
     },
     {
@@ -2005,7 +2005,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 10,
+      "route_top1_count": 12,
       "memory_mentions": 0
     },
     {
@@ -2131,7 +2131,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 5,
+      "route_top1_count": 6,
       "memory_mentions": 1
     },
     {
@@ -2185,7 +2185,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 4,
+      "route_top1_count": 5,
       "memory_mentions": 0
     },
     {
@@ -2221,7 +2221,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 8,
+      "route_top1_count": 9,
       "memory_mentions": 4
     },
     {
@@ -2249,16 +2249,16 @@
       "version": "1.0.0",
       "description_len": 1,
       "triggers_count": 8,
-      "skill_md_bytes": 10389,
-      "dir_bytes": 84595263,
+      "skill_md_bytes": 10785,
+      "dir_bytes": 84595659,
       "ref_files": 165,
       "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 12,
-      "memory_mentions": 13
+      "route_top1_count": 14,
+      "memory_mentions": 15
     },
     {
       "name": "prompt-consolidation",
@@ -2311,7 +2311,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 9,
+      "route_top1_count": 11,
       "memory_mentions": 1
     },
     {
@@ -2357,16 +2357,16 @@
       "version": "2.1.0",
       "description_len": 233,
       "triggers_count": 0,
-      "skill_md_bytes": 16461,
-      "dir_bytes": 16461,
-      "ref_files": 0,
-      "over_soft_limit": true,
+      "skill_md_bytes": 5055,
+      "dir_bytes": 16929,
+      "ref_files": 1,
+      "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 8,
-      "memory_mentions": 12
+      "route_top1_count": 10,
+      "memory_mentions": 13
     },
     {
       "name": "report-generator-skill",
@@ -2383,7 +2383,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 10,
+      "route_top1_count": 12,
       "memory_mentions": 0
     },
     {
@@ -2401,7 +2401,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 5,
+      "route_top1_count": 6,
       "memory_mentions": 0
     },
     {
@@ -2437,7 +2437,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 12,
+      "route_top1_count": 14,
       "memory_mentions": 0
     },
     {
@@ -2447,16 +2447,16 @@
       "version": "2.0.0",
       "description_len": 513,
       "triggers_count": 15,
-      "skill_md_bytes": 19391,
-      "dir_bytes": 19391,
-      "ref_files": 0,
-      "over_soft_limit": true,
+      "skill_md_bytes": 12084,
+      "dir_bytes": 19860,
+      "ref_files": 1,
+      "over_soft_limit": false,
       "retired_on_disk": false,
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 4,
-      "memory_mentions": 10
+      "route_top1_count": 5,
+      "memory_mentions": 14
     },
     {
       "name": "shadcn",
@@ -2492,7 +2492,7 @@
       "loose_refs": [],
       "declared_refs": [],
       "route_top1_count": 4,
-      "memory_mentions": 6
+      "memory_mentions": 7
     },
     {
       "name": "spec-to-implementation",
@@ -2527,7 +2527,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 4,
+      "route_top1_count": 5,
       "memory_mentions": 19
     },
     {
@@ -2601,7 +2601,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 4,
+      "route_top1_count": 5,
       "memory_mentions": 0
     },
     {
@@ -2854,7 +2854,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 9,
+      "route_top1_count": 11,
       "memory_mentions": 1
     },
     {
@@ -2872,7 +2872,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 9,
+      "route_top1_count": 11,
       "memory_mentions": 7
     },
     {
@@ -2926,7 +2926,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 12,
+      "route_top1_count": 16,
       "memory_mentions": 1
     },
     {
@@ -2980,7 +2980,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 13,
+      "route_top1_count": 16,
       "memory_mentions": 1
     },
     {
@@ -2998,7 +2998,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 21,
+      "route_top1_count": 29,
       "memory_mentions": 0
     },
     {
@@ -3043,11 +3043,11 @@
       "name": "web-access",
       "dir": "web-access",
       "has_skill_md": true,
-      "version": "2.5.4",
+      "version": "2.6.0",
       "description_len": 132,
       "triggers_count": 0,
-      "skill_md_bytes": 18682,
-      "dir_bytes": 87001,
+      "skill_md_bytes": 20014,
+      "dir_bytes": 88333,
       "ref_files": 2,
       "over_soft_limit": true,
       "retired_on_disk": false,
@@ -3055,7 +3055,7 @@
       "loose_refs": [],
       "declared_refs": [],
       "route_top1_count": 0,
-      "memory_mentions": 0
+      "memory_mentions": 2
     },
     {
       "name": "web-design-guidelines",
@@ -3090,7 +3090,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 4,
+      "route_top1_count": 5,
       "memory_mentions": 2
     },
     {
@@ -3198,7 +3198,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 15,
+      "route_top1_count": 18,
       "memory_mentions": 1
     },
     {
@@ -3290,7 +3290,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 7,
+      "route_top1_count": 8,
       "memory_mentions": 4
     },
     {
@@ -3308,7 +3308,7 @@
       "dead_refs": [],
       "loose_refs": [],
       "declared_refs": [],
-      "route_top1_count": 8,
+      "route_top1_count": 10,
       "memory_mentions": 0
     }
   ],

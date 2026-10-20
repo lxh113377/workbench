@@ -53,7 +53,7 @@
           "score_total": 18
         }
       ],
-      "notes": "未检索到与本地六字段报告模板同源的上游；awesome-copilot 的 skills 目录未见独立 code-review 技能（仅 codeql 等相邻项）。 | 2026-10-20 裁决=吸收 依据=字节比0.236/上游独有36标题→吸收24节至1.045(独有0)，commit b3e189c；复扫 08:18 总判定 GREEN"
+      "notes": "未检索到与本地六字段报告模板同源的上游；awesome-copilot 的 skills 目录未见独立 code-review 技能（仅 codeql 等相邻项）。 | 2026-10-20 裁决=吸收 依据=字节比0.236/上游独有36标题→吸收24节至1.045(独有0)，commit b3e189c；复扫 08:18 总判定 GREEN；2026-10-20 轮9 B3b 吸收卷迁 references/upstream-*.md（合并口径漂移腿 missing=0，主文件已回 12KB 内，commit 1890a42）"
     },
     {
       "local_skill": "debugging-fixing",
@@ -102,7 +102,7 @@
           "score_total": 5
         }
       ],
-      "notes": "上游同源为 obra/superpowers 的 systematic-debugging；本地已含自有 references 扩展。 | 2026-10-20 裁决=吸收 依据=字节比0.586→1.434(commit f2dbf14),上游独有标题→0"
+      "notes": "上游同源为 obra/superpowers 的 systematic-debugging；本地已含自有 references 扩展。 | 2026-10-20 裁决=吸收 依据=字节比0.586→1.434(commit f2dbf14),上游独有标题→0；2026-10-20 轮9 B3b 吸收卷迁 references/upstream-*.md（合并口径漂移腿 missing=0，主文件已回 12KB 内，commit 1890a42）"
     },
     {
       "local_skill": "testing",
@@ -263,7 +263,7 @@
           "score_total": 5
         }
       ],
-      "notes": "obra/superpowers 的 skills/ 目录实测无 refactoring，本地该技能为自研。 | 2026-10-20 裁决=吸收 依据=字节比0.355→1.201(commit f2dbf14),上游独有标题24→0"
+      "notes": "obra/superpowers 的 skills/ 目录实测无 refactoring，本地该技能为自研。 | 2026-10-20 裁决=吸收 依据=字节比0.355→1.201(commit f2dbf14),上游独有标题24→0；2026-10-20 轮9 B3b 吸收卷迁 references/upstream-*.md（合并口径漂移腿 missing=0，主文件已回 12KB 内，commit 1890a42）"
     },
     {
       "local_skill": "spike",
@@ -515,7 +515,7 @@
           "score_total": 15
         }
       ],
-      "notes": "license 字段 API 返回 NOASSERTION，README 内 SPDX 声明为 CC-BY-SA-4.0。 | 2026-10-20 裁决=吸收 依据=本地七Phase仅覆盖Web向OWASP Top10，agent向ASI Top10为真缺口→吸收16节，字节比0.996→1.628(commit b8c7440)；UNVERIFIED 成因=代表上游 github/awesome-copilot 无 release tag（版本腿结构性失明，非能力问题）；漂移腿已 GREEN（独有 16→0，字节比 0.996→1.628）"
+      "notes": "license 字段 API 返回 NOASSERTION，README 内 SPDX 声明为 CC-BY-SA-4.0。 | 2026-10-20 裁决=吸收 依据=本地七Phase仅覆盖Web向OWASP Top10，agent向ASI Top10为真缺口→吸收16节，字节比0.996→1.628(commit b8c7440)；UNVERIFIED 成因=代表上游 github/awesome-copilot 无 release tag（版本腿结构性失明，非能力问题）；漂移腿已 GREEN（独有 16→0，字节比 0.996→1.628）；2026-10-20 轮9 B3b 吸收卷迁 references/upstream-*.md（合并口径漂移腿 missing=0，主文件已回 12KB 内，commit 1890a42）"
     },
     {
       "local_skill": "ci-pipeline-debugging",
@@ -676,7 +676,7 @@
           "score_total": 15
         }
       ],
-      "notes": "结构差异证据：上游 skills/brainstorming/ 含 builder-check-prompt.md，本地对应文件为 spec-document-reviewer-prompt.md（已产生分叉漂移）。 | 2026-10-20 裁决=吸收 依据=漂移腿RED(独有8)→吸收上游7节→复验漂移GREEN(独有0)；候选腿1个ungh瞬时限流属取数失败非失活"
+      "notes": "结构差异证据：上游 skills/brainstorming/ 含 builder-check-prompt.md，本地对应文件为 spec-document-reviewer-prompt.md（已产生分叉漂移）。 | 2026-10-20 裁决=吸收 依据=漂移腿RED(独有8)→吸收上游7节→复验漂移GREEN(独有0)；候选腿1个ungh瞬时限流属取数失败非失活；2026-10-20 轮9 B3b 吸收卷迁 references/upstream-*.md（合并口径漂移腿 missing=0，主文件已回 12KB 内，commit 1890a42）"
     },
     {
       "local_skill": "A-dynamic-workflow",

@@ -181,7 +181,7 @@ def leg_drift(local_text, local_note, up_text, up_note):
         state = RED
     if len(missing_norm) > 3:
         state = RED
-    note = "本地 %dB / 上游 %dB / 相似度 %.3f / 上游独有标题 原始 %d / 归一化 %d%s" % (
+    note = "本地(含references卷) %dB / 上游 %dB / 相似度 %.3f / 上游独有标题 原始 %d / 归一化 %d%s" % (
         lb, ub, ratio, len(missing), len(missing_norm), ("" if not missing_norm else "（例：" + "; ".join(missing_norm[:3]) + "）"))
     return state, note
 
@@ -263,6 +263,31 @@ def leg_discover(entry, today, offline, active_days, budget):
     return GREEN, "未发现未登记的活跃替代（活跃窗 %d 天）" % active_days, fresh, 1
 
 
+def load_local_merged(local_path):
+    """漂移腿的本地侧文本 = SKILL.md + references/ 下全部 .md 合并。
+
+    为什么合并：B3b 把吸收块从主文件迁进 references/ 分卷后，只看主文件会把
+    「内容仍在、只是换了文件」误判成漂移回归（判据先于动手修，见 05 规范 §十）。
+    返回 (merged_text, main_bytes, note)。main_bytes 供体量口径单列。"""
+    if not local_path or not local_path.is_file():
+        return None, 0, "本地 SKILL.md 不可读：" + str(local_path)
+    try:
+        main = local_path.read_text(encoding="utf-8", errors="replace")
+    except OSError as err:
+        return None, 0, repr(err)
+    parts = [main]
+    refs = local_path.parent / "references"
+    ref_files = 0
+    if refs.is_dir():
+        for rf in sorted(refs.rglob("*.md")):
+            try:
+                parts.append(rf.read_text(encoding="utf-8", errors="replace"))
+                ref_files += 1
+            except OSError:
+                continue
+    note = "主文件 %dB + %d 个 references 卷合并" % (len(main.encode("utf-8", "replace")), ref_files)
+    return chr(10).join(parts), len(main.encode("utf-8", "replace")), note
+
 def sweep(registry, offline=False, discover=0, active_days=None):
     today = datetime.date.today()
     fuse = int(registry.get("fuse_days") or FUSE_DAYS_DEFAULT)
@@ -275,15 +300,7 @@ def sweep(registry, offline=False, discover=0, active_days=None):
         repo = e.get("upstream_repo")
         path = e.get("upstream_path")
         local_path = Path(e.get("local_skill_md") or "")
-        local_text = None
-        lnote = ""
-        if str(local_path) and local_path.is_file():
-            try:
-                local_text = local_path.read_text(encoding="utf-8", errors="replace")
-            except OSError as err:
-                lnote = repr(err)
-        else:
-            lnote = "本地技能目录不在盘：" + str(local_path)
+        local_text, main_bytes, lnote = load_local_merged(local_path)
 
         val, note, src, c = live_version(repo, offline); api_calls += c
         legv = leg_version(e.get("recorded_version"), val, note)
@@ -322,6 +339,7 @@ def sweep(registry, offline=False, discover=0, active_days=None):
             "upstream_path": path,
             "recorded_version": e.get("recorded_version"),
             "live_version": val,
+            "local_main_bytes": main_bytes,
             "live_source": src,
             "leg_version": {"state": STATE_NAME[legv[0]], "note": legv[1]},
             "leg_drift": {"state": STATE_NAME[legd[0]], "note": legd[1]},
