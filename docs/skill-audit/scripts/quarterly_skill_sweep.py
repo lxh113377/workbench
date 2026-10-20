@@ -216,6 +216,11 @@ def leg_candidates(cands, today, offline, active_days):
             continue
         stars, pushed, archived, lic, src, err = cand_facts(repo, offline)
         calls += 1
+        if err and stars is None:
+            # 轮3：候选读数失败先重试一次——api 配额共享的瞬断不该把 overall 拖黄（把抖动当真失活=假红）
+            import time as _t; _t.sleep(2.0)
+            stars, pushed, archived, lic, src, err = cand_facts(repo, offline)
+            calls += 1
         age = days_since(pushed, today)
         rec = {"repo": repo, "stars": stars, "pushed_days": age, "archived": archived, "license": lic, "source": src}
         if err and stars is None:
@@ -343,7 +348,10 @@ def sweep(registry, offline=False, discover=0, active_days=None):
         else:
             legd = leg_drift(local_text, lnote, up_text, up_note)
 
-        legc = leg_candidates(e.get("candidates") or [], today, offline, ad)
+        if _kind.startswith("self_developed"):
+            legc = (GREEN, "自研条目：无外部候选可追踪，候选腿不判", [], 0)
+        else:
+            legc = leg_candidates(e.get("candidates") or [], today, offline, ad)
         api_calls += legc[3]
 
         legn = leg_discover(e, today, offline, ad, budget)
