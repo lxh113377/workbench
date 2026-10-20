@@ -32,13 +32,16 @@ const promContentType = "text/plain; version=0.0.4; charset=utf-8"
 
 // 指标名（统一 workbench_ 前缀，避免与采集端其他 job 的指标撞名）。
 const (
-	promNameTasksTotal    = "workbench_tasks_total"
-	promNameAttemptsTotal = "workbench_attempts_total"
-	promNameFailuresTotal = "workbench_task_failures_total"
-	promNameDuration      = "workbench_task_duration_seconds"
-	promNameGoroutines    = "workbench_goroutines"
-	promNameHeapAlloc     = "workbench_heap_alloc_bytes"
-	promNameGCPauseTotal  = "workbench_gc_pause_total_seconds"
+	promNameTasksTotal      = "workbench_tasks_total"
+	promNameAttemptsTotal   = "workbench_attempts_total"
+	promNameFailuresTotal   = "workbench_task_failures_total"
+	promNameDuration        = "workbench_task_duration_seconds"
+	promNameGoroutines      = "workbench_goroutines"
+	promNameHeapAlloc       = "workbench_heap_alloc_bytes"
+	promNameGCPauseTotal    = "workbench_gc_pause_total_seconds"
+	promNameRateLimitRate   = "workbench_rate_limit_per_second"
+	promNameRateLimitBurst  = "workbench_rate_limit_burst"
+	promNameRateLimitTokens = "workbench_rate_limit_available_tokens"
 )
 
 // promTaskStates 是 model 包的全部合法状态（来自 model.TaskState 枚举）。
@@ -382,6 +385,21 @@ func (s *Server) renderPrometheus() string {
 		"Bytes of heap memory occupied by live objects plus objects not yet swept by the garbage collector, from the runtime metric /memory/classes/heap/objects:bytes (equivalent to runtime.MemStats HeapAlloc).")
 	heap.addInt(nil, procHeap)
 
+	// 限速闸门状态（D9 修复的可观测面收口）：配置/读数都进指标，采集端才能发现
+	// 「配置 20/分钟但快照全零」这种回退 —— 那正是 D9 的原始形态（面板显示限速、实际不限速）。
+	// tokens 是瞬时令牌数，gauge；enabled 用 0/1 表示（未配置限速时 config_rate=0 且 enabled=0）。
+	if s.engine != nil {
+		snap := s.engine.RateLimiterSnapshot()
+		rl := e.family(promNameRateLimitRate, "gauge",
+			"Configured global request rate limit in requests per second (executor.requestsPerMinute/60). Zero means unlimited.")
+		rl.addFloat(nil, snap.RatePerSecond)
+		rlb := e.family(promNameRateLimitBurst, "gauge",
+			"Configured token bucket capacity (executor.requestBurst). Zero means unlimited.")
+		rlb.addInt(nil, int64(snap.Burst))
+		rlt := e.family(promNameRateLimitTokens, "gauge",
+			"Currently available tokens in the global rate limiter bucket. Compare with workbench_rate_limit_burst to see saturation.")
+		rlt.addFloat(nil, snap.Tokens)
+	}
 	gc := e.family(promNameGCPauseTotal, "counter",
 		"Cumulative stop-the-world garbage collection pause time since process start, in seconds, from runtime.MemStats PauseTotalNs. Monotonic for the life of the process.")
 	gc.addFloat(nil, procGCPause)

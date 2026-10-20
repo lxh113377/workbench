@@ -66,7 +66,8 @@ var promSummaryFamilies = []struct{ Name string }{{"workbench_task_duration_seco
 // promExpectedNames 是必须在场的指标族。
 var promExpectedNames = []string{"workbench_tasks_total", "workbench_attempts_total",
 	"workbench_task_failures_total", "workbench_task_duration_seconds",
-	"workbench_goroutines", "workbench_heap_alloc_bytes", "workbench_gc_pause_total_seconds"}
+	"workbench_goroutines", "workbench_heap_alloc_bytes", "workbench_gc_pause_total_seconds",
+	"workbench_rate_limit_per_second", "workbench_rate_limit_burst", "workbench_rate_limit_available_tokens"}
 
 // TestMetricsPromZeroTaskStillValid 零任务场景（负面用例之一）：空台账也必须输出
 // 合法文本，且不得出现 NaN/+Inf；每个合法状态都要有 0 值序列，采集端才能预先建面板。
