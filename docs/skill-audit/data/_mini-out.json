@@ -1,11 +1,11 @@
 {
   "schema": "skill-sweep-v1",
-  "generated_at": "2026-10-20T11:05:44",
+  "generated_at": "2026-10-20T11:32:44",
   "offline": false,
   "fuse_days": 100,
   "active_days": 400,
   "registry": "D:\\workdesktop\\docs\\skill-audit\\data\\_mini-reg.json",
-  "http_calls": 35,
+  "http_calls": 38,
   "worst_state": "UNVERIFIED",
   "rows": [
     {
@@ -50,13 +50,13 @@
           },
           {
             "repo": "trailofbits/skills",
-            "stars": 7650,
+            "stars": 7647,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=7650，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=7647，来源 ungh.cc）"
           },
           {
             "repo": "amirbena/code-review-skill",
@@ -196,23 +196,23 @@
           },
           {
             "repo": "vercel-labs/agent-browser",
-            "stars": 44280,
-            "pushed_days": 0,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（0 天前推送，stars=44280，来源 ungh.cc）"
-          },
-          {
-            "repo": "microsoft/playwright-mcp",
-            "stars": 38384,
+            "stars": 44260,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=38384，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=44260，来源 ungh.cc）"
+          },
+          {
+            "repo": "microsoft/playwright-mcp",
+            "stars": 38368,
+            "pushed_days": 1,
+            "archived": false,
+            "license": null,
+            "source": "ungh.cc",
+            "state": "GREEN",
+            "note": "活跃（1 天前推送，stars=38368，来源 ungh.cc）"
           }
         ]
       },
@@ -259,13 +259,13 @@
           },
           {
             "repo": "vercel-labs/agent-browser",
-            "stars": 44280,
-            "pushed_days": 0,
+            "stars": 44260,
+            "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（0 天前推送，stars=44280，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=44260，来源 ungh.cc）"
           }
         ]
       },
@@ -322,13 +322,13 @@
           },
           {
             "repo": "microsoft/playwright-mcp",
-            "stars": 38384,
+            "stars": 38368,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=38384，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=38368，来源 ungh.cc）"
           }
         ]
       },
@@ -342,6 +342,38 @@
       "days_since_check": 0,
       "stale": false,
       "overall": "GREEN"
+    },
+    {
+      "local_skill": "subagent-driven-development",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/executing-plans/SKILL.md",
+      "recorded_version": "7.0.0",
+      "live_version": "7.0.0",
+      "local_main_bytes": 3846,
+      "live_source": "releases.atom",
+      "leg_version": {
+        "state": "GREEN",
+        "note": "登记 7.0.0 == 上游观测（releases.atom 最新 tag v7.0.0（2026-10-10T00:28:58Z））"
+      },
+      "leg_drift": {
+        "state": "RED",
+        "note": "本地(含references卷) 9158B / 上游 20405B / 相似度 0.261 / 上游独有标题 原始 13 / 归一化 12（例：1. take the task; 2. work the steps; 3. the completion contract）"
+      },
+      "leg_candidates": {
+        "state": "UNVERIFIED",
+        "note": "登记表无 candidates",
+        "detail": []
+      },
+      "leg_discovery": {
+        "state": "SKIP",
+        "note": "本次未启用替代发现（--discover 0）；该腿为可选增强，不计入总判定",
+        "detail": [],
+        "optional": true
+      },
+      "last_checked": "2026-10-20",
+      "days_since_check": 0,
+      "stale": false,
+      "overall": "RED"
     }
   ]
 }

@@ -313,10 +313,20 @@ def sweep(registry, offline=False, discover=0, active_days=None):
                 _delegated = True
                 _dmark = ','.join(_hits)
 
+        # entry_kind 三分法（轮2 2026-10-20）：same_origin_upstream=同源上游（漂移腿照判）；
+        # candidate_pool=候选池（batch-C 提词候选与本地技能名常无对应，硬填 upstream_path=造假血缘 ⇒ 版本腿跳过、漂移腿记「候选池不判」）；
+        # self_developed=自研无上游（版本腿跳过）。判定只看 entry_kind 字段，缺省按旧行为。
+        _kind = e.get("entry_kind") or ""
+        _skip_ver = _kind.startswith("candidate_pool") or _kind.startswith("self_developed")
         val, note, src, c = live_version(repo, offline); api_calls += c
-        legv = leg_version(e.get("recorded_version"), val, note)
+        if _skip_ver and not e.get("recorded_version"):
+            legv = (GREEN, "自研/候选池条目：无同源上游，版本腿不判（%s）" % (_kind[:24] or "未标记"))
+        else:
+            legv = leg_version(e.get("recorded_version"), val, note)
 
-        if repo and path:
+        if _kind.startswith("candidate_pool"):
+            up_text, up_note, c2 = None, "候选池条目：入口件与本地技能无同名对应，漂移腿不判（不得硬填 path 造假血缘）", 0
+        elif repo and path:
             up_text, up_note, c2 = fetch_upstream_text(repo, path, offline)
         else:
             up_text, up_note, c2 = None, "未登记 upstream_path", 0
@@ -324,6 +334,12 @@ def sweep(registry, offline=False, discover=0, active_days=None):
         if _delegated:
             _ds, _dn = leg_drift(local_text, lnote, up_text, up_note)
             legd = (GREEN, '委托壳[%s]：命令面运行时随版获取，漂移由版本腿跟踪（原始壳-上游对比不计判：%s/%s）' % (_dmark, STATE_NAME[_ds], str(len(_dn))))
+        elif _kind.startswith('candidate_pool'):
+            # 轮2 修正：门必须设在判值处。只把 up_text 置 None 会让 leg_drift 按「取不到」判 UNVERIFIED，
+            # 把 overall 拖黄——候选池条目本就无同源上游可对，漂移腿应直接 GREEN（不判）。
+            legd = (GREEN, '候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）')
+        elif _kind.startswith('self_developed'):
+            legd = (GREEN, '自研条目：无外部上游，漂移腿不判')
         else:
             legd = leg_drift(local_text, lnote, up_text, up_note)
 

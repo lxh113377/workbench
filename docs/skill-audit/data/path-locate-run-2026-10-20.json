@@ -1,0 +1,98 @@
+{
+ "ran_at": "2026-10-20T11:52:49",
+ "located": [],
+ "unresolved": [
+  {
+   "local_skill": "A-prompt-better",
+   "repo": "gaasher/Agent-Loop-Skills"
+  },
+  {
+   "local_skill": "canvas-design",
+   "repo": "ZSeven-W/openpencil"
+  },
+  {
+   "local_skill": "cloudbase",
+   "repo": "TencentCloudBase/CloudBase-AI-Toolkit"
+  },
+  {
+   "local_skill": "coding-agent",
+   "repo": "obra/superpowers"
+  },
+  {
+   "local_skill": "data-analysis",
+   "repo": "aipoch/medical-research-skills"
+  },
+  {
+   "local_skill": "dingtalk-chat",
+   "repo": "zhimaAi/ChatClaw"
+  },
+  {
+   "local_skill": "discover-agent-cli",
+   "repo": "NanmiCoder/cc-haha"
+  },
+  {
+   "local_skill": "figma",
+   "repo": "plugin87/ux-ui-agent-skills"
+  },
+  {
+   "local_skill": "find-skills",
+   "repo": "davepoon/buildwithclaude"
+  },
+  {
+   "local_skill": "frontend-skill",
+   "repo": "Leonxlnx/taste-skill"
+  },
+  {
+   "local_skill": "hyperframes",
+   "repo": "nexu-io/html-anything"
+  },
+  {
+   "local_skill": "knowledge-capture",
+   "repo": "0xranx/OpenContext"
+  },
+  {
+   "local_skill": "local-asr",
+   "repo": "XimilalaXiang/DeLive"
+  },
+  {
+   "local_skill": "local-computer-use",
+   "repo": "NanmiCoder/cc-haha"
+  },
+  {
+   "local_skill": "mcp-builder",
+   "repo": "Appllama/appllama-skills"
+  },
+  {
+   "local_skill": "pdf",
+   "repo": "AgriciDaniel/claude-seo"
+  },
+  {
+   "local_skill": "rag-eval",
+   "repo": "calmrocks/ai-engineer-notebooks"
+  },
+  {
+   "local_skill": "shadcn",
+   "repo": "bitjaru/styleseed"
+  },
+  {
+   "local_skill": "spec-to-implementation",
+   "repo": "AkoliteZA/hermes-agent-idea-workflow"
+  },
+  {
+   "local_skill": "story-cover",
+   "repo": "danderfer/Comp_Sci_Sem_2"
+  },
+  {
+   "local_skill": "story-long-write",
+   "repo": "danderfer/Comp_Sci_Sem_2"
+  },
+  {
+   "local_skill": "workbuddy-mcp",
+   "repo": "hujjun/mcd-saver-strategist"
+  },
+  {
+   "local_skill": "xlsx",
+   "repo": "genspark-ai/genoffice"
+  }
+ ]
+}

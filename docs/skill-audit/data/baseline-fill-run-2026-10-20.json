@@ -1,0 +1,104 @@
+{
+ "ran_at": "2026-10-20T11:51:08",
+ "snapshot_baselines": [
+  {
+   "local_skill": "scope-creep-detector",
+   "repo": "Shubhamsaboo/awesome-llm-apps",
+   "path": "agent_skills/scope-creep-detector/SKILL.md",
+   "sha": "a21a28ce5969",
+   "bytes": 5140
+  },
+  {
+   "local_skill": "commit-archaeologist",
+   "repo": "Shubhamsaboo/awesome-llm-apps",
+   "path": "agent_skills/commit-archaeologist/SKILL.md",
+   "sha": "8f21eb5ff270",
+   "bytes": 5496
+  },
+  {
+   "local_skill": "security-audit",
+   "repo": "github/awesome-copilot",
+   "path": "skills/agent-owasp-compliance/SKILL.md",
+   "sha": "5c1f92c48888",
+   "bytes": 11894
+  },
+  {
+   "local_skill": "A-dynamic-workflow",
+   "repo": "wshobson/agents",
+   "path": "plugins/agent-teams/skills/multi-reviewer-patterns/SKILL.md",
+   "sha": "30a8e067af08",
+   "bytes": 5192
+  },
+  {
+   "local_skill": "docx",
+   "repo": "anthropics/skills",
+   "path": "skills/docx/SKILL.md",
+   "sha": "8017469ea95f",
+   "bytes": 6911
+  },
+  {
+   "local_skill": "browser-cdp",
+   "repo": "Colgate13/claude-cdp-debugger",
+   "path": "README.md",
+   "sha": "40805997a34e",
+   "bytes": 5920
+  },
+  {
+   "local_skill": "grill-me",
+   "repo": "RobMitt/grill-me-skill",
+   "path": "SKILL.md",
+   "sha": "4c4db26d8b01",
+   "bytes": 1615
+  },
+  {
+   "local_skill": "defuddle",
+   "repo": "kepano/obsidian-skills",
+   "path": "skills/defuddle/SKILL.md",
+   "sha": "8669cdcc9f7b",
+   "bytes": 831
+  },
+  {
+   "local_skill": "json-canvas",
+   "repo": "kepano/obsidian-skills",
+   "path": "skills/json-canvas/SKILL.md",
+   "sha": "97d1ae072895",
+   "bytes": 7624
+  },
+  {
+   "local_skill": "obsidian-bases",
+   "repo": "kepano/obsidian-skills",
+   "path": "skills/obsidian-bases/SKILL.md",
+   "sha": "c0037f20926c",
+   "bytes": 13027
+  },
+  {
+   "local_skill": "obsidian-cli",
+   "repo": "kepano/obsidian-skills",
+   "path": "skills/obsidian-cli/SKILL.md",
+   "sha": "b54257cdc0e5",
+   "bytes": 3183
+  },
+  {
+   "local_skill": "obsidian-markdown",
+   "repo": "kepano/obsidian-skills",
+   "path": "skills/obsidian-markdown/SKILL.md",
+   "sha": "7ad72e1f0a90",
+   "bytes": 5367
+  },
+  {
+   "local_skill": "oracle",
+   "repo": "komako-workshop/digital-oracle",
+   "path": "SKILL.md",
+   "sha": "75ce71b29dc5",
+   "bytes": 23611
+  },
+  {
+   "local_skill": "wechat-automation",
+   "repo": "LAVARONG/wechat-automation-api",
+   "path": "SKILL.md",
+   "sha": "c421913be263",
+   "bytes": 9954
+  }
+ ],
+ "unresolvable": []
+}

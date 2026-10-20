@@ -377,7 +377,7 @@
           "score_total": 21
         }
       ],
-      "recorded_version": null,
+      "recorded_version": "sha256:a21a28ce5969@5140B",
       "last_checked": "2026-10-20",
       "discovery_query": "scope creep detector skill agent diff",
       "candidates": [
@@ -410,7 +410,8 @@
           "score_total": 13
         }
       ],
-      "notes": "本地 script 与上游是否同源未能逐字节比对（上游仅取证 SKILL.md）。"
+      "notes": "本地 script 与上游是否同源未能逐字节比对（上游仅取证 SKILL.md）。",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "commit-archaeologist",
@@ -426,7 +427,7 @@
           "score_total": 21
         }
       ],
-      "recorded_version": null,
+      "recorded_version": "sha256:8f21eb5ff270@5496B",
       "last_checked": "2026-10-20",
       "discovery_query": "git history archaeology skill agent",
       "candidates": [
@@ -459,7 +460,8 @@
           "score_total": 5
         }
       ],
-      "notes": null
+      "notes": null,
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "security-audit",
@@ -475,7 +477,7 @@
           "score_total": 15
         }
       ],
-      "recorded_version": null,
+      "recorded_version": "sha256:5c1f92c48888@11894B",
       "last_checked": "2026-10-20",
       "discovery_query": "security audit skill agent owasp",
       "candidates": [
@@ -516,7 +518,8 @@
         }
       ],
       "notes": "license 字段 API 返回 NOASSERTION，README 内 SPDX 声明为 CC-BY-SA-4.0。 | 2026-10-20 裁决=吸收(ASI十项 b8c7440)；trailofbits 误配曾致假 RED 0.395",
-      "upstream_role": "same_origin_upstream(轮13 重钉: 吸收源；trailofbits 为方法论出处非件级上游)"
+      "upstream_role": "same_origin_upstream(轮13 重钉: 吸收源；trailofbits 为方法论出处非件级上游)",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "ci-pipeline-debugging",
@@ -693,7 +696,7 @@
           "score_total": 19
         }
       ],
-      "recorded_version": null,
+      "recorded_version": "sha256:30a8e067af08@5192B",
       "last_checked": "2026-10-20",
       "discovery_query": "A dynamic workflow skill agent",
       "candidates": [
@@ -719,7 +722,8 @@
           "score_total": 18
         }
       ],
-      "notes": null
+      "notes": null,
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "verification-before-completion",
@@ -938,7 +942,7 @@
           "score_total": 17
         }
       ],
-      "recorded_version": null,
+      "recorded_version": "sha256:8017469ea95f@6911B",
       "last_checked": "2026-10-20",
       "discovery_query": "docx skill agent",
       "candidates": [
@@ -957,7 +961,8 @@
           "score_total": 3
         }
       ],
-      "notes": " | 2026-10-20(轮13 补录覆盖丢失) 裁决=保持本地(不替换)"
+      "notes": " | 2026-10-20(轮13 补录覆盖丢失) 裁决=保持本地(不替换)",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "executing-plans",
@@ -1064,7 +1069,7 @@
           "score_total": 16
         }
       ],
-      "recorded_version": null,
+      "recorded_version": "sha256:40805997a34e@5920B",
       "last_checked": "2026-10-20",
       "discovery_query": "browser cdp skill agent",
       "candidates": [
@@ -1090,7 +1095,8 @@
           "score_total": 6
         }
       ],
-      "notes": null
+      "notes": null,
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "audit-runner-safe-aggregate",
@@ -1155,7 +1161,7 @@
           "score_total": 13
         }
       ],
-      "recorded_version": null,
+      "recorded_version": "sha256:4c4db26d8b01@1615B",
       "last_checked": "2026-10-20",
       "discovery_query": "grill me skill agent design interview",
       "candidates": [
@@ -1188,7 +1194,8 @@
           "score_total": 5
         }
       ],
-      "notes": "RobMitt/grill-me-skill 的 license 字段 API 返回 null（未声明 license）。"
+      "notes": "RobMitt/grill-me-skill 的 license 字段 API 返回 null（未声明 license）。",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "agent-browser",
@@ -1338,7 +1345,8 @@
           "score_total": 2
         }
       ],
-      "notes": "检索式 headless_qa 的 total_count=1；命中 1 个候选"
+      "notes": "检索式 headless_qa 的 total_count=1；命中 1 个候选",
+      "entry_kind": "self_developed(自研：无外部上游可追踪，巡检不判版本)"
     },
     {
       "local_skill": "ppt-master",
@@ -1380,7 +1388,8 @@
           "score_total": 2
         }
       ],
-      "notes": "检索式 pptx_generation 的 total_count=0；命中 3 个候选"
+      "notes": "检索式 pptx_generation 的 total_count=0；命中 3 个候选",
+      "entry_kind": "self_developed(自研：无外部上游可追踪，巡检不判版本)"
     },
     {
       "local_skill": "A-ask-questions",
@@ -1400,7 +1409,8 @@
       "last_checked": "2026-10-20",
       "discovery_query": "A ask questions skill agent",
       "candidates": [],
-      "notes": "检索式 requirements_clarity 的 total_count=0；命中 0 个候选"
+      "notes": "检索式 requirements_clarity 的 total_count=0；命中 0 个候选",
+      "entry_kind": "self_developed(自研：无外部上游可追踪，巡检不判版本)"
     },
     {
       "local_skill": "A-project-better",
@@ -1420,7 +1430,8 @@
       "last_checked": "2026-10-20",
       "discovery_query": "A project better skill agent",
       "candidates": [],
-      "notes": "检索式 project_direction 的 total_count=0；命中 0 个候选"
+      "notes": "检索式 project_direction 的 total_count=0；命中 0 个候选",
+      "entry_kind": "self_developed(自研：无外部上游可追踪，巡检不判版本)"
     },
     {
       "local_skill": "screenshot",
@@ -1440,7 +1451,8 @@
       "last_checked": "2026-10-20",
       "discovery_query": "screenshot skill agent",
       "candidates": [],
-      "notes": "检索式 screenshot 的 total_count=3；命中 0 个候选"
+      "notes": "检索式 screenshot 的 total_count=3；命中 0 个候选",
+      "entry_kind": "self_developed(自研：无外部上游可追踪，巡检不判版本)"
     },
     {
       "local_skill": "office-automation-pro",
@@ -1460,7 +1472,8 @@
       "last_checked": "2026-10-20",
       "discovery_query": "office automation pro skill agent",
       "candidates": [],
-      "notes": "检索式 office_automation 的 total_count=0；命中 0 个候选"
+      "notes": "检索式 office_automation 的 total_count=0；命中 0 个候选",
+      "entry_kind": "self_developed(自研：无外部上游可追踪，巡检不判版本)"
     },
     {
       "local_skill": "A-prompt-better",
@@ -1480,7 +1493,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "brand-guidelines",
@@ -1520,7 +1534,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "chart-visualization",
@@ -1560,7 +1575,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "coding-agent",
@@ -1580,7 +1596,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "data-analysis",
@@ -1600,7 +1617,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "data-visualization",
@@ -1628,7 +1646,7 @@
       "upstream_repo": "kepano/obsidian-skills",
       "upstream_path": "skills/defuddle/SKILL.md",
       "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
-      "recorded_version": null,
+      "recorded_version": "sha256:8669cdcc9f7b@831B",
       "last_checked": "2026-10-20",
       "discovery_query": "batch-C 提词检索",
       "candidates": [
@@ -1640,7 +1658,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "dingtalk-chat",
@@ -1660,7 +1679,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "discover-agent-cli",
@@ -1680,7 +1700,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "figma",
@@ -1700,7 +1721,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "find-skills",
@@ -1720,7 +1742,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "frontend-skill",
@@ -1740,7 +1763,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "frontend-slides",
@@ -1780,7 +1804,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "json-canvas",
@@ -1788,7 +1813,7 @@
       "upstream_repo": "kepano/obsidian-skills",
       "upstream_path": "skills/json-canvas/SKILL.md",
       "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
-      "recorded_version": null,
+      "recorded_version": "sha256:97d1ae072895@7624B",
       "last_checked": "2026-10-20",
       "discovery_query": "batch-C 提词检索",
       "candidates": [
@@ -1800,7 +1825,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "knowledge-capture",
@@ -1820,7 +1846,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "local-asr",
@@ -1840,7 +1867,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "local-computer-use",
@@ -1860,7 +1888,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "mcp-builder",
@@ -1880,7 +1909,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "obsidian-bases",
@@ -1888,7 +1918,7 @@
       "upstream_repo": "kepano/obsidian-skills",
       "upstream_path": "skills/obsidian-bases/SKILL.md",
       "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
-      "recorded_version": null,
+      "recorded_version": "sha256:c0037f20926c@13027B",
       "last_checked": "2026-10-20",
       "discovery_query": "batch-C 提词检索",
       "candidates": [
@@ -1900,7 +1930,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "obsidian-cli",
@@ -1908,7 +1939,7 @@
       "upstream_repo": "kepano/obsidian-skills",
       "upstream_path": "skills/obsidian-cli/SKILL.md",
       "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
-      "recorded_version": null,
+      "recorded_version": "sha256:b54257cdc0e5@3183B",
       "last_checked": "2026-10-20",
       "discovery_query": "batch-C 提词检索",
       "candidates": [
@@ -1920,7 +1951,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "obsidian-markdown",
@@ -1928,7 +1960,7 @@
       "upstream_repo": "kepano/obsidian-skills",
       "upstream_path": "skills/obsidian-markdown/SKILL.md",
       "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
-      "recorded_version": null,
+      "recorded_version": "sha256:7ad72e1f0a90@5367B",
       "last_checked": "2026-10-20",
       "discovery_query": "batch-C 提词检索",
       "candidates": [
@@ -1940,7 +1972,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "oracle",
@@ -1948,7 +1981,7 @@
       "upstream_repo": "komako-workshop/digital-oracle",
       "upstream_path": "SKILL.md",
       "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
-      "recorded_version": null,
+      "recorded_version": "sha256:75ce71b29dc5@23611B",
       "last_checked": "2026-10-20",
       "discovery_query": "batch-C 提词检索",
       "candidates": [
@@ -1960,7 +1993,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "pdf",
@@ -1980,7 +2014,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "rag-eval",
@@ -2000,7 +2035,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "shadcn",
@@ -2020,7 +2056,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "spec-to-implementation",
@@ -2040,7 +2077,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "story",
@@ -2080,7 +2118,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "story-long-write",
@@ -2100,7 +2139,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "video-frames",
@@ -2148,7 +2188,7 @@
       "upstream_repo": "LAVARONG/wechat-automation-api",
       "upstream_path": "SKILL.md",
       "upstream_role": "discovered_strong_candidate(batch-D 2026-10-20; 入口件实测200)",
-      "recorded_version": null,
+      "recorded_version": "sha256:c421913be263@9954B",
       "last_checked": "2026-10-20",
       "discovery_query": "batch-C 提词检索",
       "candidates": [
@@ -2160,7 +2200,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
     },
     {
       "local_skill": "workbuddy-mcp",
@@ -2180,7 +2221,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "xlsx",
@@ -2200,7 +2242,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": "",
+      "entry_kind": "candidate_pool(候选池：同名/同族入口件未定位，不等于本技能上游)"
     },
     {
       "local_skill": "subagent-driven-development",
@@ -2213,5 +2256,6 @@
       "candidates": [],
       "notes": "2026-10-20 轮1 新建（B4 自行决策落地）：吸收上游 executing-plans 20405B 内核四段（inline 理由/Rulings-not-stalls/ledger 存活/四项 stop 条件）；旧名 executing-plans 在退役名册，以本名注册。references/plan-execution-contract.md 定义 ledger 与 completion contract 格式。 | 2026-10-20 轮1 裁决=吸收分叉（05 §五）：漂移腿 RED 系本地中文精选吸收(3846B)对上游全文(20405B)的预期差异，上游独有段按需增量吸收，不做全文镜像；版本腿 GREEN(7.0.0)。S1 结构自检 PASS(3 卷全 ≤4096B)、冒烟 PASS(分卷无死链/新名不在退役册)。"
     }
-  ]
+  ],
+  "_policy_notes": " | 2026-10-20 轮2：entry_kind 三分法——same_origin_upstream(同源上游，漂移腿判)/candidate_pool(候选池，仅候选活性腿)/self_developed(自研，版本腿跳过)。依据：batch-C 提词检索的 STRONG 候选与本地技能名常无对应（xlsx→genoffice 套件、pdf→seo-* 族），硬填 upstream_path=造假血缘。"
 }
