@@ -52,6 +52,14 @@ type Logger struct {
 	level   slog.Level
 	file    *os.File
 	handler Handler
+	// attrs 是子日志器携带的固定字段（At 打 component、With 打自定义键）。
+	//
+	// 为什么必须自己存一份（2026-10-20 实测缺陷 D11）：改造前这些字段只加在
+	// slog 侧（inner.With(...)），而 handler 通道的 Record 是**另起一路**、
+	// 只从本次调用的 kv 构造 —— 于是落盘的 workbench.jsonl 有 component，
+	// 面板 /api/logs 却没有。ARCHITECTURE.md 写着"component 字段可按来源过滤"，
+	// 在那条链路上是假的：排障时按 component 筛日志筛不到，只能全文翻。
+	attrs []any
 }
 
 // Options 控制日志初始化。
@@ -114,6 +122,7 @@ func (l *Logger) At(component string) *Logger {
 	defer l.mu.RUnlock()
 	cp := *l
 	cp.inner = l.inner.With("component", component)
+	cp.attrs = l.copyAttrs("component", component)
 	return &cp
 }
 
@@ -126,7 +135,19 @@ func (l *Logger) With(kv ...any) *Logger {
 	defer l.mu.RUnlock()
 	cp := *l
 	cp.inner = l.inner.With(kv...)
+	cp.attrs = l.copyAttrs(kv...)
 	return &cp
+}
+
+// copyAttrs 返回「父 attrs + 新 kv」的**独立副本**。
+//
+// 不能直接 append 到 l.attrs：Logger 会被 At/With 按值复制，多个子日志器可能共享
+// 同一底层数组，一次 append 就会把兄弟日志器的字段改掉（静默串字段，排查代价极高）。
+func (l *Logger) copyAttrs(kv ...any) []any {
+	out := make([]any, 0, len(l.attrs)+len(kv))
+	out = append(out, l.attrs...)
+	out = append(out, kv...)
+	return out
 }
 
 func (l *Logger) emit(level slog.Level, msg string, kv []any) {
@@ -140,6 +161,12 @@ func (l *Logger) emit(level slog.Level, msg string, kv []any) {
 	l.inner.Log(ctx, level, msg, kv...)
 	if l.handler != nil {
 		fields := map[string]any{}
+		// 固定字段先垫，本次 kv 覆盖同名键（与 slog 的后者优先语义一致）
+		for i := 0; i+1 < len(l.attrs); i += 2 {
+			if k, ok := l.attrs[i].(string); ok {
+				fields[k] = l.attrs[i+1]
+			}
+		}
 		for i := 0; i+1 < len(kv); i += 2 {
 			if k, ok := kv[i].(string); ok {
 				fields[k] = kv[i+1]

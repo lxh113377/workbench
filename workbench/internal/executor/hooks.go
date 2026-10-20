@@ -103,5 +103,13 @@ func (r *Runner) SetHooks(h *Hooks) *Runner {
 	return r
 }
 
+// AttachHooks 是「可被挂执行钩子」的能力实现（L5 收敛，2026-10-20）。
+//
+// 为什么再多一个方法而不是复用 SetHooks：SetHooks 返回 *Runner（为了链式装配），
+// 调用方若断言它就必须写出 interface{ SetHooks(*Hooks) *executor.Runner } ——
+// 接口签名里带具体类型，等于没脱离 *Runner（改造前 engine.SetLogger 正是这个形态）。
+// 这个无返回值的方法让上层只用一个纯接口装配钩子。
+func (r *Runner) AttachHooks(h *Hooks) { r.hooks = h }
+
 // Hooks 返回当前钩子集合（可能为 nil）。
 func (r *Runner) Hooks() *Hooks { return r.hooks }

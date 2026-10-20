@@ -21,11 +21,31 @@ import (
 type Client struct {
 	layout config.Layout
 	exec   config.ExecutorConfig
+	// runner 是注入的执行器（L5/D7 收敛）。为 nil 时回退自建执行器（向后兼容）。
+	runner executor.RunnerContract
 }
 
 // New 构造判分器。
 func New(layout config.Layout, execCfg config.ExecutorConfig) *Client {
 	return &Client{layout: layout, exec: execCfg}
+}
+
+// SetRunner 注入执行器实现。
+//
+// 为什么必须有（2026-10-20 实测缺陷 D7）：改造前 run() 每次自己 executor.New(...)，
+// 语义子任务（summary-*/critique-*/judge-*）因此**绕过引擎的执行器**，三条后果全部有现场证据：
+//  1. engine.SetRunner 注入的假执行器管不到语义层 ⇒ go test 会真的拉起 DSH 子进程。
+//     取证：t.TempDir 残留 tasks/summary-task-done-e2e 与 tasks/critique-task-done-e2e
+//     （events.jsonl 长度 0），本机同时堆积 20+ 个 DSH Desktop 进程；真实 DSH 单任务
+//     65-148s，而测试只 WaitInflight(5s) ⇒ 后处理仍在写 events.jsonl 时用例结束，
+//     Windows 下 TempDir 的 RemoveAll 报 "used by another process"，engine 包判红。
+//  2. 生产路径绕过模型池：main 把 FailoverRunner（故障转移+车道健康度）与限速闸门
+//     装在 e.runner 上，语义层自建的是**裸** Runner —— 每个任务额外 2-3 次请求不受约束。
+//  3. 执行钩子（尝试开始/结束日志）对语义子任务完全失效。
+func (c *Client) SetRunner(r executor.RunnerContract) {
+	if c != nil {
+		c.runner = r
+	}
 }
 
 // UpdateConfig 热更新执行配置。
@@ -117,11 +137,15 @@ func (c *Client) Summarize(ctx context.Context, task *model.Task, content string
 
 // run 走一次短任务执行（不带工具，只要文本）。
 func (c *Client) run(ctx context.Context, tag, prompt string, timeoutMin int) (*executor.Result, error) {
-	cfg := c.exec
-	if cfg.DefaultTimeout <= 0 {
-		cfg.DefaultTimeout = timeoutMin
+	// 优先用注入的执行器（见 SetRunner）；未注入时保留旧行为（自建裸 Runner）。
+	runner := c.runner
+	if runner == nil {
+		cfg := c.exec
+		if cfg.DefaultTimeout <= 0 {
+			cfg.DefaultTimeout = timeoutMin
+		}
+		runner = executor.New(cfg, c.layout)
 	}
-	runner := executor.New(cfg, c.layout)
 	task := &model.Task{ID: tag, Title: tag, Prompt: prompt, TimeoutMin: timeoutMin}
 	res, err := runner.Run(ctx, task, "")
 	if err != nil {
@@ -159,6 +183,20 @@ func parseCritique(res *executor.Result) (*model.Critique, error) {
 	text := extractJSON(res.FinalText)
 	if text == "" {
 		return nil, fmt.Errorf("自评输出中未找到 JSON")
+	}
+	// schema 存在性校验（2026-10-20 实测缺陷 D10）：extractJSON 抓的是"第一个平衡 JSON"，
+	// 模型回答里若含**别的** JSON（产物协议 manifest {"files":[...],"verify":[...]}、
+	// 工具输出片段），Unmarshal 到 Score 会全字段零值却返回 nil error —— 自评质量被
+	// 误判为 0、degraded=false 让上层以为这是模型的诚实评分。后果链：质量 0 →
+	// ShouldExtend 判否 → 链不延伸；自主验收按 quality 门槛判失败 → 闭环不推进。
+	// 包注释承诺"失败即 fail-open 退回规则估算"，所以这里必须报错而非返回零分自评。
+	// 判据用 key 存在性而非数值范围：quality=0 是合法评分，必须放过。
+	var keys map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(text), &keys); err != nil {
+		return nil, fmt.Errorf("自评 JSON 解析失败: %w", err)
+	}
+	if _, ok := keys["quality"]; !ok {
+		return nil, fmt.Errorf("自评 JSON 缺少 quality 字段（抓到的不是自评结构，疑似产物协议或其它 JSON 片段）")
 	}
 	var s Score
 	if err := json.Unmarshal([]byte(text), &s); err != nil {

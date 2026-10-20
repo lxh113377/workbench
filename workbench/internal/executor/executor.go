@@ -309,7 +309,16 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	if ferr != nil {
 		return nil, fmt.Errorf("创建事件文件失败: %w", ferr)
 	}
-	defer eventsFile.Close()
+	// 句柄生命周期（2026-10-20 实测缺陷 D8）：用 sync.Once 包一个 closeEvents，
+	// 既保证**所有早退路径**（pipe 接管失败、任务隔离环境准备失败、cmd.Start 失败）
+	// 都释放句柄，又让正常路径由 consume 自己收尾。
+	// 改造前只有这里的 defer：consume 协程可能在 Run 返回后仍在写（wg.Wait 有 15 秒
+	// 超时兜底），对已关闭文件继续 Write 的错误被 _ 吞掉，事件尾部静默丢失。
+	// 只交给 consume 关闭也不对：早退路径会永久泄漏句柄（实测 executor 包
+	// TestRunnerLimiterThrottlesRequests 的 t.TempDir 报 events.jsonl 被占用）。
+	closeEventsOnce := &sync.Once{}
+	closeEvents := func() { closeEventsOnce.Do(func() { _ = eventsFile.Close() }) }
+	defer closeEvents()
 
 	stdout, perr := cmd.StdoutPipe()
 	if perr != nil {
@@ -341,7 +350,7 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	res.Touch = func() { lastActive.Store(time.Now().UnixMilli()) }
 	go func() {
 		defer wg.Done()
-		r.consume(stdout, eventsFile, res)
+		r.consume(stdout, eventsFile, res, closeEvents)
 	}()
 	// 卡死看门狗。
 	//
@@ -419,7 +428,19 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	select {
 	case <-waitCh:
 	case <-time.After(15 * time.Second):
-		// 读取协程卡住（多半是 pipe 未关闭）：放弃等待，继续收尾
+		// 读取协程卡住（多半是 pipe 未关闭）：放弃等待，继续收尾。
+		// 必须主动关掉两个读端把 consume/stderr 协程解阻塞（配合 D8）：句柄改由
+		// consume 自己关闭后，若这里只放弃等待而不解阻塞，卡死的协程会永久持有
+		// events.jsonl 句柄 —— 比改造前更糟（后续该文件的原子替换与清理都会撞
+		// "被另一进程占用"）。看门狗路径早已用同样手法解阻塞，这里补齐超时路径。
+		_ = stdout.Close()
+		_ = stderr.Close()
+		// 解阻塞后给一次**有界**等待，让 consume 有机会自己写完并释放句柄；
+		// 不等就继续往下走的话，run 的 defer 可能抢先关闭而 consume 仍在 Write。
+		select {
+		case <-waitCh:
+		case <-time.After(2 * time.Second):
+		}
 	}
 	waitErr := cmd.Wait()
 	res.Elapsed = time.Since(started)
@@ -483,7 +504,11 @@ func (r *Runner) environment() []string {
 	return env
 }
 
-func (r *Runner) consume(reader io.Reader, eventsFile *os.File, res *Result) {
+func (r *Runner) consume(reader io.Reader, eventsFile *os.File, res *Result, closeEvents func()) {
+	// 写方自己收尾（与 run() 里 sync.Once 的 defer 去重，缺陷 D8）。
+	if closeEvents != nil {
+		defer closeEvents()
+	}
 	sc := bufio.NewScanner(reader)
 	maxLine := r.cfg.MaxOutputMB * 1024 * 1024
 	if maxLine < 1024*1024 {

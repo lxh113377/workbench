@@ -326,3 +326,86 @@ Get-ChildItem D:\workdesktop\dist\workbench-output\tasks -Recurse -Filter events
 ### 9.4 复验暴露的新一层盲区（转 §7 学习计划处置）
 
 全量 `go test ./... -cover`（容器 Linux）显示 **engine / retention / verify 三包 FAIL**，全部因 `exec "pwsh"/"python" not found` 与 `C:\\ 危险路径` 的平台耦合断言，属**测试层假设 Windows 宿主**，非四项 P0 的逻辑回归；另有 chain / judge 两核心决策包 0% 覆盖。逐条归因与针对性学习计划见 **[知识盲区与学习计划](../知识盲区与学习计划.md)** §2 B1-B8 / §3 L1-L8。
+
+---
+
+## 10. 第三批改造与六个新实测缺陷（2026-10-20 · ds 端，历史正文 §0-§9 零改写）
+
+> 取证时刻：2026-10-20 19:21–20:45（Asia/Shanghai）。方法同 §0：先实测取真值 → 归因 → 改 → 用**变异测试**证明判据能拦回归。
+> 触发点：本轮开工第一步跑 go vet（rc=0）+ go test ./... -count=1，得到 **24/25 包 ok、engine 包 FAIL**。§8/§9 记载的「四项 P0 已全绿」在本机已不成立。
+
+### 10.1 复验结论：§9.2 里程碑状态需下修
+
+| 阶段 | §9.2 记载 | 本轮实测 | 判定 |
+|---|---|---|---|
+| M1 P0 改造 | 已入主树且 CI 绿 | **engine 包本机判红**（容器/CI 绿） | 假绿：判据在 Windows 宿主不成立 |
+| M3 P1 工程化 | 部分完成 | P1-2 名义在册但**未真正落地**（engine 仍断言具体类型）；P1-3 此前为 0 | 本轮补齐 |
+| 限速闸门 | §8.2 记 P0-2 全绿 | **生产从未接线**（D9） | 缺陷在册 |
+
+> 关键教训（与盲区计划 §5 的 D6 同型）：**「CI 绿」不等于「本机绿」**。本轮 engine 判红的原因（单测拉起真实子进程 + Windows 文件占用）在 Linux 容器里不报错 —— 容器对仍被占用的文件删除不敏感，Windows 敏感。**跨环境只验一侧 = 没验**。
+
+### 10.2 六个新实测缺陷（D7–D12，逐条带现场证据）
+
+| # | 缺陷 | 现场证据（本轮实测） | 根因 | 对标做法 |
+|---|---|---|---|---|
+| **D7** | 语义层（摘要/自评/判分）绕过引擎执行器 | t.TempDir 残留 tasks/summary-task-done-e2e、tasks/critique-task-done-e2e（events.jsonl 长度 0）；本机堆积 20+ 个 DSH Desktop 进程；真实单任务 65–148s 而测试只 WaitInflight(5s) | judge.run() 每次自己 executor.New(...)，engine.SetRunner 的桩与 main.go 装的 FailoverRunner/限速闸门都管不到它 | river 的 jobexecutor 由 client 注入，attempt 全链同一执行器 |
+| **D8** | 事件文件句柄在协程写完前释放 / 早退路径永久泄漏 | 报错原文：unlinkat ...\events.jsonl: The process cannot access the file because it is being used by another process（engine + executor 两包） | run() 用 defer Close() 而 consume 协程可能仍在写（wg.Wait 有 15s 超时兜底），写失败被 _ 吞掉 | river attempt 记录只追加、由写入方收尾 |
+| **D9** | **全局限速闸门生产从未接线** | 全仓（排除 _test.go）ratelimit.New 调用点 = **0**；executor.SetLimiter 的调用点只有 2 个测试文件；RateLimiterSnapshot 注释写的「main 里先装限流器」在 main.go 中根本不存在 | limiter/SetLimiter/面板读数三件套 10-19 写完但无装配步骤 ⇒ requestsPerMinute=20 是装饰品，**面板显示限速、实际不限速** | asynq 的 RetryDelayFunc/中间件在 server 构造期强制装配 |
+| **D10** | 自评解析接受无关 JSON，质量恒判 0 | 探针实测：parseCritique 收到产物协议 manifest → err=<nil> quality=0 tags=[] degraded=false；TestClosedLoopThroughRunOne 红 5.57s（「5 秒内未见目标切换」） | extractJSON 抓「第一个平衡 JSON」，Unmarshal 到 struct 全字段零值却返回 nil error；包注释承诺的「失败即 fail-open」没生效 | n8n 强类型错误分级：schema 不符必须报错 |
+| **D11** | 面板日志拿不到 component | At("engine").Warn(...) 后 handler 收到 Fields=map[err:boom]，**无 component**；落盘 JSONL 却有 | At/With 只把固定字段加到 slog 侧，handler 通道的 Record 另起一路、仅从本次 kv 构造 | n8n logRoutingMetadata：路由元数据统一注入所有出口 |
+| **D12** | 构造期告警永久静默 | New() 里 e.log 先是 Nop，而 main.go 在 New() **返回之后**才 SetLogger；越权审计打不开与自主初始化失败两处「只告警」写进 io.Discard | 注释承诺「只告警不阻断」，实际「零可观测」；New() 里还有一行自杀式的 e.log = logging.Nop() 重设 | temporal worker 初始化失败一律落日志并可查 |
+
+> D7 是 D9 的**同源放大**：语义层每任务额外 2–3 次裸请求（summary+critique），既不排队也不选车道。与 D9 叠加，正是「OFM 上游 IP 阻断」「429 持续 50 分钟」两条在册事故的结构性解释。
+
+### 10.3 四项改造（按优先级）与完成标准实测
+
+排序依据：**① 已实测复现且阻塞 7×24 可靠性 / CI 可信度 → ② 是 ① 的结构性根因（不收敛必再犯）→ ③ 可观测面（排障成本）→ ④ 外部集成与防回归**。
+
+| 序 | 改造 | 覆盖缺陷 | 预期目标 | 完成标准 → 实测结果 |
+|---|---|---|---|---|
+| **①** | 可靠性内核修复（P0） | D7 D8 D9 D10 | 单测不再拉子进程；闸门真接线；句柄生命周期一致；自评不再误判 0 | 全量 go test ./... -count=1 **30 包全 ok**；-race 5 包 ok；新残留 summary-/critique- 任务目录 = **0**；变异测试逐项判红可拦 |
+| **②** | L5 执行层抽象收敛 | D7 根因 | engine 不再依赖具体执行器类型 | engine.go 无 .(*executor.Runner) 断言（仅注释引用历史形态）；AttachHooks 能力接口 + Inner() 链下探；4 条守护测试全绿，变异「回退成具体类型断言」判红 |
+| **③** | L6 日志接线收口 | D11 D12 | 构造期降级原因与 component 字段真正可见 | warnDeferred + flushPendingWarn；Logger.attrs 并入 handler Record；grep debugf = 0；logging 覆盖 **82.8% → 93.9%** |
+| **④** | P1-3 指标导出 + L8 性能护栏 | §4 P1-3 / §3.5 手工读数 | 外部监控可直抓；性能基线进 CI | GET /metrics exposition 逐行合法 + 重复序列检测；check_perf.ps1 三态实测 rc=0/2/1；ci.yml 体积上界引用基线 + 新增 Perf baseline gate |
+
+**覆盖率变化（本机同口径 go test ./... -count=1 -cover）**
+
+| 包 | 改造前 | 改造后 |
+|---|---|---|
+| internal/engine | 21.1%（§8.3）/ 本轮开工时判红 | **72.4%** |
+| internal/judge | 63.7% | **78.6%** |
+| internal/logging | 82.8% | **93.9%** |
+| internal/web | 46.0% | **57.7%** |
+| 全仓 | engine 包 FAIL | **30 包 ok / 0 FAIL / 0 平台耦合 FAIL** |
+
+### 10.4 性能护栏首跑读数（B8/L8 落地）
+
+| 项 | 基线上界 | 实测 | 判定 |
+|---|---|---|---|
+| EXE 体积 | 20,971,520 B | **14,199,296 B** | PASS（余量 6.46MB） |
+| 首页 P95 | 250 ms | 探针轮 14.31 ms（P50 12.07） | 本机 PASS / CI 显式 SKIP（口径不可比） |
+| 常驻内存 | 64 MB | 12.07 MB | 同上 |
+| 句柄 | 512 | 132 | 同上 |
+| taskDurationSecMax / readyMsMax / idleGrowthMBPerHourMax | null | — | **SKIP 并注明原因**（需外部模型凭据 / 端到端冷启动未单独计时 / 需 ≥1h 长跑；禁止臆造） |
+
+> 顺带实测发现两项**在册风险已实际发生**（记录不掩饰）：① 产物两天内 **+83.3%**（7,747,072 → 14,199,296 B）、首页 710B → 1363B；② dist/SHA256SUMS 与产物本体不一致（清单 C81CA500… vs 实测 BEC437CE…F66DA1）—— §3.8 预警的「每次构建后必须同步」未执行。
+
+### 10.5 本轮被实测纠正的自身错误（防重犯）
+
+1. **推测当结论**：看到 20+ 个 DSH 进程就先判「测试拉起子进程」，但受控单跑 -count=1 显示 DELTA=0。真证据是 t.TempDir 残留的 summary-*/critique-* 任务目录（**整套并行跑**才复现）。教训：进程数不是判据，残留产物才是。
+2. **修 A 引入 B**：把 eventsFile 关闭完全交给 consume 后，早退路径（cmd.Start 失败）永久泄漏句柄，executor 包 2 个用例判红。正解是 sync.Once 双向保证。
+3. **判据测错对象**：limiter_integration_test 断言「单次 Run < 2s」，把 linkDir spawn cmd.exe + 宿主排队算成「限流器在等待」，全量并行实测 4.12s 假红。改为测**两次连续 Run 的相对差**。
+4. **旧断言把缺陷当正确**：limiter_snapshot_test 原断言「未装闸门=零值」，D9 接线后必红 —— 该断言本身在为缺陷背书，必须改判据方向而不是改回实现。
+5. **测试桩缺能力面洗绿**：历史形态是桩不支持 SetLimiter 就 t.Skip，把「从未接线」变成「本用例不适用」。本轮要求 noopTestRunner 与真实 Runner 能力面对齐，装不上就是真装不上。
+6. **写源码时的转义层坑**：子代理产出的 metrics_prom.go 把 \n / \t / \0 写成真控制字符，注释断裂致 invalid character U+FF0C in identifier；我第一轮修复又漏判 summary 族的 _sum/_count 规范形态（两条同名同标签样本会让整次 scrape 判 duplicate sample）。教训：**新增判据必须先做一次「它能抓住我刚犯的那个错」的变异验证**。
+
+### 10.6 仍开放的差距（如实登记，不计入本轮完成）
+
+| 项 | 状态 | 说明 |
+|---|---|---|
+| 性能趋势历史 | 未做 | 现只判上界，无时间序列 ⇒ 抓得住体积翻倍，抓不住「缓慢涨到贴边」 |
+| 体积下界进基线 | 未做 | ci.yml 仍有硬编码 3MB 下界不在基线口径内 |
+| 运行期护栏在 CI 生效 | 设计性 SKIP | 本机 P95 拿去卡 runner 必误报；须在 runner 上重新取证再定上界 |
+| dist/SHA256SUMS 漂移 | 已发现未修 | 属构建产物一致性，需与 build.ps1 的 6/6 段一起处理 |
+| D7 语义层独立车道 | 未做 | 现与主链路共用执行器；摘要/自评可用更短超时/更廉价模型 |
+| 远程仓库同步 | 本地领先 origin/master | 推送涉及远端写入与 CI 触发，见交付报告「待办」 |

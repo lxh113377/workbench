@@ -180,6 +180,8 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/logs", s.guard(s.handleLogs))
 	mux.HandleFunc("/api/metrics", s.guard(s.handleMetrics))
 	mux.HandleFunc("/api/failures", s.guard(s.handleFailures))
+	// P1-3：Prometheus 文本格式指标导出（外部监控系统直抓），与 /api/metrics 同源同口径。
+	mux.HandleFunc("/metrics", s.guard(s.handleMetricsProm))
 	mux.HandleFunc("/api/autonomy", s.guard(s.handleAutonomySummary))
 	mux.HandleFunc("/api/autonomy/decisions", s.guard(s.handleAutonomyDecisions))
 	mux.HandleFunc("/api/autonomy/goal", s.guard(s.handleAutonomyGoalSet))

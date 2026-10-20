@@ -7,10 +7,31 @@ import (
 	"time"
 
 	"workbench/internal/config"
+	"workbench/internal/executor"
 	"workbench/internal/model"
+	"workbench/internal/ratelimit"
 	"workbench/internal/store"
 	"workbench/internal/templates"
 )
+
+// noopTestRunner 是空执行器：返回空文本，让语义层走 fail-open（不建任务目录、
+// 不拉子进程）。判据见 newTestEngine 的注释。
+//
+// 它同时实现 SetLimiter/LimiterSnapshot，**故意与真实 *executor.Runner 的能力面对齐**：
+// 测试桩缺能力面时，依赖该能力面的判据会拿零值 —— 而历史上 limiter_snapshot_test.go
+// 对不支持的桩直接 t.Skip，把"闸门从未接线"（D9）洗成"本用例不适用"。
+// 桩具备能力面后，装不上就是真装不上，判红可信、不得跳过。
+type noopTestRunner struct {
+	lim *ratelimit.Limiter
+}
+
+func (s *noopTestRunner) Run(ctx context.Context, task *model.Task, modelID string) (*executor.Result, error) {
+	return &executor.Result{}, nil
+}
+func (s *noopTestRunner) UpdateConfig(config.ExecutorConfig)  {}
+func (s *noopTestRunner) SetLimiter(l *ratelimit.Limiter)     { s.lim = l }
+func (s *noopTestRunner) LimiterSnapshot() ratelimit.Snapshot { return s.lim.Snapshot() }
+func (s *noopTestRunner) AttachHooks(h *executor.Hooks)       {}
 
 func newTestEngine(t *testing.T) (*Engine, *store.Store, config.Layout) {
 	t.Helper()
@@ -38,6 +59,14 @@ func newTestEngine(t *testing.T) (*Engine, *store.Store, config.Layout) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	// 默认注入空执行器（D7 的第二半，2026-10-20）：
+	// 引擎构造期的 runner 是**真实**执行器，而 completeTask→postProcess 的语义子任务
+	// （summary-*/critique-*）现在与引擎共用同一个执行器（judge 不再自造）。
+	// 于是凡是直接调 completeTask 的用例都会真的拉起 DSH 子进程 —— 实测取证：
+	// t.TempDir 残留 tasks/summary-task-done-e2e/events.jsonl，Windows 下
+	// TempDir RemoveAll 报 "used by another process"，engine 包判红。
+	// 需要真实执行路径的用例自己 SetRunner 覆盖即可。
+	e.SetRunner(&noopTestRunner{})
 	e.ReloadConfig()
 	// WAL 文件是长期打开的句柄：测试结束时必须先关闭，否则 t.TempDir 的
 	// RemoveAll 在 Windows 上会因文件被占用而失败（现场 28 个用例集体假红）。

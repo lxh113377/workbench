@@ -83,6 +83,15 @@ type Engine struct {
 	// rateLimit 记录连续限流次数（用于整池冷却的指数退避），rateLimitMu 保护它。
 	rateLimitMu sync.Mutex
 	rateLimit   rateLimitState
+	// pendingWarn 缓存**构造期**的降级原因（2026-10-20 实测缺陷 D12）。
+	//
+	// 问题形态：New() 里 e.log 先是 Nop，而 main.go 是在 New() **返回之后**才
+	// SetLogger(logger)。于是构造期所有"失败只告警不阻断"的告警（审计文件打不开、
+	// 自主子系统初始化失败）写进 io.Discard —— 永久消失。现场表现为自主链路没起来、
+	// 越权审计文件一直是空的，但日志与面板里一条原因都查不到，只能靠猜。
+	// 这里先缓冲，SetLogger 时一次性冲刷；未注入日志器时保持零输出（库默认语义不变）。
+	pendingWarnMu sync.Mutex
+	pendingWarn   []pendingWarnRecord
 	// probeSuppressor 是"限流时暂停模型探测"的回调（由 main 注入，可为 nil）。
 	probeSuppressorMu sync.RWMutex
 	probeSuppressor   func(seconds int, reason string)
@@ -122,16 +131,26 @@ func New(layout config.Layout, cstore *config.Store, st *store.Store, reg *templ
 		ws:     workspace.New(layout.DataRoot, layout.Root, cfg.Workspace),
 	}
 	// 工作目录审计：允许/拒绝都落盘，越权尝试可事后复核（打开失败只告警不阻断）。
+	// L6 接线收口（D12）：改造前 aerr 被直接丢掉，"越权审计没开"完全不可见 ——
+	// 面板显示 external 模式正常，但 workspace-audit.jsonl 始终为空，事后复核无从谈起。
 	if audit, aerr := workspace.OpenAudit(layout.WorkspaceAuditFile); aerr == nil {
 		e.ws.SetAudit(audit)
+	} else {
+		e.warnDeferred("工作目录越权审计未启用（external 模式的写越界将无留痕）", "err", aerr.Error(), "file", layout.WorkspaceAuditFile)
 	}
 	// 外部目录模式在构造期就要把运行层沙箱放行位同步给执行器（热更新见 ReloadConfig），
 	// 并把"采集工作目录上下文"的钩子挂上去（external 模式下注入 prompt）。
 	e.wireWorkspaceRunner()
 	e.applyWorkspaceMode()
+	// 语义层（自评/摘要/判分）必须与引擎用同一个执行器（2026-10-20 实测缺陷 D7）：
+	// 改造前 judge.run() 每次自己 executor.New(...)，语义子任务于是绕过引擎的
+	// FailoverRunner（模型故障转移+车道健康度）与全局限速闸门，单测里还绕过
+	// SetRunner 注入的假执行器 —— 直接后果是 go test 会真的拉起 DSH 子进程。
+	e.sem.SetRunner(e.runner)
 	e.retryPol = buildRetryPolicy(cfg.Executor)
 	// 自主子系统：初始化失败只降级，不阻断引擎构造。
-	e.log = logging.Nop()
+	// 这里**不能**重设 e.log = logging.Nop()（改造前有这行）：结构体初始化已把 log
+	// 设为 Nop，再设一次等于把 SetLogger 之前的缓冲打回零输出（缺陷 D12）。
 	e.initAutonomy()
 	return e, nil
 }
@@ -146,7 +165,45 @@ func (e *Engine) SetLogger(lg *logging.Logger) {
 	}
 	// 统一打上 component=engine：面板与采集侧可据此过滤，不必逐条猜来源。
 	e.log = lg.At("engine")
-	if r, ok := e.runner.(*executor.Runner); ok {
+	e.flushPendingWarn()
+	e.attachAttemptLogging()
+}
+
+// pendingWarnRecord 是一条构造期降级原因。
+type pendingWarnRecord struct {
+	msg string
+	kv  []any
+}
+
+// warnDeferred 记录"不阻断但必须可见"的降级原因。
+//
+// 用法边界：只用于 New() 及其调用的构造期函数。运行期直接用 e.log.Warn ——
+// 那时日志器已装好，缓冲反而推迟可见性。
+func (e *Engine) warnDeferred(msg string, kv ...any) {
+	e.pendingWarnMu.Lock()
+	e.pendingWarn = append(e.pendingWarn, pendingWarnRecord{msg: msg, kv: kv})
+	e.pendingWarnMu.Unlock()
+}
+
+// flushPendingWarn 把构造期缓冲的降级原因写进真实日志器（SetLogger 时调用一次）。
+// 冲刷后清空：重复 SetLogger 不得把同一条原因写两遍。
+func (e *Engine) flushPendingWarn() {
+	e.pendingWarnMu.Lock()
+	pending := e.pendingWarn
+	e.pendingWarn = nil
+	e.pendingWarnMu.Unlock()
+	for _, p := range pending {
+		e.log.Warn(p.msg, p.kv...)
+	}
+}
+
+// attachAttemptLogging 把「尝试开始/尝试结束」日志挂成执行器钩子（L5 收敛）。
+//
+// 改造前的形态 e.runner.(*executor.Runner) 在接口里带具体类型，等于没脱离结构体：
+// main.go 用 FailoverRunner 包住真实执行器后再 SetRunner，这条断言就不匹配，
+// 尝试日志对模型池路径静默失效（功能正常、只是没日志，运行期发现不了）。
+// 现在沿 Inner() 链找 AttachHooks 能力；装不上也不报错（钩子是观测面，不影响执行）。
+func (e *Engine) attachAttemptLogging() {
 		hooks := executor.NewHooks(
 			[]executor.BeforeRunFunc{func(ctx context.Context, task *model.Task, modelID string) error {
 				e.log.Info("尝试开始", logging.Redact([]any{
@@ -174,9 +231,8 @@ func (e *Engine) SetLogger(lg *logging.Logger) {
 				})...)
 			}},
 		)
-		r.SetHooks(hooks)
+	attachHooksToRunner(e.runner, hooks)
 	}
-}
 
 // SetRunner 替换执行器实现（P1-2 接口化的直接收益：可注入假执行器做单测）。
 func (e *Engine) SetRunner(r executor.RunnerContract) {
@@ -185,8 +241,22 @@ func (e *Engine) SetRunner(r executor.RunnerContract) {
 		// 换执行器后必须重新挂工作目录钩子与沙箱开关，否则 external 模式会静默失效。
 		e.wireWorkspaceRunner()
 		e.applyWorkspaceMode()
+		// 语义层跟着换（D7）：main.go 在这里才把 FailoverRunner 装上来，不同步的话
+		// 构造期注入的执行器会继续留在语义层上，限速与故障转移照样被绕开。
+		e.sem.SetRunner(r)
+		// 换执行器后重装限速闸门（D9）：闸门挂在装饰器链最内层，只换外层不重装时，
+		// 新链若没有已装闸门的内层就退化成「面板显示限速、实际不限速」。
+		e.applyRateLimit(e.cstore.Get().Executor)
 	}
 }
+
+// SetSemanticRunner 单独替换语义层（自评/摘要/判分）使用的执行器。
+//
+// 与 SetRunner 的区别：SetRunner 换任务主链路执行器并同步钩子/沙箱开关；这里只影响
+// 语义子任务。用途：① 生产上语义层可用不同车道；② 测试里注入桩执行器，防止单测把
+// 真实 DSH 子进程拉起来（实测一次 go test 遗留 20+ 个子进程，并把 t.TempDir 的文件
+// 占用成 engine 包假红）。
+func (e *Engine) SetSemanticRunner(r executor.RunnerContract) { e.sem.SetRunner(r) }
 
 // Runner 返回当前执行器实现（模型池装配故障转移装饰器时需要拿到底层实例）。
 func (e *Engine) Runner() executor.RunnerContract { return e.runner }
@@ -480,6 +550,7 @@ func (e *Engine) Recover() error {
 	e.gen.UpdateConfig(cfg.Chain)
 	e.sem.UpdateConfig(cfg.Executor)
 	e.runner.UpdateConfig(cfg.Executor)
+	e.applyRateLimit(cfg.Executor)
 	e.retryPolMu.Lock()
 	e.retryPol = buildRetryPolicy(cfg.Executor)
 	e.retryPolMu.Unlock()
@@ -1573,6 +1644,9 @@ func (e *Engine) ReloadConfig() {
 	e.gen.UpdateConfig(cfg.Chain)
 	e.sem.UpdateConfig(cfg.Executor)
 	e.runner.UpdateConfig(cfg.Executor)
+	// 限速闸门必须在每次热更新时重算（D9）：改配置里的 requestsPerMinute 要真的
+	// 改变发出的请求速率，而不是只改面板上那行读数。
+	e.applyRateLimit(cfg.Executor)
 	e.retryPolMu.Lock()
 	e.retryPol = buildRetryPolicy(cfg.Executor)
 	e.retryPolMu.Unlock()

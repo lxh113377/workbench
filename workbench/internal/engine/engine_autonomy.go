@@ -39,7 +39,10 @@ func (e *Engine) initAutonomy() {
 	st, err := autonomy.OpenStore(e.layout.AutonomyFile("goals.json"), e.layout.AutonomyFile("decisions.jsonl"))
 	if err != nil {
 		e.autonomy = nil
-		e.log.Warn("自主子系统初始化失败，已降级为固定模板模式", "err", err.Error())
+		// 构造期用 warnDeferred（缺陷 D12）：此处 e.log 还是 Nop（main 在 New()
+		// 返回后才 SetLogger），直接 Warn 会写进 io.Discard —— 自主链路没起来但
+		// 日志里一条原因都没有，只能靠猜。缓冲后由 SetLogger 冲刷出来。
+		e.warnDeferred("自主子系统初始化失败，已降级为固定模板模式", "err", err.Error())
 		return
 	}
 	e.autonomy = autonomy.NewManager(st, func() config.AutonomyConfig {

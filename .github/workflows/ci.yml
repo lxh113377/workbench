@@ -90,7 +90,19 @@ jobs:
           $exe = "dist/workbench.exe"
           if (-not (Test-Path $exe)) { throw "构建产物不存在: $exe" }
           $size = (Get-Item $exe).Length
-          if ($size -lt 3MB -or $size -gt 40MB) { throw "产物大小异常: $size bytes" }
+          # 体积上界改为引用基线口径（docs/benchmark/perf-baseline.json 的 exeMaxBytes），不再硬编码 40MB。
+          # 基线读不到时**退回原硬编码 40MB 并告警**：本步骤不把「没读到基线」当成产物不合格 ——
+          # 那种情形由下一步 "Perf baseline gate" 判 rc=2 UNVERIFIED，三态各归各位（口径见 docs/benchmark/性能基线口径.md）。
+          $maxBytes = 40MB
+          $bl = "docs/benchmark/perf-baseline.json"
+          if (Test-Path $bl) {
+            try {
+              $v = ([IO.File]::ReadAllText($bl) | ConvertFrom-Json).exeMaxBytes
+              if ($v -and $v -gt 0) { $maxBytes = [long]$v } else { Write-Warning "基线 exeMaxBytes 为 null/非法，退回 40MB（体积上界未被基线约束）" }
+            } catch { Write-Warning "基线解析失败，退回 40MB: $($_.Exception.Message)" }
+          } else { Write-Warning "缺 docs/benchmark/perf-baseline.json，退回 40MB" }
+          $maxMB = [math]::Round($maxBytes / 1MB, 2)
+          if ($size -lt 3MB -or $size -gt $maxBytes) { throw "产物大小异常: $size bytes（区间 3MB..${maxMB}MB，上界取自 perf-baseline.json）" }
           # EXE 是 GUI 子系统（-H=windowsgui）：CI 无控制台会话时 stdout 捕获可能为空或退出码非零，
           # 本机有控制台则正常。--version 作为「能跑起来」探针，输出经 Out-String 兜底；
           # 退出码非零仅告警（GUI 程序在 headless CI 的常见行为），存在性/大小/版本/SHA256 由 build.ps1 6/6 段已硬校验。
@@ -98,6 +110,22 @@ jobs:
           try { $ver = (& $exe --version 2>&1 | Out-String).Trim() } catch { $ver = "(输出捕获失败)" }
           if ($ver -and $ver -notmatch "workbench") { Write-Warning "--version 输出异常: $ver" }
           Write-Host "产物校验通过: $size bytes; --version: $ver"
+
+      - name: Perf baseline gate
+        shell: pwsh
+        # 对标 temporal/river 的 bench/产物断言进 CI：把 docs/benchmark/WorkBench-开源对标报告.md §3.5
+        # 那批「手工单次读数」变成有数据件、有判据、有退出码的护栏（知识盲区 B8 / 学习计划 L8）。
+        # 判据源 = docs/benchmark/perf-baseline.json；口径、取证命令、上界推导见 docs/benchmark/性能基线口径.md。
+        # 三态（tests/check_perf.ps1 的约定，与 check_subsystem / check_no_shrink 同风格）：
+        #   0=PASS / 1=FAIL（超出基线上界）/ 2=UNVERIFIED（产物或基线缺失、解析失败、一项判定都没做成）。
+        # rc=2 在这里**判红**：基线文件是本仓受控数据件，CI 里取不到就是「护栏静默失效」——
+        # 与 setup/build.ps1 对子系统校验器「不在就内联自证，而不是跳过」同一立场。
+        # 本步骤默认只判体积上界；运行期读数（首页 P95/常驻内存/句柄）因基线是本机取证而显式 SKIP，
+        # 不在 runner 上冒充判定（避免误报把整个护栏的信任打掉）。
+        run: |
+          ./tests/check_perf.ps1 -Exe dist/workbench.exe
+          if ($LASTEXITCODE -eq 1) { throw "性能基线门禁未通过：产物超出 perf-baseline.json 的上界（见上方 CHECK 行）" }
+          if ($LASTEXITCODE -ne 0) { throw "性能基线无法判定（UNVERIFIED rc=$LASTEXITCODE）：产物或基线数据件缺失/解析失败 —— 护栏没跑成，不等于性能合格" }
 
       - name: Upload EXE
         uses: actions/upload-artifact@v4

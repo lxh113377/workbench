@@ -14,10 +14,12 @@ import (
 func TestRateLimiterSnapshotReflectsWiring(t *testing.T) {
 	e, _, _ := newTestEngine(t)
 
-	// 未装闸门：应返回零值（表示不限速）
+	// 新建引擎已按配置装好闸门（D9 修复，2026-10-20）：改造前这里断言「未装闸门=零值」，
+	// 把「生产从未接线」这个缺陷当成了正确行为 —— requestsPerMinute=20 是装饰品，
+	// 面板读数为零恰好掩盖了「限速没在工作」。现在读数必须非零。
 	s := e.RateLimiterSnapshot()
-	if s.RatePerSecond != 0 || s.Burst != 0 {
-		t.Fatalf("未装闸门时快照应为零值: %+v", s)
+	if s.RatePerSecond <= 0 {
+		t.Fatalf("装配后限速快照不应为零值: %+v（零值=闸门又没接上，D9 回归）", s)
 	}
 
 	// 装上闸门后：快照必须如实反映速率与容量

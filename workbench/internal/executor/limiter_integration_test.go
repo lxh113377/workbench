@@ -59,8 +59,21 @@ func TestRunnerLimiterThrottlesRequests(t *testing.T) {
 	}
 }
 
-// TestRunnerNilLimiterNoDelay 未装限流器时应无额外延迟（向后兼容）。
+// TestRunnerNilLimiterNoDelay 未装限流器时不应有额外延迟（向后兼容）。
+//
+// 判据改法（2026-10-20 实测）：原先断言"单次 Run < 2 秒"，但全量并行跑
+// （go test ./...）时实测 4.12 秒而判红 —— 那 4 秒不是限流等待，而是
+// Run 里的固定环境成本：linkDir 要 spawn cmd.exe 建 junction + 建目录 +
+// 写覆盖层 + 开事件文件，20 多个包并行时宿主排队。绝对时限把"宿主慢"
+// 误判成"限流器在工作"，属反模式（判据测错了对象）。
+//
+// 现在测**相对差**：令牌桶的等待只发生在取令牌时，满桶的首次调用立即通过，
+// 第二次才可能被 rate 拖住。所以"第二次不比第一次慢"正是"没有闸门"的
+// 充要观测面；宿主整体变慢时两次一起变慢，判据不受影响。
 func TestRunnerNilLimiterNoDelay(t *testing.T) {
+	if testing.Short() {
+		t.Skip("跳过耗时的限流实证测试")
+	}
 	dir := t.TempDir()
 	layout, _ := config.BuildLayout(dir, "")
 	_ = layout.EnsureDirs()
@@ -73,11 +86,19 @@ func TestRunnerNilLimiterNoDelay(t *testing.T) {
 	if s := r.LimiterSnapshot(); s.RatePerSecond != 0 {
 		t.Fatalf("nil 限流器快照应为零值: %+v", s)
 	}
-	start := time.Now()
-	task := &model.Task{ID: "no-limit", Title: "无限流", TimeoutMin: 1}
-	_, _ = r.Run(context.Background(), task, "m")
-	if d := time.Since(start); d > 2*time.Second {
-		t.Fatalf("未装限流器时不应有等待: %v", d)
+	measure := func(id string) time.Duration {
+		start := time.Now()
+		_, _ = r.Run(context.Background(), &model.Task{ID: id, Title: "无限流", TimeoutMin: 1}, "m")
+		return time.Since(start)
+	}
+	first := measure("no-limit-1")
+	second := measure("no-limit-2")
+	// 闸门若存在（哪怕速率很宽），第二次必然被令牌补充拖住；nil 时两次同量级。
+	if slack := second - first; slack > time.Second {
+		t.Fatalf("未装限流器却出现额外等待：first=%v second=%v 差=%v", first, second, slack)
+	}
+	if slack := first - second; slack > time.Second {
+		t.Logf("首次反而更慢（冷启动/建 junction 成本）：first=%v second=%v", first, second)
 	}
 }
 

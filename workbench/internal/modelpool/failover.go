@@ -59,6 +59,19 @@ func (f *FailoverRunner) UpdateConfig(cfg config.ExecutorConfig) {
 // 静默失效（切到 external 后仍按项目模式跑），属于运行期难发现的缺陷。
 func (f *FailoverRunner) Inner() executor.RunnerContract { return f.inner }
 
+// AttachHooks 把钩子透传给内层执行器（L5 收敛，2026-10-20）。
+//
+// 没有它时的形态：引擎沿 Inner() 链找 AttachHooks 会在装饰器这层停下（装饰器自己
+// 不实现），于是「尝试开始/尝试结束」的结构化日志对模型池路径静默失效 ——
+// 属运行期发现不了的缺陷（功能正常，只是没日志）。
+func (f *FailoverRunner) AttachHooks(h *executor.Hooks) {
+	if f.inner != nil {
+		if x, ok := f.inner.(interface{ AttachHooks(*executor.Hooks) }); ok {
+			x.AttachHooks(h)
+		}
+	}
+}
+
 // Run 执行一次任务：主模型失败即在内部换模型，成功结果对上层不可见地返回。
 func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID string) (res *executor.Result, runErr error) {
 	if f.inner == nil {
