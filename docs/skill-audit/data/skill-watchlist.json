@@ -1192,8 +1192,8 @@
     {
       "local_skill": "agent-browser",
       "local_skill_md": "D:/global_skills/agent-browser/SKILL.md",
-      "upstream_repo": "browser-use/browser-use",
-      "upstream_path": "skills/qa/SKILL.md",
+      "upstream_repo": "vercel-labs/agent-browser",
+      "upstream_path": "skill-data/core/SKILL.md",
       "ledger": [
         {
           "repo": "browser-use/browser-use",
@@ -1203,7 +1203,7 @@
           "score_total": 7
         }
       ],
-      "recorded_version": "0.13.13: OpenAI browser tools and Cloud fixes",
+      "recorded_version": "v0.39.1",
       "last_checked": "2026-10-20",
       "discovery_query": "agent browser skill agent",
       "candidates": [
@@ -1229,7 +1229,8 @@
           "score_total": 6
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20 轮11 血缘钉回+重基线 v0.39.1（此前登记为相邻件 browser-use）",
+      "upstream_role": "same_origin_upstream(轮11钉回: 并行会话 ff6fb8c8 自述对齐 v0.39.1 skill-data/core；本地38626B vs 上游38018B，差异=两处已留痕本地分叉 fork-provenance.md)"
     },
     {
       "local_skill": "dogfood",

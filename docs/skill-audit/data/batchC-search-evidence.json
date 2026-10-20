@@ -1,0 +1,3359 @@
+{
+ "schema": "batchC-search-evidence-v1",
+ "started": "2026-10-20T09:57:03",
+ "queries": [
+  {
+   "local_skill": "9b-lightworkflow",
+   "query": "9b lightworkflow skill agent",
+   "bytes": 8832,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "A-get-memory",
+   "query": "A get memory skill agent",
+   "bytes": 12080,
+   "total_count": 23,
+   "top": [
+    {
+     "repo": "runtimenoteslabs/cc-rig",
+     "stars": 34,
+     "pushed": "2026-10-03",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "AvivK5498/Golem",
+     "stars": 27,
+     "pushed": "2026-06-22",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "truenorth-lj/adaptive-agent-skill",
+     "stars": 5,
+     "pushed": "2026-04-15",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Skryx-L-A/project-kit",
+     "stars": 2,
+     "pushed": "2026-10-14",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "oliguo/mem-skill",
+     "stars": 1,
+     "pushed": "2026-04-07",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "A-java-problem",
+   "query": "A java problem skill agent",
+   "bytes": 14494,
+   "total_count": 3,
+   "top": [
+    {
+     "repo": "ghorpadeire/java-agent-evals",
+     "stars": 0,
+     "pushed": "2026-09-08",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "sinsine/minecraft-datapack",
+     "stars": 0,
+     "pushed": "2026-10-09",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "amrita-project/Adobe-Certificate",
+     "stars": 0,
+     "pushed": "2026-09-27",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "A-prompt-better",
+   "query": "A prompt better skill agent",
+   "bytes": 28761,
+   "total_count": 16,
+   "top": [
+    {
+     "repo": "gaasher/Agent-Loop-Skills",
+     "stars": 175,
+     "pushed": "2026-06-30",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "haolange/RDC-AgentCaps",
+     "stars": 15,
+     "pushed": "2026-05-02",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "ravi2799/ai-agent-skills",
+     "stars": 3,
+     "pushed": "2026-03-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "recollective-genuseptatretus377/askproof-skill",
+     "stars": 3,
+     "pushed": "2026-10-13",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "EmadMokhtar/skill-evaluator",
+     "stars": 1,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "ai-video-homework-pipeline",
+   "query": "ai video homework pipeline skill agent",
+   "bytes": 6282,
+   "total_count": 1,
+   "top": [
+    {
+     "repo": "itsfedor/esl-automation-suite",
+     "stars": 0,
+     "pushed": "2026-10-12",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "algorithmic-art",
+   "query": "algorithmic art skill agent",
+   "bytes": 19809,
+   "total_count": 7,
+   "top": [
+    {
+     "repo": "Codeptor/ascii-shader-tsx",
+     "stars": 5,
+     "pushed": "2026-03-18",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "Pardesco/algorithmic-art-skill",
+     "stars": 3,
+     "pushed": "2026-09-28",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "veyhthan/anthropic-skills",
+     "stars": 2,
+     "pushed": "2026-08-10",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "Shivam990q/better-than-claude-skills",
+     "stars": 1,
+     "pushed": "2026-09-05",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Xamtastic/AISKILL-anthropics_skills-ALGORITHMIC-ART",
+     "stars": 0,
+     "pushed": "2026-07-10",
+     "license": "Apache-2.0",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "audio-deliverable-pipeline",
+   "query": "audio deliverable pipeline skill agent",
+   "bytes": 8345,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "bigfile-split",
+   "query": "bigfile split skill agent",
+   "bytes": 4113,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "brand-guidelines",
+   "query": "brand guidelines skill agent",
+   "bytes": 2275,
+   "total_count": 23,
+   "top": [
+    {
+     "repo": "Wholiver/swiftui-design-skill",
+     "stars": 209,
+     "pushed": "2026-05-01",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "SpillwaveSolutions/running-marketing-campaigns-agent-skill",
+     "stars": 28,
+     "pushed": "2026-01-02",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "dungnotnull/startup-brand-identity-guidelines-agent-skill",
+     "stars": 5,
+     "pushed": "2026-07-02",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "netresearch/netresearch-branding-skill",
+     "stars": 4,
+     "pushed": "2026-10-19",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "ordinarynerds/brand-book",
+     "stars": 3,
+     "pushed": "2026-07-22",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "browser-voice-call",
+   "query": "browser voice call skill agent",
+   "bytes": 10390,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "byted-bp-cdn-pagesdeploy",
+   "query": "one-click deployment static websites skill agent",
+   "bytes": 8124,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "byted-mediakit-shared",
+   "query": "byted mediakit shared skill agent",
+   "bytes": 10935,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "byted-seedance-video-generate",
+   "query": "byted seedance video generate skill agent",
+   "bytes": 8345,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "byted-seedream-image-generate",
+   "query": "byted seedream image generate skill agent",
+   "bytes": 9031,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "c-cleanup",
+   "query": "c cleanup skill agent",
+   "bytes": 30259,
+   "total_count": 103,
+   "top": [
+    {
+     "repo": "AvdLee/Xcode-Disk-Cleanup-Agent-Skill",
+     "stars": 75,
+     "pushed": "2026-09-14",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "wilgon456/orca-agent-cleanup",
+     "stars": 50,
+     "pushed": "2026-10-14",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "aka-luan/doc-cleanup",
+     "stars": 43,
+     "pushed": "2026-07-14",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "himynameisben/macos-disk-cleanup",
+     "stars": 40,
+     "pushed": "2026-08-06",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "iziqing/-disk-cleaner",
+     "stars": 38,
+     "pushed": "2026-07-17",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "canvas-design",
+   "query": "canvas design skill agent",
+   "bytes": 12416,
+   "total_count": 28,
+   "top": [
+    {
+     "repo": "ZSeven-W/openpencil",
+     "stars": 6283,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "tigerless-labs/design-harness",
+     "stars": 233,
+     "pushed": "2026-09-01",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "nicekate/kate-skills",
+     "stars": 16,
+     "pushed": "2026-07-20",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "MindReset/dot_skill",
+     "stars": 15,
+     "pushed": "2026-10-08",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "adryanmoldokkr32-pixel/anthropics-skills",
+     "stars": 11,
+     "pushed": "2026-05-15",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "chaoshi-admin-inline-edit",
+   "query": "inlineeditform productstab inline edit skill agent",
+   "bytes": 6245,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "chaoshi-image-optimization",
+   "query": "ffmpeg webp srcset imagegen skill agent",
+   "bytes": 24516,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "chaoshi-web-deploy",
+   "query": "cloudflare pages functions wrangler skill agent",
+   "bytes": 57456,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "chart-visualization",
+   "query": "chart visualization skill agent",
+   "bytes": 3395,
+   "total_count": 27,
+   "top": [
+    {
+     "repo": "larashero3-dotcom/lieflat-charts",
+     "stars": 6269,
+     "pushed": "2026-10-15",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "VisActor/skills",
+     "stars": 471,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "caylent/tufte-data-viz",
+     "stars": 226,
+     "pushed": "2026-02-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "alphaparkinc/genpark-natural-language-data-analytics-bi-agent-skill",
+     "stars": 9,
+     "pushed": "2026-08-03",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "tcsenpai/flint-chart-skill",
+     "stars": 4,
+     "pushed": "2026-07-09",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "cloudbase",
+   "query": "cloudbase skill agent",
+   "bytes": 19814,
+   "total_count": 9,
+   "top": [
+    {
+     "repo": "TencentCloudBase/CloudBase-AI-Toolkit",
+     "stars": 1140,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "TencentCloudBase/skills",
+     "stars": 78,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "TencentCloudBase/cloudbase-skills",
+     "stars": 37,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "TencentCloudBase/cloudbase-plugin",
+     "stars": 2,
+     "pushed": "2026-10-19",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "karlgao616-cpu/wechat-miniprogram-cloudbase-skill",
+     "stars": 0,
+     "pushed": "2026-08-24",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "cloudbase-db-optimize",
+   "query": "cloudbase db optimize skill agent",
+   "bytes": 8389,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "codebuddy-chat-web",
+   "query": "codebuddy chat web skill agent",
+   "bytes": 5531,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "coding-agent",
+   "query": "coding agent skill agent",
+   "bytes": 4965,
+   "total_count": 35902,
+   "top": [
+    {
+     "repo": "obra/superpowers",
+     "stars": 302151,
+     "pushed": "2026-10-10",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "affaan-m/ECC",
+     "stars": 284168,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "JuliusBrussee/caveman",
+     "stars": 113680,
+     "pushed": "2026-10-19",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "addyosmani/agent-skills",
+     "stars": 108647,
+     "pushed": "2026-10-13",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Leonxlnx/taste-skill",
+     "stars": 99393,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "consulting-analysis",
+   "query": "consulting analysis skill agent",
+   "bytes": 71678,
+   "total_count": 5,
+   "top": [
+    {
+     "repo": "Skolleigen/Big4Bot",
+     "stars": 4,
+     "pushed": "2026-03-08",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "emdashsmoker/biz-agent-skills",
+     "stars": 0,
+     "pushed": "2026-10-18",
+     "license": "GPL-3.0",
+     "archived": false
+    },
+    {
+     "repo": "CuellarC05/vera-economic-intelligence",
+     "stars": 0,
+     "pushed": "2026-03-11",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "SidneyLYZhang/AnaPPTSkills",
+     "stars": 0,
+     "pushed": "2026-09-30",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "poprjaduhhaa/ai-external-brain",
+     "stars": 0,
+     "pushed": "2026-06-30",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "cross-platform-agent-sync",
+   "query": "junction eval truth constants.json skill agent",
+   "bytes": 4082,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "data-analysis",
+   "query": "data analysis skill agent",
+   "bytes": 8969,
+   "total_count": 225,
+   "top": [
+    {
+     "repo": "aipoch/medical-research-skills",
+     "stars": 1971,
+     "pushed": "2026-09-17",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "LeonChaoX/qinyan-academic-skills",
+     "stars": 967,
+     "pushed": "2026-07-20",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "pseudo-longinus/quant-buddy-skills",
+     "stars": 195,
+     "pushed": "2026-10-16",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "gaasher/Agent-Loop-Skills",
+     "stars": 175,
+     "pushed": "2026-06-30",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "ellie886/Datalume",
+     "stars": 135,
+     "pushed": "2026-09-03",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "data-visualization",
+   "query": "data visualization skill agent",
+   "bytes": 13740,
+   "total_count": 65,
+   "top": [
+    {
+     "repo": "larashero3-dotcom/lieflat-charts",
+     "stars": 6269,
+     "pushed": "2026-10-15",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "markdown-viewer/skills",
+     "stars": 3373,
+     "pushed": "2026-10-05",
+     "license": "CC-BY-4.0",
+     "archived": false
+    },
+    {
+     "repo": "gnurio/tufte-vdqi-plugin",
+     "stars": 310,
+     "pushed": "2026-07-23",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "caylent/tufte-data-viz",
+     "stars": 226,
+     "pushed": "2026-02-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "adammico-lab/adammico-lab",
+     "stars": 10,
+     "pushed": "2026-07-27",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "defuddle",
+   "query": "defuddle skill agent",
+   "bytes": 2608,
+   "total_count": 4,
+   "top": [
+    {
+     "repo": "kepano/obsidian-skills",
+     "stars": 49784,
+     "pushed": "2026-09-15",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "vaaniijones22/defuddle-skill",
+     "stars": 0,
+     "pushed": "2026-09-27",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "SidepoinT/obsidian-all-skill",
+     "stars": 0,
+     "pushed": "2026-08-23",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "stackwalker-wtf/cli-threadreader",
+     "stars": 0,
+     "pushed": "2026-09-10",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "diagram-maker",
+   "query": "diagram maker skill agent",
+   "bytes": 2622,
+   "total_count": 1,
+   "top": [
+    {
+     "repo": "TusharParlikar/doc-maker",
+     "stars": 0,
+     "pushed": "2026-10-01",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "dingtalk-aisearch",
+   "query": "dingtalk aisearch skill agent",
+   "bytes": 9263,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "dingtalk-aitable",
+   "query": "dingtalk aitable skill agent",
+   "bytes": 27002,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "dingtalk-calendar",
+   "query": "dingtalk calendar skill agent",
+   "bytes": 13531,
+   "total_count": 1,
+   "top": [
+    {
+     "repo": "CPsean/dingtalk-meetings-skill",
+     "stars": 0,
+     "pushed": "2026-07-13",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "dingtalk-chat",
+   "query": "dingtalk chat skill agent",
+   "bytes": 9764,
+   "total_count": 5,
+   "top": [
+    {
+     "repo": "zhimaAi/ChatClaw",
+     "stars": 309,
+     "pushed": "2026-05-13",
+     "license": "GPL-3.0",
+     "archived": false
+    },
+    {
+     "repo": "FlyTOmeLight/openclaw-portal",
+     "stars": 1,
+     "pushed": "2026-05-28",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "duffiewiccan103/dingtalk-wukong-skills",
+     "stars": 1,
+     "pushed": "2026-10-12",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "iweb3insight/dingtalk-chat-summary",
+     "stars": 0,
+     "pushed": "2026-05-08",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "impoorvme50/hermes-dingtalk-official",
+     "stars": 0,
+     "pushed": "2026-05-22",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "dingtalk-contact",
+   "query": "dingtalk contact skill agent",
+   "bytes": 9665,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "dingtalk-doc",
+   "query": "dingtalk doc skill agent",
+   "bytes": 12264,
+   "total_count": 2,
+   "top": [
+    {
+     "repo": "D1-2004/dingtalk-doc-multica-sync",
+     "stars": 0,
+     "pushed": "2026-07-16",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "MaxxxDong/ai-pc-daily-memory",
+     "stars": 0,
+     "pushed": "2026-06-21",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "dingtalk-drive",
+   "query": "dingtalk drive skill agent",
+   "bytes": 15639,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "dingtalk-event",
+   "query": "dingtalk event skill agent",
+   "bytes": 10290,
+   "total_count": 1,
+   "top": [
+    {
+     "repo": "CPsean/dingtalk-meetings-skill",
+     "stars": 0,
+     "pushed": "2026-07-13",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "dingtalk-mail",
+   "query": "dingtalk mail skill agent",
+   "bytes": 9591,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "dingtalk-minutes",
+   "query": "dingtalk minutes skill agent",
+   "bytes": 16765,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "dingtalk-misc",
+   "query": "ding agoal openapi hrbrain skill agent",
+   "bytes": 16285,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "dingtalk-shared",
+   "query": "dingtalk shared skill agent",
+   "bytes": 7143,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "dingtalk-todo",
+   "query": "dingtalk todo skill agent",
+   "bytes": 11959,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "dingtalk-wiki",
+   "query": "dingtalk wiki skill agent",
+   "bytes": 13732,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "discover-agent-cli",
+   "query": "electron skill agent",
+   "bytes": 8531,
+   "total_count": 204,
+   "top": [
+    {
+     "repo": "NanmiCoder/cc-haha",
+     "stars": 15078,
+     "pushed": "2026-10-20",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "op7418/CodePilot",
+     "stars": 6503,
+     "pushed": "2026-09-22",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "0xsline/OpenChatCut",
+     "stars": 2539,
+     "pushed": "2026-10-18",
+     "license": "AGPL-3.0",
+     "archived": false
+    },
+    {
+     "repo": "OpenCoworkAI/open-cowork",
+     "stars": 2219,
+     "pushed": "2026-10-13",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "skalesapp/skales",
+     "stars": 2200,
+     "pushed": "2026-10-19",
+     "license": "NOASSERTION",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "doc-coauthoring",
+   "query": "doc coauthoring skill agent",
+   "bytes": 15855,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "docker-e2e-gate",
+   "query": "docker e2e gate skill agent",
+   "bytes": 3598,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "elon-musk-perspective",
+   "query": "elon musk perspective skill agent",
+   "bytes": 23684,
+   "total_count": 1,
+   "top": [
+    {
+     "repo": "Aryia-Behroziuan/References",
+     "stars": 74,
+     "pushed": "2022-09-02",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "fenjue-lessons-hitrate",
+   "query": "fenjue lessons hitrate skill agent",
+   "bytes": 3275,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "fenjue-memory-audit",
+   "query": "fenjue memory audit skill agent",
+   "bytes": 9768,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "figma",
+   "query": "figma skill agent",
+   "bytes": 3210,
+   "total_count": 261,
+   "top": [
+    {
+     "repo": "plugin87/ux-ui-agent-skills",
+     "stars": 2402,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "figma/community-resources",
+     "stars": 857,
+     "pushed": "2026-07-17",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "sleekdotdesign/agent-skills",
+     "stars": 589,
+     "pushed": "2026-10-05",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "referodesign/refero_skill",
+     "stars": 319,
+     "pushed": "2026-10-15",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "skydashnet/material-design-3-ui-skill",
+     "stars": 151,
+     "pushed": "2026-09-30",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "find-skills",
+   "query": "find skills skill agent",
+   "bytes": 2674,
+   "total_count": 957,
+   "top": [
+    {
+     "repo": "davepoon/buildwithclaude",
+     "stars": 3654,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Oldcircle/geo-sleuth",
+     "stars": 3483,
+     "pushed": "2026-10-18",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Jakeschincariol/youtube-agent-skill",
+     "stars": 1889,
+     "pushed": "2026-09-16",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "zubair-trabzada/ai-sales-team-claude",
+     "stars": 1449,
+     "pushed": "2026-03-27",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "utkusen/sast-skills",
+     "stars": 1342,
+     "pushed": "2026-04-08",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "frontend-design",
+   "query": "create distinctive production-grade frontend skill agent",
+   "bytes": 10198,
+   "total_count": 1,
+   "top": [
+    {
+     "repo": "Mine77/lovable-design-skills",
+     "stars": 2,
+     "pushed": "2026-05-21",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "frontend-skill",
+   "query": "frontend skill skill agent",
+   "bytes": 7711,
+   "total_count": 1014,
+   "top": [
+    {
+     "repo": "Leonxlnx/taste-skill",
+     "stars": 99396,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "zarazhangrui/frontend-slides",
+     "stars": 30926,
+     "pushed": "2026-06-23",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "nateherkai/scroll-craft",
+     "stars": 3706,
+     "pushed": "2026-09-30",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "oil-oil/oil-ui",
+     "stars": 1850,
+     "pushed": "2026-10-18",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Anionex/agent-vision-toolkit",
+     "stars": 1237,
+     "pushed": "2026-10-13",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "frontend-slides",
+   "query": "frontend slides skill agent",
+   "bytes": 19694,
+   "total_count": 9,
+   "top": [
+    {
+     "repo": "zarazhangrui/frontend-slides",
+     "stars": 30926,
+     "pushed": "2026-06-23",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "yinqd3/workbuddy-skills",
+     "stars": 13,
+     "pushed": "2026-06-03",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "yoruuuchan/yoru-design-systems",
+     "stars": 2,
+     "pushed": "2026-10-09",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "viniciusouz/frontend-slides",
+     "stars": 0,
+     "pushed": "2026-08-23",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "piyush-gambhir/frontend-slides",
+     "stars": 0,
+     "pushed": "2026-10-12",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "github",
+   "query": "interact using cli. issue skill agent",
+   "bytes": 5124,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "gsap",
+   "query": "gsap animation reference hyperframes. skill agent",
+   "bytes": 7816,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "healthcare-cdss-patterns",
+   "query": "healthcare cdss patterns skill agent",
+   "bytes": 9501,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "healthcare-emr-patterns",
+   "query": "healthcare emr patterns skill agent",
+   "bytes": 6786,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "healthcare-eval-harness",
+   "query": "healthcare eval harness skill agent",
+   "bytes": 7889,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "hermes-installer",
+   "query": "hermes hermes-setup.exe install didn skill agent",
+   "bytes": 2512,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "hook-analyzer-skill",
+   "query": "hook analyzer skill skill agent",
+   "bytes": 5471,
+   "total_count": 4,
+   "top": [
+    {
+     "repo": "Hemanthdamineni/latentcode",
+     "stars": 1,
+     "pushed": "2026-09-18",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "Mohdhamouda/Skills-Auditor-Hooks-Gap-Analyzer",
+     "stars": 0,
+     "pushed": "2026-05-18",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "shurijoc/harness-gap-analyzer",
+     "stars": 0,
+     "pushed": "2026-06-21",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "0xb007ab1e/claude-analyzer",
+     "stars": 0,
+     "pushed": "2026-06-14",
+     "license": "0BSD",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "html-to-docx-win-fix",
+   "query": "html to docx win fix skill agent",
+   "bytes": 4554,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "hyperframes",
+   "query": "hyperframes skill agent",
+   "bytes": 33071,
+   "total_count": 140,
+   "top": [
+    {
+     "repo": "nexu-io/html-anything",
+     "stars": 9181,
+     "pushed": "2026-10-13",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "Tejashmakwana/motionmaxxing",
+     "stars": 910,
+     "pushed": "2026-10-06",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "zhuyansen/awesome-claude-video-skills",
+     "stars": 735,
+     "pushed": "2026-10-19",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "geekjourneyx/hyperframes-motion-director",
+     "stars": 465,
+     "pushed": "2026-07-26",
+     "license": "AGPL-3.0",
+     "archived": false
+    },
+    {
+     "repo": "Bomx/super-video-maker-skill",
+     "stars": 316,
+     "pushed": "2026-08-09",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "hyperframes-cli",
+   "query": "hyperframes cli skill agent",
+   "bytes": 8989,
+   "total_count": 11,
+   "top": [
+    {
+     "repo": "manat0912/HyperFrames-Studio",
+     "stars": 26,
+     "pushed": "2026-06-19",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "Karnaf0katom/taskfilm",
+     "stars": 9,
+     "pushed": "2026-10-18",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "shiftynick/motion-mania",
+     "stars": 1,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "JimmySadek/kit-to-clip",
+     "stars": 1,
+     "pushed": "2026-10-09",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "leeguooooo/motion-use",
+     "stars": 1,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "hyperframes-media",
+   "query": "hyperframes media skill agent",
+   "bytes": 15189,
+   "total_count": 5,
+   "top": [
+    {
+     "repo": "zhouyuechuan2025-ui/ai-self-media-video-packaging-skill",
+     "stars": 41,
+     "pushed": "2026-10-14",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "manat0912/HyperFrames-Studio",
+     "stars": 26,
+     "pushed": "2026-06-19",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "xiaojiesssx/ai-self-media-video-packaging-skill",
+     "stars": 1,
+     "pushed": "2026-08-21",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "ANVEAI/motion-pack",
+     "stars": 1,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "nicappave/hyperframes-media-skills",
+     "stars": 0,
+     "pushed": "2026-10-08",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "hyperframes-registry",
+   "query": "hyperframes registry skill agent",
+   "bytes": 4803,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "ican-deploy",
+   "query": "ican python flask pythonanywhere skill agent",
+   "bytes": 10286,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "ican-frontend-design-system",
+   "query": "ican frontend design system skill agent",
+   "bytes": 59528,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "internal-comms",
+   "query": "resources help write kinds skill agent",
+   "bytes": 1551,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "json-canvas",
+   "query": "json canvas skill agent",
+   "bytes": 7664,
+   "total_count": 10,
+   "top": [
+    {
+     "repo": "kepano/obsidian-skills",
+     "stars": 49784,
+     "pushed": "2026-09-15",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "gusbavia/pbi-theme",
+     "stars": 8,
+     "pushed": "2026-06-11",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "samansalari/Comfy-workflow-builder",
+     "stars": 2,
+     "pushed": "2026-07-21",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "llwwds/flow_canvas_skill",
+     "stars": 1,
+     "pushed": "2026-07-21",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Shoberman2/schoolbridge",
+     "stars": 1,
+     "pushed": "2026-08-18",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "knowledge-capture",
+   "query": "knowledge capture skill agent",
+   "bytes": 7377,
+   "total_count": 34,
+   "top": [
+    {
+     "repo": "0xranx/OpenContext",
+     "stars": 1269,
+     "pushed": "2026-06-16",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "pskoett/self-improving-agent",
+     "stars": 772,
+     "pushed": "2026-10-10",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "Fergana-Labs/stash",
+     "stars": 338,
+     "pushed": "2026-10-16",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "zhixiongbai960-design/capture-daily-insights",
+     "stars": 17,
+     "pushed": "2026-10-11",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "jrswab/slipbot",
+     "stars": 16,
+     "pushed": "2026-07-13",
+     "license": "GPL-3.0",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "local-asr",
+   "query": "local asr skill agent",
+   "bytes": 4908,
+   "total_count": 13,
+   "top": [
+    {
+     "repo": "XimilalaXiang/DeLive",
+     "stars": 274,
+     "pushed": "2026-10-11",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "emstudio010-hub/video-localize-dub",
+     "stars": 2,
+     "pushed": "2026-10-02",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "zc790-hub/funasr-transcribe",
+     "stars": 2,
+     "pushed": "2026-07-08",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "xichow0663-gif/yt-research-skill",
+     "stars": 1,
+     "pushed": "2026-09-11",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "cpro1868/video-agent",
+     "stars": 1,
+     "pushed": "2026-07-01",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "local-computer-use",
+   "query": "local computer use skill agent",
+   "bytes": 5863,
+   "total_count": 13,
+   "top": [
+    {
+     "repo": "NanmiCoder/cc-haha",
+     "stars": 15078,
+     "pushed": "2026-10-20",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "skalesapp/skales",
+     "stars": 2200,
+     "pushed": "2026-10-19",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "chen0416ccc-cpu/codex-windows-fast-patch-skill",
+     "stars": 1297,
+     "pushed": "2026-10-19",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "positer/Newmark-Agent",
+     "stars": 3,
+     "pushed": "2026-10-17",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "a1ansa1a/Search-Skills-Pro",
+     "stars": 2,
+     "pushed": "2026-04-23",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "local-img2img",
+   "query": "local img2img skill agent",
+   "bytes": 3786,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "local-mineru",
+   "query": "local mineru skill agent",
+   "bytes": 5755,
+   "total_count": 3,
+   "top": [
+    {
+     "repo": "IgorOberon/translate-pdf-latex",
+     "stars": 11,
+     "pushed": "2026-10-11",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "danmackinlay/pdf-ingest-skill",
+     "stars": 2,
+     "pushed": "2026-06-15",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Lucent-Snow/mineru-skill",
+     "stars": 0,
+     "pushed": "2026-03-26",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "local-ocr-npu",
+   "query": "local ocr npu skill agent",
+   "bytes": 6319,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "local-realtime-translator",
+   "query": "local realtime translator skill agent",
+   "bytes": 8241,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "local-screenshot-qa",
+   "query": "local screenshot qa skill agent",
+   "bytes": 5775,
+   "total_count": 1,
+   "top": [
+    {
+     "repo": "K-kiron/RageClick",
+     "stars": 0,
+     "pushed": "2026-09-23",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "local-tts",
+   "query": "local tts skill agent",
+   "bytes": 6569,
+   "total_count": 31,
+   "top": [
+    {
+     "repo": "yoav0gal/agent-voice",
+     "stars": 11,
+     "pushed": "2026-10-16",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "zanezhao0708/voxagent",
+     "stars": 10,
+     "pushed": "2026-08-17",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "tashisleepy/tashi-workstation",
+     "stars": 5,
+     "pushed": "2026-04-26",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "ammar-hasan/narova",
+     "stars": 4,
+     "pushed": "2026-10-07",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "retrogtx/ai-marketing-videos",
+     "stars": 3,
+     "pushed": "2026-09-24",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "local-txt2img",
+   "query": "local txt2img skill agent",
+   "bytes": 5268,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "local-vram",
+   "query": "local vram skill agent",
+   "bytes": 5691,
+   "total_count": 3,
+   "top": [
+    {
+     "repo": "Maciejdziuba/local-ai-rig-planner",
+     "stars": 7,
+     "pushed": "2026-06-24",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "smeuser/AlexaVoiceAgent",
+     "stars": 0,
+     "pushed": "2026-08-18",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "lazyv0rtex/Ollama-HUb",
+     "stars": 0,
+     "pushed": "2026-04-12",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "mcp-builder",
+   "query": "mcp builder skill agent",
+   "bytes": 9132,
+   "total_count": 105,
+   "top": [
+    {
+     "repo": "Appllama/appllama-skills",
+     "stars": 2895,
+     "pushed": "2026-09-06",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "aiagenta2z/onekey-gateway",
+     "stars": 51,
+     "pushed": "2026-04-10",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "keysersoose/claude-agent-builder",
+     "stars": 45,
+     "pushed": "2026-03-06",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Array-Ventures/coworker",
+     "stars": 43,
+     "pushed": "2026-02-25",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "danielrosehill/Israeli-AI",
+     "stars": 18,
+     "pushed": "2026-10-15",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "mcporter",
+   "query": "mcporter skill agent",
+   "bytes": 1741,
+   "total_count": 4,
+   "top": [
+    {
+     "repo": "Pluto-Mo/agent-reach-custom-config",
+     "stars": 0,
+     "pushed": "2026-08-21",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "AkaraChen/agent-plugin-mcp",
+     "stars": 0,
+     "pushed": "2026-09-17",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "sprintberlin/openclaw-zoho-social-mcp-skill",
+     "stars": 0,
+     "pushed": "2026-09-21",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "sprintberlin/openclaw-zoho-workdrive-mcp-skill",
+     "stars": 0,
+     "pushed": "2026-09-21",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "meeting-intelligence",
+   "query": "meeting intelligence skill agent",
+   "bytes": 11339,
+   "total_count": 8,
+   "top": [
+    {
+     "repo": "alphaparkinc/genpark-agent-meeting-intelligence-action-extractor-skill",
+     "stars": 7,
+     "pushed": "2026-09-28",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "Alpha-Park/genpark-agent-meeting-intelligence-action-extractor-skill",
+     "stars": 7,
+     "pushed": "2026-09-28",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "lixiuyin/meeting-agent",
+     "stars": 4,
+     "pushed": "2026-09-22",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "tmolavi/hermes-meeting-intelligence",
+     "stars": 0,
+     "pushed": "2026-10-03",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "fengyiqicoder/m365-meeting-prep",
+     "stars": 0,
+     "pushed": "2026-05-20",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "nano-pdf",
+   "query": "nano pdf skill agent",
+   "bytes": 1158,
+   "total_count": 1,
+   "top": [
+    {
+     "repo": "iizcm/nano-pdf-skill",
+     "stars": 0,
+     "pushed": "2026-07-26",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "no-manual-steps",
+   "query": "no manual steps skill agent",
+   "bytes": 3450,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "node-inspect-debugger",
+   "query": "node inspect debugger skill agent",
+   "bytes": 3867,
+   "total_count": 1,
+   "top": [
+    {
+     "repo": "Colgate13/claude-cdp-debugger",
+     "stars": 2,
+     "pushed": "2026-05-12",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "notion-cli",
+   "query": "notion cli skill agent",
+   "bytes": 2411,
+   "total_count": 17,
+   "top": [
+    {
+     "repo": "jgorostegui/notion-agent-cli",
+     "stars": 3,
+     "pushed": "2026-04-14",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "iagooar/notion-agent-connector",
+     "stars": 2,
+     "pushed": "2026-03-17",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "ethanolivertroy/mischief-managed",
+     "stars": 2,
+     "pushed": "2026-06-26",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "agentculture/notion-agent",
+     "stars": 1,
+     "pushed": "2026-08-30",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "baixiaodev/notion-pro-skill",
+     "stars": 1,
+     "pushed": "2026-03-23",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "obsidian-bases",
+   "query": "obsidian bases skill agent",
+   "bytes": 13067,
+   "total_count": 19,
+   "top": [
+    {
+     "repo": "kepano/obsidian-skills",
+     "stars": 49784,
+     "pushed": "2026-09-15",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Totoro-qaq/Cobsidian",
+     "stars": 13,
+     "pushed": "2026-08-17",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Easonnotsing/VaultForge",
+     "stars": 12,
+     "pushed": "2026-06-01",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "eugenelim/llm-wiki-kit",
+     "stars": 12,
+     "pushed": "2026-06-25",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Yutao-Yang/obsidian-vault-forge",
+     "stars": 2,
+     "pushed": "2026-08-01",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "obsidian-cli",
+   "query": "obsidian cli skill agent",
+   "bytes": 3223,
+   "total_count": 105,
+   "top": [
+    {
+     "repo": "kepano/obsidian-skills",
+     "stars": 49784,
+     "pushed": "2026-09-15",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "huytieu/COG-second-brain",
+     "stars": 1302,
+     "pushed": "2026-10-02",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "917Dhj/DeepPaperNote",
+     "stars": 1222,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "pablo-mano/Obsidian-CLI-skill",
+     "stars": 453,
+     "pushed": "2026-03-05",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "Nebutra/MinerU-Skill",
+     "stars": 125,
+     "pushed": "2026-09-24",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "obsidian-markdown",
+   "query": "obsidian markdown skill agent",
+   "bytes": 5407,
+   "total_count": 175,
+   "top": [
+    {
+     "repo": "kepano/obsidian-skills",
+     "stars": 49784,
+     "pushed": "2026-09-15",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "917Dhj/DeepPaperNote",
+     "stars": 1222,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "JimmySadek/video-fetcher-to-markdown",
+     "stars": 494,
+     "pushed": "2026-10-07",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "kv0906/pm-kit",
+     "stars": 138,
+     "pushed": "2026-10-11",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Nebutra/MinerU-Skill",
+     "stars": 125,
+     "pushed": "2026-09-24",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "oc-dispatch-exec-guard",
+   "query": "openclaw a-get-memory skill agent",
+   "bytes": 5323,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "openai-whisper-api",
+   "query": "openai whisper api skill agent",
+   "bytes": 2211,
+   "total_count": 2,
+   "top": [
+    {
+     "repo": "simonpierreboucher02/agentilab-openai",
+     "stars": 0,
+     "pushed": "2026-06-08",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "Generovo/claude-voice-skills",
+     "stars": 0,
+     "pushed": "2026-05-11",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "openclaw-dual-gate-quality-audit",
+   "query": "openclaw codex openclaw-task-supervision openclaw-fenjue-weekly skill agent",
+   "bytes": 21587,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "openclaw-fenjue-weekly",
+   "query": "openclaw session phase openclaw-task-supervision skill agent",
+   "bytes": 4916,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "openclaw-task-supervision",
+   "query": "codex openclaw prompt openclaw-fenjue-weekly skill agent",
+   "bytes": 34136,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "oracle",
+   "query": "oracle skill agent",
+   "bytes": 5016,
+   "total_count": 120,
+   "top": [
+    {
+     "repo": "komako-workshop/digital-oracle",
+     "stars": 902,
+     "pushed": "2026-07-26",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "oracle/skills",
+     "stars": 896,
+     "pushed": "2026-10-09",
+     "license": "UPL-1.0",
+     "archived": false
+    },
+    {
+     "repo": "YichengYang-Ethan/oracle3-prediction-market-agent",
+     "stars": 480,
+     "pushed": "2026-10-12",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "Soul-Brews-Studio/arra-oracle-skills-cli",
+     "stars": 125,
+     "pushed": "2026-10-03",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "emlai/defi-native-skill",
+     "stars": 51,
+     "pushed": "2026-09-06",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "pdf",
+   "query": "pdf skill agent",
+   "bytes": 11399,
+   "total_count": 1154,
+   "top": [
+    {
+     "repo": "AgriciDaniel/claude-seo",
+     "stars": 19323,
+     "pushed": "2026-10-04",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "genspark-ai/genoffice",
+     "stars": 10054,
+     "pushed": "2026-10-19",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "chuspeeism/dashi-ppt-skill",
+     "stars": 9704,
+     "pushed": "2026-09-12",
+     "license": "AGPL-3.0",
+     "archived": false
+    },
+    {
+     "repo": "deusyu/translate-book",
+     "stars": 2128,
+     "pushed": "2026-10-12",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "zubair-trabzada/ai-legal-claude",
+     "stars": 1789,
+     "pushed": "2026-03-27",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "pixelle-api-ensure",
+   "query": "pixelle api ensure skill agent",
+   "bytes": 3559,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "prompt-consolidation",
+   "query": "append-only skill agent",
+   "bytes": 16145,
+   "total_count": 41,
+   "top": [
+    {
+     "repo": "CloudLLM-ai/mentisdb",
+     "stars": 86,
+     "pushed": "2026-09-16",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "yologdev/yoyo-gasp",
+     "stars": 5,
+     "pushed": "2026-10-20",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "affectionatec/agentic-engineering",
+     "stars": 5,
+     "pushed": "2026-07-03",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "aviralmathur/enterprise-brain",
+     "stars": 5,
+     "pushed": "2026-09-18",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "tobby168/resume-pipeline",
+     "stars": 3,
+     "pushed": "2026-10-17",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "prompt-system-audit",
+   "query": "prompt-system-audit skill agent",
+   "bytes": 33023,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "python-debugpy",
+   "query": "python debugpy skill agent",
+   "bytes": 3025,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "rag-eval",
+   "query": "rag eval skill agent",
+   "bytes": 9732,
+   "total_count": 44,
+   "top": [
+    {
+     "repo": "calmrocks/ai-engineer-notebooks",
+     "stars": 706,
+     "pushed": "2026-10-08",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "di37/EvalSurfer",
+     "stars": 11,
+     "pushed": "2026-07-15",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Alpha-Park/genpark-ragas-faithfulness-answer-relevance-evaluator-skill",
+     "stars": 8,
+     "pushed": "2026-09-06",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "alphaparkinc/genpark-ragas-faithfulness-answer-relevance-evaluator-skill",
+     "stars": 8,
+     "pushed": "2026-09-06",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "dungnotnull/mmorpg-guild-management-agent-skill",
+     "stars": 5,
+     "pushed": "2026-07-21",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "vercel-react-best-practices",
+   "query": "vercel react best practices skill agent",
+   "bytes": 7291,
+   "total_count": 8,
+   "top": [
+    {
+     "repo": "vaferkhanom/Website-skills",
+     "stars": 2,
+     "pushed": "2026-08-18",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "Domush/ai-agent-web-development-skills",
+     "stars": 1,
+     "pushed": "2026-04-25",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "kalilovsky/react-best-practices",
+     "stars": 0,
+     "pushed": "2026-01-16",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "RealBulbaBot/react-best-practices",
+     "stars": 0,
+     "pushed": "2026-01-28",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "BespokeWoodcraftStudio/vercel-react-best-practices",
+     "stars": 0,
+     "pushed": "2026-07-31",
+     "license": "NOASSERTION",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "report-generator-skill",
+   "query": "report generator skill skill agent",
+   "bytes": 5209,
+   "total_count": 17,
+   "top": [
+    {
+     "repo": "lorsabyan/okf-skill",
+     "stars": 6,
+     "pushed": "2026-08-23",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "neil-wang-global/pomasa-research-skill",
+     "stars": 4,
+     "pushed": "2026-07-19",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "KeLuoJun/market-debrief-cn",
+     "stars": 1,
+     "pushed": "2026-03-13",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "BlackBird-BB/cnnvd-cve-report-generator",
+     "stars": 1,
+     "pushed": "2026-05-08",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "purpose1004/dark-tech-report-generator",
+     "stars": 1,
+     "pushed": "2026-06-18",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "research-documentation",
+   "query": "research documentation skill agent",
+   "bytes": 3843,
+   "total_count": 40,
+   "top": [
+    {
+     "repo": "ryannadel/cognitive-coverage",
+     "stars": 49,
+     "pushed": "2026-07-15",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "kenming/bricks-builder-skill",
+     "stars": 47,
+     "pushed": "2026-10-04",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "leviathofnoesia/AgentCompiler",
+     "stars": 25,
+     "pushed": "2026-04-13",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "kpab/seo-mastery-agent-skills",
+     "stars": 14,
+     "pushed": "2026-09-22",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "ejklock/living-docs-skill",
+     "stars": 13,
+     "pushed": "2026-10-19",
+     "license": "NOASSERTION",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "shadcn",
+   "query": "shadcn skill agent",
+   "bytes": 16512,
+   "total_count": 122,
+   "top": [
+    {
+     "repo": "bitjaru/styleseed",
+     "stars": 980,
+     "pushed": "2026-10-14",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "O0000-code/paper-search-pro",
+     "stars": 206,
+     "pushed": "2026-09-30",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "ahpxex/open-dashboard",
+     "stars": 146,
+     "pushed": "2026-06-29",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "arla6ka/design.how",
+     "stars": 141,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "QingYunA/agent-html",
+     "stars": 55,
+     "pushed": "2026-09-29",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "shell-encoding-pitfalls",
+   "query": "shell encoding pitfalls skill agent",
+   "bytes": 14047,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "spec-to-implementation",
+   "query": "spec to implementation skill agent",
+   "bytes": 8848,
+   "total_count": 35,
+   "top": [
+    {
+     "repo": "AkoliteZA/hermes-agent-idea-workflow",
+     "stars": 274,
+     "pushed": "2026-05-05",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "whit3rabbit/clean-room-skill",
+     "stars": 14,
+     "pushed": "2026-10-14",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "sohutv/agent-skills-mcp",
+     "stars": 11,
+     "pushed": "2026-01-20",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "mariano-aguero/spec-driven-development-skill",
+     "stars": 9,
+     "pushed": "2026-08-06",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "YoungXAI/agent-study-skills",
+     "stars": 8,
+     "pushed": "2026-04-02",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "sq-cleanmgr-c",
+   "query": "sq cleanmgr c skill agent",
+   "bytes": 12526,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "sqlalchemy-loader-criteria-pitfalls",
+   "query": "sqlalchemy loader criteria pitfalls skill agent",
+   "bytes": 4560,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "static-site-batch-audit-fix",
+   "query": "html lang aria favicon skill agent",
+   "bytes": 14405,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "story",
+   "query": "story skill agent",
+   "bytes": 9047,
+   "total_count": 325,
+   "top": [
+    {
+     "repo": "zenstory-ai/oh-story-claudecode",
+     "stars": 7759,
+     "pushed": "2026-10-18",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "FireRedTeam/FireRed-OpenStoryline",
+     "stars": 3537,
+     "pushed": "2026-07-31",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "liangdabiao/Seedance2-Storyboard-Generator",
+     "stars": 2629,
+     "pushed": "2026-09-21",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "gnipbao/story-to-handdrawn-video",
+     "stars": 2248,
+     "pushed": "2026-09-22",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "zenstory-ai/novel-to-game",
+     "stars": 896,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "story-cover",
+   "query": "story cover skill agent",
+   "bytes": 1698,
+   "total_count": 3,
+   "top": [
+    {
+     "repo": "danderfer/Comp_Sci_Sem_2",
+     "stars": 215,
+     "pushed": "2023-04-03",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "imyuyu/zentao-cli",
+     "stars": 3,
+     "pushed": "2026-05-28",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "OliviaPp8/cover-letter-writer",
+     "stars": 0,
+     "pushed": "2026-09-22",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "story-deslop",
+   "query": "story deslop skill agent",
+   "bytes": 10537,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "story-import",
+   "query": "story import skill agent",
+   "bytes": 9652,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "story-long-analyze",
+   "query": "story long analyze skill agent",
+   "bytes": 5908,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "story-long-write",
+   "query": "story long write skill agent",
+   "bytes": 2438,
+   "total_count": 2,
+   "top": [
+    {
+     "repo": "danderfer/Comp_Sci_Sem_2",
+     "stars": 215,
+     "pushed": "2023-04-03",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "SHREE167/storycanon",
+     "stars": 0,
+     "pushed": "2026-09-27",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "story-review",
+   "query": "story review skill agent",
+   "bytes": 11110,
+   "total_count": 23,
+   "top": [
+    {
+     "repo": "yudong-94/storytelling-viz-skill",
+     "stars": 27,
+     "pushed": "2026-06-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "morajabi/yc-partner",
+     "stars": 5,
+     "pushed": "2026-06-17",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "openplanr/OpenPlanr",
+     "stars": 5,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "EthanO-O/system-paper-polisher",
+     "stars": 5,
+     "pushed": "2026-05-11",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "nicodiansk/turbocharge",
+     "stars": 3,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "story-scan",
+   "query": "story scan skill agent",
+   "bytes": 6238,
+   "total_count": 3,
+   "top": [
+    {
+     "repo": "sky-flux/skills",
+     "stars": 10,
+     "pushed": "2026-06-26",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "NamHT4Devlop/claude-code-workflow-kit",
+     "stars": 1,
+     "pushed": "2026-09-28",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "pangpang888/image-story-assembly-hardening",
+     "stars": 0,
+     "pushed": "2026-09-18",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "story-setup",
+   "query": "story setup skill agent",
+   "bytes": 6192,
+   "total_count": 1,
+   "top": [
+    {
+     "repo": "xzneozx96/qa-autopilot",
+     "stars": 0,
+     "pushed": "2026-04-21",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "story-short-analyze",
+   "query": "story short analyze skill agent",
+   "bytes": 9659,
+   "total_count": 1,
+   "top": [
+    {
+     "repo": "kakarrot-dev/my-girlfriend-jingtian-skill",
+     "stars": 0,
+     "pushed": "2026-08-28",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "story-short-write",
+   "query": "story short write skill agent",
+   "bytes": 10469,
+   "total_count": 1,
+   "top": [
+    {
+     "repo": "Pharaoh-so/pharaoh-write",
+     "stars": 1,
+     "pushed": "2026-05-05",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "taskflow",
+   "query": "taskflow skill agent",
+   "bytes": 6146,
+   "total_count": 5,
+   "top": [
+    {
+     "repo": "invictusdhahri/taskflow",
+     "stars": 5,
+     "pushed": "2026-08-07",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "AbhiShake1/taskflow-skill",
+     "stars": 0,
+     "pushed": "2026-04-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "NietzsLe/taskflow",
+     "stars": 0,
+     "pushed": "2026-07-08",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "enriquecordero/taskflow-migracion",
+     "stars": 0,
+     "pushed": "2026-07-09",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "DanielMcSheehy/theopolis",
+     "stars": 0,
+     "pushed": "2026-04-08",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "taskflow-inbox-triage",
+   "query": "taskflow inbox triage skill agent",
+   "bytes": 2791,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "theme-factory",
+   "query": "theme factory skill agent",
+   "bytes": 3164,
+   "total_count": 2,
+   "top": [
+    {
+     "repo": "brmbh/wordpress",
+     "stars": 5,
+     "pushed": "2026-08-13",
+     "license": "GPL-2.0",
+     "archived": false
+    },
+    {
+     "repo": "rlancaster243/ddos-dashboard-factory",
+     "stars": 1,
+     "pushed": "2026-08-27",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "ui-ux-pro-max",
+   "query": "ui ux pro max skill agent",
+   "bytes": 3095,
+   "total_count": 25,
+   "top": [
+    {
+     "repo": "huzaifaa-dev-vibe/Ultimate-Ui-Ux-pro-max-2.O",
+     "stars": 4,
+     "pushed": "2026-06-29",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "noumanzindani/mobile-app-uiux-pro-max-skill",
+     "stars": 3,
+     "pushed": "2026-07-01",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "aakash1552005/universal-agent-skills",
+     "stars": 2,
+     "pushed": "2026-08-29",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "luffy666code/ui-ux-pro-max-skill",
+     "stars": 1,
+     "pushed": "2026-08-28",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "ANR7HA/frontend-craft-skill",
+     "stars": 1,
+     "pushed": "2026-10-13",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "utf8-encoding-fix",
+   "query": "utf8 encoding fix skill agent",
+   "bytes": 8341,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "video-breakdown-skill",
+   "query": "video breakdown skill skill agent",
+   "bytes": 6892,
+   "total_count": 5,
+   "top": [
+    {
+     "repo": "hanli1999/video-breakdown-skill",
+     "stars": 11,
+     "pushed": "2026-09-21",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "wundercorp/ogilvideo-skill",
+     "stars": 2,
+     "pushed": "2026-06-08",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "uda-eth/design-skills",
+     "stars": 0,
+     "pushed": "2026-07-17",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "lamtrang5508647/huozhiji-video-breakdown-to-feishu",
+     "stars": 0,
+     "pushed": "2026-10-13",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "8TrafficAI/reference-video-director",
+     "stars": 0,
+     "pushed": "2026-08-07",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "video-frames",
+   "query": "video frames skill agent",
+   "bytes": 1231,
+   "total_count": 40,
+   "top": [
+    {
+     "repo": "JimmySadek/video-fetcher-to-markdown",
+     "stars": 494,
+     "pushed": "2026-10-07",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "cosmicstack-labs/lazy-frames",
+     "stars": 166,
+     "pushed": "2026-08-19",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "Aryia-Behroziuan/References",
+     "stars": 74,
+     "pushed": "2022-09-02",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "musoyangrigor/scroll-video-website-skill",
+     "stars": 57,
+     "pushed": "2026-09-04",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "manat0912/HyperFrames-Studio",
+     "stars": 26,
+     "pushed": "2026-06-19",
+     "license": "Apache-2.0",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "video-whisper-transcribe",
+   "query": "video whisper transcribe skill agent",
+   "bytes": 5816,
+   "total_count": 7,
+   "top": [
+    {
+     "repo": "XFWang522/vidscribe",
+     "stars": 4,
+     "pushed": "2026-03-09",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "youyongdemao/video-summarizer",
+     "stars": 1,
+     "pushed": "2026-10-06",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "roysahar11/transcribe-skill",
+     "stars": 0,
+     "pushed": "2026-04-26",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "holarchic/transcribe",
+     "stars": 0,
+     "pushed": "2026-10-17",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "ciro-rosa/claude-skills",
+     "stars": 0,
+     "pushed": "2026-04-15",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "vp-perspective-audit",
+   "query": "vp perspective audit skill agent",
+   "bytes": 15307,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "wb-git-commit-recipe",
+   "query": "wb git commit recipe skill agent",
+   "bytes": 8919,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "web-access",
+   "query": "web access skill agent",
+   "bytes": 20014,
+   "total_count": 67,
+   "top": [
+    {
+     "repo": "teng-lin/notebooklm-py",
+     "stars": 19815,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "eze-is/web-access",
+     "stars": 9212,
+     "pushed": "2026-10-14",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "browserbase/skills",
+     "stars": 3738,
+     "pushed": "2026-09-29",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "christinminor459/OnionClaw",
+     "stars": 375,
+     "pushed": "2026-10-12",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "Lexus2016/claude-code-studio",
+     "stars": 144,
+     "pushed": "2026-10-13",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "web-design-guidelines",
+   "query": "web design guidelines skill agent",
+   "bytes": 1402,
+   "total_count": 8,
+   "top": [
+    {
+     "repo": "iizcm/web-design-guidelines-skill",
+     "stars": 4,
+     "pushed": "2026-07-26",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "vaferkhanom/Website-skills",
+     "stars": 2,
+     "pushed": "2026-08-18",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "mares29/dashboard-design-skill",
+     "stars": 1,
+     "pushed": "2026-02-20",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "cristiankweber/cue-skill-web-design-guidelines",
+     "stars": 0,
+     "pushed": "2026-10-17",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "otgmcapital/web-design-guidelines",
+     "stars": 0,
+     "pushed": "2026-10-09",
+     "license": null,
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "wechat-automation",
+   "query": "wechat automation skill agent",
+   "bytes": 20209,
+   "total_count": 20,
+   "top": [
+    {
+     "repo": "LAVARONG/wechat-automation-api",
+     "stars": 186,
+     "pushed": "2026-09-18",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "canyexuanfan/17-Skills",
+     "stars": 17,
+     "pushed": "2026-10-18",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "HsiangNianian/wechat-publisher-mcp",
+     "stars": 5,
+     "pushed": "2026-07-23",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "yehuzi2026/workbuddy-skills-hub",
+     "stars": 3,
+     "pushed": "2026-10-01",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "flyanx/studiohub",
+     "stars": 3,
+     "pushed": "2026-09-08",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "wechat-voice-transcription",
+   "query": "wechat voice transcription skill agent",
+   "bytes": 3508,
+   "total_count": 1,
+   "top": [
+    {
+     "repo": "freanocank/wechat-decrypt",
+     "stars": 68,
+     "pushed": "2026-10-14",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "win-toolchain-pitfalls",
+   "query": "win toolchain pitfalls skill agent",
+   "bytes": 11846,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "windows-bash-cli-interop-pitfalls",
+   "query": "windows bash cli interop pitfalls skill agent",
+   "bytes": 7511,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "windows-cli-utf8-wrapper",
+   "query": "windows cli utf8 wrapper skill agent",
+   "bytes": 9562,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "windows-gitbash-chinese-path-pit",
+   "query": "windows gitbash chinese path pit skill agent",
+   "bytes": 6068,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "windows-native-ocr",
+   "query": "windows native ocr skill agent",
+   "bytes": 2722,
+   "total_count": 2,
+   "top": [
+    {
+     "repo": "Daive1119/local-ocr",
+     "stars": 1,
+     "pushed": "2026-10-11",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "GitRuozhi/native-winui-control",
+     "stars": 1,
+     "pushed": "2026-09-20",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "workbuddy-mcp",
+   "query": "workbuddy mcp skill agent",
+   "bytes": 4299,
+   "total_count": 72,
+   "top": [
+    {
+     "repo": "hujjun/mcd-saver-strategist",
+     "stars": 708,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "Ayzzz123/mcd-coupon-strategist",
+     "stars": 555,
+     "pushed": "2026-10-14",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "SourceWeft/SourceWeft",
+     "stars": 272,
+     "pushed": "2026-10-19",
+     "license": "NOASSERTION",
+     "archived": false
+    },
+    {
+     "repo": "konnga/skill-buddy",
+     "stars": 123,
+     "pushed": "2026-10-15",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "erikzeng2008-del/mcd-dual-budget-coach",
+     "stars": 110,
+     "pushed": "2026-10-19",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "workflow-preflight-check",
+   "query": "workflow preflight check skill agent",
+   "bytes": 11159,
+   "total_count": 4,
+   "top": [
+    {
+     "repo": "KoreyKing/agentic-dev-preflight",
+     "stars": 0,
+     "pushed": "2026-05-26",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "wmsing/tony-agent-workflow",
+     "stars": 0,
+     "pushed": "2026-09-22",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "Flan246/repo-preflight",
+     "stars": 0,
+     "pushed": "2026-09-09",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "LeeFJ0606/cloud-instance-ops",
+     "stars": 0,
+     "pushed": "2026-06-01",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "wps-knowledgebase",
+   "query": "zhishi crud kwiki knowledge skill agent",
+   "bytes": 21413,
+   "total_count": 0,
+   "top": []
+  },
+  {
+   "local_skill": "xlsx",
+   "query": "xlsx skill agent",
+   "bytes": 11728,
+   "total_count": 90,
+   "top": [
+    {
+     "repo": "genspark-ai/genoffice",
+     "stars": 10056,
+     "pushed": "2026-10-19",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "ferdinandobons/brand-docs",
+     "stars": 279,
+     "pushed": "2026-07-10",
+     "license": "MIT",
+     "archived": false
+    },
+    {
+     "repo": "bowenliang123/markdown-exporter",
+     "stars": 274,
+     "pushed": "2026-08-13",
+     "license": "Apache-2.0",
+     "archived": false
+    },
+    {
+     "repo": "thvroyal/kimi-skills",
+     "stars": 238,
+     "pushed": "2026-03-28",
+     "license": null,
+     "archived": false
+    },
+    {
+     "repo": "officecli/officecli",
+     "stars": 109,
+     "pushed": "2026-08-10",
+     "license": "MIT",
+     "archived": false
+    }
+   ]
+  },
+  {
+   "local_skill": "天眼一下",
+   "query": "天眼一下 skill agent",
+   "bytes": 10371,
+   "total_count": 0,
+   "top": []
+  }
+ ],
+ "progress": 140,
+ "ok": 148,
+ "err": 0,
+ "total_todo": 148
+}
