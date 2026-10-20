@@ -1,0 +1,27 @@
+{
+  "schema": "skill-watchlist-v1",
+  "_source": "smoke-test",
+  "fuse_days": 100,
+  "active_days": 400,
+  "watchlist": [
+    {
+      "local_skill": "brainstorming",
+      "local_skill_md": "D:/global_skills/brainstorming/SKILL.md",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/brainstorming/SKILL.md",
+      "recorded_version": "6.4.2",
+      "last_checked": "2026-09-29",
+      "discovery_query": "claude skill brainstorming agent",
+      "candidates": []
+    },
+    {
+      "local_skill": "writing-plans",
+      "local_skill_md": "D:/global_skills/writing-plans/SKILL.md",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/writing-plans/SKILL.md",
+      "recorded_version": "6.4.2",
+      "last_checked": "2026-09-29",
+      "candidates": []
+    }
+  ]
+}

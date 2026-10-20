@@ -1,0 +1,106 @@
+{
+  "schema": "gh-repo-facts-v2",
+  "fetched_at": "2026-10-20T06:59:06",
+  "repos": [
+    {
+      "repo": "vercel-labs/agent-browser",
+      "stars": 44260,
+      "forks": 3014,
+      "pushed_at": "2026-10-19T19:04:44Z",
+      "license": null,
+      "description": "Browser automation CLI for AI agents"
+    },
+    {
+      "repo": "browser-use/browser-use",
+      "stars": 118543,
+      "forks": 13157,
+      "pushed_at": "2026-10-17T20:02:49Z",
+      "license": null,
+      "description": "Open-source Python library for AI browser agents, plus Browser Use Cloud: stealth browsers and a hosted agent API."
+    },
+    {
+      "repo": "microsoft/playwright-mcp",
+      "stars": 38379,
+      "forks": 3285,
+      "pushed_at": "2026-10-19T15:31:53Z",
+      "license": null,
+      "description": "Playwright MCP server"
+    },
+    {
+      "repo": "garrytan/gstack",
+      "stars": 136958,
+      "forks": 20319,
+      "pushed_at": "2026-10-19T22:55:43Z",
+      "license": null,
+      "description": "Use Garry Tan's exact Claude Code setup: 23 opinionated tools that serve as CEO, Designer, Eng Manager, Release Manager,"
+    },
+    {
+      "repo": "op7418/guizang-ppt-skill",
+      "stars": 28244,
+      "forks": 1950,
+      "pushed_at": "2026-08-07T03:58:08Z",
+      "license": null,
+      "description": "AI-agent Skill for generating polished HTML slide decks: editorial magazine and Swiss layouts, image prompts, social cov"
+    },
+    {
+      "repo": "Akxan/ppt-agent-skill",
+      "stars": 163,
+      "forks": 47,
+      "pushed_at": "2026-05-11T00:47:17Z",
+      "license": null,
+      "description": "🎨 World-class AI presentation generator · 26 styles · 18 charts · benchmarked against Linear/Anthropic/Stripe/Apple/NYT "
+    },
+    {
+      "repo": "skalesapp/skales",
+      "stars": 2200,
+      "forks": 325,
+      "pushed_at": "2026-10-19T18:40:23Z",
+      "license": null,
+      "description": "Personal AI agent for macOS, Windows, Linux, Android & iOS. Set a goal, it works alone: coding (Skales Code), desktop + "
+    },
+    {
+      "repo": "JeecgBoot/jeecg-boot",
+      "error": "ungh 未取到"
+    },
+    {
+      "repo": "tykimos/cheliped-skills",
+      "error": "ungh 未取到"
+    },
+    {
+      "repo": "Colgate13/claude-cdp-debugger",
+      "stars": 2,
+      "forks": 0,
+      "pushed_at": "2026-05-12T04:43:13Z",
+      "license": null,
+      "description": "A Claude Code skill that lets the agent live-debug any Node.js service via Chrome DevTools Protocol — discovers .vscode/"
+    },
+    {
+      "repo": "obra/superpowers-skills",
+      "stars": 754,
+      "forks": 169,
+      "pushed_at": "2025-10-14T20:52:50Z",
+      "license": null,
+      "description": "Community-editable skills for Claude Code's superpowers plugin"
+    },
+    {
+      "repo": "tfriedel/claude-office-skills",
+      "error": "ungh 未取到"
+    },
+    {
+      "repo": "LeoLin990405/claude-office-skills",
+      "error": "ungh 未取到"
+    },
+    {
+      "repo": "Pragmatic-Labs-AI/praxis",
+      "error": "ungh 未取到"
+    },
+    {
+      "repo": "rondoflow/rondoflow",
+      "error": "ungh 未取到"
+    },
+    {
+      "repo": "ray-amjad/claude-code-workflow-creator",
+      "error": "ungh 未取到"
+    }
+  ]
+}

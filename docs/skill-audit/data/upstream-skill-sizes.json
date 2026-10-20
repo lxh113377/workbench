@@ -1,0 +1,202 @@
+{
+  "schema": "upstream-skill-sizes-v1",
+  "fetched_at": "2026-10-19T22:43:42",
+  "pairs": [
+    {
+      "name": "brainstorming",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/brainstorming/SKILL.md",
+      "local_path": "D:/global_skills/brainstorming/SKILL.md",
+      "upstream_bytes": 10073,
+      "upstream_headings": 9,
+      "upstream_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/brainstorming/SKILL.md",
+      "local_bytes": 10634,
+      "local_headings": 8,
+      "size_ratio_local_over_upstream": 1.056
+    },
+    {
+      "name": "writing-plans",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/writing-plans/SKILL.md",
+      "local_path": "D:/global_skills/writing-plans/SKILL.md",
+      "upstream_bytes": 10335,
+      "upstream_headings": 15,
+      "upstream_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/writing-plans/SKILL.md",
+      "local_bytes": 11226,
+      "local_headings": 17,
+      "size_ratio_local_over_upstream": 1.086
+    },
+    {
+      "name": "executing-plans",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/executing-plans/SKILL.md",
+      "local_path": "D:/global_skills/executing-plans/SKILL.md",
+      "upstream_bytes": 20405,
+      "upstream_headings": 13,
+      "upstream_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/executing-plans/SKILL.md",
+      "local_error": "FileNotFoundError(2, 'No such file or directory')"
+    },
+    {
+      "name": "test-driven-development",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/test-driven-development/SKILL.md",
+      "local_path": "D:/global_skills/test-driven-development/SKILL.md",
+      "upstream_bytes": 9578,
+      "upstream_headings": 19,
+      "upstream_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/test-driven-development/SKILL.md",
+      "local_bytes": 10649,
+      "local_headings": 21,
+      "size_ratio_local_over_upstream": 1.112
+    },
+    {
+      "name": "verification-before-completion",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/verification-before-completion/SKILL.md",
+      "local_path": "D:/global_skills/verification-before-completion/SKILL.md",
+      "upstream_bytes": 3646,
+      "upstream_headings": 9,
+      "upstream_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/verification-before-completion/SKILL.md",
+      "local_bytes": 7128,
+      "local_headings": 15,
+      "size_ratio_local_over_upstream": 1.955
+    },
+    {
+      "name": "systematic-debugging",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/systematic-debugging/SKILL.md",
+      "local_path": null,
+      "upstream_bytes": 9530,
+      "upstream_headings": 19,
+      "upstream_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/systematic-debugging/SKILL.md"
+    },
+    {
+      "name": "docx",
+      "upstream_repo": "anthropics/skills",
+      "upstream_path": "skills/docx/SKILL.md",
+      "local_path": "D:/global_skills/docx/SKILL.md",
+      "upstream_bytes": 6911,
+      "upstream_headings": 10,
+      "upstream_url": "https://raw.githubusercontent.com/anthropics/skills/HEAD/skills/docx/SKILL.md",
+      "local_bytes": 28922,
+      "local_headings": 54,
+      "size_ratio_local_over_upstream": 4.185
+    },
+    {
+      "name": "pdf",
+      "upstream_repo": "anthropics/skills",
+      "upstream_path": "skills/pdf/SKILL.md",
+      "local_path": "D:/global_skills/pdf/SKILL.md",
+      "upstream_bytes": 8072,
+      "upstream_headings": 57,
+      "upstream_url": "https://raw.githubusercontent.com/anthropics/skills/HEAD/skills/pdf/SKILL.md",
+      "local_bytes": 11209,
+      "local_headings": 46,
+      "size_ratio_local_over_upstream": 1.389
+    },
+    {
+      "name": "xlsx",
+      "upstream_repo": "anthropics/skills",
+      "upstream_path": "skills/xlsx/SKILL.md",
+      "local_path": "D:/global_skills/xlsx/SKILL.md",
+      "upstream_bytes": 8598,
+      "upstream_headings": 7,
+      "upstream_url": "https://raw.githubusercontent.com/anthropics/skills/HEAD/skills/xlsx/SKILL.md",
+      "local_bytes": 11703,
+      "local_headings": 25,
+      "size_ratio_local_over_upstream": 1.361
+    },
+    {
+      "name": "pptx",
+      "upstream_repo": "anthropics/skills",
+      "upstream_path": "skills/pptx/SKILL.md",
+      "local_path": null,
+      "upstream_bytes": 20796,
+      "upstream_headings": 19,
+      "upstream_url": "https://raw.githubusercontent.com/anthropics/skills/HEAD/skills/pptx/SKILL.md"
+    },
+    {
+      "name": "frontend-design",
+      "upstream_repo": "anthropics/skills",
+      "upstream_path": "skills/frontend-design/SKILL.md",
+      "local_path": "D:/global_skills/frontend-design/SKILL.md",
+      "upstream_bytes": 9390,
+      "upstream_headings": 6,
+      "upstream_url": "https://raw.githubusercontent.com/anthropics/skills/HEAD/skills/frontend-design/SKILL.md",
+      "local_bytes": 10173,
+      "local_headings": 17,
+      "size_ratio_local_over_upstream": 1.083
+    },
+    {
+      "name": "mcp-builder",
+      "upstream_repo": "anthropics/skills",
+      "upstream_path": "skills/mcp-builder/SKILL.md",
+      "local_path": "D:/global_skills/mcp-builder/SKILL.md",
+      "upstream_bytes": 9092,
+      "upstream_headings": 27,
+      "upstream_url": "https://raw.githubusercontent.com/anthropics/skills/HEAD/skills/mcp-builder/SKILL.md",
+      "local_bytes": 9092,
+      "local_headings": 27,
+      "size_ratio_local_over_upstream": 1.0
+    },
+    {
+      "name": "doc-coauthoring",
+      "upstream_repo": "anthropics/skills",
+      "upstream_path": "skills/doc-coauthoring/SKILL.md",
+      "local_path": "D:/global_skills/doc-coauthoring/SKILL.md",
+      "upstream_bytes": 15815,
+      "upstream_headings": 27,
+      "upstream_url": "https://raw.githubusercontent.com/anthropics/skills/HEAD/skills/doc-coauthoring/SKILL.md",
+      "local_bytes": 15815,
+      "local_headings": 27,
+      "size_ratio_local_over_upstream": 1.0
+    },
+    {
+      "name": "theme-factory",
+      "upstream_repo": "anthropics/skills",
+      "upstream_path": "skills/theme-factory/SKILL.md",
+      "local_path": "D:/global_skills/theme-factory/SKILL.md",
+      "upstream_bytes": 3124,
+      "upstream_headings": 7,
+      "upstream_url": "https://raw.githubusercontent.com/anthropics/skills/HEAD/skills/theme-factory/SKILL.md",
+      "local_bytes": 3124,
+      "local_headings": 7,
+      "size_ratio_local_over_upstream": 1.0
+    },
+    {
+      "name": "code-review-and-quality",
+      "upstream_repo": "addyosmani/agent-skills",
+      "upstream_path": "skills/code-review-and-quality/SKILL.md",
+      "local_path": "D:/global_skills/code-review/SKILL.md",
+      "upstream_bytes": 20976,
+      "upstream_headings": 38,
+      "upstream_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/code-review-and-quality/SKILL.md",
+      "local_bytes": 4954,
+      "local_headings": 7,
+      "size_ratio_local_over_upstream": 0.236
+    },
+    {
+      "name": "debugging-and-error-recovery",
+      "upstream_repo": "addyosmani/agent-skills",
+      "upstream_path": "skills/debugging-and-error-recovery/SKILL.md",
+      "local_path": "D:/global_skills/debugging-fixing/SKILL.md",
+      "upstream_bytes": 10913,
+      "upstream_headings": 30,
+      "upstream_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/debugging-and-error-recovery/SKILL.md",
+      "local_bytes": 6395,
+      "local_headings": 9,
+      "size_ratio_local_over_upstream": 0.586
+    },
+    {
+      "name": "code-simplification",
+      "upstream_repo": "addyosmani/agent-skills",
+      "upstream_path": "skills/code-simplification/SKILL.md",
+      "local_path": "D:/global_skills/refactoring/SKILL.md",
+      "upstream_bytes": 13545,
+      "upstream_headings": 27,
+      "upstream_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/code-simplification/SKILL.md",
+      "local_bytes": 4810,
+      "local_headings": 10,
+      "size_ratio_local_over_upstream": 0.355
+    }
+  ]
+}

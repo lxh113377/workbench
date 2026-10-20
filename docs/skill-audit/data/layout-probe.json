@@ -1,0 +1,70 @@
+{
+  "wshobson/agents::plugins/agent-teams": {
+    "url": "https://github.com/wshobson/agents/tree/HEAD/plugins/agent-teams",
+    "tree": [
+      ".claude-plugin",
+      ".claude-plugin",
+      ".codex-plugin",
+      ".codex-plugin",
+      "agents",
+      "agents",
+      "commands",
+      "commands",
+      "skills",
+      "skills"
+    ],
+    "blob": [
+      "README.md",
+      "README.md"
+    ]
+  },
+  "wshobson/agents::plugins/agent-teams/skills": {
+    "url": "https://github.com/wshobson/agents/tree/HEAD/plugins/agent-teams/skills",
+    "tree": [
+      "multi-reviewer-patterns",
+      "multi-reviewer-patterns",
+      "parallel-debugging",
+      "parallel-debugging",
+      "parallel-feature-development",
+      "parallel-feature-development",
+      "task-coordination-strategies",
+      "task-coordination-strategies",
+      "team-communication-protocols",
+      "team-communication-protocols",
+      "team-composition-patterns",
+      "team-composition-patterns"
+    ],
+    "blob": []
+  },
+  "wshobson/agents::plugins/pptx-deck-creation/skills": {
+    "url": "https://github.com/wshobson/agents/tree/HEAD/plugins/pptx-deck-creation/skills",
+    "tree": [
+      "pptx-deck-context",
+      "pptx-deck-context",
+      "pptx-quality-gates",
+      "pptx-quality-gates",
+      "pptx-reference-deck-analysis",
+      "pptx-reference-deck-analysis",
+      "pptx-slide-specification",
+      "pptx-slide-specification",
+      "pptx-visual-assets",
+      "pptx-visual-assets"
+    ],
+    "blob": []
+  },
+  "skalesapp/skales::": {
+    "url": "https://github.com/skalesapp/skales",
+    "tree": [],
+    "blob": []
+  },
+  "Colgate13/claude-cdp-debugger::": {
+    "url": "https://github.com/Colgate13/claude-cdp-debugger",
+    "tree": [],
+    "blob": []
+  },
+  "tykimos/cheliped-skills::": {
+    "url": "https://github.com/tykimos/cheliped-skills",
+    "tree": [],
+    "blob": []
+  }
+}

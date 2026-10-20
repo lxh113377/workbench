@@ -1,0 +1,486 @@
+{
+  "schema": "skill-substitute-candidates-v1",
+  "generated_at": "2026-10-20T06:52:29",
+  "batch": "batch-A",
+  "facts_method_note": "GitHub search API（18 次，配额窗口内）+ raw.githubusercontent 入口件实测 + ungh.cc 元数据；api.github.com/repos 单仓查询在配额耗尽时段不可用，未取到的 stars 一律 null。",
+  "skills": [
+    {
+      "local_skill": "A-memory-start",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [
+        {
+          "repo": "yonatangross/orchestkit",
+          "url": "https://github.com/yonatangross/orchestkit",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "plugins/ork/skills/agent-orchestration/SKILL.md",
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/yonatangross/orchestkit/HEAD/plugins/ork/skills/agent-orchestration/SKILL.md",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "high",
+          "entry_bytes": 11040
+        }
+      ],
+      "notes": "检索式 session_protocol 的 total_count=1；命中 1 个候选"
+    },
+    {
+      "local_skill": "A-ask-questions",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [],
+      "notes": "检索式 requirements_clarity 的 total_count=0；命中 0 个候选"
+    },
+    {
+      "local_skill": "A-project-better",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [],
+      "notes": "检索式 project_direction 的 total_count=0；命中 0 个候选"
+    },
+    {
+      "local_skill": "A-project-handoff",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [
+        {
+          "repo": "yonatangross/orchestkit",
+          "url": "https://github.com/yonatangross/orchestkit",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "plugins/ork/skills/agent-orchestration/SKILL.md",
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/yonatangross/orchestkit/HEAD/plugins/ork/skills/agent-orchestration/SKILL.md",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "high",
+          "entry_bytes": 11040
+        }
+      ],
+      "notes": "检索式 project_memory 的 total_count=19；命中 1 个候选"
+    },
+    {
+      "local_skill": "A-skill-manager",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "url": "https://github.com/obra/superpowers",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": null,
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/obra/superpowers/HEAD/",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "low",
+          "entry_bytes": null
+        },
+        {
+          "repo": "anthropics/skills",
+          "url": "https://github.com/anthropics/skills",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "skills/pptx/SKILL.md",
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/anthropics/skills/HEAD/skills/pptx/SKILL.md",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "high",
+          "entry_bytes": 20796
+        }
+      ],
+      "notes": "检索式 skill_manager 的 total_count=0；命中 2 个候选"
+    },
+    {
+      "local_skill": "A-dynamic-workflow",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [
+        {
+          "repo": "wshobson/agents",
+          "url": "https://github.com/wshobson/agents",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "plugins/pptx-deck-creation/skills/pptx-quality-gates/SKILL.md",
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/wshobson/agents/HEAD/plugins/pptx-deck-creation/skills/pptx-quality-gates/SKILL.md",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "high",
+          "entry_bytes": 1635
+        },
+        {
+          "repo": "yonatangross/orchestkit",
+          "url": "https://github.com/yonatangross/orchestkit",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "plugins/ork/skills/agent-orchestration/SKILL.md",
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/yonatangross/orchestkit/HEAD/plugins/ork/skills/agent-orchestration/SKILL.md",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "high",
+          "entry_bytes": 11040
+        }
+      ],
+      "notes": "检索式 workflow_orchestration 的 total_count=62；命中 2 个候选"
+    },
+    {
+      "local_skill": "agent-browser",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [
+        {
+          "repo": "vercel-labs/agent-browser",
+          "url": "https://github.com/vercel-labs/agent-browser",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": null,
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/vercel-labs/agent-browser/HEAD/",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "low",
+          "entry_bytes": null
+        },
+        {
+          "repo": "browser-use/browser-use",
+          "url": "https://github.com/browser-use/browser-use",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": null,
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/browser-use/browser-use/HEAD/",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "low",
+          "entry_bytes": null
+        },
+        {
+          "repo": "microsoft/playwright-mcp",
+          "url": "https://github.com/microsoft/playwright-mcp",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": null,
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/microsoft/playwright-mcp/HEAD/",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "low",
+          "entry_bytes": null
+        }
+      ],
+      "notes": "检索式 browser_automation 的 total_count=10；命中 3 个候选"
+    },
+    {
+      "local_skill": "browser-cdp",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [
+        {
+          "repo": "Colgate13/claude-cdp-debugger",
+          "url": "https://github.com/Colgate13/claude-cdp-debugger",
+          "stars": 2,
+          "last_activity": "2026-05-12",
+          "license": "MIT",
+          "entry_path": "README.md",
+          "match_reason": "A Claude Code skill that lets the agent live-debug any Node.js service via Chrome DevTools Protocol — discovers .vscode/launch.json automati",
+          "evidence_url": "raw.githubusercontent.com/Colgate13/claude-cdp-debugger/HEAD/README.md",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "high",
+          "entry_bytes": 5920
+        },
+        {
+          "repo": "microsoft/playwright-mcp",
+          "url": "https://github.com/microsoft/playwright-mcp",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": null,
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/microsoft/playwright-mcp/HEAD/",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "low",
+          "entry_bytes": null
+        },
+        {
+          "repo": "vercel-labs/agent-browser",
+          "url": "https://github.com/vercel-labs/agent-browser",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": null,
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/vercel-labs/agent-browser/HEAD/",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "low",
+          "entry_bytes": null
+        }
+      ],
+      "notes": "检索式 browser_cdp 的 total_count=10；命中 3 个候选"
+    },
+    {
+      "local_skill": "electron",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [
+        {
+          "repo": "vercel-labs/agent-browser",
+          "url": "https://github.com/vercel-labs/agent-browser",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": null,
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/vercel-labs/agent-browser/HEAD/",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "low",
+          "entry_bytes": null
+        }
+      ],
+      "notes": "检索式 electron_automation 的 total_count=0；命中 1 个候选"
+    },
+    {
+      "local_skill": "gstack",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [
+        {
+          "repo": "garrytan/gstack",
+          "url": "https://github.com/garrytan/gstack",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": null,
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/garrytan/gstack/HEAD/",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "low",
+          "entry_bytes": null
+        }
+      ],
+      "notes": "检索式 headless_qa 的 total_count=1；命中 1 个候选"
+    },
+    {
+      "local_skill": "computer-use-guidance-windows",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [
+        {
+          "repo": "skalesapp/skales",
+          "url": "https://github.com/skalesapp/skales",
+          "stars": 2200,
+          "last_activity": "2026-10-19",
+          "license": "NOASSERTION",
+          "entry_path": "README.md",
+          "match_reason": "Personal AI agent for macOS, Windows, Linux, Android & iOS. Set a goal, it works alone: coding (Skales Code), desktop + browser automation, ",
+          "evidence_url": "raw.githubusercontent.com/skalesapp/skales/HEAD/README.md",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "high",
+          "entry_bytes": 42998
+        }
+      ],
+      "notes": "检索式 computer_use 的 total_count=6；命中 1 个候选"
+    },
+    {
+      "local_skill": "dogfood",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [
+        {
+          "repo": "vercel-labs/agent-browser",
+          "url": "https://github.com/vercel-labs/agent-browser",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": null,
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/vercel-labs/agent-browser/HEAD/",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "low",
+          "entry_bytes": null
+        },
+        {
+          "repo": "browser-use/browser-use",
+          "url": "https://github.com/browser-use/browser-use",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": null,
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/browser-use/browser-use/HEAD/",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "low",
+          "entry_bytes": null
+        }
+      ],
+      "notes": "检索式 app_dogfood 的 total_count=0；命中 2 个候选"
+    },
+    {
+      "local_skill": "screenshot",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [],
+      "notes": "检索式 screenshot 的 total_count=3；命中 0 个候选"
+    },
+    {
+      "local_skill": "docx",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [
+        {
+          "repo": "tfriedel/claude-office-skills",
+          "url": "https://github.com/tfriedel/claude-office-skills",
+          "stars": 839,
+          "last_activity": "2026-04-01",
+          "license": null,
+          "entry_path": null,
+          "match_reason": "Office document creation and editing skills for Claude Code - PPTX, DOCX, XLSX, and PDF workflows with automation support",
+          "evidence_url": "raw.githubusercontent.com/tfriedel/claude-office-skills/HEAD/",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "low",
+          "entry_bytes": null
+        },
+        {
+          "repo": "anthropics/skills",
+          "url": "https://github.com/anthropics/skills",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "skills/pptx/SKILL.md",
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/anthropics/skills/HEAD/skills/pptx/SKILL.md",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "high",
+          "entry_bytes": 20796
+        }
+      ],
+      "notes": "检索式 office_docs 的 total_count=3；命中 2 个候选"
+    },
+    {
+      "local_skill": "ppt-master",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [
+        {
+          "repo": "anthropics/skills",
+          "url": "https://github.com/anthropics/skills",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "skills/pptx/SKILL.md",
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/anthropics/skills/HEAD/skills/pptx/SKILL.md",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "high",
+          "entry_bytes": 20796
+        },
+        {
+          "repo": "wshobson/agents",
+          "url": "https://github.com/wshobson/agents",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "plugins/pptx-deck-creation/skills/pptx-quality-gates/SKILL.md",
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/wshobson/agents/HEAD/plugins/pptx-deck-creation/skills/pptx-quality-gates/SKILL.md",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "high",
+          "entry_bytes": 1635
+        },
+        {
+          "repo": "Akxan/ppt-agent-skill",
+          "url": "https://github.com/Akxan/ppt-agent-skill",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "SKILL.md",
+          "match_reason": "检索未命中该仓（由人工点名比对）",
+          "evidence_url": "raw.githubusercontent.com/Akxan/ppt-agent-skill/HEAD/SKILL.md",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "high",
+          "entry_bytes": 21090
+        }
+      ],
+      "notes": "检索式 pptx_generation 的 total_count=0；命中 3 个候选"
+    },
+    {
+      "local_skill": "html-ppt",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [
+        {
+          "repo": "op7418/guizang-ppt-skill",
+          "url": "https://github.com/op7418/guizang-ppt-skill",
+          "stars": 28244,
+          "last_activity": "2026-08-07",
+          "license": "AGPL-3.0",
+          "entry_path": "SKILL.md",
+          "match_reason": "AI-agent Skill for generating polished HTML slide decks: editorial magazine and Swiss layouts, image prompts, social covers, and a WebGL/low",
+          "evidence_url": "raw.githubusercontent.com/op7418/guizang-ppt-skill/HEAD/SKILL.md",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "high",
+          "entry_bytes": 43125
+        },
+        {
+          "repo": "Akxan/ppt-agent-skill",
+          "url": "https://github.com/Akxan/ppt-agent-skill",
+          "stars": 163,
+          "last_activity": "2026-05-11",
+          "license": "MIT",
+          "entry_path": "SKILL.md",
+          "match_reason": "🎨 World-class AI presentation generator · 26 styles · 18 charts · benchmarked against Linear/Anthropic/Stripe/Apple/NYT — a Claude Code Skil",
+          "evidence_url": "raw.githubusercontent.com/Akxan/ppt-agent-skill/HEAD/SKILL.md",
+          "fetched_at": "2026-10-20T06:52:29",
+          "confidence": "high",
+          "entry_bytes": 21090
+        }
+      ],
+      "notes": "检索式 html_presentation 的 total_count=32；命中 2 个候选"
+    },
+    {
+      "local_skill": "office-automation-pro",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地字节见 data/inventory.json"
+      },
+      "candidates": [],
+      "notes": "检索式 office_automation 的 total_count=0；命中 0 个候选"
+    }
+  ]
+}

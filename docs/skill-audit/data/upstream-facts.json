@@ -1,0 +1,51 @@
+{
+  "schema": "upstream-facts-v1",
+  "fetched_at": "2026-10-19T22:29:07",
+  "repos": [
+    {
+      "repo": "obra/superpowers",
+      "error": "<HTTPError 403: 'rate limit exceeded'>",
+      "top_error": "<HTTPError 403: 'rate limit exceeded'>"
+    },
+    {
+      "repo": "anthropics/skills",
+      "error": "<HTTPError 403: 'rate limit exceeded'>",
+      "top_error": "<HTTPError 403: 'rate limit exceeded'>"
+    },
+    {
+      "repo": "addyosmani/agent-skills",
+      "error": "<HTTPError 403: 'rate limit exceeded'>",
+      "top_error": "<HTTPError 403: 'rate limit exceeded'>"
+    },
+    {
+      "repo": "github/awesome-copilot",
+      "error": "<HTTPError 403: 'rate limit exceeded'>",
+      "top_error": "<HTTPError 403: 'rate limit exceeded'>"
+    },
+    {
+      "repo": "obra/superpowers-skills",
+      "error": "<HTTPError 403: 'rate limit exceeded'>",
+      "top_error": "<HTTPError 403: 'rate limit exceeded'>"
+    },
+    {
+      "repo": "wshobson/agents",
+      "error": "<HTTPError 403: 'rate limit exceeded'>",
+      "top_error": "<HTTPError 403: 'rate limit exceeded'>"
+    },
+    {
+      "repo": "obra/superpowers",
+      "kind": "skills_dir",
+      "skills": "<HTTPError 403: 'rate limit exceeded'>",
+      "plugins": "<HTTPError 403: 'rate limit exceeded'>"
+    },
+    {
+      "repo": "anthropics/skills",
+      "kind": "skills_dir",
+      "skills": "<HTTPError 403: 'rate limit exceeded'>",
+      "plugins": "<HTTPError 403: 'rate limit exceeded'>"
+    }
+  ],
+  "rate": {
+    "calls_used_by_this_script": 16
+  }
+}

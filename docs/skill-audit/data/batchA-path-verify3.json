@@ -1,0 +1,67 @@
+{
+  "schema": "batchA-path-verify3",
+  "checked": [
+    {
+      "tag": "task-coordination",
+      "repo": "wshobson/agents",
+      "path": "plugins/agent-teams/skills/task-coordination-strategies/SKILL.md",
+      "http": 200,
+      "bytes": 4690,
+      "raw_url": "https://raw.githubusercontent.com/wshobson/agents/HEAD/plugins/agent-teams/skills/task-coordination-strategies/SKILL.md"
+    },
+    {
+      "tag": "multi-reviewer",
+      "repo": "wshobson/agents",
+      "path": "plugins/agent-teams/skills/multi-reviewer-patterns/SKILL.md",
+      "http": 200,
+      "bytes": 5192,
+      "raw_url": "https://raw.githubusercontent.com/wshobson/agents/HEAD/plugins/agent-teams/skills/multi-reviewer-patterns/SKILL.md"
+    },
+    {
+      "tag": "pptx-slide-spec",
+      "repo": "wshobson/agents",
+      "path": "plugins/pptx-deck-creation/skills/pptx-slide-specification/SKILL.md",
+      "http": 200,
+      "bytes": 1954,
+      "raw_url": "https://raw.githubusercontent.com/wshobson/agents/HEAD/plugins/pptx-deck-creation/skills/pptx-slide-specification/SKILL.md"
+    },
+    {
+      "tag": "pptx-quality-gates",
+      "repo": "wshobson/agents",
+      "path": "plugins/pptx-deck-creation/skills/pptx-quality-gates/SKILL.md",
+      "http": 200,
+      "bytes": 1635,
+      "raw_url": "https://raw.githubusercontent.com/wshobson/agents/HEAD/plugins/pptx-deck-creation/skills/pptx-quality-gates/SKILL.md"
+    },
+    {
+      "tag": "skales-readme",
+      "repo": "skalesapp/skales",
+      "path": "README.md",
+      "http": 200,
+      "bytes": 42998,
+      "raw_url": "https://raw.githubusercontent.com/skalesapp/skales/HEAD/README.md"
+    },
+    {
+      "tag": "cdp-debugger-readme",
+      "repo": "Colgate13/claude-cdp-debugger",
+      "path": "README.md",
+      "http": 200,
+      "bytes": 5920,
+      "raw_url": "https://raw.githubusercontent.com/Colgate13/claude-cdp-debugger/HEAD/README.md"
+    },
+    {
+      "tag": "cheliped-readme",
+      "repo": "tykimos/cheliped-skills",
+      "path": "README.md",
+      "http": 200,
+      "bytes": 1895,
+      "raw_url": "https://raw.githubusercontent.com/tykimos/cheliped-skills/HEAD/README.md"
+    },
+    {
+      "tag": "agent-orchestration-readme",
+      "repo": "wshobson/agents",
+      "path": "plugins/agent-orchestration/README.md",
+      "error": "<HTTPError 404: 'Not Found'>"
+    }
+  ]
+}

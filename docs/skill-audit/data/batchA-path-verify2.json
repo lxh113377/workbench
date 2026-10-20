@@ -1,0 +1,52 @@
+[
+  {
+    "tag": "pptx-deck",
+    "repo": "wshobson/agents",
+    "path": "plugins/pptx-deck-creation/skills/pptx-deck-creation/SKILL.md",
+    "error": "<HTTPError 404: 'Not Found'>"
+  },
+  {
+    "tag": "agent-orchestration",
+    "repo": "wshobson/agents",
+    "path": "plugins/agent-orchestration/commands/orchestrate.md",
+    "error": "<HTTPError 404: 'Not Found'>"
+  },
+  {
+    "tag": "agent-teams",
+    "repo": "wshobson/agents",
+    "path": "plugins/agent-teams/skills/teams/SKILL.md",
+    "error": "<HTTPError 404: 'Not Found'>"
+  },
+  {
+    "tag": "guizang-ppt",
+    "repo": "op7418/guizang-ppt-skill",
+    "path": "SKILL.md",
+    "http": 200,
+    "bytes": 43125
+  },
+  {
+    "tag": "ppt-agent",
+    "repo": "Akxan/ppt-agent-skill",
+    "path": "SKILL.md",
+    "http": 200,
+    "bytes": 21090
+  },
+  {
+    "tag": "skales",
+    "repo": "skalesapp/skales",
+    "path": "SKILL.md",
+    "error": "<HTTPError 404: 'Not Found'>"
+  },
+  {
+    "tag": "cdp-debugger",
+    "repo": "Colgate13/claude-cdp-debugger",
+    "path": "SKILL.md",
+    "error": "<HTTPError 404: 'Not Found'>"
+  },
+  {
+    "tag": "cheliped",
+    "repo": "tykimos/cheliped-skills",
+    "path": "SKILL.md",
+    "error": "<HTTPError 404: 'Not Found'>"
+  }
+]

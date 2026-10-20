@@ -1,0 +1,1065 @@
+{
+  "schema": "skill-substitute-candidates-v1",
+  "generated_at": "2026-10-19T14:35:00.000Z",
+  "batch": "batch-B",
+  "skills": [
+    {
+      "local_skill": "code-review",
+      "local_evidence": {
+        "skill_md_bytes": 4954,
+        "note": "本地 4954B，五维扫描（性能/缺陷/可维护性/安全/重复）+ 六字段报告模板，自研模板。"
+      },
+      "candidates": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "url": "https://github.com/addyosmani/agent-skills",
+          "stars": 108473,
+          "last_activity": "2026-10-13",
+          "license": "MIT",
+          "entry_path": "skills/code-review-and-quality/SKILL.md",
+          "match_reason": "五轴并行审查含逐轴 rubric 与合并前门禁，补足本地五维扫描缺的轴粒度评分基线",
+          "evidence_url": "https://api.github.com/repos/addyosmani/agent-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "obra/superpowers",
+          "url": "https://github.com/obra/superpowers",
+          "stars": 301953,
+          "last_activity": "2026-10-10",
+          "license": "MIT",
+          "entry_path": "skills/requesting-code-review/SKILL.md",
+          "match_reason": "提供独立 reviewer 子 agent 与 code-reviewer.md 评审提示词，补足本地缺的『派独立审查者』角色分工",
+          "evidence_url": "https://api.github.com/repos/obra/superpowers",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "amirbena/code-review-skill",
+          "url": "https://github.com/amirbena/code-review-skill",
+          "stars": 8,
+          "last_activity": "2026-10-19",
+          "license": "Apache-2.0",
+          "entry_path": "skills/local-code-review/SKILL.md",
+          "match_reason": "以 P0/P1/P2 证据分级同时覆盖本地改动与 GitHub PR，补足本地缺的 PR 审查维度",
+          "evidence_url": "https://api.github.com/repos/amirbena/code-review-skill",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "trailofbits/skills",
+          "url": "https://github.com/trailofbits/skills",
+          "stars": 7641,
+          "last_activity": "2026-10-15",
+          "license": "CC-BY-SA-4.0",
+          "entry_path": "plugins/differential-review/skills/differential-review/SKILL.md",
+          "match_reason": "差分审查只看变更面，补足本地全库扫描在『仅审 diff』场景的缺口",
+          "evidence_url": "https://api.github.com/repos/trailofbits/skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        }
+      ],
+      "notes": "未检索到与本地六字段报告模板同源的上游；awesome-copilot 的 skills 目录未见独立 code-review 技能（仅 codeql 等相邻项）。"
+    },
+    {
+      "local_skill": "debugging-fixing",
+      "local_evidence": {
+        "skill_md_bytes": 6395,
+        "note": "本地 6395B + references/engine-failure-diagnosis.md(2603B)、verification.md(3906B)，含 rc=124/引擎故障等自有扩展。"
+      },
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "url": "https://github.com/obra/superpowers",
+          "stars": 301953,
+          "last_activity": "2026-10-10",
+          "license": "MIT",
+          "entry_path": "skills/systematic-debugging/SKILL.md",
+          "match_reason": "Iron Law『无根因调查不得改代码』+ condition-based-waiting/defense-in-depth，补足本地缺的根因调查强制前置",
+          "evidence_url": "https://api.github.com/repos/obra/superpowers",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "url": "https://github.com/addyosmani/agent-skills",
+          "stars": 108473,
+          "last_activity": "2026-10-13",
+          "license": "MIT",
+          "entry_path": "skills/debugging-and-error-recovery/SKILL.md",
+          "match_reason": "系统化 root-cause 调试与回归恢复流程，补足本地缺的『昨天还好今天坏了』定位模板",
+          "evidence_url": "https://api.github.com/repos/addyosmani/agent-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "plus8bit/agent-postmortem-skill",
+          "url": "https://github.com/plus8bit/agent-postmortem-skill",
+          "stars": 7,
+          "last_activity": "2026-05-10",
+          "license": "MIT",
+          "entry_path": "SKILL.md",
+          "match_reason": "强制以证据证明修复并产出事后复盘，补足本地『记录根因』步骤缺的证据链",
+          "evidence_url": "https://api.github.com/repos/plus8bit/agent-postmortem-skill",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "mssx145/systematic-bug-fixing-skill",
+          "url": "https://github.com/mssx145/systematic-bug-fixing-skill",
+          "stars": 6,
+          "last_activity": "2026-08-11",
+          "license": "MIT",
+          "entry_path": null,
+          "match_reason": "证据驱动的缺陷诊断与已验证修复，补足本地缺陷分类维度（入口路径未取证）",
+          "evidence_url": "https://api.github.com/repos/mssx145/systematic-bug-fixing-skill",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        }
+      ],
+      "notes": "上游同源为 obra/superpowers 的 systematic-debugging；本地已含自有 references 扩展。"
+    },
+    {
+      "local_skill": "testing",
+      "local_evidence": {
+        "skill_md_bytes": 7921,
+        "note": "本地 7921B，六阶段流程（目标识别→框架选择→编写→运行→覆盖），已点名 PBT/Mutation 但无工具链。"
+      },
+      "candidates": [
+        {
+          "repo": "trailofbits/skills",
+          "url": "https://github.com/trailofbits/skills",
+          "stars": 7641,
+          "last_activity": "2026-10-15",
+          "license": "CC-BY-SA-4.0",
+          "entry_path": "plugins/property-based-testing/skills/property-based-testing/SKILL.md",
+          "match_reason": "Hypothesis/fast-check/proptest/jqwik 多语言 property-based 测试编写与调试，补足本地仅点名无实操",
+          "evidence_url": "https://api.github.com/repos/trailofbits/skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "trailofbits/skills",
+          "url": "https://github.com/trailofbits/skills",
+          "stars": 7641,
+          "last_activity": "2026-10-15",
+          "license": "CC-BY-SA-4.0",
+          "entry_path": "plugins/mutation-testing/skills/mutation-testing/SKILL.md",
+          "match_reason": "mewt/muton 变异测试配置与存活变异体分析，补足本地 Mutation testing 缺的落地工具链",
+          "evidence_url": "https://api.github.com/repos/trailofbits/skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "trailofbits/skills",
+          "url": "https://github.com/trailofbits/skills",
+          "stars": 7641,
+          "last_activity": "2026-10-15",
+          "license": "CC-BY-SA-4.0",
+          "entry_path": "plugins/testing-handbook-skills/skills/coverage-analysis/SKILL.md",
+          "match_reason": "覆盖分析手册（含 sanitizer/fuzzing 家族），补足本地覆盖报告如何解读的缺口",
+          "evidence_url": "https://api.github.com/repos/trailofbits/skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "url": "https://github.com/github/awesome-copilot",
+          "stars": 40184,
+          "last_activity": "2026-10-16",
+          "license": "MIT",
+          "entry_path": "skills/breakdown-test/SKILL.md",
+          "match_reason": "从测试策略到任务拆解与质量验证计划，补足本地缺的测试计划编排面",
+          "evidence_url": "https://api.github.com/repos/github/awesome-copilot",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "url": "https://github.com/addyosmani/agent-skills",
+          "stars": 108473,
+          "last_activity": "2026-10-13",
+          "license": "MIT",
+          "entry_path": "skills/browser-testing-with-devtools/SKILL.md",
+          "match_reason": "浏览器 DevTools 端到端测试，补足本地纯单元/集成测试之外的 UI 层验证",
+          "evidence_url": "https://api.github.com/repos/addyosmani/agent-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "test-driven-development",
+      "local_evidence": {
+        "skill_md_bytes": 10649,
+        "note": "本地 10649B + testing-anti-patterns.md(8251B)，Iron Law + Verify RED。"
+      },
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "url": "https://github.com/obra/superpowers",
+          "stars": 301953,
+          "last_activity": "2026-10-10",
+          "license": "MIT",
+          "entry_path": "skills/test-driven-development/SKILL.md",
+          "match_reason": "上游同源分叉：上游 9578B 短于本地 10649B，本地为扩展版，可回溯上游基线",
+          "evidence_url": "https://api.github.com/repos/obra/superpowers",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "url": "https://github.com/addyosmani/agent-skills",
+          "stars": 108473,
+          "last_activity": "2026-10-13",
+          "license": "MIT",
+          "entry_path": "skills/test-driven-development/SKILL.md",
+          "match_reason": "red-green-refactor 强制循环 + 逐语言示例，补足本地缺的多语言测试骨架",
+          "evidence_url": "https://api.github.com/repos/addyosmani/agent-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "oprogramadorreal/optimus-claude",
+          "url": "https://github.com/oprogramadorreal/optimus-claude",
+          "stars": 74,
+          "last_activity": "2026-09-28",
+          "license": "MIT",
+          "entry_path": "skills/tdd/SKILL.md",
+          "match_reason": "TDD 工作流与项目级接线脚本，补足本地缺的工程落地自动化",
+          "evidence_url": "https://api.github.com/repos/oprogramadorreal/optimus-claude",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "glebis/claude-skills",
+          "url": "https://github.com/glebis/claude-skills",
+          "stars": 394,
+          "last_activity": "2026-10-18",
+          "license": "MIT",
+          "entry_path": "tdd/README.md",
+          "match_reason": "轻量 TDD 说明与实践清单，补足本地缺的跨语言最小示例",
+          "evidence_url": "https://api.github.com/repos/glebis/claude-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        }
+      ],
+      "notes": "本地 description 与 obra/superpowers 上游 description 逐字一致（同源证据）。"
+    },
+    {
+      "local_skill": "verification-before-completion",
+      "local_evidence": {
+        "skill_md_bytes": 7128,
+        "note": "本地 7128B，含中文 triggers 列表，为上游的扩展版。"
+      },
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "url": "https://github.com/obra/superpowers",
+          "stars": 301953,
+          "last_activity": "2026-10-10",
+          "license": "MIT",
+          "entry_path": "skills/verification-before-completion/SKILL.md",
+          "match_reason": "上游同源：上游 3646B，本地 7128B 为其扩展版，可回溯核心原则原文",
+          "evidence_url": "https://api.github.com/repos/obra/superpowers",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "trailofbits/skills",
+          "url": "https://github.com/trailofbits/skills",
+          "stars": 7641,
+          "last_activity": "2026-10-15",
+          "license": "CC-BY-SA-4.0",
+          "entry_path": "plugins/post-patch-validation/skills/post-patch-validation/SKILL.md",
+          "match_reason": "补丁前后可复现的 baseline-vs-patched 证据对照，补足本地缺的『修复前后基线对比』硬化条款",
+          "evidence_url": "https://api.github.com/repos/trailofbits/skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "jagreehal/jagreehal-claude-skills",
+          "url": "https://github.com/jagreehal/jagreehal-claude-skills",
+          "stars": 3,
+          "last_activity": "2026-07-29",
+          "license": "MIT",
+          "entry_path": "skills/verification-before-completion/SKILL.md",
+          "match_reason": "同族精简实现（2157B），补足本地缺的轻量可嵌入版本",
+          "evidence_url": "https://api.github.com/repos/jagreehal/jagreehal-claude-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "plus8bit/agent-postmortem-skill",
+          "url": "https://github.com/plus8bit/agent-postmortem-skill",
+          "stars": 7,
+          "last_activity": "2026-05-10",
+          "license": "MIT",
+          "entry_path": "SKILL.md",
+          "match_reason": "把『证据先于结论』做成可交付复盘产物，补足本地缺的验收存档格式",
+          "evidence_url": "https://api.github.com/repos/plus8bit/agent-postmortem-skill",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "url": "https://github.com/github/awesome-copilot",
+          "stars": 40184,
+          "last_activity": "2026-10-16",
+          "license": "MIT",
+          "entry_path": "skills/audit-integrity/SKILL.md",
+          "match_reason": "审计输出的质量门禁与证据校验，补足本地缺的审计类交付门禁",
+          "evidence_url": "https://api.github.com/repos/github/awesome-copilot",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "refactoring",
+      "local_evidence": {
+        "skill_md_bytes": 4810,
+        "note": "本地 4810B，不改行为的结构优化；未见上游同源目录。"
+      },
+      "candidates": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "url": "https://github.com/addyosmani/agent-skills",
+          "stars": 108473,
+          "last_activity": "2026-10-13",
+          "license": "MIT",
+          "entry_path": "skills/code-simplification/SKILL.md",
+          "match_reason": "不改行为提升可读性的简化手法清单（13545B），补足本地缺的重构手法目录",
+          "evidence_url": "https://api.github.com/repos/addyosmani/agent-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "solatis/claude-config",
+          "url": "https://github.com/solatis/claude-config",
+          "stars": 911,
+          "last_activity": "2026-03-13",
+          "license": "MIT",
+          "entry_path": "skills/refactor/README.md",
+          "match_reason": "重构工作流说明（6946B），补足本地缺的重构执行编排",
+          "evidence_url": "https://api.github.com/repos/solatis/claude-config",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "asteria-jacky/skills",
+          "url": "https://github.com/asteria-jacky/skills",
+          "stars": 0,
+          "last_activity": "2026-10-18",
+          "license": null,
+          "entry_path": "README.md",
+          "match_reason": "面向统一语言/深模块的重构（1906B），补足本地缺的领域语言维度",
+          "evidence_url": "https://api.github.com/repos/asteria-jacky/skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        },
+        {
+          "repo": "cskwork/clean-code",
+          "url": "https://github.com/cskwork/clean-code",
+          "stars": 3,
+          "last_activity": "2026-09-07",
+          "license": "MIT",
+          "entry_path": null,
+          "match_reason": "保留特征化测试地重构遗留代码，补足本地缺的重构安全网要求（入口路径未取证）",
+          "evidence_url": "https://api.github.com/repos/cskwork/clean-code",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        },
+        {
+          "repo": "45ck/refactoring-code-smells-skills",
+          "url": "https://github.com/45ck/refactoring-code-smells-skills",
+          "stars": 6,
+          "last_activity": "2026-04-11",
+          "license": "MIT",
+          "entry_path": null,
+          "match_reason": "代码坏味/重复/反模式清理计划，补足本地缺的坏味分类清单（入口路径未取证）",
+          "evidence_url": "https://api.github.com/repos/45ck/refactoring-code-smells-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        }
+      ],
+      "notes": "obra/superpowers 的 skills/ 目录实测无 refactoring，本地该技能为自研。"
+    },
+    {
+      "local_skill": "security-audit",
+      "local_evidence": {
+        "skill_md_bytes": 11841,
+        "note": "本地 11841B，声明 Adapted from Trail of Bits security audit methodology。"
+      },
+      "candidates": [
+        {
+          "repo": "trailofbits/skills",
+          "url": "https://github.com/trailofbits/skills",
+          "stars": 7641,
+          "last_activity": "2026-10-15",
+          "license": "CC-BY-SA-4.0",
+          "entry_path": "plugins/audit-context-building/skills/audit-context-building/SKILL.md",
+          "match_reason": "本地声明的上游来源：审计前置语境构建，补足本地缺的『先理解代码库再找 bug』步骤",
+          "evidence_url": "https://api.github.com/repos/trailofbits/skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "trailofbits/skills",
+          "url": "https://github.com/trailofbits/skills",
+          "stars": 7641,
+          "last_activity": "2026-10-15",
+          "license": "CC-BY-SA-4.0",
+          "entry_path": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/SKILL.md",
+          "match_reason": "供应链风险审计器（6991B），补足本地供应链条款缺的具体执行",
+          "evidence_url": "https://api.github.com/repos/trailofbits/skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "trailofbits/skills",
+          "url": "https://github.com/trailofbits/skills",
+          "stars": 7641,
+          "last_activity": "2026-10-15",
+          "license": "CC-BY-SA-4.0",
+          "entry_path": "plugins/agentic-actions-auditor/skills/agentic-actions-auditor/SKILL.md",
+          "match_reason": "GitHub Actions 与 AI agent 供应链/权限审计，补足本地缺的 CI 侧攻击面",
+          "evidence_url": "https://api.github.com/repos/trailofbits/skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "netresearch/security-audit-skill",
+          "url": "https://github.com/netresearch/security-audit-skill",
+          "stars": 47,
+          "last_activity": "2026-10-19",
+          "license": "NOASSERTION",
+          "entry_path": "README.md",
+          "match_reason": "OWASP Top10 + CWE Top25 2025 + CVSS v4.0 对账，补足本地缺的 CWE/CVSS 版本化基线",
+          "evidence_url": "https://api.github.com/repos/netresearch/security-audit-skill",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "url": "https://github.com/github/awesome-copilot",
+          "stars": 40184,
+          "last_activity": "2026-10-16",
+          "license": "MIT",
+          "entry_path": "skills/agent-owasp-compliance/SKILL.md",
+          "match_reason": "OWASP Agentic Security Initiative ASI Top10 检查，补足本地仅 OWASP Web Top10 的 agent 维度",
+          "evidence_url": "https://api.github.com/repos/github/awesome-copilot",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        }
+      ],
+      "notes": "license 字段 API 返回 NOASSERTION，README 内 SPDX 声明为 CC-BY-SA-4.0。"
+    },
+    {
+      "local_skill": "ci-pipeline-debugging",
+      "local_evidence": {
+        "skill_md_bytes": 12926,
+        "note": "本地 12926B，六类归因决策树（v1.1.2），未见同源上游。"
+      },
+      "candidates": [
+        {
+          "repo": "rjmurillo/ai-agents",
+          "url": "https://github.com/rjmurillo/ai-agents",
+          "stars": 48,
+          "last_activity": "2026-10-19",
+          "license": "MIT",
+          "entry_path": "src/copilot-cli/skills/github/fix-ci.md",
+          "match_reason": "面向 GitHub Actions 失败的修复流程（11590B），补足本地决策树缺的读日志→复现执行脚本",
+          "evidence_url": "https://api.github.com/repos/rjmurillo/ai-agents",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "url": "https://github.com/addyosmani/agent-skills",
+          "stars": 108473,
+          "last_activity": "2026-10-13",
+          "license": "MIT",
+          "entry_path": "skills/ci-cd-and-automation/SKILL.md",
+          "match_reason": "CI/CD 质量门禁与部署策略配置，补足本地缺的『从零搭 CI 判据』侧",
+          "evidence_url": "https://api.github.com/repos/addyosmani/agent-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "url": "https://github.com/github/awesome-copilot",
+          "stars": 40184,
+          "last_activity": "2026-10-16",
+          "license": "MIT",
+          "entry_path": "skills/codeql/SKILL.md",
+          "match_reason": "CodeQL 扫描接入 GitHub Actions，补足本地 CI 判据缺的 SAST 挂载面",
+          "evidence_url": "https://api.github.com/repos/github/awesome-copilot",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "trailofbits/skills",
+          "url": "https://github.com/trailofbits/skills",
+          "stars": 7641,
+          "last_activity": "2026-10-15",
+          "license": "CC-BY-SA-4.0",
+          "entry_path": "plugins/agentic-actions-auditor/skills/agentic-actions-auditor/SKILL.md",
+          "match_reason": "workflow 权限/注入审计，补足本地 CI 排障缺的安全侧归因",
+          "evidence_url": "https://api.github.com/repos/trailofbits/skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        }
+      ],
+      "notes": "明确缺口：GitHub 未检索到与本地『六类归因决策树』同源的技能仓库。"
+    },
+    {
+      "local_skill": "writing-plans",
+      "local_evidence": {
+        "skill_md_bytes": 11226,
+        "note": "本地 11226B（224 行）+ plan-document-reviewer-prompt.md(1714B)。"
+      },
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "url": "https://github.com/obra/superpowers",
+          "stars": 301953,
+          "last_activity": "2026-10-10",
+          "license": "MIT",
+          "entry_path": "skills/writing-plans/SKILL.md",
+          "match_reason": "上游同源分叉：本地 11226B vs 上游实测 10335B（非批次描述所称 8.9KB），上游 frontmatter 与本地逐字一致",
+          "evidence_url": "https://api.github.com/repos/obra/superpowers",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "url": "https://github.com/addyosmani/agent-skills",
+          "stars": 108473,
+          "last_activity": "2026-10-13",
+          "license": "MIT",
+          "entry_path": "skills/planning-and-task-breakdown/SKILL.md",
+          "match_reason": "把 spec 拆成有序可实施任务并给估时/并行策略，补足本地缺的估时与并行判断",
+          "evidence_url": "https://api.github.com/repos/addyosmani/agent-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "url": "https://github.com/github/awesome-copilot",
+          "stars": 40184,
+          "last_activity": "2026-10-16",
+          "license": "MIT",
+          "entry_path": "skills/breakdown-plan/SKILL.md",
+          "match_reason": "从需求到实施计划的拆解模板（15050B），补足本地缺的计划颗粒度示例",
+          "evidence_url": "https://api.github.com/repos/github/awesome-copilot",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "url": "https://github.com/github/awesome-copilot",
+          "stars": 40184,
+          "last_activity": "2026-10-16",
+          "license": "MIT",
+          "entry_path": "skills/breakdown-feature-implementation/SKILL.md",
+          "match_reason": "功能实施级拆解（4837B），补足本地缺的 feature→task 映射",
+          "evidence_url": "https://api.github.com/repos/github/awesome-copilot",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "ericgandrade/claude-superskills",
+          "url": "https://github.com/ericgandrade/claude-superskills",
+          "stars": 84,
+          "last_activity": "2026-05-11",
+          "license": "MIT",
+          "entry_path": null,
+          "match_reason": "18 技能编排平台含 planning 技能，补足本地缺的跨平台安装分发（入口路径未取证）",
+          "evidence_url": "https://api.github.com/repos/ericgandrade/claude-superskills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        }
+      ],
+      "notes": "批次给出的『本地 6.0KB vs 上游 8.9KB』与实测不符：本地实测 11226B、上游 SKILL.md 实测 10335B。"
+    },
+    {
+      "local_skill": "brainstorming",
+      "local_evidence": {
+        "skill_md_bytes": 10634,
+        "note": "本地 10634B(164 行) + visual-companion.md(12047B) + scripts/(起服务与模板)。"
+      },
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "url": "https://github.com/obra/superpowers",
+          "stars": 301953,
+          "last_activity": "2026-10-10",
+          "license": "MIT",
+          "entry_path": "skills/brainstorming/SKILL.md",
+          "match_reason": "上游同源分叉：本地 10634B vs 上游实测 10073B（非批次所称 17.1KB）；上游 description 已外扩到软件之外场景",
+          "evidence_url": "https://api.github.com/repos/obra/superpowers",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "url": "https://github.com/addyosmani/agent-skills",
+          "stars": 108473,
+          "last_activity": "2026-10-13",
+          "license": "MIT",
+          "entry_path": "skills/idea-refine/SKILL.md",
+          "match_reason": "把模糊想法收敛为可执行方向（9253B），补足本地缺的想法收敛判据",
+          "evidence_url": "https://api.github.com/repos/addyosmani/agent-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "url": "https://github.com/addyosmani/agent-skills",
+          "stars": 108473,
+          "last_activity": "2026-10-13",
+          "license": "MIT",
+          "entry_path": "skills/interview-me/SKILL.md",
+          "match_reason": "逐问式需求拷问（15080B），补足本地缺的『一次一问』交互约束",
+          "evidence_url": "https://api.github.com/repos/addyosmani/agent-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "ericgandrade/claude-superskills",
+          "url": "https://github.com/ericgandrade/claude-superskills",
+          "stars": 84,
+          "last_activity": "2026-05-11",
+          "license": "MIT",
+          "entry_path": "skills/brainstorming/SKILL.md",
+          "match_reason": "跨 8 平台可分发的 brainstorming 技能（6248B），补足本地缺的分发安装链",
+          "evidence_url": "https://api.github.com/repos/ericgandrade/claude-superskills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "ysskrishna/ai-agent-skills",
+          "url": "https://github.com/ysskrishna/ai-agent-skills",
+          "stars": 17,
+          "last_activity": "2026-10-16",
+          "license": "MIT",
+          "entry_path": "README.md",
+          "match_reason": "brainstorming/决策支持/系统思考三件套（README 21192B），补足本地缺的系统思考配套",
+          "evidence_url": "https://api.github.com/repos/ysskrishna/ai-agent-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        }
+      ],
+      "notes": "结构差异证据：上游 skills/brainstorming/ 含 builder-check-prompt.md，本地对应文件为 spec-document-reviewer-prompt.md（已产生分叉漂移）。"
+    },
+    {
+      "local_skill": "executing-plans",
+      "local_evidence": {
+        "skill_md_bytes": null,
+        "note": "本地目录 D:\\global_skills\\executing-plans 实测不存在（已退役），故 skill_md_bytes=null。"
+      },
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "url": "https://github.com/obra/superpowers",
+          "stars": 301953,
+          "last_activity": "2026-10-10",
+          "license": "MIT",
+          "entry_path": "skills/executing-plans/SKILL.md",
+          "match_reason": "上游同源：本地已退役，上游实测 20405B（≈19.9KB，与批次描述一致）含 scripts/task-start、task-done",
+          "evidence_url": "https://api.github.com/repos/obra/superpowers",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "obra/superpowers",
+          "url": "https://github.com/obra/superpowers",
+          "stars": 301953,
+          "last_activity": "2026-10-10",
+          "license": "MIT",
+          "entry_path": "skills/subagent-driven-development/SKILL.md",
+          "match_reason": "派子 agent 执行的实现者/审查者提示词与 review-package 脚本，补足本地退役后缺的执行编排",
+          "evidence_url": "https://api.github.com/repos/obra/superpowers",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "url": "https://github.com/addyosmani/agent-skills",
+          "stars": 108473,
+          "last_activity": "2026-10-13",
+          "license": "MIT",
+          "entry_path": "skills/incremental-implementation/SKILL.md",
+          "match_reason": "增量实施与检查点（9629B），补足本地缺的『小步可回退』执行节奏",
+          "evidence_url": "https://api.github.com/repos/addyosmani/agent-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "url": "https://github.com/github/awesome-copilot",
+          "stars": 40184,
+          "last_activity": "2026-10-16",
+          "license": "MIT",
+          "entry_path": "skills/breakdown-feature-implementation/SKILL.md",
+          "match_reason": "功能实施级拆解到执行清单，补足本地退役后缺的执行映射",
+          "evidence_url": "https://api.github.com/repos/github/awesome-copilot",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        }
+      ],
+      "notes": "恢复该能力建议以上游 obra/superpowers 的 executing-plans 或 subagent-driven-development 为源。"
+    },
+    {
+      "local_skill": "spike",
+      "local_evidence": {
+        "skill_md_bytes": 2075,
+        "note": "本地 2075B，一次性原型验证并给 VALIDATED/PARTIAL/INVALIDATED 三档结论。"
+      },
+      "candidates": [
+        {
+          "repo": "NousResearch/hermes-agent",
+          "url": "https://github.com/NousResearch/hermes-agent",
+          "stars": 255164,
+          "last_activity": "2026-10-19",
+          "license": "MIT",
+          "entry_path": "skills/software-development/spike/SKILL.md",
+          "match_reason": "一次性原型验证可行性并给结论（8723B），补足本地缺的抛型式原型产出物约定",
+          "evidence_url": "https://api.github.com/repos/NousResearch/hermes-agent",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "OpenBMB/PilotDeck",
+          "url": "https://github.com/OpenBMB/PilotDeck",
+          "stars": 4789,
+          "last_activity": "2026-10-19",
+          "license": "AGPL-3.0",
+          "entry_path": "skills/spike/SKILL.md",
+          "match_reason": "原型验证/方案对比/给裁决（2125B），补足本地缺的方案 A/B 裁决模板",
+          "evidence_url": "https://api.github.com/repos/OpenBMB/PilotDeck",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "url": "https://github.com/github/awesome-copilot",
+          "stars": 40184,
+          "last_activity": "2026-10-16",
+          "license": "MIT",
+          "entry_path": "skills/create-technical-spike/SKILL.md",
+          "match_reason": "技术 spike 计划与产出（6578B），补足本地缺的 spike 计划书结构",
+          "evidence_url": "https://api.github.com/repos/github/awesome-copilot",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "haris-admin/skills-rules-repo",
+          "url": "https://github.com/haris-admin/skills-rules-repo",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "software-development/spike/SKILL.md",
+          "match_reason": "同族 spike 技能（8892B）；该仓库 star/license/更新时间均未取证",
+          "evidence_url": "https://api.github.com/repos/haris-admin/skills-rules-repo",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "grill-me",
+      "local_evidence": {
+        "skill_md_bytes": 2691,
+        "note": "本地 2691B（51 行），另含 _skillhub_meta.json(692B)。"
+      },
+      "candidates": [
+        {
+          "repo": "RobMitt/grill-me-skill",
+          "url": "https://github.com/RobMitt/grill-me-skill",
+          "stars": 992,
+          "last_activity": "2026-04-11",
+          "license": null,
+          "entry_path": "SKILL.md",
+          "match_reason": "上游同名同源：上游 1615B、description 与本地逐字一致，本地 2691B 为中文扩展版",
+          "evidence_url": "https://api.github.com/repos/RobMitt/grill-me-skill",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "url": "https://github.com/addyosmani/agent-skills",
+          "stars": 108473,
+          "last_activity": "2026-10-13",
+          "license": "MIT",
+          "entry_path": "skills/interview-me/SKILL.md",
+          "match_reason": "一次一问的需求拷问（15080B），补足本地缺的『单问节奏』约束",
+          "evidence_url": "https://api.github.com/repos/addyosmani/agent-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "obra/superpowers",
+          "url": "https://github.com/obra/superpowers",
+          "stars": 301953,
+          "last_activity": "2026-10-10",
+          "license": "MIT",
+          "entry_path": "skills/brainstorming/SKILL.md",
+          "match_reason": "追问式设计澄清，补足本地缺的设计树分支收敛",
+          "evidence_url": "https://api.github.com/repos/obra/superpowers",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "TimothyVang/Grill-me",
+          "url": "https://github.com/TimothyVang/Grill-me",
+          "stars": 37,
+          "last_activity": "2026-07-17",
+          "license": "MIT",
+          "entry_path": null,
+          "match_reason": "同名技能集合（1683KB repo），补足本地缺的工程化包装；SKILL.md 路径未取证",
+          "evidence_url": "https://api.github.com/repos/TimothyVang/Grill-me",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        }
+      ],
+      "notes": "RobMitt/grill-me-skill 的 license 字段 API 返回 null（未声明 license）。"
+    },
+    {
+      "local_skill": "first-principles-decomposer",
+      "local_evidence": {
+        "skill_md_bytes": 3034,
+        "note": "本地 3034B + references/(framework 2204B、examples 3438B、integrated-frameworks 3659B)。"
+      },
+      "candidates": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "url": "https://github.com/addyosmani/agent-skills",
+          "stars": 108473,
+          "last_activity": "2026-10-13",
+          "license": "MIT",
+          "entry_path": "skills/doubt-driven-development/SKILL.md",
+          "match_reason": "以怀疑驱动质疑既有假设，补足本地缺的对抗式『质疑→重建』检验",
+          "evidence_url": "https://api.github.com/repos/addyosmani/agent-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "mrchou1/first-principles-reasoning",
+          "url": "https://github.com/mrchou1/first-principles-reasoning",
+          "stars": 0,
+          "last_activity": "2026-04-25",
+          "license": null,
+          "entry_path": "SKILL.md",
+          "match_reason": "结构化第一性推理：拆解-质疑-重建（33580B），补足本地缺的显式三段骨架",
+          "evidence_url": "https://api.github.com/repos/mrchou1/first-principles-reasoning",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "weiliu1031/first-principles-thinking",
+          "url": "https://github.com/weiliu1031/first-principles-thinking",
+          "stars": 4,
+          "last_activity": "2026-03-28",
+          "license": "MIT",
+          "entry_path": null,
+          "match_reason": "强制每个任务走第一性思考，补足本地缺的强制触发钩子（入口路径未取证）",
+          "evidence_url": "https://api.github.com/repos/weiliu1031/first-principles-thinking",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        },
+        {
+          "repo": "v1r3n/first-principles-skills",
+          "url": "https://github.com/v1r3n/first-principles-skills",
+          "stars": 0,
+          "last_activity": "2026-04-06",
+          "license": "MIT",
+          "entry_path": null,
+          "match_reason": "第一性原理 agent 技能集（114KB repo），补足本地缺的英文原版表述",
+          "evidence_url": "https://api.github.com/repos/v1r3n/first-principles-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        }
+      ],
+      "notes": "明确缺口：该方向缺少高 star/活跃维护的上游，现有专项仓库多为 0-4 star 个人项目。"
+    },
+    {
+      "local_skill": "audit-runner-safe-aggregate",
+      "local_evidence": {
+        "skill_md_bytes": 5654,
+        "note": "本地 5654B，anti-mask 聚合判定范式（THE BUG/THE FIX/三原则/陷阱清单）。"
+      },
+      "candidates": [
+        {
+          "repo": "github/awesome-copilot",
+          "url": "https://github.com/github/awesome-copilot",
+          "stars": 40184,
+          "last_activity": "2026-10-16",
+          "license": "MIT",
+          "entry_path": "skills/audit-integrity/SKILL.md",
+          "match_reason": "审计输出质量门禁与证据校验（4028B），补足本地缺的审计结论入库门禁",
+          "evidence_url": "https://api.github.com/repos/github/awesome-copilot",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "skills-lock/skil-lock",
+          "url": "https://github.com/skills-lock/skil-lock",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "README.md",
+          "match_reason": "锁定 skill 行为并在 CI 阻断未批准漂移（README 19489B），补足本地缺的聚合回归基线；star/license 未取证",
+          "evidence_url": "https://api.github.com/repos/skills-lock/skil-lock",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        },
+        {
+          "repo": "oaustegard/claude-skills",
+          "url": "https://github.com/oaustegard/claude-skills",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": null,
+          "match_reason": "含 gating-v0.2.0 发布，补足本地缺的聚合门禁技能；star/license/入口均未取证",
+          "evidence_url": "https://api.github.com/repos/oaustegard/claude-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        },
+        {
+          "repo": "mohitagw15856/pm-claude-skills",
+          "url": "https://github.com/mohitagw15856/pm-claude-skills",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "scripts/eval-regression-gate.mjs",
+          "match_reason": "eval-regression-gate 脚本防评分回退，补足本地缺的回归门禁实现参考",
+          "evidence_url": "https://api.github.com/repos/mohitagw15856/pm-claude-skills",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        }
+      ],
+      "notes": "明确缺口：GitHub 未检索到与本地 anti-mask 聚合判定同源的技能，本地方案为对该类问题的自研范式；上列候选均为相邻而非同源。"
+    },
+    {
+      "local_skill": "scope-creep-detector",
+      "local_evidence": {
+        "skill_md_bytes": 5140,
+        "note": "本地 5140B + scripts/scope_creep.py(18609B) + references/scope-signals.md(3268B)。"
+      },
+      "candidates": [
+        {
+          "repo": "Shubhamsaboo/awesome-llm-apps",
+          "url": "https://github.com/Shubhamsaboo/awesome-llm-apps",
+          "stars": 142294,
+          "last_activity": "2026-10-18",
+          "license": "Apache-2.0",
+          "entry_path": "agent_skills/scope-creep-detector/SKILL.md",
+          "match_reason": "上游同源：上游 SKILL.md 实测 5140B 与本地 5140B 字节量一致，frontmatter description 逐字相同",
+          "evidence_url": "https://api.github.com/repos/Shubhamsaboo/awesome-llm-apps",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "url": "https://github.com/github/awesome-copilot",
+          "stars": 40184,
+          "last_activity": "2026-10-16",
+          "license": "MIT",
+          "entry_path": "skills/api-breaking-change-detector/SKILL.md",
+          "match_reason": "API 破坏性变更检测，补足本地缺的公开接口改名判据",
+          "evidence_url": "https://api.github.com/repos/github/awesome-copilot",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "garrytan/gstack",
+          "url": "https://github.com/garrytan/gstack",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "review/SKILL.md",
+          "match_reason": "PR diff 对照声明意图的近地评审（80888B），补足本地缺的 GitHub PR 侧执行；star/license 未取证",
+          "evidence_url": "https://api.github.com/repos/garrytan/gstack",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        },
+        {
+          "repo": "Naveja00/OverReach",
+          "url": "https://github.com/Naveja00/OverReach",
+          "stars": null,
+          "last_activity": null,
+          "license": null,
+          "entry_path": "README.md",
+          "match_reason": "越界行为检测（README 8370B），补足本地缺的 overreach 语义维度；star/license 未取证",
+          "evidence_url": "https://api.github.com/repos/Naveja00/OverReach",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        }
+      ],
+      "notes": "本地 script 与上游是否同源未能逐字节比对（上游仅取证 SKILL.md）。"
+    },
+    {
+      "local_skill": "commit-archaeologist",
+      "local_evidence": {
+        "skill_md_bytes": 5496,
+        "note": "本地 5496B + scripts/archaeologist.py(13172B) + references/reading-git-history.md(3589B)。"
+      },
+      "candidates": [
+        {
+          "repo": "Shubhamsaboo/awesome-llm-apps",
+          "url": "https://github.com/Shubhamsaboo/awesome-llm-apps",
+          "stars": 142294,
+          "last_activity": "2026-10-18",
+          "license": "Apache-2.0",
+          "entry_path": "agent_skills/commit-archaeologist/SKILL.md",
+          "match_reason": "上游同源：上游 SKILL.md 实测 5496B 与本地 5496B 字节量一致，frontmatter description 逐字相同",
+          "evidence_url": "https://api.github.com/repos/Shubhamsaboo/awesome-llm-apps",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "CodeAlive-AI/ai-driven-development",
+          "url": "https://github.com/CodeAlive-AI/ai-driven-development",
+          "stars": 163,
+          "last_activity": "2026-10-18",
+          "license": "MIT",
+          "entry_path": "skills/investigating-repository-history/SKILL.md",
+          "match_reason": "在冒险改动前做仓库历史调查（blame/log/PR/rebase，7865B），补足本地缺的 PR 与 git 改写维度",
+          "evidence_url": "https://api.github.com/repos/CodeAlive-AI/ai-driven-development",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "high"
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "url": "https://github.com/github/awesome-copilot",
+          "stars": 40184,
+          "last_activity": "2026-10-16",
+          "license": "MIT",
+          "entry_path": "skills/code-tour/SKILL.md",
+          "match_reason": "代码库导览定位历史脉络，补足本地缺的仓库级叙事输出",
+          "evidence_url": "https://api.github.com/repos/github/awesome-copilot",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "medium"
+        },
+        {
+          "repo": "mistykoyalzoho/git-archaeologist",
+          "url": "https://github.com/mistykoyalzoho/git-archaeologist",
+          "stars": 2,
+          "last_activity": "2026-06-01",
+          "license": "MIT",
+          "entry_path": null,
+          "match_reason": "同名 git 历史考古工具，补足本地缺的独立 CLI 化（入口路径未取证）",
+          "evidence_url": "https://api.github.com/repos/mistykoyalzoho/git-archaeologist",
+          "fetched_at": "2026-10-19T22:26:00+08:00",
+          "confidence": "low"
+        }
+      ],
+      "notes": null
+    }
+  ]
+}

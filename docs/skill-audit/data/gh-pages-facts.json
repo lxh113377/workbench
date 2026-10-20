@@ -1,0 +1,230 @@
+{
+  "anthropics/skills": {
+    "status": 200,
+    "html_bytes": 281616,
+    "title": "GitHub - anthropics/skills: Public repository for Agent Skills · GitHub",
+    "stars_html": "76263028",
+    "license_html": null,
+    "has_skills_dir": true,
+    "top_dirs": [
+      ".claude-plugin",
+      "skills",
+      "spec",
+      "template"
+    ],
+    "updated_txt": null
+  },
+  "obra/superpowers": {
+    "status": 200,
+    "html_bytes": 430648,
+    "title": "GitHub - obra/superpowers: An agentic skills framework &amp; software development methodology that works. · GitHub",
+    "stars_html": "45416",
+    "license_html": "MIT",
+    "has_skills_dir": true,
+    "top_dirs": [
+      ".antigravity-plugin",
+      ".claude-plugin",
+      ".codex-plugin",
+      ".cursor-plugin",
+      ".devin-plugin",
+      ".github",
+      ".hermes-plugin",
+      ".kimi-plugin",
+      ".muse-plugin",
+      ".opencode",
+      "assets",
+      "docs",
+      "hooks",
+      "scripts",
+      "skills",
+      "tests"
+    ],
+    "updated_txt": null
+  },
+  "addyosmani/agent-skills": {
+    "status": 200,
+    "html_bytes": 424543,
+    "title": "GitHub - addyosmani/agent-skills: Production-grade engineering skills for AI coding agents. · GitHub",
+    "stars_html": "110953",
+    "license_html": "MIT",
+    "has_skills_dir": true,
+    "top_dirs": [
+      ".claude",
+      ".claude-plugin",
+      ".codex-plugin",
+      ".github",
+      ".opencode",
+      "agents",
+      "commands",
+      "docs",
+      "evals",
+      "hooks",
+      "references",
+      "scripts",
+      "skills"
+    ],
+    "updated_txt": null
+  },
+  "github/awesome-copilot": {
+    "status": 200,
+    "html_bytes": 596938,
+    "title": "GitHub - github/awesome-copilot: Community-contributed instructions, agents, skills, and configurations to help you make",
+    "stars_html": "9919",
+    "license_html": "MIT",
+    "has_skills_dir": true,
+    "top_dirs": [
+      ".github",
+      ".schemas",
+      ".vscode",
+      "agents",
+      "cookbook",
+      "docs",
+      "eng",
+      "extensions",
+      "hooks",
+      "instructions",
+      "plugins",
+      "skills",
+      "website",
+      "workflows"
+    ],
+    "updated_txt": null
+  },
+  "tfriedel/claude-office-skills": {
+    "status": 200,
+    "html_bytes": 325233,
+    "title": "GitHub - tfriedel/claude-office-skills: Office document creation and editing skills for Claude Code - PPTX, DOCX, XLSX, ",
+    "stars_html": "1817286",
+    "license_html": null,
+    "has_skills_dir": false,
+    "top_dirs": [
+      "public"
+    ],
+    "updated_txt": null
+  },
+  "secondsky/claude-skills": {
+    "status": 200,
+    "html_bytes": 405164,
+    "title": "GitHub - secondsky/claude-skills: Production-ready skills for Claude Code CLI - Cloudflare, React, Tailwind v4, and AI i",
+    "stars_html": "5509203",
+    "license_html": "MIT",
+    "has_skills_dir": false,
+    "top_dirs": [
+      ".claude-plugin",
+      ".githooks",
+      ".github",
+      "docs",
+      "plugins",
+      "schemas",
+      "scripts",
+      "templates"
+    ],
+    "updated_txt": null
+  },
+  "Jeffallan/claude-skills": {
+    "status": 200,
+    "html_bytes": 377843,
+    "title": "GitHub - Jeffallan/claude-skills: 67 Specialized Skills for Full-Stack Developers. Transform Claude Code into your exper",
+    "stars_html": "23423962",
+    "license_html": "MIT",
+    "has_skills_dir": true,
+    "top_dirs": [
+      ".astro",
+      ".claude-plugin",
+      ".github",
+      ".serena",
+      "assets",
+      "commands",
+      "docs",
+      "research",
+      "scripts",
+      "site",
+      "skills",
+      "specs"
+    ],
+    "updated_txt": null
+  },
+  "itgoyo/awesome-claude-code-skills": {
+    "status": 200,
+    "html_bytes": 402624,
+    "title": "GitHub - itgoyo/awesome-claude-code-skills: Supercharge Your Claude Code — The Ultimate Curated Arsenal of Top-Starred T",
+    "stars_html": "23348551",
+    "license_html": "is",
+    "has_skills_dir": false,
+    "top_dirs": [],
+    "updated_txt": null
+  },
+  "magnus919/agent-skills": {
+    "status": 200,
+    "html_bytes": 1073571,
+    "title": "GitHub - magnus919/agent-skills: Curated collection of AI agent skills for Hermes and other agent frameworks · GitHub",
+    "stars_html": "942000",
+    "license_html": "MIT",
+    "has_skills_dir": false,
+    "top_dirs": [
+      ".claude-plugin",
+      ".codex-plugin",
+      ".devcontainer",
+      ".github",
+      "actuarial-risk-modeling",
+      "adr-authoring",
+      "agent-council",
+      "agent-evals-and-observability",
+      "agent-production-operations",
+      "agent-skills",
+      "ai-governance",
+      "ai-operating-economics",
+      "analog-occultism",
+      "anydoc",
+      "api-design-and-evolution",
+      "artifact-pyramids",
+      "ascii-city-engine",
+      "autogen",
+      "backend-engineering",
+      "binary-analysis",
+      "bmad",
+      "brand-designer",
+      "c4-diagramming",
+      "capacity-and-cost-engineering",
+      "chief-of-staff-methodology"
+    ],
+    "updated_txt": null
+  },
+  "laurigates/claude-plugins": {
+    "error": "URLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1010)'))"
+  },
+  "nolabs-ai/claude-extensions": {
+    "status": 200,
+    "html_bytes": 365864,
+    "title": "GitHub - nolabs-ai/claude-extensions: Useful skills and agents for Claude Code · GitHub",
+    "stars_html": "289819636",
+    "license_html": "MIT",
+    "has_skills_dir": true,
+    "top_dirs": [
+      "agents",
+      "assets",
+      "commands",
+      "docs",
+      "hooks",
+      "mcp",
+      "presets",
+      "scripts",
+      "skills",
+      "templates"
+    ],
+    "updated_txt": null
+  },
+  "ReeperReepx/Security-Audit-Claude-Skill": {
+    "status": 200,
+    "html_bytes": 317413,
+    "title": "GitHub - ReeperReepx/Security-Audit-Claude-Skill: Enterprise security audit plugin for Claude Code. One command (/securi",
+    "stars_html": "255132102",
+    "license_html": "MIT",
+    "has_skills_dir": true,
+    "top_dirs": [
+      ".claude-plugin",
+      "agents"
+    ],
+    "updated_txt": null
+  }
+}

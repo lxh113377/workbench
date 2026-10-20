@@ -1,0 +1,147 @@
+{
+  "schema": "batchA-path-verify-v1",
+  "fetched_at": "2026-10-20T06:55:41",
+  "checked": [
+    {
+      "tag": "docx",
+      "repo": "anthropics/skills",
+      "path": "skills/docx/SKILL.md",
+      "http": 200,
+      "bytes": 6911,
+      "raw_url": "https://raw.githubusercontent.com/anthropics/skills/HEAD/skills/docx/SKILL.md"
+    },
+    {
+      "tag": "pdf",
+      "repo": "anthropics/skills",
+      "path": "skills/pdf/SKILL.md",
+      "http": 200,
+      "bytes": 8072,
+      "raw_url": "https://raw.githubusercontent.com/anthropics/skills/HEAD/skills/pdf/SKILL.md"
+    },
+    {
+      "tag": "xlsx",
+      "repo": "anthropics/skills",
+      "path": "skills/xlsx/SKILL.md",
+      "http": 200,
+      "bytes": 8598,
+      "raw_url": "https://raw.githubusercontent.com/anthropics/skills/HEAD/skills/xlsx/SKILL.md"
+    },
+    {
+      "tag": "slide-deck",
+      "repo": "anthropics/skills",
+      "path": "skills/pptx/SKILL.md",
+      "http": 200,
+      "bytes": 20796,
+      "raw_url": "https://raw.githubusercontent.com/anthropics/skills/HEAD/skills/pptx/SKILL.md"
+    },
+    {
+      "tag": "pptx-deck",
+      "repo": "wshobson/agents",
+      "path": "plugins/pptx-deck-creation/commands/pptx.md",
+      "http": 404,
+      "error": "HTTP 404"
+    },
+    {
+      "tag": "playwright",
+      "repo": "Jeffallan/claude-skills",
+      "path": "skills/playwright-expert/SKILL.md",
+      "http": 200,
+      "bytes": 5759,
+      "raw_url": "https://raw.githubusercontent.com/Jeffallan/claude-skills/HEAD/skills/playwright-expert/SKILL.md"
+    },
+    {
+      "tag": "browser-devtools",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/browser-testing-with-devtools/SKILL.md",
+      "http": 200,
+      "bytes": 14539,
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/browser-testing-with-devtools/SKILL.md"
+    },
+    {
+      "tag": "browser-tools",
+      "repo": "yonatangross/orchestkit",
+      "path": "plugins/ork/skills/browser-tools/SKILL.md",
+      "http": 200,
+      "bytes": 24173,
+      "raw_url": "https://raw.githubusercontent.com/yonatangross/orchestkit/HEAD/plugins/ork/skills/browser-tools/SKILL.md"
+    },
+    {
+      "tag": "memory-fabric",
+      "repo": "yonatangross/orchestkit",
+      "path": "plugins/ork/skills/memory-fabric/SKILL.md",
+      "http": 200,
+      "bytes": 8268,
+      "raw_url": "https://raw.githubusercontent.com/yonatangross/orchestkit/HEAD/plugins/ork/skills/memory-fabric/SKILL.md"
+    },
+    {
+      "tag": "memory",
+      "repo": "yonatangross/orchestkit",
+      "path": "plugins/ork/skills/memory/SKILL.md",
+      "http": 200,
+      "bytes": 6748,
+      "raw_url": "https://raw.githubusercontent.com/yonatangross/orchestkit/HEAD/plugins/ork/skills/memory/SKILL.md"
+    },
+    {
+      "tag": "quality-gates",
+      "repo": "yonatangross/orchestkit",
+      "path": "plugins/ork/skills/quality-gates/SKILL.md",
+      "http": 200,
+      "bytes": 11628,
+      "raw_url": "https://raw.githubusercontent.com/yonatangross/orchestkit/HEAD/plugins/ork/skills/quality-gates/SKILL.md"
+    },
+    {
+      "tag": "orchestration",
+      "repo": "wshobson/agents",
+      "path": "plugins/agent-orchestration/commands/orchestrate.md",
+      "http": 404,
+      "error": "HTTP 404"
+    },
+    {
+      "tag": "team-orchestration",
+      "repo": "yonatangross/orchestkit",
+      "path": "plugins/ork/skills/agent-orchestration/SKILL.md",
+      "http": 200,
+      "bytes": 11040,
+      "raw_url": "https://raw.githubusercontent.com/yonatangross/orchestkit/HEAD/plugins/ork/skills/agent-orchestration/SKILL.md"
+    },
+    {
+      "tag": "ci-cd",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/ci-cd-and-automation/SKILL.md",
+      "http": 200,
+      "bytes": 11332,
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/ci-cd-and-automation/SKILL.md"
+    },
+    {
+      "tag": "code-simplification",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/code-simplification/SKILL.md",
+      "http": 200,
+      "bytes": 13545,
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/code-simplification/SKILL.md"
+    },
+    {
+      "tag": "code-review-quality",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/code-review-and-quality/SKILL.md",
+      "http": 200,
+      "bytes": 20976,
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/code-review-and-quality/SKILL.md"
+    },
+    {
+      "tag": "debugging-recovery",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/debugging-and-error-recovery/SKILL.md",
+      "http": 200,
+      "bytes": 10913,
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/debugging-and-error-recovery/SKILL.md"
+    },
+    {
+      "tag": "teams",
+      "repo": "wshobson/agents",
+      "path": "plugins/agent-teams/commands/team.md",
+      "http": 404,
+      "error": "HTTP 404"
+    }
+  ]
+}

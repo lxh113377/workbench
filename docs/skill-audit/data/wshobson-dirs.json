@@ -1,0 +1,20 @@
+{
+  "plugins/agent-orchestration": [
+    ".claude-plugin",
+    "agents",
+    "commands"
+  ],
+  "plugins/agent-teams": [
+    ".claude-plugin",
+    ".codex-plugin",
+    "agents",
+    "commands",
+    "skills"
+  ],
+  "plugins/pptx-deck-creation": [
+    ".claude-plugin",
+    ".codex-plugin",
+    "agents",
+    "skills"
+  ]
+}

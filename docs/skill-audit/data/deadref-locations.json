@@ -1,0 +1,42 @@
+{
+  "A-dynamic-workflow": {
+    "multi_agent_collab.md": [
+      "D:/global_skills/A-memory-start/references/multi_agent_collab.md"
+    ]
+  },
+  "dingtalk-misc": {
+    "intent-guide.md": [
+      "D:/global_skills/dingtalk-aisearch/references/intent-guide.md",
+      "D:/global_skills/dingtalk-aitable/references/intent-guide.md",
+      "D:/global_skills/dingtalk-calendar/references/intent-guide.md",
+      "D:/global_skills/dingtalk-chat/references/intent-guide.md",
+      "D:/global_skills/dingtalk-contact/references/intent-guide.md",
+      "D:/global_skills/dingtalk-doc/references/intent-guide.md"
+    ]
+  },
+  "dingtalk-shared": {
+    "profile.md": [
+      "D:/global_skills/dingtalk-misc/references/profile.md"
+    ]
+  },
+  "hyperframes-media": {
+    "transcript-guide.md": [
+      "D:/global_skills/hyperframes/references/transcript-guide.md"
+    ]
+  },
+  "openclaw-fenjue-weekly": {
+    "prompt_optimizer.md": [
+      "D:/global_skills/A-memory-start/references/prompt_optimizer.md"
+    ]
+  },
+  "prompt-system-audit": {
+    "reply_footer.md": [
+      "D:/global_skills/A-memory-start/references/reply_footer.md"
+    ]
+  },
+  "wps-knowledgebase": {
+    "workflow.md": [
+      "D:/global_skills/A-project-better/references/workflow.md"
+    ]
+  }
+}

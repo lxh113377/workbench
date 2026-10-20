@@ -1,0 +1,55 @@
+{
+  "vercel-labs/agent-browser": {
+    "root": [],
+    "skill-data": [
+      "agentcore",
+      "core",
+      "derive-client",
+      "dogfood",
+      "electron",
+      "protected-vercel-deployments",
+      "slack",
+      "vercel-sandbox",
+      "webmcp-gen"
+    ],
+    "skills": [
+      "agent-browser"
+    ]
+  },
+  "garrytan/gstack": {
+    "root": [],
+    "skill-data_err": "<HTTPError 404: 'Not Found'>",
+    "skills_err": "<HTTPError 404: 'Not Found'>"
+  },
+  "browser-use/browser-use": {
+    "root": [],
+    "skill-data_err": "<HTTPError 404: 'Not Found'>",
+    "skills": [
+      "browser-use",
+      "cloud",
+      "open-source",
+      "qa",
+      "remote-browser",
+      "x402"
+    ]
+  },
+  "microsoft/playwright-mcp": {
+    "root": [],
+    "skill-data_err": "<HTTPError 404: 'Not Found'>",
+    "skills_err": "<HTTPError 404: 'Not Found'>"
+  },
+  "obra/superpowers-skills": {
+    "root": [],
+    "skill-data_err": "<HTTPError 404: 'Not Found'>",
+    "skills": [
+      "architecture",
+      "collaboration",
+      "debugging",
+      "meta",
+      "problem-solving",
+      "research",
+      "testing",
+      "using-skills"
+    ]
+  }
+}

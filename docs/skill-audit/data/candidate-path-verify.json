@@ -1,0 +1,543 @@
+{
+  "schema": "candidate-path-verify-v1",
+  "generated_at": "2026-10-19T22:48:23",
+  "checked": [
+    {
+      "local_skill": "code-review",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/code-review-and-quality/SKILL.md",
+      "http": 200,
+      "bytes": 20976,
+      "sha256": "2db1e850379f255f",
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/code-review-and-quality/SKILL.md"
+    },
+    {
+      "local_skill": "code-review",
+      "repo": "obra/superpowers",
+      "path": "skills/requesting-code-review/SKILL.md",
+      "http": 200,
+      "bytes": 2974,
+      "sha256": "2180e14a448e9410",
+      "raw_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/requesting-code-review/SKILL.md"
+    },
+    {
+      "local_skill": "code-review",
+      "repo": "amirbena/code-review-skill",
+      "path": "skills/local-code-review/SKILL.md",
+      "http": 200,
+      "bytes": 18147,
+      "sha256": "2ed1af1c0c4204e5",
+      "raw_url": "https://raw.githubusercontent.com/amirbena/code-review-skill/HEAD/skills/local-code-review/SKILL.md"
+    },
+    {
+      "local_skill": "code-review",
+      "repo": "trailofbits/skills",
+      "path": "plugins/differential-review/skills/differential-review/SKILL.md",
+      "http": 200,
+      "bytes": 7439,
+      "sha256": "f9af6a8193fc1a9f",
+      "raw_url": "https://raw.githubusercontent.com/trailofbits/skills/HEAD/plugins/differential-review/skills/differential-review/SKILL.md"
+    },
+    {
+      "local_skill": "debugging-fixing",
+      "repo": "obra/superpowers",
+      "path": "skills/systematic-debugging/SKILL.md",
+      "http": 200,
+      "bytes": 9530,
+      "sha256": "51c6435d98c83c42",
+      "raw_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/systematic-debugging/SKILL.md"
+    },
+    {
+      "local_skill": "debugging-fixing",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/debugging-and-error-recovery/SKILL.md",
+      "http": 200,
+      "bytes": 10913,
+      "sha256": "21f3960f5d7ae2cc",
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/debugging-and-error-recovery/SKILL.md"
+    },
+    {
+      "local_skill": "debugging-fixing",
+      "repo": "plus8bit/agent-postmortem-skill",
+      "path": "SKILL.md",
+      "http": 200,
+      "bytes": 3591,
+      "sha256": "40be6ab7112f4352",
+      "raw_url": "https://raw.githubusercontent.com/plus8bit/agent-postmortem-skill/HEAD/SKILL.md"
+    },
+    {
+      "local_skill": "testing",
+      "repo": "trailofbits/skills",
+      "path": "plugins/property-based-testing/skills/property-based-testing/SKILL.md",
+      "http": 200,
+      "bytes": 4306,
+      "sha256": "9448cacb65c6237a",
+      "raw_url": "https://raw.githubusercontent.com/trailofbits/skills/HEAD/plugins/property-based-testing/skills/property-based-testing/SKILL.md"
+    },
+    {
+      "local_skill": "testing",
+      "repo": "trailofbits/skills",
+      "path": "plugins/mutation-testing/skills/mutation-testing/SKILL.md",
+      "http": 200,
+      "bytes": 6225,
+      "sha256": "20e6ee2b6cec91ba",
+      "raw_url": "https://raw.githubusercontent.com/trailofbits/skills/HEAD/plugins/mutation-testing/skills/mutation-testing/SKILL.md"
+    },
+    {
+      "local_skill": "testing",
+      "repo": "trailofbits/skills",
+      "path": "plugins/testing-handbook-skills/skills/coverage-analysis/SKILL.md",
+      "http": 200,
+      "bytes": 21004,
+      "sha256": "9f71cfaffec44f15",
+      "raw_url": "https://raw.githubusercontent.com/trailofbits/skills/HEAD/plugins/testing-handbook-skills/skills/coverage-analysis/SKILL.md"
+    },
+    {
+      "local_skill": "testing",
+      "repo": "github/awesome-copilot",
+      "path": "skills/breakdown-test/SKILL.md",
+      "http": 200,
+      "bytes": 14962,
+      "sha256": "83727ec30a986686",
+      "raw_url": "https://raw.githubusercontent.com/github/awesome-copilot/HEAD/skills/breakdown-test/SKILL.md"
+    },
+    {
+      "local_skill": "testing",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/browser-testing-with-devtools/SKILL.md",
+      "http": 200,
+      "bytes": 14539,
+      "sha256": "4e3aacd6a380cd25",
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/browser-testing-with-devtools/SKILL.md"
+    },
+    {
+      "local_skill": "test-driven-development",
+      "repo": "obra/superpowers",
+      "path": "skills/test-driven-development/SKILL.md",
+      "http": 200,
+      "bytes": 9578,
+      "sha256": "64b03fce4aee5a97",
+      "raw_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/test-driven-development/SKILL.md"
+    },
+    {
+      "local_skill": "test-driven-development",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/test-driven-development/SKILL.md",
+      "http": 200,
+      "bytes": 16676,
+      "sha256": "a3aa6ba956384970",
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/test-driven-development/SKILL.md"
+    },
+    {
+      "local_skill": "test-driven-development",
+      "repo": "oprogramadorreal/optimus-claude",
+      "path": "skills/tdd/SKILL.md",
+      "http": 200,
+      "bytes": 20919,
+      "sha256": "ed512aede6325dbd",
+      "raw_url": "https://raw.githubusercontent.com/oprogramadorreal/optimus-claude/HEAD/skills/tdd/SKILL.md"
+    },
+    {
+      "local_skill": "test-driven-development",
+      "repo": "glebis/claude-skills",
+      "path": "tdd/README.md",
+      "http": 200,
+      "bytes": 6293,
+      "sha256": "4ab2777c44362fb8",
+      "raw_url": "https://raw.githubusercontent.com/glebis/claude-skills/HEAD/tdd/README.md"
+    },
+    {
+      "local_skill": "verification-before-completion",
+      "repo": "obra/superpowers",
+      "path": "skills/verification-before-completion/SKILL.md",
+      "http": 200,
+      "bytes": 3646,
+      "sha256": "2befe7fc55bcadaa",
+      "raw_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/verification-before-completion/SKILL.md"
+    },
+    {
+      "local_skill": "verification-before-completion",
+      "repo": "trailofbits/skills",
+      "path": "plugins/post-patch-validation/skills/post-patch-validation/SKILL.md",
+      "http": 200,
+      "bytes": 15336,
+      "sha256": "33b604f4d7d62eab",
+      "raw_url": "https://raw.githubusercontent.com/trailofbits/skills/HEAD/plugins/post-patch-validation/skills/post-patch-validation/SKILL.md"
+    },
+    {
+      "local_skill": "verification-before-completion",
+      "repo": "jagreehal/jagreehal-claude-skills",
+      "path": "skills/verification-before-completion/SKILL.md",
+      "http": 200,
+      "bytes": 2157,
+      "sha256": "ccfeeb81f4a094b7",
+      "raw_url": "https://raw.githubusercontent.com/jagreehal/jagreehal-claude-skills/HEAD/skills/verification-before-completion/SKILL.md"
+    },
+    {
+      "local_skill": "verification-before-completion",
+      "repo": "github/awesome-copilot",
+      "path": "skills/audit-integrity/SKILL.md",
+      "http": 200,
+      "bytes": 4028,
+      "sha256": "f2aa1a0cce91cfca",
+      "raw_url": "https://raw.githubusercontent.com/github/awesome-copilot/HEAD/skills/audit-integrity/SKILL.md"
+    },
+    {
+      "local_skill": "refactoring",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/code-simplification/SKILL.md",
+      "http": 200,
+      "bytes": 13545,
+      "sha256": "f0c5ed754057eb0c",
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/code-simplification/SKILL.md"
+    },
+    {
+      "local_skill": "refactoring",
+      "repo": "solatis/claude-config",
+      "path": "skills/refactor/README.md",
+      "http": 200,
+      "bytes": 6946,
+      "sha256": "438b9fa2920e1587",
+      "raw_url": "https://raw.githubusercontent.com/solatis/claude-config/HEAD/skills/refactor/README.md"
+    },
+    {
+      "local_skill": "refactoring",
+      "repo": "asteria-jacky/skills",
+      "path": "README.md",
+      "http": 200,
+      "bytes": 1906,
+      "sha256": "8e7a39074c129783",
+      "raw_url": "https://raw.githubusercontent.com/asteria-jacky/skills/HEAD/README.md"
+    },
+    {
+      "local_skill": "security-audit",
+      "repo": "trailofbits/skills",
+      "path": "plugins/audit-context-building/skills/audit-context-building/SKILL.md",
+      "http": 200,
+      "bytes": 3991,
+      "sha256": "33fa693dc6e166cf",
+      "raw_url": "https://raw.githubusercontent.com/trailofbits/skills/HEAD/plugins/audit-context-building/skills/audit-context-building/SKILL.md"
+    },
+    {
+      "local_skill": "security-audit",
+      "repo": "trailofbits/skills",
+      "path": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/SKILL.md",
+      "http": 200,
+      "bytes": 6991,
+      "sha256": "a1254b7f8d3a1731",
+      "raw_url": "https://raw.githubusercontent.com/trailofbits/skills/HEAD/plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/SKILL.md"
+    },
+    {
+      "local_skill": "security-audit",
+      "repo": "trailofbits/skills",
+      "path": "plugins/agentic-actions-auditor/skills/agentic-actions-auditor/SKILL.md",
+      "http": 200,
+      "bytes": 21743,
+      "sha256": "b2bdb88d559bc37e",
+      "raw_url": "https://raw.githubusercontent.com/trailofbits/skills/HEAD/plugins/agentic-actions-auditor/skills/agentic-actions-auditor/SKILL.md"
+    },
+    {
+      "local_skill": "security-audit",
+      "repo": "netresearch/security-audit-skill",
+      "path": "README.md",
+      "http": 200,
+      "bytes": 14113,
+      "sha256": "c6e852d6906a5d53",
+      "raw_url": "https://raw.githubusercontent.com/netresearch/security-audit-skill/HEAD/README.md"
+    },
+    {
+      "local_skill": "security-audit",
+      "repo": "github/awesome-copilot",
+      "path": "skills/agent-owasp-compliance/SKILL.md",
+      "http": 200,
+      "bytes": 11894,
+      "sha256": "5c1f92c48888beb8",
+      "raw_url": "https://raw.githubusercontent.com/github/awesome-copilot/HEAD/skills/agent-owasp-compliance/SKILL.md"
+    },
+    {
+      "local_skill": "ci-pipeline-debugging",
+      "repo": "rjmurillo/ai-agents",
+      "path": "src/copilot-cli/skills/github/fix-ci.md",
+      "http": 200,
+      "bytes": 11590,
+      "sha256": "77f746b083e0bec4",
+      "raw_url": "https://raw.githubusercontent.com/rjmurillo/ai-agents/HEAD/src/copilot-cli/skills/github/fix-ci.md"
+    },
+    {
+      "local_skill": "ci-pipeline-debugging",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/ci-cd-and-automation/SKILL.md",
+      "http": 200,
+      "bytes": 11332,
+      "sha256": "a6ed8ed56456b01f",
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/ci-cd-and-automation/SKILL.md"
+    },
+    {
+      "local_skill": "ci-pipeline-debugging",
+      "repo": "github/awesome-copilot",
+      "path": "skills/codeql/SKILL.md",
+      "http": 200,
+      "bytes": 13489,
+      "sha256": "81503394c7c05957",
+      "raw_url": "https://raw.githubusercontent.com/github/awesome-copilot/HEAD/skills/codeql/SKILL.md"
+    },
+    {
+      "local_skill": "writing-plans",
+      "repo": "obra/superpowers",
+      "path": "skills/writing-plans/SKILL.md",
+      "http": 200,
+      "bytes": 10335,
+      "sha256": "a6c67c1900064347",
+      "raw_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/writing-plans/SKILL.md"
+    },
+    {
+      "local_skill": "writing-plans",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/planning-and-task-breakdown/SKILL.md",
+      "http": 200,
+      "bytes": 10564,
+      "sha256": "ed0f90cc5951ddd4",
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/planning-and-task-breakdown/SKILL.md"
+    },
+    {
+      "local_skill": "writing-plans",
+      "repo": "github/awesome-copilot",
+      "path": "skills/breakdown-plan/SKILL.md",
+      "http": 200,
+      "bytes": 15050,
+      "sha256": "ce46dc0485b0ee3e",
+      "raw_url": "https://raw.githubusercontent.com/github/awesome-copilot/HEAD/skills/breakdown-plan/SKILL.md"
+    },
+    {
+      "local_skill": "writing-plans",
+      "repo": "github/awesome-copilot",
+      "path": "skills/breakdown-feature-implementation/SKILL.md",
+      "http": 200,
+      "bytes": 4837,
+      "sha256": "9565e55d80889f5b",
+      "raw_url": "https://raw.githubusercontent.com/github/awesome-copilot/HEAD/skills/breakdown-feature-implementation/SKILL.md"
+    },
+    {
+      "local_skill": "brainstorming",
+      "repo": "obra/superpowers",
+      "path": "skills/brainstorming/SKILL.md",
+      "http": 200,
+      "bytes": 10073,
+      "sha256": "6ee10d1481b8a258",
+      "raw_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/brainstorming/SKILL.md"
+    },
+    {
+      "local_skill": "brainstorming",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/idea-refine/SKILL.md",
+      "http": 200,
+      "bytes": 9253,
+      "sha256": "21ef828e3a214424",
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/idea-refine/SKILL.md"
+    },
+    {
+      "local_skill": "brainstorming",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/interview-me/SKILL.md",
+      "http": 200,
+      "bytes": 15080,
+      "sha256": "ace4b675999bb504",
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/interview-me/SKILL.md"
+    },
+    {
+      "local_skill": "brainstorming",
+      "repo": "ericgandrade/claude-superskills",
+      "path": "skills/brainstorming/SKILL.md",
+      "http": 200,
+      "bytes": 6248,
+      "sha256": "53eaf6c87034038f",
+      "raw_url": "https://raw.githubusercontent.com/ericgandrade/claude-superskills/HEAD/skills/brainstorming/SKILL.md"
+    },
+    {
+      "local_skill": "brainstorming",
+      "repo": "ysskrishna/ai-agent-skills",
+      "path": "README.md",
+      "http": 200,
+      "bytes": 21192,
+      "sha256": "3a7c39f0aaf803ad",
+      "raw_url": "https://raw.githubusercontent.com/ysskrishna/ai-agent-skills/HEAD/README.md"
+    },
+    {
+      "local_skill": "executing-plans",
+      "repo": "obra/superpowers",
+      "path": "skills/executing-plans/SKILL.md",
+      "http": 200,
+      "bytes": 20405,
+      "sha256": "f38e8f2ddcf079f6",
+      "raw_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/executing-plans/SKILL.md"
+    },
+    {
+      "local_skill": "executing-plans",
+      "repo": "obra/superpowers",
+      "path": "skills/subagent-driven-development/SKILL.md",
+      "http": 200,
+      "bytes": 32577,
+      "sha256": "8dde5589ee083fb4",
+      "raw_url": "https://raw.githubusercontent.com/obra/superpowers/HEAD/skills/subagent-driven-development/SKILL.md"
+    },
+    {
+      "local_skill": "executing-plans",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/incremental-implementation/SKILL.md",
+      "http": 200,
+      "bytes": 9629,
+      "sha256": "df66536610071727",
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/incremental-implementation/SKILL.md"
+    },
+    {
+      "local_skill": "spike",
+      "repo": "NousResearch/hermes-agent",
+      "path": "skills/software-development/spike/SKILL.md",
+      "http": 200,
+      "bytes": 8723,
+      "sha256": "573d8fc0d6699eaf",
+      "raw_url": "https://raw.githubusercontent.com/NousResearch/hermes-agent/HEAD/skills/software-development/spike/SKILL.md"
+    },
+    {
+      "local_skill": "spike",
+      "repo": "OpenBMB/PilotDeck",
+      "path": "skills/spike/SKILL.md",
+      "http": 200,
+      "bytes": 2125,
+      "sha256": "e1ea9d18a6ead2fa",
+      "raw_url": "https://raw.githubusercontent.com/OpenBMB/PilotDeck/HEAD/skills/spike/SKILL.md"
+    },
+    {
+      "local_skill": "spike",
+      "repo": "github/awesome-copilot",
+      "path": "skills/create-technical-spike/SKILL.md",
+      "http": 200,
+      "bytes": 6578,
+      "sha256": "2caccb0ba3b9851b",
+      "raw_url": "https://raw.githubusercontent.com/github/awesome-copilot/HEAD/skills/create-technical-spike/SKILL.md"
+    },
+    {
+      "local_skill": "spike",
+      "repo": "haris-admin/skills-rules-repo",
+      "path": "software-development/spike/SKILL.md",
+      "http": 200,
+      "bytes": 8892,
+      "sha256": "7cf1726eb63f3ad4",
+      "raw_url": "https://raw.githubusercontent.com/haris-admin/skills-rules-repo/HEAD/software-development/spike/SKILL.md"
+    },
+    {
+      "local_skill": "grill-me",
+      "repo": "RobMitt/grill-me-skill",
+      "path": "SKILL.md",
+      "http": 200,
+      "bytes": 1615,
+      "sha256": "4c4db26d8b01994c",
+      "raw_url": "https://raw.githubusercontent.com/RobMitt/grill-me-skill/HEAD/SKILL.md"
+    },
+    {
+      "local_skill": "first-principles-decomposer",
+      "repo": "addyosmani/agent-skills",
+      "path": "skills/doubt-driven-development/SKILL.md",
+      "http": 200,
+      "bytes": 16647,
+      "sha256": "6fa1fcd8420c28da",
+      "raw_url": "https://raw.githubusercontent.com/addyosmani/agent-skills/HEAD/skills/doubt-driven-development/SKILL.md"
+    },
+    {
+      "local_skill": "first-principles-decomposer",
+      "repo": "mrchou1/first-principles-reasoning",
+      "path": "SKILL.md",
+      "http": 200,
+      "bytes": 33580,
+      "sha256": "c61cb7a391052fad",
+      "raw_url": "https://raw.githubusercontent.com/mrchou1/first-principles-reasoning/HEAD/SKILL.md"
+    },
+    {
+      "local_skill": "audit-runner-safe-aggregate",
+      "repo": "skills-lock/skil-lock",
+      "path": "README.md",
+      "http": 200,
+      "bytes": 19489,
+      "sha256": "c3ec7a133eae3874",
+      "raw_url": "https://raw.githubusercontent.com/skills-lock/skil-lock/HEAD/README.md"
+    },
+    {
+      "local_skill": "audit-runner-safe-aggregate",
+      "repo": "mohitagw15856/pm-claude-skills",
+      "path": "scripts/eval-regression-gate.mjs",
+      "http": 200,
+      "bytes": 3309,
+      "sha256": "02737e77f963f854",
+      "raw_url": "https://raw.githubusercontent.com/mohitagw15856/pm-claude-skills/HEAD/scripts/eval-regression-gate.mjs"
+    },
+    {
+      "local_skill": "scope-creep-detector",
+      "repo": "Shubhamsaboo/awesome-llm-apps",
+      "path": "agent_skills/scope-creep-detector/SKILL.md",
+      "http": 200,
+      "bytes": 5140,
+      "sha256": "a21a28ce59694554",
+      "raw_url": "https://raw.githubusercontent.com/Shubhamsaboo/awesome-llm-apps/HEAD/agent_skills/scope-creep-detector/SKILL.md"
+    },
+    {
+      "local_skill": "scope-creep-detector",
+      "repo": "github/awesome-copilot",
+      "path": "skills/api-breaking-change-detector/SKILL.md",
+      "http": 200,
+      "bytes": 6741,
+      "sha256": "1fcd27dcb533c23b",
+      "raw_url": "https://raw.githubusercontent.com/github/awesome-copilot/HEAD/skills/api-breaking-change-detector/SKILL.md"
+    },
+    {
+      "local_skill": "scope-creep-detector",
+      "repo": "garrytan/gstack",
+      "path": "review/SKILL.md",
+      "http": 200,
+      "bytes": 80888,
+      "sha256": "491fa0bdc3b99c13",
+      "raw_url": "https://raw.githubusercontent.com/garrytan/gstack/HEAD/review/SKILL.md"
+    },
+    {
+      "local_skill": "scope-creep-detector",
+      "repo": "Naveja00/OverReach",
+      "path": "README.md",
+      "http": 200,
+      "bytes": 8370,
+      "sha256": "0aff99b0df25da8a",
+      "raw_url": "https://raw.githubusercontent.com/Naveja00/OverReach/HEAD/README.md"
+    },
+    {
+      "local_skill": "commit-archaeologist",
+      "repo": "Shubhamsaboo/awesome-llm-apps",
+      "path": "agent_skills/commit-archaeologist/SKILL.md",
+      "http": 200,
+      "bytes": 5496,
+      "sha256": "8f21eb5ff270b4f4",
+      "raw_url": "https://raw.githubusercontent.com/Shubhamsaboo/awesome-llm-apps/HEAD/agent_skills/commit-archaeologist/SKILL.md"
+    },
+    {
+      "local_skill": "commit-archaeologist",
+      "repo": "CodeAlive-AI/ai-driven-development",
+      "path": "skills/investigating-repository-history/SKILL.md",
+      "http": 200,
+      "bytes": 7865,
+      "sha256": "8dd1372591438762",
+      "raw_url": "https://raw.githubusercontent.com/CodeAlive-AI/ai-driven-development/HEAD/skills/investigating-repository-history/SKILL.md"
+    },
+    {
+      "local_skill": "commit-archaeologist",
+      "repo": "github/awesome-copilot",
+      "path": "skills/code-tour/SKILL.md",
+      "http": 200,
+      "bytes": 22654,
+      "sha256": "365f0d06c564e6bb",
+      "raw_url": "https://raw.githubusercontent.com/github/awesome-copilot/HEAD/skills/code-tour/SKILL.md"
+    }
+  ],
+  "summary": {
+    "ok": 59,
+    "http_error": 0,
+    "other": 0,
+    "distinct_checked": 59
+  }
+}

@@ -1,0 +1,1462 @@
+{
+  "schema": "skill-watchlist-v1",
+  "_note": "技能上游/替代季度巡检登记表。upstream_* = 该技能评分最高的已实测候选（代表上游）；recorded_version = 本次对表基线（github releases.atom 实测）；ledger = 其余候选的即时读数快照；candidates = 季度复查对象。",
+  "_policy": "上游不自动覆盖：扫描出 RED -> 人工裁决（吸收/保持分叉/弃用/替换）-> 再动手。",
+  "_updated": "2026-10-20",
+  "fuse_days": 100,
+  "active_days": 400,
+  "watchlist": [
+    {
+      "local_skill": "code-review",
+      "local_skill_md": "D:/global_skills/code-review/SKILL.md",
+      "upstream_repo": "addyosmani/agent-skills",
+      "upstream_path": "skills/code-review-and-quality/SKILL.md",
+      "ledger": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/code-review-and-quality/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 22
+        }
+      ],
+      "recorded_version": "Agent Skills 0.6.13",
+      "last_checked": "2026-10-20",
+      "discovery_query": "code review skill agent claude",
+      "candidates": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/code-review-and-quality/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 22
+        },
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/requesting-code-review/SKILL.md",
+          "stars": 301953,
+          "license": "MIT",
+          "score_total": 19
+        },
+        {
+          "repo": "trailofbits/skills",
+          "entry_path": "plugins/differential-review/skills/differential-review/SKILL.md",
+          "stars": 7641,
+          "license": "CC-BY-SA-4.0",
+          "score_total": 18
+        },
+        {
+          "repo": "amirbena/code-review-skill",
+          "entry_path": "skills/local-code-review/SKILL.md",
+          "stars": 8,
+          "license": "Apache-2.0",
+          "score_total": 18
+        }
+      ],
+      "notes": "未检索到与本地六字段报告模板同源的上游；awesome-copilot 的 skills 目录未见独立 code-review 技能（仅 codeql 等相邻项）。 | 2026-10-20 裁决=吸收 依据=字节比0.236/上游独有36标题→吸收24节至1.045(独有0)，commit b3e189c；复扫 08:18 总判定 GREEN"
+    },
+    {
+      "local_skill": "debugging-fixing",
+      "local_skill_md": "D:/global_skills/debugging-fixing/SKILL.md",
+      "upstream_repo": "addyosmani/agent-skills",
+      "upstream_path": "skills/debugging-and-error-recovery/SKILL.md",
+      "ledger": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/debugging-and-error-recovery/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 22
+        }
+      ],
+      "recorded_version": "Agent Skills 0.6.13",
+      "last_checked": "2026-10-20",
+      "discovery_query": "systematic debugging skill agent",
+      "candidates": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/debugging-and-error-recovery/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 22
+        },
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/systematic-debugging/SKILL.md",
+          "stars": 301953,
+          "license": "MIT",
+          "score_total": 21
+        },
+        {
+          "repo": "plus8bit/agent-postmortem-skill",
+          "entry_path": "SKILL.md",
+          "stars": 7,
+          "license": "MIT",
+          "score_total": 15
+        },
+        {
+          "repo": "mssx145/systematic-bug-fixing-skill",
+          "entry_path": null,
+          "stars": 6,
+          "license": "MIT",
+          "score_total": 5
+        }
+      ],
+      "notes": "上游同源为 obra/superpowers 的 systematic-debugging；本地已含自有 references 扩展。 | 2026-10-20 裁决=吸收 依据=字节比0.586→1.434(commit f2dbf14),上游独有标题→0"
+    },
+    {
+      "local_skill": "testing",
+      "local_skill_md": "D:/global_skills/testing/SKILL.md",
+      "upstream_repo": "addyosmani/agent-skills",
+      "upstream_path": "skills/browser-testing-with-devtools/SKILL.md",
+      "ledger": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/browser-testing-with-devtools/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 22
+        }
+      ],
+      "recorded_version": "Agent Skills 0.6.13",
+      "last_checked": "2026-10-20",
+      "discovery_query": "testing skill agent property based mutation coverage",
+      "candidates": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/browser-testing-with-devtools/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 22
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "entry_path": "skills/breakdown-test/SKILL.md",
+          "stars": 40184,
+          "license": "MIT",
+          "score_total": 21
+        },
+        {
+          "repo": "trailofbits/skills",
+          "entry_path": "plugins/property-based-testing/skills/property-based-testing/SKILL.md",
+          "stars": 7641,
+          "license": "CC-BY-SA-4.0",
+          "score_total": 15
+        },
+        {
+          "repo": "trailofbits/skills",
+          "entry_path": "plugins/mutation-testing/skills/mutation-testing/SKILL.md",
+          "stars": 7641,
+          "license": "CC-BY-SA-4.0",
+          "score_total": 15
+        },
+        {
+          "repo": "trailofbits/skills",
+          "entry_path": "plugins/testing-handbook-skills/skills/coverage-analysis/SKILL.md",
+          "stars": 7641,
+          "license": "CC-BY-SA-4.0",
+          "score_total": 15
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "test-driven-development",
+      "local_skill_md": "D:/global_skills/test-driven-development/SKILL.md",
+      "upstream_repo": "addyosmani/agent-skills",
+      "upstream_path": "skills/test-driven-development/SKILL.md",
+      "ledger": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/test-driven-development/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 22
+        }
+      ],
+      "recorded_version": "Agent Skills 0.6.13",
+      "last_checked": "2026-10-20",
+      "discovery_query": "test driven development skill agent",
+      "candidates": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/test-driven-development/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 22
+        },
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/test-driven-development/SKILL.md",
+          "stars": 301953,
+          "license": "MIT",
+          "score_total": 20
+        },
+        {
+          "repo": "oprogramadorreal/optimus-claude",
+          "entry_path": "skills/tdd/SKILL.md",
+          "stars": 74,
+          "license": "MIT",
+          "score_total": 18
+        },
+        {
+          "repo": "glebis/claude-skills",
+          "entry_path": "tdd/README.md",
+          "stars": 394,
+          "license": "MIT",
+          "score_total": 16
+        }
+      ],
+      "notes": "本地 description 与 obra/superpowers 上游 description 逐字一致（同源证据）。"
+    },
+    {
+      "local_skill": "refactoring",
+      "local_skill_md": "D:/global_skills/refactoring/SKILL.md",
+      "upstream_repo": "addyosmani/agent-skills",
+      "upstream_path": "skills/code-simplification/SKILL.md",
+      "ledger": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/code-simplification/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 22
+        }
+      ],
+      "recorded_version": "Agent Skills 0.6.13",
+      "last_checked": "2026-10-20",
+      "discovery_query": "refactoring code smells skill agent",
+      "candidates": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/code-simplification/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 22
+        },
+        {
+          "repo": "solatis/claude-config",
+          "entry_path": "skills/refactor/README.md",
+          "stars": 911,
+          "license": "MIT",
+          "score_total": 17
+        },
+        {
+          "repo": "asteria-jacky/skills",
+          "entry_path": "README.md",
+          "stars": 0,
+          "license": null,
+          "score_total": 12
+        },
+        {
+          "repo": "45ck/refactoring-code-smells-skills",
+          "entry_path": null,
+          "stars": 6,
+          "license": "MIT",
+          "score_total": 5
+        },
+        {
+          "repo": "cskwork/clean-code",
+          "entry_path": null,
+          "stars": 3,
+          "license": "MIT",
+          "score_total": 5
+        }
+      ],
+      "notes": "obra/superpowers 的 skills/ 目录实测无 refactoring，本地该技能为自研。 | 2026-10-20 裁决=吸收 依据=字节比0.355→1.201(commit f2dbf14),上游独有标题24→0"
+    },
+    {
+      "local_skill": "spike",
+      "local_skill_md": "D:/global_skills/spike/SKILL.md",
+      "upstream_repo": "NousResearch/hermes-agent",
+      "upstream_path": "skills/software-development/spike/SKILL.md",
+      "ledger": [
+        {
+          "repo": "NousResearch/hermes-agent",
+          "entry_path": "skills/software-development/spike/SKILL.md",
+          "stars": 255164,
+          "license": "MIT",
+          "score_total": 22
+        }
+      ],
+      "recorded_version": "v0.22.2+canary.20261019T071120Z",
+      "last_checked": "2026-10-20",
+      "discovery_query": "technical spike skill agent prototype",
+      "candidates": [
+        {
+          "repo": "NousResearch/hermes-agent",
+          "entry_path": "skills/software-development/spike/SKILL.md",
+          "stars": 255164,
+          "license": "MIT",
+          "score_total": 22
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "entry_path": "skills/create-technical-spike/SKILL.md",
+          "stars": 40184,
+          "license": "MIT",
+          "score_total": 21
+        },
+        {
+          "repo": "OpenBMB/PilotDeck",
+          "entry_path": "skills/spike/SKILL.md",
+          "stars": 4789,
+          "license": "AGPL-3.0",
+          "score_total": 16
+        },
+        {
+          "repo": "haris-admin/skills-rules-repo",
+          "entry_path": "software-development/spike/SKILL.md",
+          "stars": null,
+          "license": null,
+          "score_total": 15
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "first-principles-decomposer",
+      "local_skill_md": "D:/global_skills/first-principles-decomposer/SKILL.md",
+      "upstream_repo": "addyosmani/agent-skills",
+      "upstream_path": "skills/doubt-driven-development/SKILL.md",
+      "ledger": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/doubt-driven-development/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 22
+        }
+      ],
+      "recorded_version": "Agent Skills 0.6.13",
+      "last_checked": "2026-10-20",
+      "discovery_query": "first principles reasoning skill agent",
+      "candidates": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/doubt-driven-development/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 22
+        },
+        {
+          "repo": "mrchou1/first-principles-reasoning",
+          "entry_path": "SKILL.md",
+          "stars": 0,
+          "license": null,
+          "score_total": 15
+        },
+        {
+          "repo": "weiliu1031/first-principles-thinking",
+          "entry_path": null,
+          "stars": 4,
+          "license": "MIT",
+          "score_total": 5
+        },
+        {
+          "repo": "v1r3n/first-principles-skills",
+          "entry_path": null,
+          "stars": 0,
+          "license": "MIT",
+          "score_total": 5
+        }
+      ],
+      "notes": "明确缺口：该方向缺少高 star/活跃维护的上游，现有专项仓库多为 0-4 star 个人项目。"
+    },
+    {
+      "local_skill": "scope-creep-detector",
+      "local_skill_md": "D:/global_skills/scope-creep-detector/SKILL.md",
+      "upstream_repo": "Shubhamsaboo/awesome-llm-apps",
+      "upstream_path": "agent_skills/scope-creep-detector/SKILL.md",
+      "ledger": [
+        {
+          "repo": "Shubhamsaboo/awesome-llm-apps",
+          "entry_path": "agent_skills/scope-creep-detector/SKILL.md",
+          "stars": 142294,
+          "license": "Apache-2.0",
+          "score_total": 21
+        }
+      ],
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "scope creep detector skill agent diff",
+      "candidates": [
+        {
+          "repo": "Shubhamsaboo/awesome-llm-apps",
+          "entry_path": "agent_skills/scope-creep-detector/SKILL.md",
+          "stars": 142294,
+          "license": "Apache-2.0",
+          "score_total": 21
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "entry_path": "skills/api-breaking-change-detector/SKILL.md",
+          "stars": 40184,
+          "license": "MIT",
+          "score_total": 20
+        },
+        {
+          "repo": "Naveja00/OverReach",
+          "entry_path": "README.md",
+          "stars": null,
+          "license": null,
+          "score_total": 15
+        },
+        {
+          "repo": "garrytan/gstack",
+          "entry_path": "review/SKILL.md",
+          "stars": null,
+          "license": null,
+          "score_total": 13
+        }
+      ],
+      "notes": "本地 script 与上游是否同源未能逐字节比对（上游仅取证 SKILL.md）。"
+    },
+    {
+      "local_skill": "commit-archaeologist",
+      "local_skill_md": "D:/global_skills/commit-archaeologist/SKILL.md",
+      "upstream_repo": "Shubhamsaboo/awesome-llm-apps",
+      "upstream_path": "agent_skills/commit-archaeologist/SKILL.md",
+      "ledger": [
+        {
+          "repo": "Shubhamsaboo/awesome-llm-apps",
+          "entry_path": "agent_skills/commit-archaeologist/SKILL.md",
+          "stars": 142294,
+          "license": "Apache-2.0",
+          "score_total": 21
+        }
+      ],
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "git history archaeology skill agent",
+      "candidates": [
+        {
+          "repo": "Shubhamsaboo/awesome-llm-apps",
+          "entry_path": "agent_skills/commit-archaeologist/SKILL.md",
+          "stars": 142294,
+          "license": "Apache-2.0",
+          "score_total": 21
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "entry_path": "skills/code-tour/SKILL.md",
+          "stars": 40184,
+          "license": "MIT",
+          "score_total": 21
+        },
+        {
+          "repo": "CodeAlive-AI/ai-driven-development",
+          "entry_path": "skills/investigating-repository-history/SKILL.md",
+          "stars": 163,
+          "license": "MIT",
+          "score_total": 18
+        },
+        {
+          "repo": "mistykoyalzoho/git-archaeologist",
+          "entry_path": null,
+          "stars": 2,
+          "license": "MIT",
+          "score_total": 5
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "security-audit",
+      "local_skill_md": "D:/global_skills/security-audit/SKILL.md",
+      "upstream_repo": "github/awesome-copilot",
+      "upstream_path": "skills/agent-owasp-compliance/SKILL.md",
+      "ledger": [
+        {
+          "repo": "github/awesome-copilot",
+          "entry_path": "skills/agent-owasp-compliance/SKILL.md",
+          "stars": 40184,
+          "license": "MIT",
+          "score_total": 20
+        }
+      ],
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "security audit skill agent owasp",
+      "candidates": [
+        {
+          "repo": "github/awesome-copilot",
+          "entry_path": "skills/agent-owasp-compliance/SKILL.md",
+          "stars": 40184,
+          "license": "MIT",
+          "score_total": 20
+        },
+        {
+          "repo": "trailofbits/skills",
+          "entry_path": "plugins/audit-context-building/skills/audit-context-building/SKILL.md",
+          "stars": 7641,
+          "license": "CC-BY-SA-4.0",
+          "score_total": 15
+        },
+        {
+          "repo": "trailofbits/skills",
+          "entry_path": "plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/SKILL.md",
+          "stars": 7641,
+          "license": "CC-BY-SA-4.0",
+          "score_total": 15
+        },
+        {
+          "repo": "trailofbits/skills",
+          "entry_path": "plugins/agentic-actions-auditor/skills/agentic-actions-auditor/SKILL.md",
+          "stars": 7641,
+          "license": "CC-BY-SA-4.0",
+          "score_total": 15
+        },
+        {
+          "repo": "netresearch/security-audit-skill",
+          "entry_path": "README.md",
+          "stars": 47,
+          "license": "NOASSERTION",
+          "score_total": 15
+        }
+      ],
+      "notes": "license 字段 API 返回 NOASSERTION，README 内 SPDX 声明为 CC-BY-SA-4.0。"
+    },
+    {
+      "local_skill": "ci-pipeline-debugging",
+      "local_skill_md": "D:/global_skills/ci-pipeline-debugging/SKILL.md",
+      "upstream_repo": "addyosmani/agent-skills",
+      "upstream_path": "skills/ci-cd-and-automation/SKILL.md",
+      "ledger": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/ci-cd-and-automation/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 20
+        }
+      ],
+      "recorded_version": "Agent Skills 0.6.13",
+      "last_checked": "2026-10-20",
+      "discovery_query": "ci pipeline debugging skill agent github actions",
+      "candidates": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/ci-cd-and-automation/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 20
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "entry_path": "skills/codeql/SKILL.md",
+          "stars": 40184,
+          "license": "MIT",
+          "score_total": 20
+        },
+        {
+          "repo": "rjmurillo/ai-agents",
+          "entry_path": "src/copilot-cli/skills/github/fix-ci.md",
+          "stars": 48,
+          "license": "MIT",
+          "score_total": 16
+        },
+        {
+          "repo": "trailofbits/skills",
+          "entry_path": "plugins/agentic-actions-auditor/skills/agentic-actions-auditor/SKILL.md",
+          "stars": 7641,
+          "license": "CC-BY-SA-4.0",
+          "score_total": 5
+        }
+      ],
+      "notes": "明确缺口：GitHub 未检索到与本地『六类归因决策树』同源的技能仓库。"
+    },
+    {
+      "local_skill": "writing-plans",
+      "local_skill_md": "D:/global_skills/writing-plans/SKILL.md",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/writing-plans/SKILL.md",
+      "ledger": [
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/writing-plans/SKILL.md",
+          "stars": 301953,
+          "license": "MIT",
+          "score_total": 20
+        }
+      ],
+      "recorded_version": "v7.0.0",
+      "last_checked": "2026-10-20",
+      "discovery_query": "writing plans skill agent implementation plan",
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/writing-plans/SKILL.md",
+          "stars": 301953,
+          "license": "MIT",
+          "score_total": 20
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/planning-and-task-breakdown/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 20
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "entry_path": "skills/breakdown-plan/SKILL.md",
+          "stars": 40184,
+          "license": "MIT",
+          "score_total": 20
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "entry_path": "skills/breakdown-feature-implementation/SKILL.md",
+          "stars": 40184,
+          "license": "MIT",
+          "score_total": 20
+        },
+        {
+          "repo": "ericgandrade/claude-superskills",
+          "entry_path": null,
+          "stars": 84,
+          "license": "MIT",
+          "score_total": 5
+        }
+      ],
+      "notes": "批次给出的『本地 6.0KB vs 上游 8.9KB』与实测不符：本地实测 11226B、上游 SKILL.md 实测 10335B。"
+    },
+    {
+      "local_skill": "brainstorming",
+      "local_skill_md": "D:/global_skills/brainstorming/SKILL.md",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/brainstorming/SKILL.md",
+      "ledger": [
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/brainstorming/SKILL.md",
+          "stars": 301953,
+          "license": "MIT",
+          "score_total": 20
+        }
+      ],
+      "recorded_version": "v7.0.0",
+      "last_checked": "2026-10-20",
+      "discovery_query": "brainstorming skill agent requirements interview",
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/brainstorming/SKILL.md",
+          "stars": 301953,
+          "license": "MIT",
+          "score_total": 20
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/idea-refine/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 20
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/interview-me/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 20
+        },
+        {
+          "repo": "ysskrishna/ai-agent-skills",
+          "entry_path": "README.md",
+          "stars": 17,
+          "license": "MIT",
+          "score_total": 18
+        },
+        {
+          "repo": "ericgandrade/claude-superskills",
+          "entry_path": "skills/brainstorming/SKILL.md",
+          "stars": 84,
+          "license": "MIT",
+          "score_total": 15
+        }
+      ],
+      "notes": "结构差异证据：上游 skills/brainstorming/ 含 builder-check-prompt.md，本地对应文件为 spec-document-reviewer-prompt.md（已产生分叉漂移）。 | 2026-10-20 裁决=吸收 依据=漂移腿RED(独有8)→吸收上游7节→复验漂移GREEN(独有0)；候选腿1个ungh瞬时限流属取数失败非失活"
+    },
+    {
+      "local_skill": "A-dynamic-workflow",
+      "local_skill_md": "D:/global_skills/A-dynamic-workflow/SKILL.md",
+      "upstream_repo": "wshobson/agents",
+      "upstream_path": "plugins/agent-teams/skills/multi-reviewer-patterns/SKILL.md",
+      "ledger": [
+        {
+          "repo": "wshobson/agents",
+          "entry_path": "plugins/agent-teams/skills/multi-reviewer-patterns/SKILL.md",
+          "stars": 41107,
+          "license": "MIT",
+          "score_total": 19
+        }
+      ],
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "A dynamic workflow skill agent",
+      "candidates": [
+        {
+          "repo": "wshobson/agents",
+          "entry_path": "plugins/agent-teams/skills/multi-reviewer-patterns/SKILL.md",
+          "stars": 41107,
+          "license": "MIT",
+          "score_total": 19
+        },
+        {
+          "repo": "wshobson/agents",
+          "entry_path": "plugins/agent-teams/skills/task-coordination-strategies/SKILL.md",
+          "stars": 41107,
+          "license": "MIT",
+          "score_total": 18
+        },
+        {
+          "repo": "yonatangross/orchestkit",
+          "entry_path": "plugins/ork/skills/agent-orchestration/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "score_total": 18
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "verification-before-completion",
+      "local_skill_md": "D:/global_skills/verification-before-completion/SKILL.md",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/verification-before-completion/SKILL.md",
+      "ledger": [
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/verification-before-completion/SKILL.md",
+          "stars": 301953,
+          "license": "MIT",
+          "score_total": 19
+        }
+      ],
+      "recorded_version": "v7.0.0",
+      "last_checked": "2026-10-20",
+      "discovery_query": "verification before completion skill agent evidence",
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/verification-before-completion/SKILL.md",
+          "stars": 301953,
+          "license": "MIT",
+          "score_total": 19
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "entry_path": "skills/audit-integrity/SKILL.md",
+          "stars": 40184,
+          "license": "MIT",
+          "score_total": 18
+        },
+        {
+          "repo": "trailofbits/skills",
+          "entry_path": "plugins/post-patch-validation/skills/post-patch-validation/SKILL.md",
+          "stars": 7641,
+          "license": "CC-BY-SA-4.0",
+          "score_total": 18
+        },
+        {
+          "repo": "jagreehal/jagreehal-claude-skills",
+          "entry_path": "skills/verification-before-completion/SKILL.md",
+          "stars": 3,
+          "license": "MIT",
+          "score_total": 14
+        },
+        {
+          "repo": "plus8bit/agent-postmortem-skill",
+          "entry_path": "SKILL.md",
+          "stars": 7,
+          "license": "MIT",
+          "score_total": 5
+        }
+      ],
+      "notes": " | 2026-10-20 裁决=吸收 依据=漂移腿RED(独有9)→吸收上游9节→复验GREEN(独有0)"
+    },
+    {
+      "local_skill": "A-skill-manager",
+      "local_skill_md": "D:/global_skills/A-skill-manager/SKILL.md",
+      "upstream_repo": "yonatangross/orchestkit",
+      "upstream_path": "plugins/ork/skills/quality-gates/SKILL.md",
+      "ledger": [
+        {
+          "repo": "yonatangross/orchestkit",
+          "entry_path": "plugins/ork/skills/quality-gates/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "score_total": 18
+        }
+      ],
+      "recorded_version": "v10.0.0-beta.183",
+      "last_checked": "2026-10-20",
+      "discovery_query": "A skill manager skill agent",
+      "candidates": [
+        {
+          "repo": "yonatangross/orchestkit",
+          "entry_path": "plugins/ork/skills/quality-gates/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "score_total": 18
+        },
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/writing-skills/SKILL.md",
+          "stars": 301816,
+          "license": "MIT",
+          "score_total": 9
+        },
+        {
+          "repo": "anthropics/skills",
+          "entry_path": "skills/skill-creator/SKILL.md",
+          "stars": 182156,
+          "license": null,
+          "score_total": 7
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "html-ppt",
+      "local_skill_md": "D:/global_skills/html-ppt/SKILL.md",
+      "upstream_repo": "op7418/guizang-ppt-skill",
+      "upstream_path": "SKILL.md",
+      "ledger": [
+        {
+          "repo": "op7418/guizang-ppt-skill",
+          "entry_path": "SKILL.md",
+          "stars": 28244,
+          "license": "AGPL-3.0",
+          "score_total": 18
+        }
+      ],
+      "recorded_version": "v1.1.0 · Swiss style and community-ready release",
+      "last_checked": "2026-10-20",
+      "discovery_query": "html ppt skill agent",
+      "candidates": [
+        {
+          "repo": "op7418/guizang-ppt-skill",
+          "entry_path": "SKILL.md",
+          "stars": 28244,
+          "license": "AGPL-3.0",
+          "score_total": 18
+        },
+        {
+          "repo": "Akxan/ppt-agent-skill",
+          "entry_path": "SKILL.md",
+          "stars": 163,
+          "license": "MIT",
+          "score_total": 18
+        },
+        {
+          "repo": "anthropics/skills",
+          "entry_path": "skills/theme-factory/SKILL.md",
+          "stars": 182156,
+          "license": null,
+          "score_total": 7
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "A-project-handoff",
+      "local_skill_md": "D:/global_skills/A-project-handoff/SKILL.md",
+      "upstream_repo": "yonatangross/orchestkit",
+      "upstream_path": "plugins/ork/skills/memory-fabric/SKILL.md",
+      "ledger": [
+        {
+          "repo": "yonatangross/orchestkit",
+          "entry_path": "plugins/ork/skills/memory-fabric/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "score_total": 17
+        }
+      ],
+      "recorded_version": "v10.0.0-beta.183",
+      "last_checked": "2026-10-20",
+      "discovery_query": "A project handoff skill agent",
+      "candidates": [
+        {
+          "repo": "yonatangross/orchestkit",
+          "entry_path": "plugins/ork/skills/memory-fabric/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "score_total": 17
+        },
+        {
+          "repo": "yonatangross/orchestkit",
+          "entry_path": "plugins/ork/skills/memory/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "score_total": 17
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "computer-use-guidance-windows",
+      "local_skill_md": "D:/global_skills/computer-use-guidance-windows/SKILL.md",
+      "upstream_repo": "skalesapp/skales",
+      "upstream_path": "README.md",
+      "ledger": [
+        {
+          "repo": "skalesapp/skales",
+          "entry_path": "README.md",
+          "stars": 2200,
+          "license": "NOASSERTION",
+          "score_total": 17
+        }
+      ],
+      "recorded_version": "Skales 12.9.55 - Mango",
+      "last_checked": "2026-10-20",
+      "discovery_query": "computer use guidance windows skill agent",
+      "candidates": [
+        {
+          "repo": "skalesapp/skales",
+          "entry_path": "README.md",
+          "stars": 2200,
+          "license": "NOASSERTION",
+          "score_total": 17
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "docx",
+      "local_skill_md": "D:/global_skills/docx/SKILL.md",
+      "upstream_repo": "anthropics/skills",
+      "upstream_path": "skills/docx/SKILL.md",
+      "ledger": [
+        {
+          "repo": "anthropics/skills",
+          "entry_path": "skills/docx/SKILL.md",
+          "stars": 182156,
+          "license": null,
+          "score_total": 17
+        }
+      ],
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "docx skill agent",
+      "candidates": [
+        {
+          "repo": "anthropics/skills",
+          "entry_path": "skills/docx/SKILL.md",
+          "stars": 182156,
+          "license": null,
+          "score_total": 17
+        },
+        {
+          "repo": "tfriedel/claude-office-skills",
+          "entry_path": "SKILL.md",
+          "stars": 839,
+          "license": null,
+          "score_total": 3
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "executing-plans",
+      "local_skill_md": "D:/global_skills/executing-plans/SKILL.md",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/executing-plans/SKILL.md",
+      "ledger": [
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/executing-plans/SKILL.md",
+          "stars": 301953,
+          "license": "MIT",
+          "score_total": 17
+        }
+      ],
+      "recorded_version": "v7.0.0",
+      "last_checked": "2026-10-20",
+      "discovery_query": "executing plans skill agent task tracking subagent",
+      "candidates": [
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/executing-plans/SKILL.md",
+          "stars": 301953,
+          "license": "MIT",
+          "score_total": 17
+        },
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/subagent-driven-development/SKILL.md",
+          "stars": 301953,
+          "license": "MIT",
+          "score_total": 17
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/incremental-implementation/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 17
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "entry_path": "skills/breakdown-feature-implementation/SKILL.md",
+          "stars": 40184,
+          "license": "MIT",
+          "score_total": 8
+        }
+      ],
+      "notes": "恢复该能力建议以上游 obra/superpowers 的 executing-plans 或 subagent-driven-development 为源。"
+    },
+    {
+      "local_skill": "A-memory-start",
+      "local_skill_md": "D:/global_skills/A-memory-start/SKILL.md",
+      "upstream_repo": "yonatangross/orchestkit",
+      "upstream_path": "plugins/ork/skills/memory-fabric/SKILL.md",
+      "ledger": [
+        {
+          "repo": "yonatangross/orchestkit",
+          "entry_path": "plugins/ork/skills/memory-fabric/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "score_total": 16
+        }
+      ],
+      "recorded_version": "v10.0.0-beta.183",
+      "last_checked": "2026-10-20",
+      "discovery_query": "A memory start skill agent",
+      "candidates": [
+        {
+          "repo": "yonatangross/orchestkit",
+          "entry_path": "plugins/ork/skills/memory-fabric/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "score_total": 16
+        },
+        {
+          "repo": "yonatangross/orchestkit",
+          "entry_path": "plugins/ork/skills/memory/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "score_total": 16
+        },
+        {
+          "repo": "anthropics/skills",
+          "entry_path": "skills/claude-api/SKILL.md",
+          "stars": 182156,
+          "license": null,
+          "score_total": 7
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "browser-cdp",
+      "local_skill_md": "D:/global_skills/browser-cdp/SKILL.md",
+      "upstream_repo": "Colgate13/claude-cdp-debugger",
+      "upstream_path": "README.md",
+      "ledger": [
+        {
+          "repo": "Colgate13/claude-cdp-debugger",
+          "entry_path": "README.md",
+          "stars": 2,
+          "license": "MIT",
+          "score_total": 16
+        }
+      ],
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "browser cdp skill agent",
+      "candidates": [
+        {
+          "repo": "Colgate13/claude-cdp-debugger",
+          "entry_path": "README.md",
+          "stars": 2,
+          "license": "MIT",
+          "score_total": 16
+        },
+        {
+          "repo": "vercel-labs/agent-browser",
+          "entry_path": "skills/agent-browser/SKILL.md",
+          "stars": 44260,
+          "license": null,
+          "score_total": 6
+        },
+        {
+          "repo": "microsoft/playwright-mcp",
+          "entry_path": "README.md",
+          "stars": 38379,
+          "license": null,
+          "score_total": 6
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "audit-runner-safe-aggregate",
+      "local_skill_md": "D:/global_skills/audit-runner-safe-aggregate/SKILL.md",
+      "upstream_repo": "skills-lock/skil-lock",
+      "upstream_path": "README.md",
+      "ledger": [
+        {
+          "repo": "skills-lock/skil-lock",
+          "entry_path": "README.md",
+          "stars": null,
+          "license": null,
+          "score_total": 15
+        }
+      ],
+      "recorded_version": "v0.2.5",
+      "last_checked": "2026-10-20",
+      "discovery_query": "audit runner aggregate pass fail gate skill",
+      "candidates": [
+        {
+          "repo": "skills-lock/skil-lock",
+          "entry_path": "README.md",
+          "stars": null,
+          "license": null,
+          "score_total": 15
+        },
+        {
+          "repo": "mohitagw15856/pm-claude-skills",
+          "entry_path": "scripts/eval-regression-gate.mjs",
+          "stars": null,
+          "license": null,
+          "score_total": 12
+        },
+        {
+          "repo": "github/awesome-copilot",
+          "entry_path": "skills/audit-integrity/SKILL.md",
+          "stars": 40184,
+          "license": "MIT",
+          "score_total": 8
+        },
+        {
+          "repo": "oaustegard/claude-skills",
+          "entry_path": null,
+          "stars": null,
+          "license": null,
+          "score_total": 2
+        }
+      ],
+      "notes": "明确缺口：GitHub 未检索到与本地 anti-mask 聚合判定同源的技能，本地方案为对该类问题的自研范式；上列候选均为相邻而非同源。"
+    },
+    {
+      "local_skill": "grill-me",
+      "local_skill_md": "D:/global_skills/grill-me/SKILL.md",
+      "upstream_repo": "RobMitt/grill-me-skill",
+      "upstream_path": "SKILL.md",
+      "ledger": [
+        {
+          "repo": "RobMitt/grill-me-skill",
+          "entry_path": "SKILL.md",
+          "stars": 992,
+          "license": null,
+          "score_total": 13
+        }
+      ],
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "grill me skill agent design interview",
+      "candidates": [
+        {
+          "repo": "RobMitt/grill-me-skill",
+          "entry_path": "SKILL.md",
+          "stars": 992,
+          "license": null,
+          "score_total": 13
+        },
+        {
+          "repo": "obra/superpowers",
+          "entry_path": "skills/brainstorming/SKILL.md",
+          "stars": 301953,
+          "license": "MIT",
+          "score_total": 9
+        },
+        {
+          "repo": "addyosmani/agent-skills",
+          "entry_path": "skills/interview-me/SKILL.md",
+          "stars": 108473,
+          "license": "MIT",
+          "score_total": 9
+        },
+        {
+          "repo": "TimothyVang/Grill-me",
+          "entry_path": null,
+          "stars": 37,
+          "license": "MIT",
+          "score_total": 5
+        }
+      ],
+      "notes": "RobMitt/grill-me-skill 的 license 字段 API 返回 null（未声明 license）。"
+    },
+    {
+      "local_skill": "agent-browser",
+      "local_skill_md": "D:/global_skills/agent-browser/SKILL.md",
+      "upstream_repo": "browser-use/browser-use",
+      "upstream_path": "skills/qa/SKILL.md",
+      "ledger": [
+        {
+          "repo": "browser-use/browser-use",
+          "entry_path": "skills/qa/SKILL.md",
+          "stars": 118543,
+          "license": null,
+          "score_total": 7
+        }
+      ],
+      "recorded_version": "0.13.13: OpenAI browser tools and Cloud fixes",
+      "last_checked": "2026-10-20",
+      "discovery_query": "agent browser skill agent",
+      "candidates": [
+        {
+          "repo": "browser-use/browser-use",
+          "entry_path": "skills/qa/SKILL.md",
+          "stars": 118543,
+          "license": null,
+          "score_total": 7
+        },
+        {
+          "repo": "vercel-labs/agent-browser",
+          "entry_path": "skills/agent-browser/SKILL.md",
+          "stars": 44260,
+          "license": null,
+          "score_total": 6
+        },
+        {
+          "repo": "microsoft/playwright-mcp",
+          "entry_path": "README.md",
+          "stars": 38379,
+          "license": null,
+          "score_total": 6
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "dogfood",
+      "local_skill_md": "D:/global_skills/dogfood/SKILL.md",
+      "upstream_repo": "browser-use/browser-use",
+      "upstream_path": "skills/qa/SKILL.md",
+      "ledger": [
+        {
+          "repo": "browser-use/browser-use",
+          "entry_path": "skills/qa/SKILL.md",
+          "stars": 118543,
+          "license": null,
+          "score_total": 7
+        }
+      ],
+      "recorded_version": "0.13.13: OpenAI browser tools and Cloud fixes",
+      "last_checked": "2026-10-20",
+      "discovery_query": "dogfood skill agent",
+      "candidates": [
+        {
+          "repo": "browser-use/browser-use",
+          "entry_path": "skills/qa/SKILL.md",
+          "stars": 118543,
+          "license": null,
+          "score_total": 7
+        },
+        {
+          "repo": "vercel-labs/agent-browser",
+          "entry_path": "skill-data/dogfood/SKILL.md",
+          "stars": 44260,
+          "license": null,
+          "score_total": 6
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "electron",
+      "local_skill_md": "D:/global_skills/electron/SKILL.md",
+      "upstream_repo": "vercel-labs/agent-browser",
+      "upstream_path": "skill-data/electron/SKILL.md",
+      "ledger": [
+        {
+          "repo": "vercel-labs/agent-browser",
+          "entry_path": "skill-data/electron/SKILL.md",
+          "stars": 44260,
+          "license": null,
+          "score_total": 6
+        }
+      ],
+      "recorded_version": "v0.39.1",
+      "last_checked": "2026-10-20",
+      "discovery_query": "electron skill agent",
+      "candidates": [
+        {
+          "repo": "vercel-labs/agent-browser",
+          "entry_path": "skill-data/electron/SKILL.md",
+          "stars": 44260,
+          "license": null,
+          "score_total": 6
+        },
+        {
+          "repo": "vercel-labs/agent-browser",
+          "entry_path": "skill-data/dogfood/SKILL.md",
+          "stars": 44260,
+          "license": null,
+          "score_total": 6
+        },
+        {
+          "repo": "microsoft/playwright-mcp",
+          "entry_path": "README.md",
+          "stars": 38379,
+          "license": null,
+          "score_total": 6
+        }
+      ],
+      "notes": null
+    },
+    {
+      "local_skill": "gstack",
+      "local_skill_md": "D:/global_skills/gstack/SKILL.md",
+      "upstream_repo": "garrytan/gstack",
+      "upstream_path": null,
+      "ledger": [
+        {
+          "repo": "garrytan/gstack",
+          "entry_path": null,
+          "stars": null,
+          "license": null,
+          "score_total": 2
+        }
+      ],
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "gstack skill agent",
+      "candidates": [
+        {
+          "repo": "garrytan/gstack",
+          "entry_path": null,
+          "stars": null,
+          "license": null,
+          "score_total": 2
+        }
+      ],
+      "notes": "检索式 headless_qa 的 total_count=1；命中 1 个候选"
+    },
+    {
+      "local_skill": "ppt-master",
+      "local_skill_md": "D:/global_skills/ppt-master/SKILL.md",
+      "upstream_repo": "anthropics/skills",
+      "upstream_path": "skills/pptx/SKILL.md",
+      "ledger": [
+        {
+          "repo": "anthropics/skills",
+          "entry_path": "skills/pptx/SKILL.md",
+          "stars": null,
+          "license": null,
+          "score_total": 2
+        }
+      ],
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "ppt master skill agent",
+      "candidates": [
+        {
+          "repo": "anthropics/skills",
+          "entry_path": "skills/pptx/SKILL.md",
+          "stars": null,
+          "license": null,
+          "score_total": 2
+        },
+        {
+          "repo": "wshobson/agents",
+          "entry_path": "plugins/pptx-deck-creation/skills/pptx-quality-gates/SKILL.md",
+          "stars": null,
+          "license": null,
+          "score_total": 2
+        },
+        {
+          "repo": "Akxan/ppt-agent-skill",
+          "entry_path": "SKILL.md",
+          "stars": null,
+          "license": null,
+          "score_total": 2
+        }
+      ],
+      "notes": "检索式 pptx_generation 的 total_count=0；命中 3 个候选"
+    },
+    {
+      "local_skill": "A-ask-questions",
+      "local_skill_md": "D:/global_skills/A-ask-questions/SKILL.md",
+      "upstream_repo": null,
+      "upstream_path": null,
+      "ledger": [
+        {
+          "repo": null,
+          "entry_path": null,
+          "stars": null,
+          "license": null,
+          "score_total": null
+        }
+      ],
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "A ask questions skill agent",
+      "candidates": [],
+      "notes": "检索式 requirements_clarity 的 total_count=0；命中 0 个候选"
+    },
+    {
+      "local_skill": "A-project-better",
+      "local_skill_md": "D:/global_skills/A-project-better/SKILL.md",
+      "upstream_repo": null,
+      "upstream_path": null,
+      "ledger": [
+        {
+          "repo": null,
+          "entry_path": null,
+          "stars": null,
+          "license": null,
+          "score_total": null
+        }
+      ],
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "A project better skill agent",
+      "candidates": [],
+      "notes": "检索式 project_direction 的 total_count=0；命中 0 个候选"
+    },
+    {
+      "local_skill": "screenshot",
+      "local_skill_md": "D:/global_skills/screenshot/SKILL.md",
+      "upstream_repo": null,
+      "upstream_path": null,
+      "ledger": [
+        {
+          "repo": null,
+          "entry_path": null,
+          "stars": null,
+          "license": null,
+          "score_total": null
+        }
+      ],
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "screenshot skill agent",
+      "candidates": [],
+      "notes": "检索式 screenshot 的 total_count=3；命中 0 个候选"
+    },
+    {
+      "local_skill": "office-automation-pro",
+      "local_skill_md": "D:/global_skills/office-automation-pro/SKILL.md",
+      "upstream_repo": null,
+      "upstream_path": null,
+      "ledger": [
+        {
+          "repo": null,
+          "entry_path": null,
+          "stars": null,
+          "license": null,
+          "score_total": null
+        }
+      ],
+      "recorded_version": null,
+      "last_checked": "2026-10-20",
+      "discovery_query": "office automation pro skill agent",
+      "candidates": [],
+      "notes": "检索式 office_automation 的 total_count=0；命中 0 个候选"
+    }
+  ]
+}

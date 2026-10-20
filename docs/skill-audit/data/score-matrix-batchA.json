@@ -1,0 +1,716 @@
+{
+  "schema": "skill-score-matrix-v1",
+  "batch": "batch-A",
+  "generated_at": "2026-10-20T07:22:50",
+  "rules": {
+    "F": "入口件/本地字节比：3+(>=1.5:+2/>=1.0:+1/<0.6:-1)",
+    "E": "入口件字节：<=8K:5 <=16K:4 <=32K:3 <=64K:2 else 1",
+    "C": "格式兼容 3；宽松许可+1；CC-BY-SA/GPL/无声明-1",
+    "D": "入口件字节：>=15K:5 >=8K:4 >=3K:3 else 2",
+    "S": "stars：>=100k:5 >=10k:4 >=1k:3 >=100:2 else 1；>180天未活跃 -1；未取证记 null"
+  },
+  "baseline_date": "2026-10-20",
+  "skills": [
+    {
+      "local_skill": "A-memory-start",
+      "local_bytes": 19508,
+      "candidate_count": 3,
+      "best": {
+        "repo": "yonatangross/orchestkit",
+        "total": 16
+      },
+      "candidates": [
+        {
+          "repo": "yonatangross/orchestkit",
+          "evidence": "plugins/ork/skills/memory-fabric/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "memory-fabric 提供跨会话记忆编排；可借鉴其分层结构，但无本仓门禁契约",
+          "confidence": "medium",
+          "ubytes": 8268,
+          "ratio_up_over_local": 0.424,
+          "F": 2,
+          "E": 4,
+          "C": 4,
+          "D": 4,
+          "S": 2,
+          "total_measured": 16,
+          "dims_measured": 5
+        },
+        {
+          "repo": "yonatangross/orchestkit",
+          "evidence": "plugins/ork/skills/memory/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "memory 技能提供记忆写入/召回约定，体量小，属补丁级参考",
+          "confidence": "low",
+          "ubytes": 6748,
+          "ratio_up_over_local": 0.346,
+          "F": 2,
+          "E": 5,
+          "C": 4,
+          "D": 3,
+          "S": 2,
+          "total_measured": 16,
+          "dims_measured": 5
+        },
+        {
+          "repo": "anthropics/skills",
+          "evidence": "skills/claude-api/SKILL.md",
+          "stars": 182156,
+          "license": null,
+          "last_activity": "2026-10-09",
+          "match_reason": "官方 API 技能：只覆盖 API 用法，不覆盖本仓记忆门禁；属相邻非等价",
+          "confidence": "medium",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 5,
+          "total_measured": 7,
+          "dims_measured": 2
+        }
+      ]
+    },
+    {
+      "local_skill": "A-skill-manager",
+      "local_bytes": 11496,
+      "candidate_count": 3,
+      "best": {
+        "repo": "yonatangross/orchestkit",
+        "total": 18
+      },
+      "candidates": [
+        {
+          "repo": "yonatangross/orchestkit",
+          "evidence": "plugins/ork/skills/quality-gates/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "quality-gates 定义技能/交付门禁清单，可对照本仓门禁完整性",
+          "confidence": "medium",
+          "ubytes": 11628,
+          "ratio_up_over_local": 1.011,
+          "F": 4,
+          "E": 4,
+          "C": 4,
+          "D": 4,
+          "S": 2,
+          "total_measured": 18,
+          "dims_measured": 5
+        },
+        {
+          "repo": "obra/superpowers",
+          "evidence": "skills/writing-skills/SKILL.md",
+          "stars": 301816,
+          "license": "MIT",
+          "last_activity": "2026-10-10",
+          "match_reason": "上游 writing-skills 定义技能创作规范；本仓 A-skill-manager 是更高层（增删改/同步/漂移），可吸收其规范节",
+          "confidence": "high",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 4,
+          "D": null,
+          "S": 5,
+          "total_measured": 9,
+          "dims_measured": 2
+        },
+        {
+          "repo": "anthropics/skills",
+          "evidence": "skills/skill-creator/SKILL.md",
+          "stars": 182156,
+          "license": null,
+          "last_activity": "2026-10-09",
+          "match_reason": "官方 skill-creator 给技能脚手架与校验流程；补足本仓缺的生成侧规范",
+          "confidence": "high",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 5,
+          "total_measured": 7,
+          "dims_measured": 2
+        }
+      ]
+    },
+    {
+      "local_skill": "A-dynamic-workflow",
+      "local_bytes": 8033,
+      "candidate_count": 3,
+      "best": {
+        "repo": "wshobson/agents",
+        "total": 19
+      },
+      "candidates": [
+        {
+          "repo": "wshobson/agents",
+          "evidence": "plugins/agent-teams/skills/multi-reviewer-patterns/SKILL.md",
+          "stars": 41107,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "多评审者并行模式：补本仓缺的「并行评审」编排范式",
+          "confidence": "medium",
+          "ubytes": 5192,
+          "ratio_up_over_local": 0.646,
+          "F": 3,
+          "E": 5,
+          "C": 4,
+          "D": 3,
+          "S": 4,
+          "total_measured": 19,
+          "dims_measured": 5
+        },
+        {
+          "repo": "wshobson/agents",
+          "evidence": "plugins/agent-teams/skills/task-coordination-strategies/SKILL.md",
+          "stars": 41107,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "任务协调策略：角色分工与依赖编排，可对照本仓 guards 节",
+          "confidence": "medium",
+          "ubytes": 4690,
+          "ratio_up_over_local": 0.584,
+          "F": 2,
+          "E": 5,
+          "C": 4,
+          "D": 3,
+          "S": 4,
+          "total_measured": 18,
+          "dims_measured": 5
+        },
+        {
+          "repo": "yonatangross/orchestkit",
+          "evidence": "plugins/ork/skills/agent-orchestration/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "多 agent 编排技能；本仓该技能主攻本机并发事故护栏，非等价但可吸收编排节",
+          "confidence": "medium",
+          "ubytes": 11040,
+          "ratio_up_over_local": 1.374,
+          "F": 4,
+          "E": 4,
+          "C": 4,
+          "D": 4,
+          "S": 2,
+          "total_measured": 18,
+          "dims_measured": 5
+        }
+      ]
+    },
+    {
+      "local_skill": "agent-browser",
+      "local_bytes": 29313,
+      "candidate_count": 3,
+      "best": {
+        "repo": "browser-use/browser-use",
+        "total": 7
+      },
+      "candidates": [
+        {
+          "repo": "browser-use/browser-use",
+          "evidence": "skills/qa/SKILL.md",
+          "stars": 118543,
+          "license": null,
+          "last_activity": "2026-10-17",
+          "match_reason": "高层 QA 编排；与本仓浏览器 CLI 定位不同，属互补",
+          "confidence": "medium",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 5,
+          "total_measured": 7,
+          "dims_measured": 2
+        },
+        {
+          "repo": "vercel-labs/agent-browser",
+          "evidence": "skills/agent-browser/SKILL.md",
+          "stars": 44260,
+          "license": null,
+          "last_activity": "2026-10-19",
+          "match_reason": "同源上游：CLI 极简入口（3457B）；本仓 29313B 为自建加厚版，需判定拆分而非替换",
+          "confidence": "high",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 4,
+          "total_measured": 6,
+          "dims_measured": 2
+        },
+        {
+          "repo": "microsoft/playwright-mcp",
+          "evidence": "README.md",
+          "stars": 38379,
+          "license": null,
+          "last_activity": "2026-10-19",
+          "match_reason": "Playwright 官方 MCP：提供稳定浏览器协议层；本仓若走 MCP 可减少自维护代码",
+          "confidence": "medium",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 4,
+          "total_measured": 6,
+          "dims_measured": 2
+        }
+      ]
+    },
+    {
+      "local_skill": "browser-cdp",
+      "local_bytes": 6474,
+      "candidate_count": 3,
+      "best": {
+        "repo": "Colgate13/claude-cdp-debugger",
+        "total": 16
+      },
+      "candidates": [
+        {
+          "repo": "Colgate13/claude-cdp-debugger",
+          "evidence": "README.md",
+          "stars": 2,
+          "license": "MIT",
+          "last_activity": "2026-05-12",
+          "match_reason": "CDP 调试器技能；活跃度不足，仅作写法参照",
+          "confidence": "low",
+          "ubytes": 5920,
+          "ratio_up_over_local": 0.914,
+          "F": 3,
+          "E": 5,
+          "C": 4,
+          "D": 3,
+          "S": 1,
+          "total_measured": 16,
+          "dims_measured": 5
+        },
+        {
+          "repo": "vercel-labs/agent-browser",
+          "evidence": "skills/agent-browser/SKILL.md",
+          "stars": 44260,
+          "license": null,
+          "last_activity": "2026-10-19",
+          "match_reason": "上游 CLI 内含登录态复用与截图，可替代本仓部分 CDP 手工步骤",
+          "confidence": "medium",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 4,
+          "total_measured": 6,
+          "dims_measured": 2
+        },
+        {
+          "repo": "microsoft/playwright-mcp",
+          "evidence": "README.md",
+          "stars": 38379,
+          "license": null,
+          "last_activity": "2026-10-19",
+          "match_reason": "官方 MCP 已覆盖 CDP 会话复用，可作为 browser-cdp 的替代路径",
+          "confidence": "medium",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 4,
+          "total_measured": 6,
+          "dims_measured": 2
+        }
+      ]
+    },
+    {
+      "local_skill": "electron",
+      "local_bytes": 6727,
+      "candidate_count": 3,
+      "best": {
+        "repo": "vercel-labs/agent-browser",
+        "total": 6
+      },
+      "candidates": [
+        {
+          "repo": "vercel-labs/agent-browser",
+          "evidence": "skill-data/electron/SKILL.md",
+          "stars": 44260,
+          "license": null,
+          "last_activity": "2026-10-19",
+          "match_reason": "与本地字节完全一致（6727B，SHA256 相同）——已是上游最新拷贝",
+          "confidence": "high",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 4,
+          "total_measured": 6,
+          "dims_measured": 2
+        },
+        {
+          "repo": "vercel-labs/agent-browser",
+          "evidence": "skill-data/dogfood/SKILL.md",
+          "stars": 44260,
+          "license": null,
+          "last_activity": "2026-10-19",
+          "match_reason": "上游 dogfood 件（10845B vs 本地 10428B）——本地 dogfood 落后 417B，可吸收",
+          "confidence": "high",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 4,
+          "total_measured": 6,
+          "dims_measured": 2
+        },
+        {
+          "repo": "microsoft/playwright-mcp",
+          "evidence": "README.md",
+          "stars": 38379,
+          "license": null,
+          "last_activity": "2026-10-19",
+          "match_reason": "官方 Electron 支持路径，可作长期替代",
+          "confidence": "medium",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 4,
+          "total_measured": 6,
+          "dims_measured": 2
+        }
+      ]
+    },
+    {
+      "local_skill": "dogfood",
+      "local_bytes": 10428,
+      "candidate_count": 2,
+      "best": {
+        "repo": "browser-use/browser-use",
+        "total": 7
+      },
+      "candidates": [
+        {
+          "repo": "browser-use/browser-use",
+          "evidence": "skills/qa/SKILL.md",
+          "stars": 118543,
+          "license": null,
+          "last_activity": "2026-10-17",
+          "match_reason": "高层 QA 流程；与本仓探索式走查定位接近，可作流程层替代",
+          "confidence": "medium",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 5,
+          "total_measured": 7,
+          "dims_measured": 2
+        },
+        {
+          "repo": "vercel-labs/agent-browser",
+          "evidence": "skill-data/dogfood/SKILL.md",
+          "stars": 44260,
+          "license": null,
+          "last_activity": "2026-10-19",
+          "match_reason": "同源上游：上游 10845B vs 本地 10428B，**已产生 417B 差异**，需逐节对表吸收",
+          "confidence": "high",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 4,
+          "total_measured": 6,
+          "dims_measured": 2
+        }
+      ]
+    },
+    {
+      "local_skill": "docx",
+      "local_bytes": 28922,
+      "candidate_count": 2,
+      "best": {
+        "repo": "anthropics/skills",
+        "total": 17
+      },
+      "candidates": [
+        {
+          "repo": "anthropics/skills",
+          "evidence": "skills/docx/SKILL.md",
+          "stars": 182156,
+          "license": null,
+          "last_activity": "2026-10-09",
+          "match_reason": "官方同源：上游 6911B vs 本地 28922B（本地 4.19 倍）——需判定本地加厚是否仍覆盖官方能力",
+          "confidence": "high",
+          "ubytes": 6911,
+          "ratio_up_over_local": 0.239,
+          "F": 2,
+          "E": 5,
+          "C": 2,
+          "D": 3,
+          "S": 5,
+          "total_measured": 17,
+          "dims_measured": 5
+        },
+        {
+          "repo": "tfriedel/claude-office-skills",
+          "evidence": "SKILL.md",
+          "stars": 839,
+          "license": null,
+          "last_activity": "2026-04-01",
+          "match_reason": "第三方 Office 技能包（PPTX/DOCX/XLSX/PDF）；活跃度偏低",
+          "confidence": "low",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 1,
+          "total_measured": 3,
+          "dims_measured": 2
+        }
+      ]
+    },
+    {
+      "local_skill": "html-ppt",
+      "local_bytes": 14265,
+      "candidate_count": 3,
+      "best": {
+        "repo": "op7418/guizang-ppt-skill",
+        "total": 18
+      },
+      "candidates": [
+        {
+          "repo": "op7418/guizang-ppt-skill",
+          "evidence": "SKILL.md",
+          "stars": 28244,
+          "license": "AGPL-3.0",
+          "last_activity": "2026-08-07",
+          "match_reason": "高星 HTML PPT 技能（43125B）；**AGPL-3.0 需评估传染性**",
+          "confidence": "high",
+          "ubytes": 43125,
+          "ratio_up_over_local": 3.023,
+          "F": 5,
+          "E": 2,
+          "C": 2,
+          "D": 5,
+          "S": 4,
+          "total_measured": 18,
+          "dims_measured": 5
+        },
+        {
+          "repo": "Akxan/ppt-agent-skill",
+          "evidence": "SKILL.md",
+          "stars": 163,
+          "license": "MIT",
+          "last_activity": "2026-05-11",
+          "match_reason": "PPT 生成流程件；可作替代但体量与活跃度弱于本仓",
+          "confidence": "medium",
+          "ubytes": 21090,
+          "ratio_up_over_local": 1.478,
+          "F": 4,
+          "E": 3,
+          "C": 4,
+          "D": 5,
+          "S": 2,
+          "total_measured": 18,
+          "dims_measured": 5
+        },
+        {
+          "repo": "anthropics/skills",
+          "evidence": "skills/theme-factory/SKILL.md",
+          "stars": 182156,
+          "license": null,
+          "last_activity": "2026-10-09",
+          "match_reason": "官方主题工厂：本地已字节一致，属「已同步」证明而非替代",
+          "confidence": "high",
+          "ubytes": null,
+          "ratio_up_over_local": null,
+          "F": null,
+          "E": null,
+          "C": 2,
+          "D": null,
+          "S": 5,
+          "total_measured": 7,
+          "dims_measured": 2
+        }
+      ]
+    },
+    {
+      "local_skill": "computer-use-guidance-windows",
+      "local_bytes": 28217,
+      "candidate_count": 1,
+      "best": {
+        "repo": "skalesapp/skales",
+        "total": 17
+      },
+      "candidates": [
+        {
+          "repo": "skalesapp/skales",
+          "evidence": "README.md",
+          "stars": 2200,
+          "license": "NOASSERTION",
+          "last_activity": "2026-10-19",
+          "match_reason": "活跃的 computer-use 项目（42998B README）；许可未声明，需评估",
+          "confidence": "medium",
+          "ubytes": 42998,
+          "ratio_up_over_local": 1.524,
+          "F": 5,
+          "E": 2,
+          "C": 2,
+          "D": 5,
+          "S": 3,
+          "total_measured": 17,
+          "dims_measured": 5
+        }
+      ]
+    },
+    {
+      "local_skill": "A-project-handoff",
+      "local_bytes": 9664,
+      "candidate_count": 2,
+      "best": {
+        "repo": "yonatangross/orchestkit",
+        "total": 17
+      },
+      "candidates": [
+        {
+          "repo": "yonatangross/orchestkit",
+          "evidence": "plugins/ork/skills/memory-fabric/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "跨会话记忆编排；可对照本仓 handoff 的分卷/指针做法",
+          "confidence": "medium",
+          "ubytes": 8268,
+          "ratio_up_over_local": 0.856,
+          "F": 3,
+          "E": 4,
+          "C": 4,
+          "D": 4,
+          "S": 2,
+          "total_measured": 17,
+          "dims_measured": 5
+        },
+        {
+          "repo": "yonatangross/orchestkit",
+          "evidence": "plugins/ork/skills/memory/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "记忆写入约定；补本仓缺的召回侧协议",
+          "confidence": "low",
+          "ubytes": 6748,
+          "ratio_up_over_local": 0.698,
+          "F": 3,
+          "E": 5,
+          "C": 4,
+          "D": 3,
+          "S": 2,
+          "total_measured": 17,
+          "dims_measured": 5
+        }
+      ]
+    },
+    {
+      "local_skill": "testing",
+      "local_bytes": 7921,
+      "candidate_count": 2,
+      "best": {
+        "repo": "addyosmani/agent-skills",
+        "total": 22
+      },
+      "candidates": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "evidence": "skills/browser-testing-with-devtools/SKILL.md",
+          "stars": 108476,
+          "license": "MIT",
+          "last_activity": "2026-10-13",
+          "match_reason": "浏览器 DevTools 测试流程（14539B）：本仓测试面缺的端到端浏览器验证",
+          "confidence": "high",
+          "ubytes": 14539,
+          "ratio_up_over_local": 1.836,
+          "F": 5,
+          "E": 4,
+          "C": 4,
+          "D": 4,
+          "S": 5,
+          "total_measured": 22,
+          "dims_measured": 5
+        },
+        {
+          "repo": "yonatangross/orchestkit",
+          "evidence": "plugins/ork/skills/browser-tools/SKILL.md",
+          "stars": 296,
+          "license": "MIT",
+          "last_activity": "2026-10-19",
+          "match_reason": "浏览器工具集（24173B）：可替代本仓手写探针",
+          "confidence": "medium",
+          "ubytes": 24173,
+          "ratio_up_over_local": 3.052,
+          "F": 5,
+          "E": 3,
+          "C": 4,
+          "D": 5,
+          "S": 2,
+          "total_measured": 19,
+          "dims_measured": 5
+        }
+      ]
+    },
+    {
+      "local_skill": "ci-pipeline-debugging",
+      "local_bytes": 12926,
+      "candidate_count": 1,
+      "best": {
+        "repo": "addyosmani/agent-skills",
+        "total": 20
+      },
+      "candidates": [
+        {
+          "repo": "addyosmani/agent-skills",
+          "evidence": "skills/ci-cd-and-automation/SKILL.md",
+          "stars": 108476,
+          "license": "MIT",
+          "last_activity": "2026-10-13",
+          "match_reason": "CI/CD 与自动化（11332B）：补本仓缺的平台侧命令与工作流写法",
+          "confidence": "high",
+          "ubytes": 11332,
+          "ratio_up_over_local": 0.877,
+          "F": 3,
+          "E": 4,
+          "C": 4,
+          "D": 4,
+          "S": 5,
+          "total_measured": 20,
+          "dims_measured": 5
+        }
+      ]
+    }
+  ]
+}

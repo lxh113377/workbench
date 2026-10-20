@@ -1,0 +1,57 @@
+{
+  "schema": "copy-proof-v1",
+  "checked": [
+    {
+      "tag": "dogfood-copy-check",
+      "repo": "vercel-labs/agent-browser",
+      "path": "skill-data/dogfood/SKILL.md",
+      "local_path": "D:/global_skills/dogfood/SKILL.md",
+      "http": 200,
+      "upstream_bytes": 10845,
+      "upstream_sha256_16": "83afc0f6ce5598ae",
+      "local_bytes": 10428,
+      "local_sha256_16": "513091d3a261bb9c",
+      "identical": false
+    },
+    {
+      "tag": "electron-copy-check",
+      "repo": "vercel-labs/agent-browser",
+      "path": "skill-data/electron/SKILL.md",
+      "local_path": "D:/global_skills/electron/SKILL.md",
+      "http": 200,
+      "upstream_bytes": 6727,
+      "upstream_sha256_16": "d97a2bc221b50441",
+      "local_bytes": 6727,
+      "local_sha256_16": "d97a2bc221b50441",
+      "identical": true
+    },
+    {
+      "tag": "agent-browser-copy-check",
+      "repo": "vercel-labs/agent-browser",
+      "path": "skills/agent-browser/SKILL.md",
+      "local_path": "D:/global_skills/agent-browser/SKILL.md",
+      "http": 200,
+      "upstream_bytes": 3457,
+      "upstream_sha256_16": "3a7520e64de2dfaa",
+      "local_bytes": 29313,
+      "local_sha256_16": "8f5028eb62fa1bcb",
+      "identical": false
+    },
+    {
+      "tag": "browser-use-qa",
+      "repo": "browser-use/browser-use",
+      "path": "skills/qa/SKILL.md",
+      "local_path": null,
+      "http": 200,
+      "upstream_bytes": 9154,
+      "upstream_sha256_16": "52469b750db93763"
+    },
+    {
+      "tag": "superpowers-skills-testing",
+      "repo": "obra/superpowers-skills",
+      "path": "skills/testing/SKILL.md",
+      "local_path": null,
+      "error": "<HTTPError 404: 'Not Found'>"
+    }
+  ]
+}

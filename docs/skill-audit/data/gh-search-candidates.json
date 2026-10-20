@@ -1,0 +1,556 @@
+{
+  "schema": "gh-search-candidates-v1",
+  "fetched_at": "2026-10-20T06:52:29",
+  "results": {
+    "session_protocol": {
+      "query": "agent skill memory persistence session handoff",
+      "items": [
+        {
+          "repo": "lekalsutee/hermes-context-persistence",
+          "stars": 4,
+          "pushed_at": "2026-07-06T08:24:40Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "3-layer context persistence for AI agents: Memory + Skills + Session Search. Beyond handoff.md."
+        }
+      ],
+      "total_count": 1
+    },
+    "project_memory": {
+      "query": "claude code project memory handoff skill",
+      "items": [
+        {
+          "repo": "RRFRRF/project-memory-skill",
+          "stars": 7,
+          "pushed_at": "2026-05-08T16:29:27Z",
+          "license": null,
+          "archived": false,
+          "description": "Lightweight project memory system for AI coding agents — cross-session state, bug queue, ADR decisions, and handoff notes as Markdown files."
+        },
+        {
+          "repo": "nanwulan/claude-handoff-skill",
+          "stars": 3,
+          "pushed_at": "2026-07-30T06:34:38Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Zero-friction project memory for Claude Code. Auto-resumes on every new session — just open and continue. Dual-file layer (PROJECT.ftmd + HA"
+        },
+        {
+          "repo": "Pragmatic-Labs-AI/praxis",
+          "stars": 3,
+          "pushed_at": "2026-10-11T05:44:37Z",
+          "license": "Apache-2.0",
+          "archived": false,
+          "description": "Praxis composes your agent harness (rules, skills, permissions, project memory, session handoffs) from one source into Claude Code, Codex, a"
+        },
+        {
+          "repo": "Evan-Daruwalla/claude-project-memory",
+          "stars": 2,
+          "pushed_at": "2026-10-13T22:07:50Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "A Claude Code skill for durable project memory: HANDOFF + append-only record + PRD roadmap + codebase-memory bins"
+        },
+        {
+          "repo": "RyanUniqueBV/dream-skill",
+          "stars": 2,
+          "pushed_at": "2026-07-12T23:37:03Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Memory consolidation skill for Claude Code. Mines session transcripts via cheap parallel subagents, writes session journals, consolidates pr"
+        },
+        {
+          "repo": "sovanrothaa/handoff",
+          "stars": 1,
+          "pushed_at": "2026-08-11T14:14:44Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "A Claude Code plugin (via its session-memory skill) that persists structured project state across sessions, so /clear doesn't wipe out what "
+        },
+        {
+          "repo": "jimmyrose/claude-code-wrap-up-skills",
+          "stars": 1,
+          "pushed_at": "2026-06-23T02:37:58Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Two Claude Code skills for wrapping up a coding session: a searchable conversation summary, project log + handoff updates, and temp-file/mem"
+        },
+        {
+          "repo": "csm-ineni/SKILLS-CLAUDE-BY-CSM",
+          "stars": 1,
+          "pushed_at": "2026-09-15T07:52:08Z",
+          "license": null,
+          "archived": false,
+          "description": "CSM's Claude Code plugin marketplace: dev-workflow (project memory, session handoff, coding rules, clean git workflow, multi-model orchestra"
+        }
+      ],
+      "total_count": 19
+    },
+    "skill_manager": {
+      "query": "agent skill registry manager marketplace claude",
+      "items": [],
+      "total_count": 0
+    },
+    "workflow_orchestration": {
+      "query": "multi agent orchestration skill claude workflow",
+      "items": [
+        {
+          "repo": "ray-amjad/claude-code-workflow-creator",
+          "stars": 93,
+          "pushed_at": "2026-05-29T12:14:18Z",
+          "license": null,
+          "archived": false,
+          "description": "A Claude Code skill for authoring Workflow tool scripts: deterministic multi-agent orchestration. Preview of an unreleased feature."
+        },
+        {
+          "repo": "MetaQiu/Trivium",
+          "stars": 24,
+          "pushed_at": "2026-02-15T01:59:06Z",
+          "license": null,
+          "archived": false,
+          "description": "A multi-agent collaborative paper writing workflow, implemented as a Claude Code skill. It orchestrates Claude Code, OpenAI Codex CLI, and G"
+        },
+        {
+          "repo": "rondoflow/rondoflow",
+          "stars": 23,
+          "pushed_at": "2026-10-19T14:55:37Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "RondoFlow is a local-first, open-source platform for visually orchestrating Claude Code AI agents. Use a drag-and-drop canvas to create agen"
+        },
+        {
+          "repo": "ronnycoding/.claude",
+          "stars": 20,
+          "pushed_at": "2026-06-17T14:17:18Z",
+          "license": null,
+          "archived": false,
+          "description": "Claude Code configuration featuring specialized AI agents, custom skills, automated GitHub workflows with Epic/Task decomposition, and multi"
+        },
+        {
+          "repo": "cubetribe/openclaw-godmode-skill",
+          "stars": 11,
+          "pushed_at": "2026-05-09T14:27:59Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "🚀 GodMode Skill for OpenClaw - Autonomous Claude Code multi-agent coding orchestration. 8 specialized agents (@researcher, @architect, @code"
+        },
+        {
+          "repo": "democra-ai/skill-to-workflow",
+          "stars": 11,
+          "pushed_at": "2026-05-31T19:51:29Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Compile any Claude Agent Skill into a multi-agent Workflow — a meta-workflow that recovers the parallelism hidden in a skill's prose and emi"
+        },
+        {
+          "repo": "zevtos/agentpipe",
+          "stars": 11,
+          "pushed_at": "2026-06-12T11:54:02Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Gated pipeline orchestration for Claude Code and Codex CLI: 9 specialist agents, 15 multi-agent workflows, skills, and a release-zip system."
+        },
+        {
+          "repo": "eloylp/agents",
+          "stars": 10,
+          "pushed_at": "2026-08-29T04:36:55Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "A self-hosted, observable orchestrator for multi-agent workflows on your repos. Compose from skills and memory, run on events or cron, dispa"
+        }
+      ],
+      "total_count": 62
+    },
+    "requirements_clarity": {
+      "query": "requirements clarification interview skill agent",
+      "items": [],
+      "total_count": 0
+    },
+    "project_direction": {
+      "query": "project roadmap analysis skill agent codebase",
+      "items": [],
+      "total_count": 0
+    },
+    "browser_automation": {
+      "query": "browser automation agent skill playwright claude",
+      "items": [
+        {
+          "repo": "ianho7/ai-friendly-web-design-skill",
+          "stars": 77,
+          "pushed_at": "2026-06-21T16:01:39Z",
+          "license": null,
+          "archived": false,
+          "description": "A skill for coding agents that build, review, and refactor Web UI that should be easier for humans, screen readers, browser automation, Play"
+        },
+        {
+          "repo": "Abm32/runsight",
+          "stars": 6,
+          "pushed_at": "2026-06-10T05:56:25Z",
+          "license": "MIT",
+          "archived": false,
+          "description": " Autonomous agent that runs projects, explores them via browser, captures screenshots, and records demo videos - automatically. Pluggable ag"
+        },
+        {
+          "repo": "denniscalazans/denniscalazans-plugins",
+          "stars": 3,
+          "pushed_at": "2026-10-15T22:04:39Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Claude Code plugin marketplace — skills and agents for thinking workflows, code quality, browser automation, adversarial implementation pipe"
+        },
+        {
+          "repo": "reduanmasud/agentic-skills",
+          "stars": 2,
+          "pushed_at": "2026-10-11T08:45:08Z",
+          "license": null,
+          "archived": false,
+          "description": "Claude Code skills for QA testing — PR testing, staging validation, security checks with Playwright browser automation"
+        },
+        {
+          "repo": "RhythrosaLabs/otto-mate-2",
+          "stars": 2,
+          "pushed_at": "2026-10-14T00:58:48Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Ottomate — universal AI agent workbench: 190+ connectors, 200+ skills, browser automation, visual pipelines, cron scheduler. Powered by Clau"
+        },
+        {
+          "repo": "alpoxdev/hyper-cloaking",
+          "stars": 1,
+          "pushed_at": "2026-07-13T13:01:59Z",
+          "license": null,
+          "archived": false,
+          "description": "Human-paced stealth browser skill for AI agents — drives CloakBrowser behind Playwright MCP. Works with Claude Code, Codex, Cursor, OpenClaw"
+        },
+        {
+          "repo": "heart-wcl/agent-browser-guide",
+          "stars": 0,
+          "pushed_at": "2026-05-22T11:06:21Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Claude Code skill for browser automation via Vercel Agent Browser CLI. Replaces Playwright MCP with CLI-first approach."
+        },
+        {
+          "repo": "MateiMiron/ai-playwright-automation",
+          "stars": 0,
+          "pushed_at": "2026-02-15T11:20:18Z",
+          "license": null,
+          "archived": false,
+          "description": "AI-driven Playwright test suite generated entirely by Claude Code agents — 74 tests, zero manual code. Uses custom skills, browser CLI, and "
+        }
+      ],
+      "total_count": 10
+    },
+    "browser_cdp": {
+      "query": "chrome devtools protocol agent skill cdp",
+      "items": [
+        {
+          "repo": "tykimos/cheliped-skills",
+          "stars": 62,
+          "pushed_at": "2026-06-19T01:35:46Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Agent Browser Runtime — AI agent-friendly browser control via Chrome DevTools Protocol (CDP)"
+        },
+        {
+          "repo": "Colgate13/claude-cdp-debugger",
+          "stars": 2,
+          "pushed_at": "2026-05-12T04:43:13Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "A Claude Code skill that lets the agent live-debug any Node.js service via Chrome DevTools Protocol — discovers .vscode/launch.json automati"
+        },
+        {
+          "repo": "sang-lu/skill-chrome-cdp-remote",
+          "stars": 1,
+          "pushed_at": "2026-08-08T04:24:59Z",
+          "license": null,
+          "archived": false,
+          "description": "An Agent Skill that lets a coding agent drive a Chrome instance running on a different machine — a VM, a container, a remote dev box, a clou"
+        },
+        {
+          "repo": "xdm67x/electrotest",
+          "stars": 1,
+          "pushed_at": "2026-09-29T22:09:52Z",
+          "license": null,
+          "archived": false,
+          "description": "A CLI automation tool for testing Electron applications using Gherkin syntax and the Chrome DevTools Protocol (CDP)"
+        },
+        {
+          "repo": "joustonhuang/chrome_for_openclaw",
+          "stars": 1,
+          "pushed_at": "2026-04-13T08:37:15Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "This is not a traditional OpenClaw “Skill.” It enables agents to control a real browser via Chrome DevTools Protocol (CDP), operating throug"
+        },
+        {
+          "repo": "eligrumman/chrome-agent-skill",
+          "stars": 0,
+          "pushed_at": "2026-03-11T14:51:40Z",
+          "license": null,
+          "archived": false,
+          "description": "Chrome DevTools Protocol CLI skill for Claude Code — direct CDP browser automation, no MCP middleware"
+        },
+        {
+          "repo": "mostafasudo/chrome-cdp",
+          "stars": 0,
+          "pushed_at": "2026-08-16T23:35:19Z",
+          "license": null,
+          "archived": false,
+          "description": "Agent skill: drive your already-open local Chrome over the DevTools Protocol, using your real logged-in session."
+        },
+        {
+          "repo": "sryo/figma-cdp",
+          "stars": 0,
+          "pushed_at": "2026-10-03T22:23:27Z",
+          "license": null,
+          "archived": false,
+          "description": "Code → Figma. A Claude Code skill that builds in Figma via agent-browser over Chrome DevTools Protocol."
+        }
+      ],
+      "total_count": 10
+    },
+    "electron_automation": {
+      "query": "electron app automation agent skill cdp",
+      "items": [],
+      "total_count": 0
+    },
+    "headless_qa": {
+      "query": "headless browser qa testing skill agent",
+      "items": [
+        {
+          "repo": "liarjsdev/liarjs-skills",
+          "stars": 4,
+          "pushed_at": "2026-08-06T06:55:38Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Agent Skills for browser fingerprint testing: run liarjs from Claude Code, Codex, Cursor or Copilot to score a browser against itself - 40 c"
+        }
+      ],
+      "total_count": 1
+    },
+    "computer_use": {
+      "query": "computer use windows desktop automation skill agent",
+      "items": [
+        {
+          "repo": "skalesapp/skales",
+          "stars": 2200,
+          "pushed_at": "2026-10-19T18:40:23Z",
+          "license": "NOASSERTION",
+          "archived": false,
+          "description": "Personal AI agent for macOS, Windows, Linux, Android & iOS. Set a goal, it works alone: coding (Skales Code), desktop + browser automation, "
+        },
+        {
+          "repo": "t1m0nch1k/computer-use-windows",
+          "stars": 1,
+          "pushed_at": "2026-10-09T12:49:48Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "High-performance, native Windows desktop automation skill and CLI for AI agents (OpenCode, OpenAI Codex, Antigravity, Claude Code)."
+        },
+        {
+          "repo": "yousefomar724/capcut-desktop-editing",
+          "stars": 1,
+          "pushed_at": "2026-09-20T19:33:18Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "An agent skill that edits video in the real CapCut desktop app on Windows through computer use - UI Automation tree where CapCut exposes it,"
+        },
+        {
+          "repo": "Shrimpaste/computer-use-4-agent",
+          "stars": 0,
+          "pushed_at": "2026-05-31T17:07:02Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Windows desktop automation for AI agents — generalize codex-computer-use into a universal skill"
+        },
+        {
+          "repo": "meixia202406-GT/windows-computer-use",
+          "stars": 0,
+          "pushed_at": "2026-09-30T07:03:48Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Agent skill for driving Windows desktop apps via UI Automation + SendInput: read the accessibility tree, click by element name, inject input"
+        },
+        {
+          "repo": "dimberd/hermes-windows-skills",
+          "stars": 0,
+          "pushed_at": "2026-07-12T18:11:37Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "A curated collection of reusable Hermes Agent skills for Windows 10/11 desktop automation, computer-use optimization, and system administrat"
+        }
+      ],
+      "total_count": 6
+    },
+    "app_dogfood": {
+      "query": "web app exploratory testing skill agent dogfood",
+      "items": [],
+      "total_count": 0
+    },
+    "screenshot": {
+      "query": "screenshot capture skill agent desktop",
+      "items": [
+        {
+          "repo": "HansBug/terminal-capture-workflow",
+          "stars": 1,
+          "pushed_at": "2026-05-13T07:55:07Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Agent skill for terminal screenshots, GIFs, videos, and visual QA without desktop input injection (Codex + Claude Code)"
+        },
+        {
+          "repo": "yusufaf/spicetify-agent-skills",
+          "stars": 0,
+          "pushed_at": "2026-10-18T05:17:50Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Agent skills for developing Spicetify extensions with AI coding agents: drive the live Spotify desktop client over CDP, and capture README/M"
+        },
+        {
+          "repo": "Appraisily/design-mockup-loop-skill",
+          "stars": 0,
+          "pushed_at": "2026-08-18T09:53:28Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Portable Agent Skill: capture live page screenshots and generate desktop + mobile GUI mockups in a 4-pass loop"
+        }
+      ],
+      "total_count": 3
+    },
+    "office_docs": {
+      "query": "office document skill claude docx pptx xlsx",
+      "items": [
+        {
+          "repo": "tfriedel/claude-office-skills",
+          "stars": 839,
+          "pushed_at": "2026-04-01T11:49:29Z",
+          "license": null,
+          "archived": false,
+          "description": "Office document creation and editing skills for Claude Code - PPTX, DOCX, XLSX, and PDF workflows with automation support"
+        },
+        {
+          "repo": "LeoLin990405/claude-office-skills",
+          "stars": 1,
+          "pushed_at": "2026-05-06T00:55:37Z",
+          "license": "MIT",
+          "archived": true,
+          "description": "Migrated to claude-code-skills/documents/*"
+        },
+        {
+          "repo": "docvinum/agent-skills",
+          "stars": 0,
+          "pushed_at": "2026-09-02T11:26:49Z",
+          "license": null,
+          "archived": false,
+          "description": "Skills génériques et réutilisables pour agents IA (Claude Code, etc.) — documents Office/PDF, création de skills, mémoire, tâches planifiées"
+        }
+      ],
+      "total_count": 3
+    },
+    "pptx_generation": {
+      "query": "powerpoint generation skill agent pptx javascript",
+      "items": [],
+      "total_count": 0
+    },
+    "html_presentation": {
+      "query": "html presentation slides skill agent deck",
+      "items": [
+        {
+          "repo": "op7418/guizang-ppt-skill",
+          "stars": 28244,
+          "pushed_at": "2026-08-07T03:58:08Z",
+          "license": "AGPL-3.0",
+          "archived": false,
+          "description": "AI-agent Skill for generating polished HTML slide decks: editorial magazine and Swiss layouts, image prompts, social covers, and a WebGL/low"
+        },
+        {
+          "repo": "Akxan/ppt-agent-skill",
+          "stars": 163,
+          "pushed_at": "2026-05-11T00:47:17Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "🎨 World-class AI presentation generator · 26 styles · 18 charts · benchmarked against Linear/Anthropic/Stripe/Apple/NYT — a Claude Code Skil"
+        },
+        {
+          "repo": "Hasasasa/html-to-editable-pptx",
+          "stars": 89,
+          "pushed_at": "2026-07-07T09:55:18Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Convert HTML slide decks to truly editable PPT / .pptx - text stays native PowerPoint textboxes, not screenshots. Agent Skill (Claude Code /"
+        },
+        {
+          "repo": "SlideSpeak/slide-design-skill",
+          "stars": 28,
+          "pushed_at": "2026-06-25T18:32:56Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "AI presentation engine. Describe your deck and the look, it derives a bespoke style and renders polished 1920x1080 HTML slides with real cha"
+        },
+        {
+          "repo": "liustack/pptwise",
+          "stars": 24,
+          "pushed_at": "2026-10-16T22:38:45Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "A real PowerPoint, not HTML. Tell your AI what to cover and pptwise builds an editable deck on your own machine. Agent skill + DSH plugin, n"
+        },
+        {
+          "repo": "prodigeproject/pradaslides",
+          "stars": 16,
+          "pushed_at": "2026-07-30T18:09:50Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Capability-aware, audience-ready presentation agent skill for PPTX, HTML slides, PDF, and deck planning."
+        },
+        {
+          "repo": "cosen1024/awesome-presentation-skills",
+          "stars": 7,
+          "pushed_at": "2026-10-19T21:34:06Z",
+          "license": "CC0-1.0",
+          "archived": false,
+          "description": "A curated catalog of verified Presentation Agent Skills for editable PPTX, HTML slides, and image-first decks."
+        },
+        {
+          "repo": "pavelkorolevxyz/craft",
+          "stars": 4,
+          "pushed_at": "2026-10-03T08:32:09Z",
+          "license": "MIT",
+          "archived": false,
+          "description": "Design system and agent skill for standalone HTML pages and slide decks that open over file:// with no build step"
+        }
+      ],
+      "total_count": 32
+    },
+    "office_automation": {
+      "query": "office automation skill email scheduled reports agent",
+      "items": [],
+      "total_count": 0
+    },
+    "anthropic_official": {
+      "query": "anthropics skills agent document pdf docx",
+      "items": [
+        {
+          "repo": "ityes22/game-design-document",
+          "stars": 7,
+          "pushed_at": "2026-03-09T03:16:11Z",
+          "license": "NOASSERTION",
+          "archived": false,
+          "description": "Anthropic Agent Skill: generates professional, publisher-grade Game Design Documents (.docx, .pdf, .pptx) from game concepts"
+        },
+        {
+          "repo": "Moshbbab/anthropic-agent-skills",
+          "stars": 0,
+          "pushed_at": "2026-10-05T15:29:22Z",
+          "license": null,
+          "archived": false,
+          "description": "Fork/archive of anthropics/skills - Official Agent Skills including document skills (docx, pdf, pptx, xlsx)"
+        }
+      ],
+      "total_count": 2
+    }
+  },
+  "api_calls": 18
+}

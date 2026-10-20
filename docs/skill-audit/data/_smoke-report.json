@@ -1,0 +1,70 @@
+{
+  "schema": "skill-sweep-v1",
+  "generated_at": "2026-10-19T22:44:32",
+  "offline": false,
+  "fuse_days": 100,
+  "active_days": 400,
+  "registry": "D:\\workdesktop\\docs\\skill-audit\\data\\_smoke-watchlist.json",
+  "api_calls": 2,
+  "worst_state": "RED",
+  "rows": [
+    {
+      "local_skill": "brainstorming",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/brainstorming/SKILL.md",
+      "recorded_version": "6.4.2",
+      "live_version": "7.0.0",
+      "leg_version": {
+        "state": "RED",
+        "note": "登记 6.4.2 != 上游观测 7.0.0（release v7.0.0 published 2026-10-10T00:28:58Z）"
+      },
+      "leg_drift": {
+        "state": "RED",
+        "note": "本地 10634B / 上游 10073B / 相似度 0.899 / 上游独有标题 8 个（例：# Brainstorming; ## First: What Do You Actually Know?; ## Play It Back）"
+      },
+      "leg_candidates": {
+        "state": "UNVERIFIED",
+        "note": "登记表无 candidates",
+        "detail": []
+      },
+      "leg_discovery": {
+        "state": "UNVERIFIED",
+        "note": "本次运行的 search 预算已用尽",
+        "detail": []
+      },
+      "last_checked": "2026-09-29",
+      "days_since_check": 20,
+      "stale": false,
+      "overall": "RED"
+    },
+    {
+      "local_skill": "writing-plans",
+      "upstream_repo": "obra/superpowers",
+      "upstream_path": "skills/writing-plans/SKILL.md",
+      "recorded_version": "6.4.2",
+      "live_version": "7.0.0",
+      "leg_version": {
+        "state": "RED",
+        "note": "登记 6.4.2 != 上游观测 7.0.0（release v7.0.0 published 2026-10-10T00:28:58Z）"
+      },
+      "leg_drift": {
+        "state": "GREEN",
+        "note": "本地 11226B / 上游 10335B / 相似度 0.959 / 上游独有标题 0 个"
+      },
+      "leg_candidates": {
+        "state": "UNVERIFIED",
+        "note": "登记表无 candidates",
+        "detail": []
+      },
+      "leg_discovery": {
+        "state": "UNVERIFIED",
+        "note": "未登记 discovery_query",
+        "detail": []
+      },
+      "last_checked": "2026-09-29",
+      "days_since_check": 20,
+      "stale": false,
+      "overall": "RED"
+    }
+  ]
+}
