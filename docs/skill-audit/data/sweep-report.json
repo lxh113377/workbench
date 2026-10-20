@@ -1,11 +1,11 @@
 {
   "schema": "skill-sweep-v1",
-  "generated_at": "2026-10-20T12:17:17",
+  "generated_at": "2026-10-20T12:29:39",
   "offline": false,
   "fuse_days": 100,
   "active_days": 400,
   "registry": "D:\\workdesktop\\docs\\skill-audit\\data\\skill-watchlist.json",
-  "http_calls": 378,
+  "http_calls": 364,
   "worst_state": "UNVERIFIED",
   "rows": [
     {
@@ -21,8 +21,8 @@
         "note": "登记 Agent Skills 0.6.13 == 上游观测（releases.atom 最新 tag Agent Skills 0.6.13（2026-10-13T20:21:58Z））"
       },
       "leg_drift": {
-        "state": "UNVERIFIED",
-        "note": "上游同名件取不到（raw 拉取失败: URLError(SSLEOFError(8, '[SSL: UNEXPECTED_EOF_WHILE_READING] EOF occurred in violation of protocol (_ssl.c:1010)'))）"
+        "state": "GREEN",
+        "note": "本地(含references卷) 22405B / 上游 20976B / 相似度 0.354 / 上游独有标题 原始 2 / 归一化 0"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -79,7 +79,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "UNVERIFIED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "debugging-fixing",
@@ -103,23 +103,23 @@
         "detail": [
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108611,
+            "stars": 108673,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108673，来源 ungh.cc）"
           },
           {
             "repo": "obra/superpowers",
-            "stars": 301816,
-            "pushed_days": 10,
+            "stars": 302202,
+            "pushed_days": 0,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=301816，来源 ungh.cc）"
+            "note": "活跃（0 天前推送，stars=302202，来源 ungh.cc）"
           },
           {
             "repo": "plus8bit/agent-postmortem-skill",
@@ -259,23 +259,23 @@
         "detail": [
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108611,
+            "stars": 108673,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108673，来源 ungh.cc）"
           },
           {
             "repo": "obra/superpowers",
-            "stars": 301816,
-            "pushed_days": 10,
+            "stars": 302202,
+            "pushed_days": 0,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=301816，来源 ungh.cc）"
+            "note": "活跃（0 天前推送，stars=302202，来源 ungh.cc）"
           },
           {
             "repo": "oprogramadorreal/optimus-claude",
@@ -332,13 +332,13 @@
         "detail": [
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108611,
+            "stars": 108673,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108673，来源 ungh.cc）"
           },
           {
             "repo": "solatis/claude-config",
@@ -406,8 +406,8 @@
         "note": "登记 0.22.2+canary.20261019T071120Z == 上游观测（releases.atom 最新 tag v0.22.2+canary.20261019T071120Z（2026-10-19T07:11:22Z））"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 2115B / 上游 8723B / 相似度 0.360 / 上游独有标题 原始 12 / 归一化 12（例：1. decompose; 2. align; 3. research）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -464,7 +464,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "first-principles-decomposer",
@@ -644,13 +644,13 @@
           },
           {
             "repo": "github/awesome-copilot",
-            "stars": 40185,
-            "pushed_days": 4,
+            "stars": 40199,
+            "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（4 天前推送，stars=40185，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=40199，来源 ungh.cc）"
           },
           {
             "repo": "CodeAlive-AI/ai-driven-development",
@@ -707,33 +707,33 @@
         "detail": [
           {
             "repo": "github/awesome-copilot",
-            "stars": 40185,
-            "pushed_days": 4,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（4 天前推送，stars=40185，来源 ungh.cc）"
-          },
-          {
-            "repo": "trailofbits/skills",
-            "stars": 7647,
+            "stars": 40199,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=7647，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=40199，来源 ungh.cc）"
           },
           {
             "repo": "trailofbits/skills",
-            "stars": 7647,
+            "stars": 7650,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=7647，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=7650，来源 ungh.cc）"
+          },
+          {
+            "repo": "trailofbits/skills",
+            "stars": 7650,
+            "pushed_days": 1,
+            "archived": false,
+            "license": null,
+            "source": "ungh.cc",
+            "state": "GREEN",
+            "note": "活跃（1 天前推送，stars=7650，来源 ungh.cc）"
           },
           {
             "repo": "trailofbits/skills",
@@ -790,13 +790,13 @@
         "detail": [
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108611,
+            "stars": 108674,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108674，来源 ungh.cc）"
           },
           {
             "repo": "github/awesome-copilot",
@@ -820,13 +820,13 @@
           },
           {
             "repo": "trailofbits/skills",
-            "stars": 7647,
+            "stars": 7650,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=7647，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=7650，来源 ungh.cc）"
           }
         ]
       },
@@ -883,23 +883,23 @@
           },
           {
             "repo": "github/awesome-copilot",
-            "stars": 40185,
-            "pushed_days": 4,
+            "stars": 40199,
+            "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（4 天前推送，stars=40185，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=40199，来源 ungh.cc）"
           },
           {
             "repo": "github/awesome-copilot",
-            "stars": 40185,
-            "pushed_days": 4,
+            "stars": 40199,
+            "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（4 天前推送，stars=40185，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=40199，来源 ungh.cc）"
           },
           {
             "repo": "ericgandrade/claude-superskills",
@@ -946,13 +946,13 @@
         "detail": [
           {
             "repo": "obra/superpowers",
-            "stars": 301816,
-            "pushed_days": 10,
+            "stars": 302203,
+            "pushed_days": 0,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=301816，来源 ungh.cc）"
+            "note": "活跃（0 天前推送，stars=302203，来源 ungh.cc）"
           },
           {
             "repo": "addyosmani/agent-skills",
@@ -966,13 +966,13 @@
           },
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108611,
+            "stars": 108674,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108674，来源 ungh.cc）"
           },
           {
             "repo": "ysskrishna/ai-agent-skills",
@@ -1029,23 +1029,23 @@
         "detail": [
           {
             "repo": "wshobson/agents",
-            "stars": 41150,
+            "stars": 41180,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=41150，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=41180，来源 ungh.cc）"
           },
           {
             "repo": "wshobson/agents",
-            "stars": 41150,
+            "stars": 41180,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=41150，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=41180，来源 ungh.cc）"
           },
           {
             "repo": "yonatangross/orchestkit",
@@ -1092,33 +1092,33 @@
         "detail": [
           {
             "repo": "obra/superpowers",
-            "stars": 301816,
-            "pushed_days": 10,
+            "stars": 302203,
+            "pushed_days": 0,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=301816，来源 ungh.cc）"
+            "note": "活跃（0 天前推送，stars=302203，来源 ungh.cc）"
           },
           {
             "repo": "github/awesome-copilot",
-            "stars": 40185,
-            "pushed_days": 4,
-            "archived": false,
-            "license": null,
-            "source": "ungh.cc",
-            "state": "GREEN",
-            "note": "活跃（4 天前推送，stars=40185，来源 ungh.cc）"
-          },
-          {
-            "repo": "trailofbits/skills",
-            "stars": 7647,
+            "stars": 40199,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=7647，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=40199，来源 ungh.cc）"
+          },
+          {
+            "repo": "trailofbits/skills",
+            "stars": 7650,
+            "pushed_days": 1,
+            "archived": false,
+            "license": null,
+            "source": "ungh.cc",
+            "state": "GREEN",
+            "note": "活跃（1 天前推送，stars=7650，来源 ungh.cc）"
           },
           {
             "repo": "jagreehal/jagreehal-claude-skills",
@@ -1166,8 +1166,8 @@
         "note": "登记 10.0.0-beta.183 == 上游观测（releases.atom 最新 tag v10.0.0-beta.183（2026-10-19T05:43:47Z））"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 129535B / 上游 11628B / 相似度 0.275 / 上游独有标题 原始 32 / 归一化 30（例：auto activate triggers; best practices pattern library; blocking thresholds）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -1185,23 +1185,23 @@
           },
           {
             "repo": "obra/superpowers",
-            "stars": 301816,
-            "pushed_days": 10,
+            "stars": 302204,
+            "pushed_days": 0,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=301816，来源 ungh.cc）"
+            "note": "活跃（0 天前推送，stars=302204，来源 ungh.cc）"
           },
           {
             "repo": "anthropics/skills",
-            "stars": 182267,
+            "stars": 182284,
             "pushed_days": 11,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（11 天前推送，stars=182267，来源 ungh.cc）"
+            "note": "活跃（11 天前推送，stars=182284，来源 ungh.cc）"
           }
         ]
       },
@@ -1214,7 +1214,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "html-ppt",
@@ -1229,8 +1229,8 @@
         "note": "登记 1.1.0 · Swiss style and community-ready release == 上游观测（releases.atom 最新 tag v1.1.0 · Swiss style and community-ready release（2026-05-15T05:15:42Z））"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 54986B / 上游 43125B / 相似度 0.497 / 上游独有标题 原始 39 / 归一化 39（例：2.1 · 必改占位符; 2.2 · 选定主题色; 3.0 · 预检 类名必须在模板的 `<style>` 里有定义）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -1277,7 +1277,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "A-project-handoff",
@@ -1292,8 +1292,8 @@
         "note": "登记 10.0.0-beta.183 == 上游观测（releases.atom 最新 tag v10.0.0-beta.183（2026-10-19T05:43:47Z））"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 410006B / 上游 8268B / 相似度 0.059 / 上游独有标题 原始 23 / 归一化 23（例：architecture overview; configuration; entity extraction）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -1330,7 +1330,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "computer-use-guidance-windows",
@@ -1345,8 +1345,8 @@
         "note": "登记 Skales 12.9.55 - Mango == 上游观测（releases.atom 最新 tag Skales 12.9.55 - Mango（2026-10-19T20:09:51Z））"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 28242B / 上游 42998B / 相似度 0.739 / 上游独有标题 原始 26 / 归一化 26（例：aipointer ⦿; demo; in 30 seconds）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -1373,7 +1373,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "docx",
@@ -1388,8 +1388,8 @@
         "note": "上游无 release tag（无 release tag；commits.atom 最近提交 2026-10-09T18:45:49Z）；登记版本 sha256:8017469ea95f@6911B 无 tag 可比，按最近提交时间判"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 29314B / 上游 6911B / 相似度 0.389 / 上游独有标题 原始 6 / 归一化 5（例：creating with docx js gotchas; dependencies; docx creation, editing, and analysis）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -1397,13 +1397,13 @@
         "detail": [
           {
             "repo": "anthropics/skills",
-            "stars": 182267,
+            "stars": 182285,
             "pushed_days": 11,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（11 天前推送，stars=182267，来源 ungh.cc）"
+            "note": "活跃（11 天前推送，stars=182285，来源 ungh.cc）"
           },
           {
             "repo": "tfriedel/claude-office-skills",
@@ -1426,7 +1426,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "executing-plans",
@@ -1450,43 +1450,43 @@
         "detail": [
           {
             "repo": "obra/superpowers",
-            "stars": 301816,
-            "pushed_days": 10,
+            "stars": 302204,
+            "pushed_days": 0,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=301816，来源 ungh.cc）"
+            "note": "活跃（0 天前推送，stars=302204，来源 ungh.cc）"
           },
           {
             "repo": "obra/superpowers",
-            "stars": 301816,
-            "pushed_days": 10,
+            "stars": 302204,
+            "pushed_days": 0,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=301816，来源 ungh.cc）"
+            "note": "活跃（0 天前推送，stars=302204，来源 ungh.cc）"
           },
           {
             "repo": "addyosmani/agent-skills",
-            "stars": 108611,
+            "stars": 108674,
             "pushed_days": 7,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（7 天前推送，stars=108611，来源 ungh.cc）"
+            "note": "活跃（7 天前推送，stars=108674，来源 ungh.cc）"
           },
           {
             "repo": "github/awesome-copilot",
-            "stars": 40185,
-            "pushed_days": 4,
+            "stars": 40199,
+            "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（4 天前推送，stars=40185，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=40199，来源 ungh.cc）"
           }
         ]
       },
@@ -1514,8 +1514,8 @@
         "note": "登记 10.0.0-beta.183 == 上游观测（releases.atom 最新 tag v10.0.0-beta.183（2026-10-19T05:43:47Z））"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 367746B / 上游 8268B / 相似度 0.068 / 上游独有标题 原始 23 / 归一化 23（例：architecture overview; configuration; entity extraction）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -1543,13 +1543,13 @@
           },
           {
             "repo": "anthropics/skills",
-            "stars": 182267,
+            "stars": 182285,
             "pushed_days": 11,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（11 天前推送，stars=182267，来源 ungh.cc）"
+            "note": "活跃（11 天前推送，stars=182285，来源 ungh.cc）"
           }
         ]
       },
@@ -1562,7 +1562,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "browser-cdp",
@@ -1596,23 +1596,23 @@
           },
           {
             "repo": "vercel-labs/agent-browser",
-            "stars": 44260,
-            "pushed_days": 1,
+            "stars": 44289,
+            "pushed_days": 0,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=44260，来源 ungh.cc）"
+            "note": "活跃（0 天前推送，stars=44289，来源 ungh.cc）"
           },
           {
             "repo": "microsoft/playwright-mcp",
-            "stars": 38368,
+            "stars": 38386,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=38368，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=38386，来源 ungh.cc）"
           }
         ]
       },
@@ -1640,8 +1640,8 @@
         "note": "登记 0.2.5 == 上游观测（releases.atom 最新 tag v0.2.5（2026-08-14T17:16:33Z））"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 5679B / 上游 19489B / 相似度 0.214 / 上游独有标题 原始 17 / 归一化 17（例：60 second install; compatibility; detection boundary）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -1659,13 +1659,13 @@
           },
           {
             "repo": "mohitagw15856/pm-claude-skills",
-            "stars": 1470,
+            "stars": 1472,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=1470，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=1472，来源 ungh.cc）"
           },
           {
             "repo": "github/awesome-copilot",
@@ -1679,13 +1679,13 @@
           },
           {
             "repo": "oaustegard/claude-skills",
-            "stars": 153,
+            "stars": 154,
             "pushed_days": 5,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（5 天前推送，stars=153，来源 ungh.cc）"
+            "note": "活跃（5 天前推送，stars=154，来源 ungh.cc）"
           }
         ]
       },
@@ -1698,7 +1698,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "grill-me",
@@ -1722,23 +1722,23 @@
         "detail": [
           {
             "repo": "RobMitt/grill-me-skill",
-            "stars": 998,
+            "stars": 1004,
             "pushed_days": 192,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（192 天前推送，stars=998，来源 ungh.cc）"
+            "note": "活跃（192 天前推送，stars=1004，来源 ungh.cc）"
           },
           {
             "repo": "obra/superpowers",
-            "stars": 301816,
-            "pushed_days": 10,
+            "stars": 302204,
+            "pushed_days": 0,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（10 天前推送，stars=301816，来源 ungh.cc）"
+            "note": "活跃（0 天前推送，stars=302204，来源 ungh.cc）"
           },
           {
             "repo": "addyosmani/agent-skills",
@@ -1795,13 +1795,13 @@
         "detail": [
           {
             "repo": "browser-use/browser-use",
-            "stars": 118543,
+            "stars": 118573,
             "pushed_days": 3,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（3 天前推送，stars=118543，来源 ungh.cc）"
+            "note": "活跃（3 天前推送，stars=118573，来源 ungh.cc）"
           },
           {
             "repo": "vercel-labs/agent-browser",
@@ -1911,13 +1911,13 @@
         "detail": [
           {
             "repo": "vercel-labs/agent-browser",
-            "stars": 44260,
-            "pushed_days": 1,
+            "stars": 44289,
+            "pushed_days": 0,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=44260，来源 ungh.cc）"
+            "note": "活跃（0 天前推送，stars=44289，来源 ungh.cc）"
           },
           {
             "repo": "vercel-labs/agent-browser",
@@ -1974,13 +1974,13 @@
         "detail": [
           {
             "repo": "garrytan/gstack",
-            "stars": 136982,
-            "pushed_days": 0,
+            "stars": 136960,
+            "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（0 天前推送，stars=136982，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=136960，来源 ungh.cc）"
           }
         ]
       },
@@ -2017,23 +2017,23 @@
         "detail": [
           {
             "repo": "anthropics/skills",
-            "stars": 182284,
+            "stars": 182286,
             "pushed_days": 11,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（11 天前推送，stars=182284，来源 ungh.cc）"
+            "note": "活跃（11 天前推送，stars=182286，来源 ungh.cc）"
           },
           {
             "repo": "wshobson/agents",
-            "stars": 41150,
+            "stars": 41180,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=41150，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=41180，来源 ungh.cc）"
           },
           {
             "repo": "Akxan/ppt-agent-skill",
@@ -2242,8 +2242,8 @@
         "note": "登记 1.0.0 — SwiftUI Design Skill == 上游观测（releases.atom 最新 tag v1.0.0 — SwiftUI Design Skill（2026-04-30T04:03:36Z））"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 2275B / 上游 11227B / 相似度 0.338 / 上游独有标题 原始 26 / 归一化 26（例：brand asset protocol; common mistakes to avoid; core design philosophy）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -2270,7 +2270,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "canvas-design",
@@ -2294,13 +2294,13 @@
         "detail": [
           {
             "repo": "ZSeven-W/openpencil",
-            "stars": 6284,
+            "stars": 6283,
             "pushed_days": 0,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（0 天前推送，stars=6284，来源 ungh.cc）"
+            "note": "活跃（0 天前推送，stars=6283，来源 ungh.cc）"
           }
         ]
       },
@@ -2328,8 +2328,8 @@
         "note": "登记 Lieflat Charts v1.2.0 · 增加报告模式 == 上游观测（releases.atom 最新 tag Lieflat Charts v1.2.0 · 增加报告模式（2026-08-14T06:48:08Z））"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 31710B / 上游 39903B / 相似度 0.565 / 上游独有标题 原始 23 / 归一化 23（例：0.1 先判输出模式; 1.1 报告模式工作流; 1.2 演示模式工作流）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -2337,13 +2337,13 @@
         "detail": [
           {
             "repo": "larashero3-dotcom/lieflat-charts",
-            "stars": 6274,
+            "stars": 6271,
             "pushed_days": 5,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（5 天前推送，stars=6274，来源 ungh.cc）"
+            "note": "活跃（5 天前推送，stars=6271，来源 ungh.cc）"
           }
         ]
       },
@@ -2356,7 +2356,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "cloudbase",
@@ -2381,12 +2381,12 @@
           {
             "repo": "TencentCloudBase/CloudBase-AI-Toolkit",
             "stars": 1140,
-            "pushed_days": 0,
+            "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（0 天前推送，stars=1140，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=1140，来源 ungh.cc）"
           }
         ]
       },
@@ -2423,13 +2423,13 @@
         "detail": [
           {
             "repo": "obra/superpowers",
-            "stars": 302196,
-            "pushed_days": 0,
+            "stars": 301816,
+            "pushed_days": 10,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（0 天前推送，stars=302196，来源 ungh.cc）"
+            "note": "活跃（10 天前推送，stars=301816，来源 ungh.cc）"
           }
         ]
       },
@@ -2466,13 +2466,13 @@
         "detail": [
           {
             "repo": "aipoch/medical-research-skills",
-            "stars": 1973,
+            "stars": 1971,
             "pushed_days": 33,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（33 天前推送，stars=1973，来源 ungh.cc）"
+            "note": "活跃（33 天前推送，stars=1971，来源 ungh.cc）"
           }
         ]
       },
@@ -2500,8 +2500,8 @@
         "note": "登记 Lieflat Charts v1.2.0 · 增加报告模式 == 上游观测（releases.atom 最新 tag Lieflat Charts v1.2.0 · 增加报告模式（2026-08-14T06:48:08Z））"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 13809B / 上游 39903B / 相似度 0.465 / 上游独有标题 原始 23 / 归一化 23（例：0.1 先判输出模式; 1.1 报告模式工作流; 1.2 演示模式工作流）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -2528,7 +2528,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "defuddle",
@@ -2896,13 +2896,13 @@
         "detail": [
           {
             "repo": "kepano/obsidian-skills",
-            "stars": 49761,
+            "stars": 49789,
             "pushed_days": 35,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（35 天前推送，stars=49761，来源 ungh.cc）"
+            "note": "活跃（35 天前推送，stars=49789，来源 ungh.cc）"
           }
         ]
       },
@@ -3111,13 +3111,13 @@
         "detail": [
           {
             "repo": "kepano/obsidian-skills",
-            "stars": 49789,
+            "stars": 49761,
             "pushed_days": 35,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（35 天前推送，stars=49789，来源 ungh.cc）"
+            "note": "活跃（35 天前推送，stars=49761，来源 ungh.cc）"
           }
         ]
       },
@@ -3154,13 +3154,13 @@
         "detail": [
           {
             "repo": "kepano/obsidian-skills",
-            "stars": 49761,
+            "stars": 49789,
             "pushed_days": 35,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（35 天前推送，stars=49761，来源 ungh.cc）"
+            "note": "活跃（35 天前推送，stars=49789，来源 ungh.cc）"
           }
         ]
       },
@@ -3231,8 +3231,8 @@
         "note": "上游无 release tag（无 release tag；commits.atom 最近提交 2026-07-26T22:44:49Z）；登记版本 sha256:75ce71b29dc5@23611B 无 tag 可比，按最近提交时间判"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 5016B / 上游 23611B / 相似度 0.349 / 上游独有标题 原始 16 / 归一化 16（例：asset pricing / whether to buy; china a share individual stock / etf / sector; digital oracle）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -3259,7 +3259,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "pdf",
@@ -3455,13 +3455,13 @@
         "detail": [
           {
             "repo": "zenstory-ai/oh-story-claudecode",
-            "stars": 7763,
+            "stars": 7764,
             "pushed_days": 2,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（2 天前推送，stars=7763，来源 ungh.cc）"
+            "note": "活跃（2 天前推送，stars=7764，来源 ungh.cc）"
           }
         ]
       },
@@ -3575,8 +3575,8 @@
         "note": "登记 2.0.1: clearer safety boundaries, no behaviour change == 上游观测（releases.atom 最新 tag v2.0.1: clearer safety boundaries, no behaviour change（2026-10-07T09:25:16Z））"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 1231B / 上游 12260B / 相似度 0.149 / 上游独有标题 原始 8 / 归一化 8（例：choose the result the user asked for; exports and capture controls; language and translation）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -3603,7 +3603,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "web-access",
@@ -3627,13 +3627,13 @@
         "detail": [
           {
             "repo": "teng-lin/notebooklm-py",
-            "stars": 19814,
+            "stars": 19815,
             "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（1 天前推送，stars=19814，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=19815，来源 ungh.cc）"
           }
         ]
       },
@@ -3661,8 +3661,8 @@
         "note": "上游无 release tag（无 release tag；commits.atom 最近提交 2026-09-18T03:32:29Z）；登记版本 sha256:c421913be263@9954B 无 tag 可比，按最近提交时间判"
       },
       "leg_drift": {
-        "state": "RED",
-        "note": "本地(含references卷) 20209B / 上游 9954B / 相似度 0.251 / 上游独有标题 原始 14 / 归一化 14（例：作为 skill 调用的规范指令; 典型触发语句; 发送图片消息）"
+        "state": "GREEN",
+        "note": "候选池条目：无同源上游可对，漂移腿不判（候选活性见候选腿）"
       },
       "leg_candidates": {
         "state": "GREEN",
@@ -3689,7 +3689,7 @@
       "last_checked": "2026-10-20",
       "days_since_check": 0,
       "stale": false,
-      "overall": "RED"
+      "overall": "GREEN"
     },
     {
       "local_skill": "workbuddy-mcp",
@@ -3756,13 +3756,13 @@
         "detail": [
           {
             "repo": "genspark-ai/genoffice",
-            "stars": 10078,
-            "pushed_days": 0,
+            "stars": 10062,
+            "pushed_days": 1,
             "archived": false,
             "license": null,
             "source": "ungh.cc",
             "state": "GREEN",
-            "note": "活跃（0 天前推送，stars=10078，来源 ungh.cc）"
+            "note": "活跃（1 天前推送，stars=10062，来源 ungh.cc）"
           }
         ]
       },

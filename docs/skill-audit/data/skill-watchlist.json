@@ -312,7 +312,9 @@
           "score_total": 15
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)",
+      "upstream_role": "candidate_pool(轮3 重分类，非同源)"
     },
     {
       "local_skill": "first-principles-decomposer",
@@ -821,7 +823,9 @@
           "score_total": 7
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)",
+      "upstream_role": "candidate_pool(轮3 重分类，非同源)"
     },
     {
       "local_skill": "html-ppt",
@@ -863,7 +867,9 @@
           "score_total": 7
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)",
+      "upstream_role": "candidate_pool(轮3 重分类，非同源)"
     },
     {
       "local_skill": "A-project-handoff",
@@ -898,7 +904,9 @@
           "score_total": 17
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)",
+      "upstream_role": "candidate_pool(轮3 重分类，非同源)"
     },
     {
       "local_skill": "computer-use-guidance-windows",
@@ -926,7 +934,9 @@
           "score_total": 17
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)",
+      "upstream_role": "candidate_pool(轮3 重分类，非同源)"
     },
     {
       "local_skill": "docx",
@@ -961,8 +971,10 @@
           "score_total": 3
         }
       ],
-      "notes": " | 2026-10-20(轮13 补录覆盖丢失) 裁决=保持本地(不替换)",
-      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
+      "notes": " | 2026-10-20(轮13 补录覆盖丢失) 裁决=保持本地(不替换) | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)",
+      "upstream_role": "candidate_pool(轮3 重分类，非同源)"
     },
     {
       "local_skill": "executing-plans",
@@ -1053,7 +1065,9 @@
           "score_total": 7
         }
       ],
-      "notes": null
+      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)",
+      "upstream_role": "candidate_pool(轮3 重分类，非同源)"
     },
     {
       "local_skill": "browser-cdp",
@@ -1145,7 +1159,9 @@
           "score_total": 2
         }
       ],
-      "notes": "明确缺口：GitHub 未检索到与本地 anti-mask 聚合判定同源的技能，本地方案为对该类问题的自研范式；上列候选均为相邻而非同源。"
+      "notes": "明确缺口：GitHub 未检索到与本地 anti-mask 聚合判定同源的技能，本地方案为对该类问题的自研范式；上列候选均为相邻而非同源。 | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)",
+      "upstream_role": "candidate_pool(轮3 重分类，非同源)"
     },
     {
       "local_skill": "grill-me",
@@ -1514,7 +1530,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)"
     },
     {
       "local_skill": "canvas-design",
@@ -1555,7 +1572,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)"
     },
     {
       "local_skill": "cloudbase",
@@ -1638,7 +1656,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)"
     },
     {
       "local_skill": "defuddle",
@@ -1993,8 +2012,9 @@
           "score_total": null
         }
       ],
-      "notes": "",
-      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
+      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)"
     },
     {
       "local_skill": "pdf",
@@ -2160,7 +2180,8 @@
           "score_total": null
         }
       ],
-      "notes": ""
+      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)"
     },
     {
       "local_skill": "web-access",
@@ -2200,8 +2221,9 @@
           "score_total": null
         }
       ],
-      "notes": "",
-      "baseline_kind": "content-snapshot(无 release 通道的合集仓)"
+      "notes": " | 2026-10-20 轮3 裁决=重分类为候选池（漂移腿红因=上游非同源：相似度/独有标题客观判据命中，上游件与本地技能非同一物；判据见 05 §十五+§十六）",
+      "baseline_kind": "content-snapshot(无 release 通道的合集仓)",
+      "entry_kind": "candidate_pool(轮3 重分类: 漂移相似度<0.5 或上游独有>=20 ⇒ 上游非本地同源件，自动选品伪同源)"
     },
     {
       "local_skill": "workbuddy-mcp",
