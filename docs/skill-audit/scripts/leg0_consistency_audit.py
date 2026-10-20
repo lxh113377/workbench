@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# V1.2 | 2026-10-20 轮17 | 第 0 腿：+ 判据9「核心文档技能读数与实测一致」
 # V1.1 | 2026-10-20 轮16 | 第 0 腿：四集对账 + 判据8「RED 必须全部有裁决」
 # V1.0 | 2026-10-20 轮11 | 第 0 腿：跨文件四集对账（05 §十八 立，季度 cron 首步调用）
 """leg0_consistency_audit.py — 巡检第 0 腿：inv/reg/mx/sweep 四集对账。
@@ -84,6 +85,19 @@ def main(argv=None):
         _n = (_e or {}).get("notes") or ""
         if "裁决=" not in _n and "裁决：" not in _n:
             problems.append("%s 是 RED 但无裁决记录（watchlist.notes 缺 裁决=）" % nm)
+
+    # 判据 9（轮17 立）：核心文档的「N 技能」读数须与实测一致（防文档静默腐坏）
+    _n_inv = len([i for i in inv["items"] if i.get("has_skill_md")])
+    _n_mx = len(mx["skills"])
+    import re as _re, os as _os
+    for _doc, _expect, _label in (("00-总览.md", _n_mx, "矩阵技能数"), ("06-验收报告.md", _n_inv, "盘点技能数")):
+        _dp = BASE + "/" + _doc
+        if not _os.path.isfile(_dp):
+            continue
+        _dt = open(_dp, encoding="utf-8").read()
+        _vals = [int(x) for x in _re.findall(r"(\d+)\s*技能", _dt)]
+        if _vals and _expect not in _vals and _expect > 0:
+            problems.append("%s 的技能读数 %s 与实测 %s 不符（%s）" % (_doc, sorted(set(_vals), reverse=True)[:4], _expect, _label))
 
     if problems:
         print("[GATE:leg0-fail] 四集对账不平，%d 项：" % len(problems))
