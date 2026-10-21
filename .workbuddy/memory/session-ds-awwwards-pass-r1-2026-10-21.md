@@ -33,14 +33,22 @@
 - frontend-gate：r2..r8 每轮 23/23 PASS（回执 xtmp/gate-r*.md）；
 - design-audit r7：15 页低对比 0 / 焦点 0 / 溢出 0；reduce-motion 模拟 matches=true。
 
-## 发布状态（截至本记录）
-- 候选件 xtmp/wb-design-r8.exe = 全部改动 + gate PASS；
-- 17890 活实例**仍是旧件**：官方 build.ps1 在 2/6 资源编译步失败（make-icon.ps1 / app.rc
-  在本机不存在且从未入库，10/18 起版本资源即静态 syso），改走既有发布通道
-  go build -H=windowsgui → check_subsystem → check_homepage → 换件；
-- **换件被并发会话挡住**：21:27-21:29 另一会话正在 internal/tray 跑变异测试
-  （trayWindowExStyle 被注 MUTANT），tray 测试暂时判红。等其复原且 tray 包回绿后再构建 1.4.0
-  换件（禁止把已知坏托盘行为打进发布件）。
+## 发布状态（终态：已完成）
+- **1.4.0 已上线**：go build -H=windowsgui → check_subsystem PASS(GUI) → check_homepage
+  四判据全 PASS → 备份 workbench.exe.bak-pre-designpass → 原子换件 → Unblock-File →
+  Win32_Process.Create 拉起 → 17890 活实例 13 项特征复验全中（gov-card 基座/铭牌层/
+  no-anim 门/td.ops/DOMAIN_TEXT/Escape/成功率诚实/theme 统一…）。
+  SHA256 4A40ECB0…668A 已写 dist/SHA256SUMS；发布件本体 frontend-gate 23/23 PASS。
+- 官方 build.ps1 2/6 资源步失败（make-icon.ps1/app.rc 本机不存在且从未入库）⇒ 走既有
+  发布通道，欠账记 07-next-steps.part132。
+- tray 包 21:27-21:31 被并发会话注入 MUTANT 变异（trayWindowExStyle 加 NOACTIVATE），
+  其守护测试正确判红；复原后回绿。期间一次全量 go test 撞 single 包写入竞态
+  （单跑/复跑 PASS）。教训：**换件前必须确认无并发变异窗口**，已按此等待后构建。
+- 微交互维度补交互态实证（CDP 真鼠标/真键盘，xtmp/interact-r1/）：KPI hover 发光线
+  22px→302.5px 铺满、页签 hover 下划线 scaleX(.35)、fold 展开播 foldIn、
+  菜单 menuIn + Escape 关闭且回焦 btnMore、输入真点击 focus 电青环+双层光晕。
+- git 提交 d311436（11 文件 +455/−107，限定写域提交不扫并发脏面）；
+  **推送未成**：GitHub 直连与 7897 代理均 TLS 断（curl 000），记 07 part132 P1。
 
 ## 踩坑（新增）
 1. **backdrop-filter 为 fixed 后代创建 containing block**：品牌铭牌 position:fixed 挂在
