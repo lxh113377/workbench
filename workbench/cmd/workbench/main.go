@@ -72,6 +72,13 @@ func main() {
 			os.Exit(runWorkspaceSelftest(dir))
 		case "--autonomy", "--auto":
 			os.Exit(runAutonomyCLI(args[1:]))
+		case "--plan-selftest":
+			// 双角色闭环的离线自检（plan_selftest.go）。
+			//
+			// 与 --autonomy selftest 同一水准：不依赖真实模型、不消耗额度，
+			// 用桩执行器把"方案 → 执行 → 验收回灌"整条链路真实跑一遍。
+			// 没有这条通道时，闭环是否还通只能靠跑真模型验证 —— 那意味着没人会天天验。
+			os.Exit(runPlanSelftest())
 		case "--model-pool", "--pool":
 			os.Exit(runModelPoolCLI(args[1:]))
 		case "--soak":

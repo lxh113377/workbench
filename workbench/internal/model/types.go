@@ -203,6 +203,21 @@ type Task struct {
 	Verified bool          `json:"verified"`
 	// RepairRounds 记录已返工轮数（验收失败回灌重做）。
 	RepairRounds int `json:"repairRounds,omitempty"`
+	// PlanRounds 记录已"重新规划"轮数（方案层面错了，重出方案再执行）。
+	//
+	// 与 RepairRounds 分开记的原因（这是双角色闭环的核心取舍）：
+	//   RepairRounds = 方案不变，执行模型带着报错重做（便宜，先用）；
+	//   PlanRounds   = 认定方案错了，重新出方案（贵，后用）。
+	// 合成一个计数器就无法实现"返工优先、重规划兜底"的策略，
+	// 也无法在面板上说清"这个任务到底卡在实现还是卡在方案"。
+	PlanRounds int `json:"planRounds,omitempty"`
+	// PlanDegraded 表示最近一轮是"退化直执行"（方案层不可用）。
+	// 面板据此区分"方案层真的跑过"与"方案层当时挂了"。
+	PlanDegraded bool `json:"planDegraded,omitempty"`
+	// PlanSummary 是最近一轮方案的一行摘要（面板展示，不必翻 plans/ 目录）。
+	PlanSummary string `json:"planSummary,omitempty"`
+	// PlanModel 是最近一轮出方案的模型 id（审计：思考模型与执行模型是否真的是两个）。
+	PlanModel string `json:"planModel,omitempty"`
 
 	CreatedAt  int64 `json:"createdAt"`
 	UpdatedAt  int64 `json:"updatedAt"`

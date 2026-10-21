@@ -35,6 +35,22 @@
   根因是 24/7 最坏的失效形态——进程活着、phase=running、没有任何错误，只有产出是 0。
 
 ### Added
+- **双角色闭环：思考模型只出方案，agent 模型负责执行（2026-10-21 老大立规）**：
+  立规原话「思考模型只出方案，agent 模型负责执行，不然只出方案没有执行落地的模型无法闭环」。
+  改造前每个任务只调一次模型、task.Prompt 原样喂过去：有推理优势的模型被当写稿机，
+  擅长执行的 agent 模型拿不到任何结构化指令，验收失败只能同一模型重做（方案层面错了永远修不掉）。
+  新增方案层 `internal/blueprint`（提示词 → 解析含截取降级 → 渲染执行指令 + 路径/解释器白名单校验）
+  与引擎编排 `engine/plan_stage.go`（选模型、调用、落盘、退化）；`runOne` 改为
+  **方案阶段 → 渲染执行指令 → 执行阶段** 两次独立调用，方案模型与执行模型可分别指定
+  （`plan.plannerModels` / `plan.plannerTier`，默认 quality）。
+  闭环分三级、顺序写死在 `completeTask`：返工有余量 → repair（改实现，便宜先用）；
+  返工用尽且重规划有余量 → **replan**（`engine/replan.go`，回到方案层改前提）；
+  两者用尽 → degraded。方案层自身失败（429 等）**不判任务死刑**：退化直执行 +
+  `PlanDegraded=true` 落盘，面板可区分「方案跑过」与「方案挂了」。
+  配置面新增 `plan` 段（enabled/plannerModels/plannerTier/plannerMaxMinutes/replanRounds/
+  appendPlanToPrompt），`schemaVersion 5 → 6`，老安装零值由 `NormalizePlan` 按开启补齐。
+  证据：新增 `--plan-selftest` 离线自检（桩执行器跑全链，12/12 PASS，不耗额度）+
+  21 条单测 + 黑盒分发契约测试。详见 `docs/双角色闭环交付报告-2026-10-21.md`。
 - **产物体积归因 + 双向体积护栏 + 清单/趋势双收口（issue #8 四判据收口，2026-10-21）**：
   ① **体积归因**：两天 +83.3%（7,747,072 增至 14,199,296 B）主因 = **在未提交合并工作区上构建**
   （模型池分组 UI、assets 重写等在途改动全部进了旧 EXE），非依赖/代码膨胀；提交态

@@ -21,7 +21,8 @@ import (
 //	2 → 3：P3 产物协议开启（appendProtocol / repairRounds）
 //	3 → 4：迁移判据改为「字段零值 + 版本上限」（修 v3 被提前写入导致迁移不命中）
 //	4 → 5：请求速率闸门（requestsPerMinute / requestBurst）
-const SchemaVersion = 5
+//	5 → 6：双角色闭环「思考模型只出方案 / agent 模型负责执行」（plan 段）
+const SchemaVersion = 6
 
 // EvalConfig 控制三维评估的行为。
 type EvalConfig struct {
@@ -134,6 +135,87 @@ type PoolConfig struct {
 	DeepProbe    bool   `json:"deepProbe"`    // 是否发模型级补全探测（会消耗额度，默认关）
 }
 
+// PlanConfig 控制「双角色闭环」：思考模型只出方案，agent 模型负责执行。
+//
+// 立规原话（老大 2026-10-21）：
+//   「思考模型只出方案，agent 模型负责执行，不然只出方案没有执行落地的模型无法闭环」
+//
+// 为什么这必须是配置项而不是硬编码常量：
+//  1. 方案模型与执行模型是**两次独立调用**，各自要能被单独指向（思考用大模型、
+//     执行用便宜快的模型，或反过来）；
+//  2. 车道上可能根本没有"支持 reasoning 的模型"（免费车道多数不支持显式推理档位）——
+//     此时 PlannerModels 为空表示"从现有路由表里按 tier 选"，而不是留空即失败；
+//  3. 额度无限的前提是方案层可关：小任务直执行更省时间，不能强迫所有任务都先规划。
+type PlanConfig struct {
+	// Enabled 是否启用方案阶段。false = 退回改造前的单次调用（兼容性要求）。
+	Enabled bool `json:"enabled"`
+	// PlannerModels 是指定的方案模型（模型 id，按顺序尝试）。
+	//
+	// 为空 = 由路由器按 PlannerTier 从现有路由表里选。
+	// 非空时只在这些模型里选（都不可用则退化直执行并留审计，绝不静默跳过）。
+	PlannerModels []string `json:"plannerModels,omitempty"`
+	// PlannerTier 是无指定模型时的选取档位（quality/balanced/fast）。
+	// 默认 quality —— 方案是"想清楚"，这一步值得用最好的模型。
+	PlannerTier string `json:"plannerTier"`
+	// PlannerMaxMinutes 是方案调用的单次超时（分钟）。方案比产出短，默认 8。
+	PlannerMaxMinutes int `json:"plannerMaxMinutes"`
+	// ReplanRounds 是验收失败后**重新规划**的最大轮数（默认 2）。
+	//
+	// 与 Executor.RepairRounds 的分工（这是本设计的核心取舍）：
+	//   - RepairRounds：方案不变，让执行模型带着报错重做（实现层面的错）；
+	//   - ReplanRounds：认定方案本身错了，重新出方案再执行（方案层面的错）。
+	// 先修实现再改方案：改方案的成本高（等于推翻重来），所以返工轮先用完。
+	ReplanRounds int `json:"replanRounds"`
+	// AppendPlanToPrompt 是否在执行指令里保留原始任务描述（默认 true）。
+	// 关掉只剩方案，适合"方案本身就是完整规格"的场景。
+	AppendPlanToPrompt bool `json:"appendPlanToPrompt"`
+}
+
+// NormalizePlan 补齐方案阶段配置的零值与越界值。
+//
+// 单独成函数（而不是塞进 Normalize）的原因：它被 Normalize 与 PlanConfig 的
+// 使用方同时需要，且判据集中在方案语义上，便于单测直接钉住。
+func NormalizePlan(p *PlanConfig, fromSchema int) {
+	if p == nil {
+		return
+	}
+	// 旧安装（schema<6）没这个段：字段全是零值。此时按"开启"迁移 ——
+	// 与 appendProtocol/repairRounds 那次迁移同一口径：新能力要能被老用户拿到。
+	if fromSchema < 6 && !p.Enabled && len(p.PlannerModels) == 0 && p.PlannerTier == "" {
+		p.Enabled = true
+	}
+	if p.PlannerTier == "" {
+		p.PlannerTier = "quality"
+	}
+	switch strings.ToLower(strings.TrimSpace(p.PlannerTier)) {
+	case "quality", "balanced", "fast":
+		p.PlannerTier = strings.ToLower(strings.TrimSpace(p.PlannerTier))
+	default:
+		p.PlannerTier = "quality"
+	}
+	if p.PlannerMaxMinutes < 1 || p.PlannerMaxMinutes > 60 {
+		p.PlannerMaxMinutes = 8
+	}
+	// 重规划轮数：零值是"未配置"，必须按默认补齐 —— 否则老安装升级后
+	// 「返工用尽 -> 重新规划」这一整条闭环支路永远不生效。
+	// 实测形态：迁移后 ReplanRounds 仍是 0，shouldReplan 恒 false，
+	// 于是方案层面的错永远修不掉，闭环断在最后一段。
+	//
+	// 关掉双角色闭环的正确开关是 plan.enabled=false，不是把轮数设 0 ——
+	// 两个开关语义重叠会让"哪个是权威"变得不可判定。
+	if p.ReplanRounds <= 0 {
+		p.ReplanRounds = 2
+	}
+	if p.ReplanRounds > 5 {
+		p.ReplanRounds = 5
+	}
+	// 注意：AppendPlanToPrompt 的零值是 false，但默认应为 true。
+	// 用"schema<6 视为未配置"判定，避免用户显式关闭后被反复打开。
+	if fromSchema < 6 {
+		p.AppendPlanToPrompt = true
+	}
+}
+
 // GovConfig 控制「契约治理 × 体量治理」双线治理的监控参数。
 // 体量量化阈值（Budget）不在这里：它作为治理数据随 governance/budget.json 落盘，
 // 便于面板在线调整与版本留痕，避免与运行期配置互相覆盖。
@@ -211,6 +293,9 @@ type Config struct {
 	Gov           GovConfig        `json:"gov"`
 	Autonomy      AutonomyConfig   `json:"autonomy"`
 	Pool          PoolConfig       `json:"pool"`
+	// Plan 是「双角色闭环」配置：思考模型只出方案，agent 模型负责执行。
+	// 零值 + 旧 schema 会由 NormalizePlan 迁移成"开启"（见其注释）。
+	Plan          PlanConfig       `json:"plan"`
 	// Workspace 是「AI 开发工作目录」配置（可选外部目录模式）。
 	// 零值/缺省 = 项目模式（与改造前行为完全一致）。
 	Workspace workspace.Config `json:"workspace"`
@@ -252,7 +337,11 @@ func DefaultConfig() Config {
 			MaxOutputMB:    32,
 			RetryPolicy: RetryPolicyConfig{
 				BaseDelayMs: 5000, MaxDelayMs: 600000, Jitter: 0.2,
-				RetryableKinds: []string{"timeout", "upstream_failed", "bad_exit", "stalled", "unknown"},
+				// transport_failed / stream_cut 必须在内（2026-10-19 现场补齐）：
+				// 网络抖动与流中断是「换模型/重试就能好」的典型故障，
+				// 若不在表内，executor 判出的类别到了重试层会被判成不可重试 ——
+				// 于是 ETIMEDOUT 一次失败即任务判死，浪费了故障转移的能力。
+				RetryableKinds: []string{"timeout", "upstream_failed", "bad_exit", "stalled", "unknown", "transport_failed", "stream_cut"},
 			},
 			ShutdownGraceSeconds: 20,
 			AppendProtocol:       true,
@@ -272,6 +361,15 @@ func DefaultConfig() Config {
 		},
 		Gov:      GovConfig{Enabled: true, SampleSeconds: 300, AutoEscalate: true, ExpiringDays: 30, ComplianceMin: 70},
 		Autonomy: DefaultAutonomyConfig(),
+		// 双角色闭环默认开启：方案阶段用 quality 档模型想清楚，执行阶段按模板 tier 选。
+		// ReplanRounds=2：返工（RepairRounds=3）先用完再重新规划 —— 改方案等于推翻重来。
+		Plan: PlanConfig{
+			Enabled:            true,
+			PlannerTier:        "quality",
+			PlannerMaxMinutes:  8,
+			ReplanRounds:       2,
+			AppendPlanToPrompt: true,
+		},
 		// 模型池默认开启：探测 3 分钟一轮（端点级，不烧额度），清单同步 10 分钟一轮。
 		Pool: PoolConfig{Enabled: true, ProbeSeconds: 180, SyncSeconds: 600, Strategy: "priority", DeepProbe: false},
 		// 默认项目模式（兼容）：用户不选外部目录时行为与改造前完全一致。
@@ -354,6 +452,17 @@ func (c *Config) Normalize() {
 	if c.Executor.StallSeconds < 30 || c.Executor.StallSeconds > 3600 {
 		c.Executor.StallSeconds = d.Executor.StallSeconds
 	}
+	// 保留策略零值补齐（2026-10-19 现场缺陷）：
+	//
+	// retention.go 早就写了 NormalizeRetention（注释：「补齐保留策略的零值，用户不配也能安全运行」），
+	// 但 **Normalize() 从不调用它** —— 实测把 config.json 的 retention 写成 0/0/0 后，
+	// 读出来的 policy 就是 0/0/0，而不是安全默认 3/30/90。
+	//
+	// 为什么这比「不回收」更危险：0 天保留期意味着**什么都算过期** ——
+	// 一次 --prune --apply 就可能立刻回收大量目录。零值必须被补齐。
+	//
+	// 与 TaskDirDays 那次同类：字段/函数都齐全，唯独**调用链断了一节**。
+	NormalizeRetention(c)
 	if c.SchemaVersion < 2 {
 		c.SchemaVersion = 2
 	}
@@ -403,6 +512,15 @@ func (c *Config) Normalize() {
 	}
 	if c.Executor.RequestBurst > 20 {
 		c.Executor.RequestBurst = 20
+	}
+	// v5 -> v6：双角色闭环（思考模型只出方案 / agent 模型负责执行）。
+	//
+	// 判据沿用「fromSchema + 零值」双口径（v3 那次教训：只看版本号会被别的模块
+	// 提前抬版本害死）。fromSchema 必须用**进入 Normalize 时**的版本，
+	// 否则前面的分支已经把 SchemaVersion 抬到 6，这里就永远不成立。
+	NormalizePlan(&c.Plan, fromSchema)
+	if c.SchemaVersion < 6 {
+		c.SchemaVersion = 6
 	}
 	if c.Eval.Threshold <= 0 || c.Eval.Threshold > 100 {
 		c.Eval.Threshold = d.Eval.Threshold

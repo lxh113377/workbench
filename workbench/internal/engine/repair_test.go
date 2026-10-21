@@ -74,8 +74,16 @@ func TestRepairExhaustedFallsToDegraded(t *testing.T) {
 	taskID := "task-repair-exhausted"
 	task, _ := seedRunningTask(t, e, st, taskID)
 	_ = os.MkdirAll(filepath.Join(layout.TaskDir(taskID), "workspace"), 0o755)
-	// 预先设成已用满 3 轮
-	if _, err := st.Update(taskID, func(x *model.Task) error { x.RepairRounds = 3; return nil }); err != nil {
+	// 预先设成已用满 3 轮返工 + 已用满重新规划额度。
+	//
+	// 后者是双角色闭环（2026-10-21）引入的：返工用尽后还有"重新规划"一段，
+	// 本用例锁的是**全部手段用尽**后的终态，因此两条额度都要设满。
+	// "返工用尽但还有重规划额度"的行为由 replan_test.go 单独锁定。
+	if _, err := st.Update(taskID, func(x *model.Task) error {
+		x.RepairRounds = 3
+		x.PlanRounds = config.DefaultConfig().Plan.ReplanRounds
+		return nil
+	}); err != nil {
 		t.Fatal(err)
 	}
 	task, _ = st.Get(taskID)

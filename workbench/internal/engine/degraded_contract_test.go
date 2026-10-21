@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"workbench/internal/config"
 	"workbench/internal/executor"
@@ -27,6 +28,13 @@ func TestCompleteTaskDegradedOnVerifyFail(t *testing.T) {
 		// 预置为已用满返工额度：本测试锁定的是"额度用尽后的降级语义"，
 		// 返工路径由 repair_test.go 单独覆盖。
 		RepairRounds: config.DefaultConfig().Executor.RepairRounds,
+		// 双角色闭环（2026-10-21）新增了"重新规划"这一段：返工用尽后先回到
+		// 方案模型重出方案，再不行才落 degraded。所以"额度用尽"现在有两个维度，
+		// 要锁住终态语义必须两条额度都设满。
+		//
+		// 注意：这不是放宽断言 —— 下面仍然逐条断言 degraded / Verified=false /
+		// FailReason 含退出码 / 不计今日产出，只是把"用尽"的前置条件补全。
+		PlanRounds: config.DefaultConfig().Plan.ReplanRounds,
 	}
 	if err := st.Create(task); err != nil {
 		t.Fatal(err)
@@ -101,4 +109,11 @@ func TestCompleteTaskDoneOnVerifyPass(t *testing.T) {
 	if s := e.Stats(); s.TodayDone != 1 {
 		t.Fatalf("todayDone = %d, want 1", s.TodayDone)
 	}
+
+	// 等待 completeTask 派生的异步 postProcess 收尾。
+	//
+	// 为什么要等（2026-10-19 flaky 根因）：completeTask 会 go e.postProcess(...)；
+	// 后者写入任务目录。测试不等就结束，t.TempDir 的 RemoveAll 会与它竞争，
+	// 报 directory is not empty（默认并行度下约 1/3 概率，门禁因此偶红）。
+	e.WaitInflight(5 * time.Second)
 }

@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"workbench/internal/autonomy"
+	"workbench/internal/blueprint"
 	"workbench/internal/chain"
 	"workbench/internal/config"
 	"workbench/internal/evaluate"
@@ -888,7 +889,73 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 				e.log.Warn("写入任务工作目录失败", "taskId", task.ID, "err", uerr.Error())
 			}
 		}
-		res, runErr := e.runner.Run(ctx, task, modelID)
+		// ── 方案阶段（双角色闭环的第一跳）──────────────────────────
+		//
+		// 立规（老大 2026-10-21）：思考模型只出方案，agent 模型负责执行。
+		// 改造前这里直接把 task.Prompt 喂给选中的模型 —— 方案与执行挤在一次调用里，
+		// 规划没有约束力（小模型会把规划写成开头一段废话然后直接开写），
+		// 且验收失败后只能"同一模型再抄一遍"，方案层面的错永远修不掉。
+		//
+		// 现在的顺序：方案模型出结构化方案 → 渲染成执行指令 → 执行模型落地。
+		// 方案失败不阻塞执行（退化直执行 + 审计），因为通道层的 429 不是任务的错。
+		execTask := task
+		if cfg.Plan.Enabled {
+			lastFailure := planFailureContext(task, cfg)
+			planRound := task.RepairRounds
+			if planRound < 0 {
+				planRound = 0
+			}
+			pst := e.buildPlan(ctx, task, cfg, lastFailure, planRound)
+			if pst.usable() {
+				rendered := blueprint.RenderTask(pst.Blueprint, task.Title, task.Prompt)
+				if cfg.Plan.AppendPlanToPrompt {
+					execTask = cloneTaskWithPrompt(task, rendered)
+				}
+				e.savePlan(task, pst, blueprint.PlanPrompt(e.autonomyGoalIntentFor(task.GoalID), task.Title, task.Prompt, minWordsOf(e, task), lastFailure), planRound)
+				e.store.AppendAttempt(store.AttemptRecord{
+					TaskID: task.ID, Attempt: attempt, Model: pst.Model, Kind: "plan",
+					Action: "done", ElapsedMs: pst.ElapsedMs,
+					Error: "方案：" + pst.Blueprint.SummaryLine(),
+				})
+				// 方案结果写回任务：面板要能看出"方案层真的跑过、用的是哪个思考模型"，
+				// 否则"思考模型只出方案"就是一句无法验证的口号。
+				//
+				// 注意（自己踩过的死锁，2026-10-21）：mutator 里**不能**再调 store.Get ——
+				// Update 已持有写锁，Get 又要读锁，Go 的 RWMutex 不可重入，直接自锁死。
+				// 现场表现：测试挂在 120s 超时，栈里停在 sync.RWMutex.RLock。
+				if _, uerr := e.store.Update(task.ID, func(t *model.Task) error {
+					t.PlanSummary = pst.Blueprint.SummaryLine()
+					t.PlanModel = pst.Model
+					t.PlanDegraded = pst.Blueprint.Degraded
+					return nil
+				}); uerr != nil {
+					e.log.Warn("写入方案结果失败", "taskId", task.ID, "err", uerr.Error())
+				}
+				e.log.Info("方案已产出", "taskId", task.ID, "plannerModel", pst.Model,
+					"round", planRound, "plan", pst.Blueprint.SummaryLine())
+			} else {
+				// 退化直执行：把"方案层为什么没跑起来"落盘 + 记审计。
+				// 不 return、不消耗重试次数 —— 通道故障不该判任务死刑。
+				reason := "未知原因"
+				if pst.Err != nil {
+					reason = pst.Err.Error()
+				}
+				e.savePlan(task, pst, blueprint.PlanPrompt(e.autonomyGoalIntentFor(task.GoalID), task.Title, task.Prompt, minWordsOf(e, task), lastFailure), planRound)
+				e.store.AppendAttempt(store.AttemptRecord{
+					TaskID: task.ID, Attempt: attempt, Model: pst.Model, Kind: "plan",
+					Action: "degraded", ElapsedMs: pst.ElapsedMs, Error: reason,
+				})
+				_, _ = e.store.Update(task.ID, func(t *model.Task) error {
+					t.PlanDegraded = true
+					t.PlanSummary = "退化直执行：" + truncateRunes(reason, 120)
+					return nil
+				})
+				e.log.Warn("方案层不可用，退化直执行", "taskId", task.ID, "err", reason)
+				e.emitEvent(model.Event{Type: "warn", At: model.Now(), TaskID: task.ID,
+					Msg: "方案层不可用（" + truncateRunes(reason, 120) + "），已退化直执行"})
+			}
+		}
+		res, runErr := e.runner.Run(ctx, execTask, modelID)
 		elapsed := time.Since(startedAt)
 
 		// ── 成功 ───────────────────────────────────────────────
@@ -1080,10 +1147,22 @@ func (e *Engine) completeTask(task *model.Task, running *model.Task, res *execut
 		e.log.Warn("写入验收结果失败", "taskId", task.ID, "err", err.Error())
 	}
 	if finalState == model.StateDegraded {
-		// 返工环（P3）：验收失败先带着报错重做，而不是直接放弃。
-		// 额度无限、时间可忽略 —— 这正是该多花几轮的地方。
+		// 验收失败的两级处置（双角色闭环的关键分支）：
+		//
+		//  一级：返工（RepairRounds）—— 方案不变，让执行模型带着真实验收报错重做。
+		//        便宜、见效快，覆盖"实现层面的错"（写错了、漏了边界）。
+		//  二级：重新规划（ReplanRounds）—— 返工用完还不过，说明错在方案层面
+		//        （交付物选错、验收命令不可执行、步骤缺关键一环），此时重做一百遍
+		//        也没用，必须回到方案模型重新出方案。
+		//
+		// 改造前只有一级：同一个方案无限重做，方案层面的错永远修不掉 ——
+		// 这正是"只出方案没有执行落地"与"只执行没有方案"两头都闭不上的原因。
 		if shouldRepair(task, verifyRep, cfg) {
 			e.scheduleRepair(task, verifyRep, workDir, cfg)
+			return
+		}
+		if shouldReplan(task, currentPlan(task.ID, e), cfg) {
+			e.scheduleReplan(task, verifyRep, cfg)
 			return
 		}
 		_, _ = e.store.Transition(task.ID, model.StateDegraded, "engine", finalNote)

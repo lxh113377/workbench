@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -477,10 +478,48 @@ func (s *Server) handleTaskDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	payload["verified"] = t.Verified
 	payload["repairRounds"] = t.RepairRounds
+	// 双角色闭环证据：面板必须能看出"这一轮是思考模型出的方案，还是退化直执行"。
+	//
+	// 为什么这不能只靠日志：'思考模型只出方案' 这条要求若没有可观测面，
+	// 退化直执行会安静地变成常态（方案模型限流 8 秒无输出 -> 每天都直执行），
+	// 而面板仍然显示一切正常 —— 这正是"无法闭环"的典型形态。
+	payload["planRounds"] = t.PlanRounds
+	payload["planDegraded"] = t.PlanDegraded
+	payload["planSummary"] = t.PlanSummary
+	payload["planModel"] = t.PlanModel
+	if plans := listPlanEvidence(s.layout.TaskDir(id)); len(plans) > 0 {
+		payload["planEvidence"] = plans
+	}
 	if rounds := listRepairEvidence(s.layout.TaskDir(id)); len(rounds) > 0 {
 		payload["repairEvidence"] = rounds
 	}
 	ok(w, payload)
+}
+
+// listPlanEvidence 列出任务目录 plans/ 下的方案证据文件（每轮方案与提示词）。
+//
+// 只回文件名与体积，面板按需再取全文（与 listRepairEvidence 同一口径）。
+func listPlanEvidence(taskDir string) []map[string]any {
+	dir := filepath.Join(taskDir, "plans")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil
+	}
+	var out []map[string]any
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		info, ierr := e.Info()
+		if ierr != nil {
+			continue
+		}
+		out = append(out, map[string]any{"name": e.Name(), "bytes": info.Size()})
+	}
+	sort.Slice(out, func(i, j int) bool {
+		return out[i]["name"].(string) < out[j]["name"].(string)
+	})
+	return out
 }
 
 // listRepairEvidence 列出任务目录里的返工证据文件（每轮验收与返工 prompt）。
