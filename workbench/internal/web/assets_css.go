@@ -150,14 +150,20 @@ body.home::after{
 }
 .home-main{
   position:relative;z-index:2;width:100%;height:100%;
-  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;
 }
 /* 宽屏取景框：发丝内框把唯一主体托住（只在足够大的画布上加，窄屏会显得局促） */
 .home-main::after{
   /* HUD 取景框：四角 L 形定位标 + 上下边刻度尺。
      全部用 background-image 的多重 linear-gradient 画出来（零额外 DOM，符合首页极简契约）。
-     小屏隐藏：太小的画布上这些细节会变成噪点。 */
-  content:'';position:absolute;inset:26px;pointer-events:none;z-index:1;
+     小屏隐藏：太小的画布上这些细节会变成噪点。
+     品牌铭牌也落在这一层（首页第一屏必须「品牌 unmistakable」；伪元素文字
+     不进 TreeWalker 的文本节点计数，极简契约不受影响）。 */
+  content:'个人 AI 工作台';
+  position:absolute;inset:26px;pointer-events:none;z-index:1;
+  font-family:var(--font-display);font-size:11px;font-weight:600;
+  letter-spacing:.34em;color:var(--dim);white-space:nowrap;
+  padding:16px 0 0 44px;
   --corner:26px;      /* 角标臂长 */
   --tw:1.5px;         /* 线宽 */
   background-image:
@@ -193,9 +199,13 @@ body.home::after{
   opacity:.85;
   filter:drop-shadow(0 0 6px rgba(var(--accent-rgb),.55));
 }
-/* 刻度尺只在有足够空间时显示，小屏关掉（否则变成噪点） */
+/* 刻度尺与角标只在有足够空间时显示，小屏关掉（否则变成噪点）；
+   但品牌铭牌必须留下 —— 第一屏「品牌 unmistakable」不分端。 */
 @media (max-width:900px){
-  .home-main::after{display:none}
+  .home-main::after{
+    inset:0;background-image:none;
+    padding:16px 0 0 16px;letter-spacing:.26em;font-size:10.5px;
+  }
 }
 .sr-only{
   position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
@@ -345,6 +355,7 @@ body.home::after{
   transition:color .22s var(--ease),background .22s var(--ease),letter-spacing .22s var(--ease);
 }
 .home-entry:first-child{border-left:0}
+
 /* 悬停：信号色从左缘掠过（一条 2px 竖条从 0 长到满高），文字提亮、字距微张 */
 .home-entry::before{
   content:'';position:absolute;left:0;top:50%;translate:0 -50%;
@@ -517,6 +528,7 @@ body.admin{
   transform:scaleX(0);transform-origin:center;transition:transform .26s var(--ease);
 }
 .tab:hover{color:var(--fg-2)}
+.tab:hover::after{transform:scaleX(.35)}
 .tab.active{color:var(--fg)}
 .tab.active::after{transform:scaleX(1)}
 .tab:focus-visible{outline-offset:-6px}
@@ -532,8 +544,8 @@ body.admin{
 .tabpane{display:none}
 /* 页切换的位移只做透明度与 4px 上浮：高度突变会推走下方元素（实测 CLS 0.025）。
    同时给激活 pane 一个首屏最小高度，避免「先空后填」造成二次位移。 */
-.tabpane.active{display:block;min-height:min(46vh,420px);animation:paneIn .3s var(--ease) both}
-@keyframes paneIn{from{opacity:0}to{opacity:1}}
+.tabpane.active{display:block;animation:paneIn .3s var(--ease) both}
+@keyframes paneIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
 
 /* ============================================================ 卡片 ==== */
 .card{
@@ -566,21 +578,36 @@ body.admin{
 .card::after{
   content:'';position:absolute;bottom:0;right:0;z-index:2;
   width:18px;height:2px;background:rgba(var(--accent-rgb),.45);
-  box-shadow:16px -14px 0 -0px rgba(var(--accent-rgb),.3);
+  box-shadow:12px -10px 0 -0px rgba(var(--accent-rgb),.3);
 }
 /* 卡片顶缘扫描：一条 1px 冷光缓缓掠过，错峰 2.4s，周期 9s。
    它承担「系统活着」的信号，同时因为极慢 + 极淡，不会造成视觉疲劳。 */
-.card::before{animation:cardSweep 9s linear infinite}
+.card::before{animation:cardSweep 11s linear infinite}
 .card:nth-of-type(2)::before{animation-delay:-1.5s}
 .card:nth-of-type(3)::before{animation-delay:-3s}
 .card:nth-of-type(4)::before{animation-delay:-4.5s}
 .card:nth-of-type(5)::before{animation-delay:-6s}
 @keyframes cardSweep{
   0%{background-position:-60% 0;opacity:.25}
-  18%{opacity:.95}
+  18%{opacity:.55}
   30%{background-position:160% 0;opacity:.4}
   100%{background-position:160% 0;opacity:.25}
 }
+/* gov-card 基座：与 .card 同一 HUD 语言但更轻（无切角、无巡游光），
+   治理台的结论卡与明细卡共用。此前它只有 ::after 反光、没有盒体，
+   卡片呈「裸文字漂浮」——走查实测缺陷。 */
+.gov-card{
+  position:relative;
+  background:
+    linear-gradient(180deg,rgba(var(--accent-rgb),.02),transparent 40%),
+    repeating-linear-gradient(180deg,rgba(var(--accent-rgb),.018) 0 1px,transparent 1px 7px),
+    var(--panel);
+  border:1px solid var(--line);border-radius:var(--radius);
+  padding:20px 22px;margin:0 0 14px;
+  box-shadow:inset 0 0 0 1px rgba(0,0,0,.25),0 18px 40px -34px rgba(0,0,0,.9);
+  transition:border-color .22s var(--ease),box-shadow .22s var(--ease);
+}
+.gov-card:hover{border-color:var(--line-2);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25),var(--glow-cyan-soft)}
 /* gov-card 沿用旧的反光（它没有切角结构） */
 .gov-card::after{
   content:'';position:absolute;left:20px;right:20px;top:0;height:1px;pointer-events:none;
@@ -592,7 +619,7 @@ body.admin{
   margin:0 0 16px;padding-bottom:12px;
   border-bottom:1px solid var(--line);
   font-family:var(--font-display);font-size:12.5px;font-weight:600;
-  letter-spacing:.2em;color:var(--fg-2);text-transform:uppercase;
+  letter-spacing:.12em;color:var(--fg-2);text-transform:uppercase;
 }
 .card h3::before,.gov-card h3::before{
   counter-increment:panelcard;
@@ -645,6 +672,8 @@ body.admin{
 /* 读数入场：仅 transform + opacity（不触发 layout，CLS 保持 0）。
    错峰延迟由 :nth-child 给出 —— 一屏 10 个读数依次点亮，是这个面板唯一的「开机感」。 */
 .kpi{animation:kpiIn .46s var(--ease) both}
+/* SSE 增量刷新重建 DOM 时不重放入场（读数闪烁 = 走查实测缺陷）：只有首帧带动画 */
+.grid.no-anim .kpi{animation:none}
 .kpi:nth-child(1){animation-delay:.02s}.kpi:nth-child(2){animation-delay:.05s}
 .kpi:nth-child(3){animation-delay:.08s}.kpi:nth-child(4){animation-delay:.11s}
 .kpi:nth-child(5){animation-delay:.14s}.kpi:nth-child(6){animation-delay:.17s}
@@ -697,13 +726,15 @@ label:has(> input[type=checkbox]){min-height:36px;align-items:center;display:inl
 }
 .fold[open] > summary::before{transform:rotate(45deg)}
 .fold > summary:hover{color:var(--fg-2)}
+.fold > summary:hover::before{border-color:var(--accent)}
 .fold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
-.fold-body{padding:2px 0 16px}
+.fold-body{padding:2px 0 16px;animation:foldIn .24s var(--ease) both}
+@keyframes foldIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
 .fold-body > table:first-child{margin-top:2px}
 
 /* 状态行：一行人话结论 + 几个关键读数，替代一排 10 个 KPI 卡 */
 .status-line{
-  display:flex;align-items:center;flex-wrap:wrap;gap:8px;
+  display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;
   font-size:13px;line-height:1.7;color:var(--dim);
 }
 .status-line b{color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}
@@ -730,6 +761,8 @@ label:has(> input[type=checkbox]){min-height:36px;align-items:center;display:inl
   box-shadow:0 22px 50px -24px #000;
 }
 .topmore[hidden]{display:none}
+.topmore{animation:menuIn .18s var(--ease) both}
+@keyframes menuIn{from{opacity:0;transform:translateY(-6px) scale(.985)}to{opacity:1;transform:none}}
 .topmore a{
   display:flex;align-items:center;min-height:38px;padding:0 12px;border-radius:var(--radius-xs);
   font-size:13px;color:var(--fg-2);transition:background .14s var(--ease),color .14s var(--ease);
@@ -804,7 +837,7 @@ input:hover,select:hover,textarea:hover{border-color:var(--line-3)}
 input:focus,select:focus,textarea:focus{
   outline:none;background:#0e1115;
   border-color:rgba(var(--accent-rgb),.7);
-  box-shadow:0 0 0 3px rgba(var(--accent-rgb),.16);
+  box-shadow:0 0 0 3px rgba(var(--accent-rgb),.16),0 0 24px -10px rgba(var(--accent-rgb),.35);
 }
 select{appearance:none;cursor:pointer;padding-right:30px;
   background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);
@@ -832,6 +865,9 @@ label{
 .toolbar > *{flex:0 0 auto}
 .row > *{flex:1;min-width:0}
 .row > .fix{flex:0 0 auto}
+.num{font-variant-numeric:tabular-nums;text-align:right}
+td.ops{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+tbody tr:hover td:last-child{box-shadow:none}
 .muted{color:var(--dim);font-size:12px;line-height:1.6}
 .note{color:var(--dim-2);font-size:12px;line-height:1.65}
 
@@ -868,7 +904,7 @@ pre,.logbox{
 
 .toast{
   position:fixed;left:50%;bottom:26px;z-index:60;
-  transform:translateX(-50%) translateY(14px);
+  transform:translateX(-50%) translateY(14px) scale(.97);
   padding:11px 20px;border-radius:999px;
   background:rgba(18,22,27,.96);border:1px solid var(--line-2);
   color:var(--fg);font-size:13px;letter-spacing:.01em;
@@ -1026,6 +1062,8 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
 .gov-check.ok .gov-check-state{color:var(--accent-2);border-color:rgba(88,224,192,.35);background:rgba(88,224,192,.1)}
 .gov-check.bad{border-left-color:var(--danger)}
 .gov-check.bad .gov-check-state{color:var(--danger);border-color:rgba(var(--danger-rgb),.35);background:rgba(var(--danger-rgb),.1)}
+.gov-check{transition:transform .18s var(--ease),border-color .18s var(--ease),background .18s var(--ease)}
+.gov-check:hover{transform:translateY(-1px);background:var(--panel3)}
 .gov-check.unk{border-left-color:var(--warn)}
 .gov-check.unk .gov-check-state{color:var(--warn);border-color:rgba(var(--warn-rgb),.36);background:rgba(var(--warn-rgb),.11)}
 @media (max-width:900px){
@@ -1118,8 +1156,8 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
   th{position:static}
   pre,.logbox{white-space:pre-wrap;word-break:break-word}
   .kpi .v{font-size:25px}
-  .toast{left:14px;right:14px;transform:translateY(16px);text-align:center}
-  .toast.show{transform:translateY(0)}
+  .toast{left:14px;right:14px;transform:translateY(16px) scale(.97);text-align:center}
+  .toast.show{transform:translateY(0) scale(1)}
   .topmore{right:14px;left:14px;min-width:0}
   .fold > summary{padding:14px 2px}
   .status-line{gap:6px;font-size:12.5px}

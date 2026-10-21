@@ -460,6 +460,10 @@ type CheckItem struct {
 	Target   string `json:"target"`
 	Actual   string `json:"actual"`
 	Pass     bool   `json:"pass"`
+	// State 是三态判定（ok / fail / unverified）。前端矩阵卡按它着色；
+	// 此前只有 bool Pass，unverified 被序列化进「pass:false」，
+	// 前端拿不存在的 it.level ⇒ 六格全渲染 FAIL，与头部计数自相矛盾（2026-10-21 走查实测）。
+	State    string `json:"state"`
 	Evidence string `json:"evidence"`
 }
 
@@ -576,12 +580,20 @@ func BuildSummary(contracts []Contract, samples []Sample, b Budget, alerts []Ale
 	return sum
 }
 
+// boolState 把二态判定映射为三态里的 ok / fail。
+func boolState(pass bool) string {
+	if pass {
+		return "ok"
+	}
+	return "fail"
+}
+
 // BuildChecklist 依据要求 4 生成可机器校验的考核项。
 func BuildChecklist(sum Summary) Checklist {
 	ck := Checklist{}
 	// add 记录一项「已判定」的考核（pass/fail）。
 	add := func(code, name, target, actual string, pass bool, evidence string) {
-		ck.Items = append(ck.Items, CheckItem{Code: code, Name: name, Target: target, Actual: actual, Pass: pass, Evidence: evidence})
+		ck.Items = append(ck.Items, CheckItem{Code: code, Name: name, Target: target, Actual: actual, Pass: pass, State: boolState(pass), Evidence: evidence})
 		if pass {
 			ck.Pass++
 		} else {
@@ -593,7 +605,7 @@ func BuildChecklist(sum Summary) Checklist {
 	// 为什么必须存在：体量域无采样时 K4 的数据链路根本无从判定，若草率记 FAIL，
 	// 就会把"还没跑"读成"跑坏了"；这与总验收的 unverified 纪律同源。
 	addUnknown := func(code, name, target, actual, evidence string) {
-		ck.Items = append(ck.Items, CheckItem{Code: code, Name: name, Target: target, Actual: actual, Pass: false, Evidence: evidence})
+		ck.Items = append(ck.Items, CheckItem{Code: code, Name: name, Target: target, Actual: actual, Pass: false, State: "unverified", Evidence: evidence})
 		ck.Unverified++
 	}
 	// K1 契约要素齐全率

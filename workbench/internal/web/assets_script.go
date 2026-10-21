@@ -23,6 +23,9 @@ const appJS = `(() => {
   const stateCls = (s) => 'state-' + String(s || '');
   const STATE_TEXT = {candidate:'候选',evaluating:'评估中',rejected:'已拒',approved:'已批',queued:'排队',running:'执行中',done:'已完成',failed:'失败',timeout:'超时',cancelled:'已取消',interrupted:'中断'};
   const kpi = (l, v) => '<div class="kpi"><div class="v">' + esc(v) + '</div><div class="l">' + esc(l) + '</div></div>';
+  // 领域列中文化：表格不再裸显 code/content 这类内部枚举（老大不是技术人员，行话回潮判红）。
+  const DOMAIN_TEXT = { content: '内容创作', code: '代码生成', knowledge: '知识整理', data: '数据处理', solution: '方案撰写', report: '报告生成' };
+  const domainText = (d) => DOMAIN_TEXT[d] || d || '-';
   const fmtTime = (ms) => ms ? new Date(ms).toLocaleString('zh-CN', {hour12:false}) : '—';
   const fmtMin = (ms) => ms ? (ms/60000).toFixed(1) + ' 分钟' : '—';
   const fmtBytes = (b) => { if(!b) return '0 B'; const u=['B','KB','MB','GB']; let i=0,v=b; while(v>=1024&&i<u.length-1){v/=1024;i++;} return v.toFixed(i?1:0)+' '+u[i]; };
@@ -158,6 +161,7 @@ const appJS = `(() => {
   const fold = (title, body) => '<details class="fold"><summary>' + esc(title) + '</summary><div class="fold-body">' + body + '</div></details>';
   const emptyHint = (txt) => '<div class="empty-hint">' + esc(txt) + '</div>';
 
+  let overviewAnimated = true; // 首帧播 KPI 入场，渲染一次后置 false（SSE 刷新不再重放）
   async function renderOverview() {
     const st = await api('/api/status');
     cache.status = st;
@@ -166,10 +170,13 @@ const appJS = `(() => {
     const models = st.models || [];
 
     // 首屏只放 4 个「用户真的关心」的读数：今天产出多少、还有多少在排队、成功率、总共完成多少。
-    const head = '<div class="grid c4">' +
+    // 入场错峰动画只属于「开机那一帧」：SSE 每来一条事件都会重建这段 DOM，
+    // 若动画照播，读数就会随事件流反复淡出淡入（走查实测：截图抓到半透明 KPI）。
+    const head = '<div class="grid c4' + (overviewAnimated ? '' : ' no-anim') + '">' +
       kpi('今日产出', s.todayDone || 0) +
       kpi('排队中', s.queuedTasks || 0) +
-      kpi('成功率', (s.successRate || 0).toFixed(1) + '%') +
+      // 成功率：分母（完成任务数）为 0 时显示「—」而非 0.0% —— 后者把「还没跑过」读成「全失败」。
+      kpi('成功率', s.doneTasks ? (s.successRate || 0).toFixed(1) + '%' : '—') +
       kpi('累计完成', s.doneTasks || 0) +
       '</div>';
 
@@ -223,6 +230,7 @@ const appJS = `(() => {
         fold('失败原因（最近 ' + (failRes.total || 0) + ' 条）', failBody) +
         (st.lastError ? fold('最近一次错误', '<div class="muted">' + esc(st.lastError) + '</div>') : '') +
       '</div>';
+    overviewAnimated = false;
   }
 
   // 任务页（2026-10-20 二轮反馈：三张卡里两张只有「没有」，页面空得像坏了）。
@@ -239,15 +247,15 @@ const appJS = `(() => {
 
     const rows = q.map(function (t) {
       const badge = '<span class="' + stateCls(t.state) + '">' + (STATE_TEXT[t.state] || t.state) + '</span>';
-      return '<tr><td>' + esc(t.title) + '</td><td>' + esc(t.domain || '-') + '</td><td>' + (t.priority || 0) + '</td><td>' + badge + '</td>' +
-        '<td class="row" style="gap:4px"><button class="btn sm" onclick="WB.priority(&apos;' + t.id + '&apos;)">置顶</button>' +
+      return '<tr><td>' + esc(t.title) + '</td><td>' + esc(domainText(t.domain)) + '</td><td class="num">' + (t.priority || 0) + '</td><td>' + badge + '</td>' +
+        '<td class="ops"><button class="btn sm" onclick="WB.priority(&apos;' + t.id + '&apos;)">置顶</button>' +
         '<button class="btn sm" onclick="WB.cancel(&apos;' + t.id + '&apos;)">终止</button></td></tr>';
     }).join('');
     const activeRows = active.slice(0, 80).map(function (t) {
       const badge = '<span class="' + stateCls(t.state) + '">' + (STATE_TEXT[t.state] || t.state) + '</span>';
       const ops = (t.state === 'running' ? '<button class="btn sm" onclick="WB.cancel(&apos;' + t.id + '&apos;)">终止</button>' : '') +
         '<button class="btn sm" onclick="WB.openTask(&apos;' + t.id + '&apos;)">详情</button>';
-      return '<tr><td>' + esc(t.title) + '</td><td>' + badge + '</td><td>' + fmtTime(t.startedAt || t.updatedAt) + '</td><td class="row" style="gap:4px">' + ops + '</td></tr>';
+      return '<tr><td>' + esc(t.title) + '</td><td>' + badge + '</td><td>' + fmtTime(t.startedAt || t.updatedAt) + '</td><td class="ops">' + ops + '</td></tr>';
     }).join('');
 
     const addBody = '<label>标题</label><input id="mTitle" placeholder="例如：整理本周 AI 工具评测">' +
@@ -297,9 +305,9 @@ const appJS = `(() => {
     const verifiedN = done.filter(function (t) { return t.verified; }).length;
     const rowOf = function (t) {
       const q = t.critique ? t.critique.quality + '/10' : '—';
-      return '<tr><td>' + esc(t.title) + '</td><td>' + esc(t.domain || '-') + '</td><td>' + fmtMin(t.elapsedMs) + '</td>' +
-        '<td>' + q + '</td><td>' + verifyBadge(t) + '</td><td>' + repairBadge(t) + '</td><td>' + fmtBytes(t.outputBytes) + '</td>' +
-        '<td class="row" style="gap:4px"><button class="btn sm" onclick="WB.openTask(&apos;' + t.id + '&apos;)">查看</button>' +
+      return '<tr><td>' + esc(t.title) + '</td><td>' + esc(domainText(t.domain)) + '</td><td class="num">' + fmtMin(t.elapsedMs) + '</td>' +
+        '<td class="num">' + q + '</td><td>' + verifyBadge(t) + '</td><td>' + repairBadge(t) + '</td><td class="num">' + fmtBytes(t.outputBytes) + '</td>' +
+        '<td class="ops"><button class="btn sm" onclick="WB.openTask(&apos;' + t.id + '&apos;)">查看</button>' +
         (t.state === 'done' ? '<button class="btn sm" onclick="WB.rate(&apos;' + t.id + '&apos;,5)">★5</button>' : '') + '</td></tr>';
     };
     const head = '<table><thead><tr><th>标题</th><th>领域</th><th>耗时</th><th>自评</th><th>验收</th><th>返工</th><th>大小</th><th>操作</th></tr></thead><tbody>';
@@ -328,12 +336,12 @@ const appJS = `(() => {
     cache.templates = res.templates || [];
     const all = cache.templates.slice().sort(function (x, y) { return (y.valuePrior || 0) - (x.valuePrior || 0); });
     const q = tplQuery.trim().toLowerCase();
-    const hit = q ? all.filter(function (t) { return (t.name || '').toLowerCase().indexOf(q) >= 0 || (t.domain || '').toLowerCase().indexOf(q) >= 0; }) : all;
+    const hit = q ? all.filter(function (t) { return (t.name || '').toLowerCase().indexOf(q) >= 0 || (t.domain || '').toLowerCase().indexOf(q) >= 0 || (DOMAIN_TEXT[t.domain] || '').indexOf(q) >= 0; }) : all;
     const shown = tplShowAll || q ? hit : hit.slice(0, 8);
     const rows = shown.map(function (t) {
       const enabled = t.enabled ? '<span class="state-done">启用</span>' : '<span class="muted">停用</span>';
-      return '<tr><td>' + esc(t.name) + '</td><td>' + esc(t.domain) + '</td><td>' + t.priorityWeight + '</td><td>' + (t.valuePrior || 0) + '</td><td>' + enabled + '</td>' +
-        '<td class="row" style="gap:4px"><button class="btn sm" onclick="WB.editTemplate(&apos;' + t.id + '&apos;)">编辑</button>' +
+      return '<tr><td>' + esc(t.name) + '</td><td>' + esc(domainText(t.domain)) + '</td><td class="num">' + t.priorityWeight + '</td><td class="num">' + (t.valuePrior || 0) + '</td><td>' + enabled + '</td>' +
+        '<td class="ops"><button class="btn sm" onclick="WB.editTemplate(&apos;' + t.id + '&apos;)">编辑</button>' +
         '<button class="btn sm" onclick="WB.deleteTemplate(&apos;' + t.id + '&apos;)">删除</button></td></tr>';
     }).join('');
     const more = (!q && !tplShowAll && hit.length > shown.length)
@@ -349,7 +357,7 @@ const appJS = `(() => {
       '<div class="toolbar" style="margin-top:14px"><button class="btn primary" onclick="WB.newTemplate()">新建模板</button>' +
       '<button class="btn" onclick="WB.resetTemplates()">恢复默认</button></div>' +
       '</div>' +
-      '<div class="card" id="templateEditor"></div>';
+      '<div id="templateEditor"></div>';
     const inp = document.getElementById('tplSearch');
     if (inp) {
       // 输入即过滤（250ms 去抖，避免每个字符都重排一整张表）
@@ -590,7 +598,7 @@ const appJS = `(() => {
     },
     newTemplate() {
       const box = document.getElementById('templateEditor');
-      box.innerHTML = '<h3>新建模板</h3>' +
+      box.innerHTML = '<div class="card"><h3>新建模板</h3>' +
         '<label>ID（英文唯一）</label><input id="tId" placeholder="my-template">' +
         '<label>名称</label><input id="tName" placeholder="我的模板">' +
         '<label>领域</label><select id="tDomain"><option value="content">内容创作</option><option value="code">代码生成</option><option value="knowledge">知识整理</option><option value="data">数据处理</option><option value="solution">方案撰写</option><option value="report">报告生成</option></select>' +
@@ -598,20 +606,20 @@ const appJS = `(() => {
         '<label>Prompt 模板（必须含 {topic}）</label><textarea id="tPrompt" rows="6" placeholder="请围绕「{topic}」产出……"></textarea>' +
         '<label>优先级权重（1-5）</label><input id="tPriority" type="number" min="1" max="5" value="3">' +
         '<label>价值先验（0-100）</label><input id="tValue" type="number" min="0" max="100" value="75">' +
-        '<div class="toolbar" style="margin-top:12px"><button class="btn primary" onclick="WB.saveTemplate()">保存模板</button></div>';
+        '<div class="toolbar" style="margin-top:12px"><button class="btn primary" onclick="WB.saveTemplate()">保存模板</button></div></div>';
     },
     editTemplate(id) {
       const t = cache.templates.find(function (x) { return x.id === id; });
       if (!t) { return; }
       const box = document.getElementById('templateEditor');
-      box.innerHTML = '<h3>编辑模板：' + esc(t.name) + '</h3>' +
+      box.innerHTML = '<div class="card"><h3>编辑模板：' + esc(t.name) + '</h3>' +
         '<label>名称</label><input id="tName" value="' + esc(t.name) + '">' +
         '<label>任务描述</label><input id="tDesc" value="' + esc(t.description || '') + '">' +
         '<label>Prompt 模板</label><textarea id="tPrompt" rows="6">' + esc(t.promptTemplate || '') + '</textarea>' +
         '<label>优先级权重（1-5）</label><input id="tPriority" type="number" min="1" max="5" value="' + (t.priorityWeight || 3) + '">' +
         '<label>价值先验（0-100）</label><input id="tValue" type="number" min="0" max="100" value="' + (t.valuePrior || 75) + '">' +
         '<label>是否启用</label><select id="tEnabled"><option value="1"' + (t.enabled ? ' selected' : '') + '>启用</option><option value="0"' + (t.enabled ? '' : ' selected') + '>停用</option></select>' +
-        '<div class="toolbar" style="margin-top:12px"><button class="btn primary" onclick="WB.saveTemplate(&apos;' + id + '&apos;)">保存修改</button></div>';
+        '<div class="toolbar" style="margin-top:12px"><button class="btn primary" onclick="WB.saveTemplate(&apos;' + id + '&apos;)">保存修改</button></div></div>';
       box.scrollIntoView({ behavior: 'smooth' });
     },
     async saveTemplate(id) {
@@ -882,6 +890,12 @@ const appJS = `(() => {
     document.addEventListener('click', function (ev) {
       if (!topMore.hidden && ev.target !== btnMore && !topMore.contains(ev.target)) {
         topMore.hidden = true; btnMore.setAttribute('aria-expanded', 'false');
+      }
+    });
+    // Escape 必须能关掉菜单：键盘用户用 Enter 打开后，鼠标外点逻辑对他们不存在。
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && !topMore.hidden) {
+        topMore.hidden = true; btnMore.setAttribute('aria-expanded', 'false'); btnMore.focus();
       }
     });
   }

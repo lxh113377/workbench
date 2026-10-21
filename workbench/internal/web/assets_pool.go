@@ -65,7 +65,12 @@ const poolJS = `(() => {
         '<span class="sep">·</span>策略 <b>' + esc(stratName(d.strategy)) + '</b>' +
         (lp.at ? '<span class="sep">·</span>上次探测 <b>' + esc(fmtTime(lp.at)) + '</b>' : '') +
       '</div>' +
-      (g.error ? '<div class="muted" style="margin-top:10px;color:var(--danger)">网关错误：' + esc(g.error) + '</div>' : '') +
+      // 网关读数分三级用词（2026-10-20 老大实报「网关错误：端口未监听...」）：
+      //   · 端口没监听 = DSH 桌面端起停/任务 HOME 轮换的正常环境态，非缺陷 ⇒ 中性提示；
+      //   · 端口在监听但拒绝鉴权 = 真需要处理（密钥不匹配）⇒ 红色；
+      //   · 其余归为错误。
+      // 旧版一律红字「网关错误」+ 裸 dial 字符串，把可自愈的环境态渲染成故障。
+      (g.error ? '<div class="muted" style="margin-top:10px;' + (g.reachable === false ? '' : 'color:var(--danger)') + '">' + (g.reachable === false ? '网关未监听：' : (g.reachable === true && g.authorized === false ? '网关鉴权失败：' : '网关错误：')) + esc(g.error) + '</div>' : '') +
       '<div style="margin-top:14px"><label>调度策略</label>' + stratSel + '</div>' +
       fold('车道水位（' + lanes.length + ' 条车道）', laneBody) +
       '</div>';
@@ -174,8 +179,9 @@ const poolJS = `(() => {
       // 真正能用的 3 个埋掉——这正是「乱七八糟」的具体来源。
       const live = list.filter(m => m.enabled && m.state !== 'down' && m.routable !== false);
       const idle = list.filter(m => !live.includes(m));
-      const liveRows = live.map((m, i) => poolRow(m, i + 1, health[m.id] || {})).join('');
-      const idleRows = idle.map((m, i) => poolRow(m, i + 1, health[m.id] || {})).join('');
+      // 序号列此前双重加一（调用方 i+1、poolRow 内再 i+1）⇒ 组内从 2 开始，走查实测缺陷。
+      const liveRows = live.map((m, i) => poolRow(m, i, health[m.id] || {})).join('');
+      const idleRows = idle.map((m, i) => poolRow(m, i, health[m.id] || {})).join('');
       const body = (live.length
           ? tableOf(liveRows)
           : '<div class="empty-hint" style="padding:10px 2px">本组没有可调度的模型——全部停用或下线。</div>') +
