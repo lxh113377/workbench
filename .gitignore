@@ -1,4 +1,4 @@
-﻿# Build artifacts
+# Build artifacts
 dist/*.exe
 dist/workbench-linux-amd64
 dist/fakedsh
@@ -25,6 +25,12 @@ src/
 # Go 测试与门禁跑出来的临时产物
 *.test
 coverage.out
+# 2026-10-21 补：实测 go test -coverprofile=coverage_tray.out 之类自定义名会漏出 ignore，
+# workbench/coverage_tray 就是这么混进 untracked 列表的（6670B 覆盖率数据，零引用、可再生）。
+# 通配所有 coverage* 变体，杜绝按包名自定义 profile 名时再次漏出。
+coverage*
+*.coverprofile
+cover.out
 
 # 门禁/容器跑出来的可再生证据产物（每次跑都重新生成，非交付物）
 # 实测 tests/docker-autonomy/evidence/ 下单个 gate-* 目录就 500+ 文件

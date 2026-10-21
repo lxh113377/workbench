@@ -13,4 +13,8 @@ type Options struct {
 	OnResume func()
 	OnStop   func()
 	OnQuit   func()
+	// OnWarn 接收托盘降级/自愈的诊断信息（例如"图标没注册上，原因是 X"）。
+	// 托盘是可选增强：注册失败绝不能影响主面板，但**必须**把原因上报出去，
+	// 否则用户看到的就是"状态栏没有图标"却不知道发生了什么。
+	OnWarn func(msg string)
 }

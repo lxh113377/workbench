@@ -1,0 +1,93 @@
+<#
+  check_all.ps1 — 工作台预检总门禁：把三条独立门禁串成一次调用。
+
+  为什么需要（2026-10-19）：
+    近期反复踩的三类坑，各自都做成了单点门禁脚本：
+      1) check_subsystem.ps1      —— 产物本身不要弹控制台（PE 子系统 = GUI）
+      2) check_spawn_silent.ps1   —— spawn 的子进程不要弹控制台（隐藏窗口属性）
+      3) check_no_shrink.ps1      —— 合并前禁止整文件覆盖丢掉他会话的改动
+   但它们散在三处，靠人记得跑。本脚本把「记得跑三个」收敛成「跑一个」。
+
+  设计原则（反掩盖，对标 audit-runner-safe-aggregate）：
+    - 每一段独立执行、独立记失败，**不允许**用聚合把单个失败洗绿；
+    - 任何一段 rc!=0 => 整体 rc=1；
+    - 有段被 SKIP（前置缺失）必须显式打印 SKIP，且**不计入 PASS**；
+    - 末尾打印每段的实测 rc，便于核对。
+
+  用法:
+    powershell -NoProfile -ExecutionPolicy Bypass -File tests/check_all.ps1
+    powershell ... -File tests/check_all.ps1 -Source <我的文件> -Target <live文件>   # 附带覆盖安全检查
+  退出码：0 = 全部通过 / 1 = 至少一段失败 / 2 = 参数错误
+#>
+param(
+  [string]$Root = 'D:\workdesktop',
+  [string]$Exe  = 'D:\workdesktop\dist\workbench.exe',
+  # 可选：额外做一次「我要覆盖 live 的某个文件」的安全性预检
+  [string]$Source = '',
+  [string]$Target = ''
+)
+$ErrorActionPreference = 'Continue'
+
+function Section([string]$name, [scriptblock]$body) {
+  Write-Host ('==> ' + $name) -ForegroundColor Cyan
+  & $body
+  $rc = $LASTEXITCODE
+  if ($null -eq $rc) { $rc = 0 }
+  if ($rc -eq 0) { Write-Host ('    PASS (rc=0) ' + $name) -ForegroundColor Green }
+  else { Write-Host ('    FAIL (rc=' + $rc + ') ' + $name) -ForegroundColor Red; $script:fails++ }
+}
+$fails = 0
+
+Write-Host '=== 工作台预检总门禁 ===' -ForegroundColor White
+
+Section '产物静默（PE 子系统 = GUI）' {
+  $g = Join-Path $Root 'tests\check_subsystem.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $Exe)) { Write-Host '    SKIP exe 不存在（未构建）'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Exe $Exe -RequireGui
+}
+
+Section '实例唯一（无孤儿/无重复生产实例）' {
+  $g = Join-Path $Root 'tests\instance_guard.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  # 报告模式（不加 -Apply）：只为判口，不在这里杀进程；回收位在 keepalive 每分钟那一跳
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -MaxInstances 6
+}
+
+Section '首页契约（产物页面 = 当前源码页面）' {
+  $g = Join-Path $Root 'tests\check_homepage.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $Exe)) { Write-Host '    SKIP exe 不存在（未构建）'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Exe $Exe
+}
+
+Section '子进程静默（spawn 点全隐藏）' {
+  $g = Join-Path $Root 'tests\check_spawn_silent.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Root (Join-Path $Root 'workbench')
+}
+
+# 托盘消息窗样式门禁（2026-10-21 新增）：防「任务视图里堆满工作台卡片」复发。
+# 只做源码判据（不加 -CheckLive），保证 CI/无头环境可用；运行期取证见下面的独立入口。
+Section '托盘窗口样式（消息窗不得进任务视图）' {
+  $g = Join-Path $Root 'tests\check_tray_window.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Root $Root
+}
+
+if ($Source -ne '' -or $Target -ne '') {
+  Section '覆盖安全（禁止整文件覆盖丢改动）' {
+    $g = Join-Path $Root 'tests\check_no_shrink.ps1'
+    if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+    if ($Source -eq '' -or $Target -eq '') { Write-Host '    SKIP 需同时给 -Source 与 -Target'; $global:LASTEXITCODE = 0; return }
+    & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Source $Source -Target $Target
+  }
+} else {
+  Write-Host '==> 覆盖安全（未指定 Source/Target，跳过）' -ForegroundColor DarkGray
+  Write-Host '    SKIP 本段不计入 PASS；合并前请显式带 -Source/-Target 再跑' -ForegroundColor Yellow
+}
+
+Write-Host '========================================'
+if ($fails -eq 0) { Write-Host 'PRECHECK: all-gates-pass' -ForegroundColor Green; exit 0 }
+Write-Host ('PRECHECK: ' + $fails + ' section(s) failed') -ForegroundColor Red
+exit 1
