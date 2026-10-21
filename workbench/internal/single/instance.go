@@ -52,20 +52,26 @@ func (i *Instance) Release() {
 	i.f = nil
 }
 
-// ProbeRunning 探测某个端口上是否已有工作台在监听。
-func ProbeRunning(host string, basePort, attempts int) (int, bool) {
+// ProbeExactPort 探测**指定端口**上是否已有工作台在监听。
+//
+// 为什么删掉了原来的 ProbeRunning(host, basePort, attempts) 顺延扫描
+// （2026-10-19 老大现场：快捷方式打开显示「重试」）：
+//   原实现从 basePort 起连扫 10 个端口，**任何**监听成功的端口都被当成「工作台面板」。
+//   现场实测 17890 是主实例、17891 是压测副本（wbsoak26.exe），于是二次启动把浏览器
+//   指向了压测副本；副本一死窗口 URL 就成死端口，页面 fetch 全失败，
+//   自动响应连续 3 次失败后按钮落进 error 态 —— 用户看到「重试」。
+//   顺延扫描的语义错误在于：端口号相邻 ≠ 同一实例。面板地址必须来自实例自写的
+//   panel.url，或**精确**的配置端口，不能用「附近有东西在听」来推断。
+func ProbeExactPort(host string, port int) (int, bool) {
 	if host == "" {
 		host = "127.0.0.1"
 	}
-	for i := 0; i < attempts; i++ {
-		p := basePort + i
-		conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(p)), 300*time.Millisecond)
-		if err == nil {
-			_ = conn.Close()
-			return p, true
-		}
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(host, strconv.Itoa(port)), 300*time.Millisecond)
+	if err != nil {
+		return 0, false
 	}
-	return 0, false
+	_ = conn.Close()
+	return port, true
 }
 
 var _ = syscall.Getpid

@@ -1,13 +1,14 @@
 // Package retention 实现运行时产物的保留策略（DSH_HOME 任务副本回收）。
 //
 // 问题（2026-10-19 现场审计）：
-//   executor 每执行一个任务就创建一份独立 DSH_HOME（为了并发隔离，这是必须的）。
-//   但**从未有回收机制** —— 现场 24 小时内积累了 247 个副本、26.3MB。
-//   按 7×24 每天约 100 个任务估算：
-//     1 周后 ≈ 1000 个副本 / 100MB
-//     1 月后 ≈ 3000 个副本 / 300MB
-//     1 年后 ≈ 36000 个副本 / 3.6GB
-//   而且每份都含 OFM 的账号态文件、profile junction、sessions 日志。
+//
+//	executor 每执行一个任务就创建一份独立 DSH_HOME（为了并发隔离，这是必须的）。
+//	但**从未有回收机制** —— 现场 24 小时内积累了 247 个副本、26.3MB。
+//	按 7×24 每天约 100 个任务估算：
+//	  1 周后 ≈ 1000 个副本 / 100MB
+//	  1 月后 ≈ 3000 个副本 / 300MB
+//	  1 年后 ≈ 36000 个副本 / 3.6GB
+//	而且每份都含 OFM 的账号态文件、profile junction、sessions 日志。
 //
 // 安全边界（项目硬约束 5「所有删除走回收站」）：
 //   - 只回收**任务级 DSH_HOME 副本**（runtime/dsh-home/tasks/<id>/）；
@@ -52,9 +53,9 @@ type Policy struct {
 // DefaultPolicy 返回默认保留策略。
 func DefaultPolicy() Policy {
 	return Policy{
-		DSHHomeDays:    DefaultDSHHomeDays,
-		WorkspaceDays:  DefaultWorkspaceDays,
-		TaskDirDays:    DefaultTaskDirDays,
+		DSHHomeDays:   DefaultDSHHomeDays,
+		WorkspaceDays: DefaultWorkspaceDays,
+		TaskDirDays:   DefaultTaskDirDays,
 	}
 }
 
@@ -88,10 +89,10 @@ type Result struct {
 // PruneDSHHome 清理过期的任务级 DSH_HOME 副本。
 //
 // 安全保证：
-//   1. 只遍历 dshHome/tasks/ 下的**一层**子目录（不递归，不碰深层）；
-//   2. 只删除 mtime 早于保留窗口的目录；
-//   3. 删除走回收站（见 trash_windows.go / trash_other.go）；
-//   4. 任何单个目录失败只记录，不中断整体清理。
+//  1. 只遍历 dshHome/tasks/ 下的**一层**子目录（不递归，不碰深层）；
+//  2. 只删除 mtime 早于保留窗口的目录；
+//  3. 删除走回收站（见 trash_windows.go / trash_other.go）；
+//  4. 任何单个目录失败只记录，不中断整体清理。
 func PruneDSHHome(dshHome string, p Policy, dryRun bool) Result {
 	p = p.normalized()
 	var res Result
@@ -132,6 +133,103 @@ func PruneDSHHome(dshHome string, p Policy, dryRun bool) Result {
 		res.FreedBytes += size
 	}
 	return res
+}
+
+// PruneTaskDir 回收**过期的任务目录本身**（audit 流 + 成果资产）。
+//
+// 现场缺陷（2026-10-19 审计）：Policy.TaskDirDays 被定义（默认 90 天）、被 Normalize 补齐、
+// 注释写明「这些是审计与成果资产，保留最久」，但**没有任何代码使用它** ——
+// PruneTaskWorkspaces 只回收 <task>/workspace/，任务目录本身永不回收。
+// 对 7x24 长跑系统这是「只涨不落的一半」，而且是一个**看起来有闸门、实际没有**的假象。
+//
+// 安全取舍（刻意保守）：本包头部明确写着
+//
+//	「绝不删除任何产出（workbench-output/tasks/<id>/ 的 final.md 等是用户资产）」。
+//
+// 任务目录里就包含 final.md 这类成果，因此本函数**不参与默认回收**，
+// 只有调用方显式要求时才执行（见 cmd/workbench 的 --task-dirs 开关）。
+// 默认 `--prune --apply` 只回收 DSH_HOME 副本与 workspace —— 那两类不是成果资产。
+//
+// 语义：
+//   - 以目录内**最新文件**的 mtime 作为「最后被真正使用」的信号；
+//   - 超过 TaskDirDays 才整体回收，删除走回收站（可反悔）；
+//   - 只处理引擎产出的目录前缀（task-*/critique-*/summary-*），别的不动；
+//   - dry-run 只统计不删除。
+//
+// 顺序：调用方应先 PruneTaskWorkspaces（回收 workspace 明细），再调本函数。
+func PruneTaskDir(tasksRoot string, p Policy, dryRun bool) Result {
+	p = p.normalized()
+	var res Result
+	res.DryRun = dryRun
+
+	entries, err := os.ReadDir(tasksRoot)
+	if err != nil {
+		return res
+	}
+	cutoff := time.Now().AddDate(0, 0, -p.TaskDirDays)
+
+	for _, e := range entries {
+		if !e.IsDir() {
+			continue
+		}
+		if !isEngineTaskDir(e.Name()) {
+			continue
+		}
+		dir := filepath.Join(tasksRoot, e.Name())
+		if newestModTime(dir).After(cutoff) {
+			res.SkippedDirs++
+			continue
+		}
+		size, _ := dirSize(dir)
+		if dryRun {
+			res.ReclaimedDirs++
+			res.FreedBytes += size
+			continue
+		}
+		if err := Trash(dir); err != nil {
+			res.Errors = append(res.Errors, fmt.Sprintf("回收任务目录 %s 失败: %v", e.Name(), err))
+			continue
+		}
+		res.ReclaimedDirs++
+		res.FreedBytes += size
+	}
+	return res
+}
+
+// isEngineTaskDir 判定目录名是否由引擎产出（避免误删用户手放的目录）。
+func isEngineTaskDir(name string) bool {
+	for _, pre := range []string{"task-", "critique-", "summary-"} {
+		if strings.HasPrefix(name, pre) {
+			return true
+		}
+	}
+	return false
+}
+
+// TaskDirUsage 汇总任务目录的占用（供 --prune 在未显式开启回收时**如实报告**）。
+//
+// 为什么要报告：默认不删用户资产，但必须让人看到「这里在涨」，
+// 否则又是一个「看起来有闸门、其实没有」的黑箱。
+func TaskDirUsage(tasksRoot string, p Policy) (count int, totalBytes int64, expired int) {
+	p = p.normalized()
+	entries, err := os.ReadDir(tasksRoot)
+	if err != nil {
+		return 0, 0, 0
+	}
+	cutoff := time.Now().AddDate(0, 0, -p.TaskDirDays)
+	for _, e := range entries {
+		if !e.IsDir() || !isEngineTaskDir(e.Name()) {
+			continue
+		}
+		dir := filepath.Join(tasksRoot, e.Name())
+		sz, _ := dirSize(dir)
+		count++
+		totalBytes += sz
+		if !newestModTime(dir).After(cutoff) {
+			expired++
+		}
+	}
+	return count, totalBytes, expired
 }
 
 // PruneTaskWorkspaces 清理过期任务的 workspace 目录（保留 final.md 等资产）。
@@ -197,7 +295,6 @@ func newestModTime(dir string) time.Time {
 	}
 	return newest
 }
-
 
 // dirSize 递归统计目录大小（单层失败不中断）。
 func dirSize(root string) (int64, error) {
