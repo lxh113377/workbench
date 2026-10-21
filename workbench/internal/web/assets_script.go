@@ -513,13 +513,14 @@ const appJS = `(() => {
         const box = document.getElementById('taskDetail');
         if (!box) { return; }
         const q = t.critique ? ' ｜ 自评：' + t.critique.quality + '/10' : '';
-        box.innerHTML = '<h3>' + esc(t.title) + '</h3>' +
-          '<div class="muted" style="margin-bottom:10px">状态：' + esc(STATE_TEXT[t.state] || t.state) + ' ｜ 领域：' + esc(t.domain || '-') +
+        // 详情必须落在卡壳里（与模板编辑器同型）：裸 h3+doc 浮在页底破坏层级（2026-10-21 走查）。
+        box.innerHTML = '<div class="card"><h3>' + esc(t.title) + '</h3>' +
+          '<div class="muted" style="margin-bottom:10px">状态：' + esc(STATE_TEXT[t.state] || t.state) + ' ｜ 领域：' + esc(domainText(t.domain)) +
           ' ｜ 模型：' + esc(t.model || '-') + ' ｜ 耗时：' + fmtMin(t.elapsedMs) + q + '</div>' +
           '<div class="doc">' + mdToHtml(res.content || '（暂无产出）') + '</div>' +
           '<div style="margin-top:12px" class="toolbar"><button class="btn sm" onclick="WB.rate(&apos;' + t.id + '&apos;,5)">★★★★★</button>' +
           '<button class="btn sm" onclick="WB.rate(&apos;' + t.id + '&apos;,4)">★★★★</button>' +
-          '<button class="btn sm" onclick="WB.rate(&apos;' + t.id + '&apos;,3)">★★★</button></div>';
+          '<button class="btn sm" onclick="WB.rate(&apos;' + t.id + '&apos;,3)">★★★</button></div></div>';
         box.scrollIntoView({ behavior: 'smooth' });
       } catch (e) { toast(e.message); }
     },
