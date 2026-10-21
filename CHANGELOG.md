@@ -11,6 +11,29 @@
 > 规则：未发布的变更一律记在本节；发版时把本节整体提升为新的 `## [x.y.z] - YYYY-MM-DD`，
 > 并立刻补一个空的 `## [Unreleased]` 回顶（CI 的 changelog 门禁会校验这一条）。
 
+### Fixed
+- **「运行中但今日产出 0」四重缺陷叠加（2026-10-21 老大实报）**：面板显示
+  `引擎 运行中 ｜ 排队 0 ｜ 今日产出 0`，而实例确实活着。取证（逐条可复算）：
+  当日 00:00:02–01:39:59 产出 2000 条自主草案，**标题与 Prompt 去重后都只有 1 个**，
+  全部被评估器拒绝（综合分 48/54 < 阈值 55），01:39:59 之后当天再无任何新任务。
+  四层根因：① `DeriveNextGoal` 在**上一代标题**上继续追加「 · 深化：X」，代际复利把目标标题
+  顶到 31 rune / 78 字节；② `model.Truncate` 的 n 是**字节**而标题上限常量是 **rune**（80），
+  中文 3 字节/rune ⇒ 89 字节截到 80 后回退合法边界正好停在 78 字节，**刚追加的阶段后缀被整体吃掉**，
+  标题退化成目标标题本身、每轮逐字相同；③ 评估器 `novelty()` 对同目标不做区分，而自主 Prompt 固定注入
+  「项目目标 + 已完成阶段」，同目标相邻阶段相似度天然 0.9+ ⇒ novelty=0 ⇒ 价值 41 / 综合 48 **恒不通过**
+  （`gates()` 里早有同目标豁免，novelty 没跟上，同一语义两处不一致 = 豁免被抵消）；
+  ④ `tasksToday()` 把 **rejected 草案也算进 dailyCap**，2000 条从未执行过的草案把配额吃满后
+  两条供货链同时停机一整天。修复：新增 `composeTitle()`（按 rune 限长、焦点段整体保留）与
+  `rootGoalTitle()`（根标题重拼，掐断复利）；`novelty()` 同目标只认精确指纹、
+  `gates()` 把「精确重复（任何目标都拦）」与「模糊相似（同目标豁免）」分开判；
+  `tasksToday()` 不计 rejected 且模板链统一走它；新增 `rejectionPressure()` 拒绝熔断（阈值 5，
+  连续被拒即停手并留痕）。**变异验证四条**：恢复旧码后对应用例逐条判红、复原后判绿。
+- **静默停摆自证 `StallReason`（2026-10-21）**：`internal/engine/stall_reason.go` 把
+  「为什么此刻没有产出」归纳成 8 个稳定原因码 + 人话文案（结构性阻塞 > 限流 > 配额耗尽 >
+  规划熔断 > 目标阻塞 > 池冷却 > 无来源），经 `/api/status` 的 `stallReason` 输出，
+  面板总览渲染 `stall-banner`、顶栏把原因顶到读数位置。原则：有产出时**不渲染**（不制造噪音）。
+  根因是 24/7 最坏的失效形态——进程活着、phase=running、没有任何错误，只有产出是 0。
+
 ### Added
 - **产物体积归因 + 双向体积护栏 + 清单/趋势双收口（issue #8 四判据收口，2026-10-21）**：
   ① **体积归因**：两天 +83.3%（7,747,072 增至 14,199,296 B）主因 = **在未提交合并工作区上构建**
@@ -24,6 +47,18 @@
   ④ **perf 趋势时间序列**（判据 4）：每次 CI 把 verdict+体积读数落盘 perf-trend/perf-verdict.jsonl
   并 upload 成 artifact（命名含 run_id 防覆盖、retention 90 天）——上界拦翻倍级膨胀，
   趋势拦每次涨 5% 的缓慢贴边。
+- **实例回收 + 托盘窗样式修复（2026-10-20 现场两连）**：
+  `tests/instance_guard.ps1`（机器级实例盘点 + 有界回收，六条裁决：生产实例只留 1 个 / 用户显式退出后残留 /
+  探针超预算 / 探针无预算超 TTL / 全局硬上限 MaxInstances / 探针父死兜底），接入 `tests/keepalive.ps1` 每分钟一跳，
+  每次真清理留痕 `runtime/instance-guard.log`。根因：四条拉起链（Run 键 / 计划任务 / SelfHeal / 探针）
+  + 单实例锁按 runtime 目录 + 无任何回收者，且 Win32_Process.Create 让「父死子退」失效 —— 现场实测 24 个孤儿实例。
+  同时修 `internal/tray/tray_windows.go`：托盘消息窗补 `WS_EX_TOOLWINDOW` + `WS_POPUP` +
+  `SWP_HIDEWINDOW`（原先 dwExStyle=0，导致每个实例在任务视图/Alt-Tab 留一张关不掉的空白卡片，
+  实测 `ex=0x00000100 TOOLWINDOW=False`），标题改为「内部消息窗口，请忽略」，类名提常量并加 4 个守护测试。
+- **首页契约门禁**：`tests/check_homepage.ps1`（产物必须含新页锚点 `home-entries`、不得含旧页锚点 `home-badge`、
+  必须有 `UI_PROBE_READY` 通道，且真探针抓 HTTP 首页同为新页），已进 `setup/build.ps1` 构建链与
+  `tests/check_all.ps1` 总预检。根因：21:52 的 dist 产物是从旧树构建后覆盖进来的，服务的是旧首页且丢了
+  `--ui-probe` 分支，而当时的门禁只看 PE 子系统 + 体积，没有一条判据看页面内容。三态自证 rc=0/1/2。
 - **Prometheus 文本格式指标导出（P1-3）**：`internal/web/metrics_prom.go` 提供 `GET /metrics`
   （exposition v0.0.4，纯标准库），把任务状态分布、尝试总数、**按 ErrorKind 的失败分类**、
   任务耗时 sum/count 与进程侧 goroutine/堆/GC 暂停投影成监控系统可直接抓取的形式。
@@ -74,6 +109,21 @@
 - **CONTRIBUTING 新增三节**：九 协作流程与判据文化、十 零弹窗纪律、十一 延伸文档。
 
 ### Fixed
+- **无头执行：测试不再弹窗、测试不再被实例守卫杀掉（2026-10-21 老大指令「不要给我跳出来窗口，无头执行」）**：
+  ① **产品层**：`internal/browser` 新增 `WB_HEADLESS`（或 `CI`）判定，命中即**不启动任何浏览器**；
+  Edge/rundll32 回落路径补 HideWindow + CREATE_NO_WINDOW；`cmd/workbench` 新增 `--headless`
+  （与 `--silent` 同为"不弹面板"，保留旧名是因为既有计划任务已用它）与 `headlessEnv()`
+  环境层兜底（`openPanel` 先判 env —— 某处分支漏判 silent 也不会污染桌面）。
+  实测：`WB_HEADLESS=1` 起实例，msedge 窗口数增量 **0**。
+  ② **测试层**：`hiddenTestCmd`（HideWindow + CREATE_NO_WINDOW + 注入 `WB_HEADLESS=1`）
+  接管 `cmd/workbench` 全部子进程 spawn。
+  ③ **找出并修掉"测试随机红"的真因**：`go test -c` 编出的测试二进制同样带
+  `ProductName=个人AI工作台`（rsrc 被链接进去），命令行又不含 `--ui-probe`/`--soak`
+  ⇒ `tests/instance_guard.ps1` 判成**"生产实例重复"** ⇒ 每分钟的 keepalive(`-Apply`)
+  **直接 kill 它**。现场表现：`go test ./cmd/workbench` 隔几次整包
+  `exit status 0xffffffff`、日志无线索（"测试假红"会让真缺陷被当噪声）。
+  修法：Go 测试二进制特征（`-test.` 参数 / `*.test.exe`）纳入"非生产"判据，
+  按预算/TTL 回收，绝不按"生产重复"杀。**实测：修复前 2/5 随机红 → 修复后 6/6 全绿**。
 - **限速闸门补构造期接线（D9 自查补漏）**：上一批写的是「`New`/恢复/`ReloadConfig`/`SetRunner` 四接线」，
   实测当时只有 3 处调用点（`New()` 里没有）。查的过程发现真实缺口：
   `cmd/workbench/main.go:419` 是第二个引擎入口（一次性 CLI 自检，只 `engine.New` 后直接
@@ -177,6 +227,235 @@
 - Windows 8.3 短路径（`RUNNER~1`）导致的 CI 假失败：路径比较统一经 `evalExisting` 归一。
 - `store.Update` 由原地写改为换指针，消除与 `runOne` defer 的真 data race（`-race` 哨兵抓出）。
 
+### Changed
+- **模型池清单改为按渠道分组管理**（老大 2026-10-20 反馈：「控制台模型池页面乱七八糟的，
+  做成像 Our Free Model 一样统一分类管理的」）。改造前 37 个模型平铺成一张 9 列表，
+  不分渠道、不看健康度，一屏全是行 —— 「乱七八糟」的具体来源是：OFM 车道 13 个里有 10 个
+  是「上游判定不可用」的自动停用项，与真正能用的 3 个混在一起，把可用的埋掉了。
+  现在按 `Spec.Group` 分四张卡片（OFM 免费 / Kilo 免费池 / EAC 协付 / 网关专属车道），
+  每张卡片头部是该组聚合健康度（`pill` 定色 + 可用/总数 + 下线 + 停用 + 成功/失败 + 均延迟），
+  形态对齐 Our Free Model 设置页的渠道卡片。组内再分两层：**能调度的默认展开**，
+  **停用/下线的折进「另 N 个停用/下线」**。序号改组内独立编号（原跨组连续编号会让第 2 组
+  第一行显示「14」，读起来像「全池第 14 个」）。分组维度由服务端 `Spec.Group` 给出，
+  前端不自己推断，避免两处口径漂移。
+  实测（37 条真实池数据、`--ui-probe` 隔离实例）：4 分组卡片、4 个默认展开、2 个默认折叠，
+  组头读数 `OFM 免费 可用3/13 停用10 成功/失败3/1`、`Kilo 免费池 可用17/17 均延迟86.9s`、
+  `EAC 协付 可用5/5`、`网关专属车道 可用0/2 停用2`。`go build`/`go vet` rc=0、
+  `go test ./...` **27 包全 ok**（含 `TestPoolTouchContract` 窄屏 data-label 契约未破）。
+  改动文件：`internal/web/assets_pool.go`（`renderList` 重写 + `poolRow` 抽函数 + `poolFold` 默认展开）、
+  `internal/web/pool_page.go`（新增 `.pool-group*` 页内样式，未污染全局 `assets_css.go`）。
+
+### Fixed
+- **「任务/产出/模板/设置 子页面被挡住」**（老大 2026-10-20 二轮反馈：「除了总览界面没问题，
+  任务、产出、模板、设施子页面都被挡住了」）。**这不是错觉也不是缓存**：老大窗口是 1040×613
+  物理像素，而本机屏幕 175% 缩放（`devicePixelRatio=1.75`），页面真实 CSS 视口只有 **594×350**；
+  在这么矮的视口里，顶栏+页签条吃掉 **239px = 68% 屏高**，子页只剩 **99px** 可见。
+  总览首屏是 4 个矮小的 KPI 数字，能露出来；其余四页首屏是卡片标题区，几乎全被推出视口 ⇒
+  体感「被挡住」。（先按 z-index/遮挡查了两轮全绿，因为 `elementFromPoint` 全命中正确元素；
+  真正的判据是**内容可见高度占视口比例**。）
+  修复：`@media (max-width:720px)` 重做窄屏排版 —— 顶栏由「三行堆叠」改单行（品牌只留 9px 色块、
+  状态与按钮同排）、页面标题 30px→15px、页签 44~46px→38px；导航总高 **239px → 78px（-67%）**，
+  内容可见 **99px → 222px（+124%）**。同时修两个连带缺陷：① `@media (pointer:coarse), (max-width:720px)`
+  把「窗口窄」误当「手指触屏」，桌面窄窗口页签被强制 44px，已拆成只有真触屏才 44px；
+  ② 模型池顶栏 4 个按钮在 390px 下把页面撑宽 18px（`scrollWidth=408 > clientWidth=390`），
+  `.topactions` 改 `flex-wrap:wrap + min-width:0`，实测 `overflowX=0`。
+  新增 `pane` 前端契约（逐页签量：内容是否钻进导航区 `overlap≤1px`、页签条是否被压扁
+  `tabsHeight≥30`、**导航占视口 `navRatio≤45%`**），门禁用例 **20 → 23**，新增
+  `pane-geometry`(1440×900) / `pane-geometry-narrow`(1040×613) / **`pane-geometry-realwindow`(594×350 = 问题现场)**。
+  双向反证：修复前 v1.3.2 在新判据下 **FAIL**（`navRatio=55.1`、1040 档模板页 `paneTextLen=0`），
+  修复后 **PASS 23/23**（`navRatio=22.3%`、五页 `overlap=0`、`visible=222px`）。
+  `go vet` rc=0、`go test ./...` **27 包全 ok**；发布件 v1.3.3（SHA256 `C92E074F…62CC3`）。
+  详见 `docs/子页面被挡住-根因与修复-2026-10-20.md`。
+- **页签条被 flex 压成 0 高度（真渲染 bug）**（老大 2026-10-20 二轮截图反馈「页签像被切掉半截」）：
+  CDP 实测 `.tabs` 的 `height = 0`，而内部 `.tab` 高 46px，页签溢出父容器叠到下方卡片上。
+  根因是 flexbox 规范细节：`body.admin` 为 `flex-direction:column`，而 `.tabs` 带 `overflow-x:auto`，
+  **overflow 非 visible 的 flex item 自动最小尺寸为 0**，于是被内容挤扁（滚动时 z-index 4 < 吸顶栏 20 更明显）。
+  修复：`.tabs` 显式 `flex:0 0 auto` + `min-height:46px`。实测改前 `tabs.h=0` → 改后 `tabs.h=46`
+  （同一探针、同一 1040×613 窗口）。新增 `TestTabsCannotBeSquashedByFlex`（只取 `.tabs{}` 规则块断言 +
+  剥离反证防恒真）。同类风险已排查：`.content` 无 overflow、`.table-scroll`/`.logbox` 在 block 卡片内，
+  只有 `.tabs` 同时是 flex item 且自带 overflow。
+- **任务页空态摆了两张空卡**（同一张截图）：三张卡里两张只写「队列是空的」「当前没有执行中」，
+  而此刻唯一能做的事（加任务）还藏在折叠里。改为全空时只留一张卡 = 状态摘要 + 一句解释
+  「引擎会自动从模板生成，不需要你手动加」+ **直接摊开**的填表；有任务时才回到表格 + 折叠表单。
+  新增 `TestQueuePageHasActionWhenEmpty`。发布件 v1.3.2（SHA256 `9286B468…1CF3`）。
+
+### Changed
+- **界面简化：管理面板 10 个页签收敛为 5 个，次级信息全部折叠**（老大 2026-10-20 反馈
+  「页面乱七八糟的东西太多了，不够简洁，对用户不友好」）。这不是换皮，是信息架构手术：
+  旧版把「系统能吐出的所有数字」平铺在一屏 —— 总览 10 张 KPI 卡 + 5 张明细卡顺排（1414px）、
+  模型池 9 列表格 + 常显 12 字段添加表单（1228px）、治理台 hero 结论带下面再念一遍同内容的
+  banner，用户要的信息反而被淹没。
+  改法五条：① 页签 **10 → 5**（总览/任务/产出/模板/设置；自主+治理并入总览，评估+工作目录+
+  审计日志并入设置），旧深链 `#logs`/`#evaluate`/`#workspace` 经 `LEGACY_TABS` 映射、
+  hash 原样保留，老书签不失效；② 首屏只留 **4 个真关心的读数**（今日产出/排队/成功率/累计完成），
+  其余降级进折叠块；③ 新增 `<details class="fold">` 折叠件，模型健康度/运行时资源/失败原因/
+  评估权重/换工作目录/访问审计/操作流水/失败任务一律收起；④ 空态改成一句话人话
+  （「队列是空的 —— 引擎会自动从模板生成任务」），不再是整块空白；⑤ 顶栏 6 按钮 + 3 链接
+  收敛为 3 按钮 + 1「更多」菜单。
+  治理台顶栏同步统一为「刷新 + 立即采样 + 更多」，跨页入口收进菜单。
+  模型池同步瘦身：9 列 → 6 列（删「延迟」「最近错误/备注」两个半数行为空的列，合并成模型名
+  下的小字），行内操作 6 → 4 高频 + 「⋯」收纳恢复/删除，添加表单从常显改折叠（高级参数再折一层），
+  车道表并入总览、状态日志折叠。治理台删除与 hero 完全重复的 banner，首启无数据时给
+  「点立即采样」的说明而非铺 7 张全 0 卡，四个取证明细卡折叠。
+  判据同步（简化不许回退，也不许把功能删掉）：新增 `TestAdminTabsStaySimplified`
+  （页签清单双向钉死 + 旧深链映射必须存在）、`TestTopbarHasSingleMoreMenu`、
+  `TestAdminPageHasWorkspaceSection`（工作目录从独立页签变设置页一块，但 `fillWorkspace`
+  能力必须在）；前端 `ADMIN_TABS` 常量 + tabs 契约数量/清单双向校验，`assertions_selftest`
+  新增 4 条反证（页签被加回 / 丢主入口 / 旧书签成死路 / 旧书签丢 hash），cdp_probe 新增
+  `legacy-hash-admin` 用例，门禁用例 19 → **20**。
+  顺手修掉门禁自身的一处假绿隐患：探针已增用例但 `frontend-gate.mjs` 的 `EXPECTED_CASES`
+  仍停在 19（回执显示「20/19」），该常量是「结果集完整」的唯一判据，写小即允许漏跑仍判 PASS；
+  已改 20 并加启动前自检（从探针源码数用例，不符即 exit 3 硬停），双向反证通过。
+  非技术用户视角补做（v1.3.1）：把模型池/设置页的行话改成白话并附代价说明 ——
+  线协议→「接口类型（OpenAI 标准对话 / Responses / Anthropic 格式）」、Tier→「用途偏好
+  （质量优先（慢一点，写得好）/ 均衡 / 速度优先）」、车道→「线路来源」、BaseURL→「接口地址」、
+  DSH profile→「运行配置（一般不用改）」；模板库从 24 行全平铺改为**默认只显示价值先验最高的
+  8 个 + 「还有 N 个，全部展开」**并加搜索框（按名/领域过滤，250ms 去抖）。
+  新增 `TestTemplatesLibraryIsSearchableAndFolded`、`TestFormLabelsAvoidJargon`（后者反向禁止
+  ">Tier<"/"线协议<select"/"DSH profile</td>" 回潮）。
+  实测：`go vet ./...` rc=0；`go test ./... -count=1` **27 包全 ok**；候选件与发布件前端门禁
+  均 **PASS ok=20 fail=0 unverified=0**；量化设计审计 15 页低对比 **0 处**（最低 5.29:1）、
+  焦点缺失 0、横向溢出 0；admin 总览页高 1414px → **471px**。发布件 `dist\workbench.exe` v1.3.0
+  （换件前备份 `workbench.exe.bak-pre-simple-*`）。详见 `docs/界面简化-信息架构收敛-2026-10-20.md`。
+
+
+### Fixed
+- **托盘「退出工作台」关不掉**（老大 2026-10-19 反馈「程序怎么我点退出工作台关不掉了」）：
+  点退出后进程确实退了，但**≤60 秒就被外部守护重新拉起并自动开跑**，用户观感＝关不掉。
+  根因是「生产者与消费者各缺一半」：产品侧早有表达能力（`engine.MarkUserQuit` 落
+  `state.json` 的 `userQuit` + `runtime/user-quit.flag`），但**只有 `--quit`/面板
+  `/api/engine/quit` 这条 HTTP 路径在用**，托盘这条不经 HTTP 的入口漏了；
+  而守护 `tests/keepalive.ps1`（计划任务 `WorkBenchKeepAlive`，每分钟一次）创建至今
+  **从未读取过该标记**，把 `stopped`/`idle` 一律当「该拉起来」。
+  实测复现（旧二进制 + 真实托盘命令 `WM_COMMAND 1006`）：退出后 60s 被拉起开跑、120s 又拉一次。
+  修复：① `main.go` 新增 `quitByUser`（先 `MarkUserQuit` 再优雅退出），托盘 `OnQuit` 接入；
+  **signal(SIGTERM) 路径刻意不落标记**——被动中断重启后理应接续，落标记会破坏 7x24。
+  ② `tests/keepalive.ps1` 新增 `Test-UserQuit`（flag 主判据 + `state.json` 回退），
+  **两处**拉起判定都加 `-not $userQuit` 守卫；脚本**绝不自己清标记**（清除点只在
+  `Engine.Start`，守护替用户清标记等于替用户改主意）。
+  验证：隔离实例端到端 `tests/quit_acceptance.ps1` **13 PASS / 0 FAIL**（含负向对照：
+  清标记后守护必须拉起，证明是「尊重意愿」而非「关掉守护」）；变异测试
+  `tests/quit_mutation_check.ps1` 证明去掉守卫即复现缺陷；真实安装盘上托盘退出后
+  `userQuit=true` **连续 105 秒（≥2 个守护周期）未被拉起**（标记存活比「没看到进程」更强：
+  只有 `Engine.Start` 会清它，它还在就说明守护没动手）。
+  详见 `docs/缺陷-托盘退出关不掉-2026-10-19.md`。
+- **首页入口「启动中点它白点」**（2026-10-19 目标轮：添加首页进入子页面的入口）：首页唯一按钮就是子界面入口，  但实测抓到两类会让入口失效的时序缺陷 —— ① busy 态被 `lock:true` 禁用，disabled 的按钮连 `click` 都不派发；  ② 开屏 900ms 自动启动在途时，用户这一击被 `if (inflight) { return; }` 直接吞掉，页面停在首页。  取证：CDP 直连把 `/api/engine/start` 拖慢 6s 造出在途窗口，点击后 9s 内 `location.href` 从未离开 `/`（`landed-not-admin`）。  修复：busy 改 `lock:false`（防重入交给 inflight），在途点击记 `pendingEnter`，启动收敛后补一次 `enterPanel()`——吞请求不吞意图。  判据：新增 `home_entry_contract_test.go`（正则断言，抗视觉重做的空格漂移）+ 前端探针 `home-enter` 用例  （`tests/ui/probes/enter.js` 真实点击 → 轮询落地 URL），门禁用例 18→19。实测：`go vet ./...` rc=0、  `go test ./internal/web ./cmd/workbench` 全绿、`frontend-gate` 19/19 PASS、busy 窗口点击端到端落到 `/admin?token=`。
+- **快捷方式「点了打不开」**（老大 2026-10-19 反馈）：桌面快捷方式写死了 `--silent`，
+  而该参数语义是"服务化实例：不弹面板"，于是双击后进程与端口都正常，
+  **桌面上却什么都不出现**。实测对照：`--silent` 新起可见窗口 0 个；
+  不带则 1.7s 内出现面板窗口。修复：快捷方式 `Arguments=""` + `WindowStyle=1`，
+  回读校验从"只看 TargetPath"升级为 TargetPath+Arguments 双校验；
+  `ensureShortcuts` 从"跑过一次永远跳过"改为每次启动校验并修复（否则旧快捷方式永不被纠正）。
+  详见 `docs/缺陷-点击打不开与托盘无图标-2026-10-19.md`。
+- **托盘图标永不出现**（老大 2026-10-19 反馈「状态栏也没有图标」）：安装目录
+  `D:\workdesktop` 被文件系统沙箱打上 **Low 完整性标签**，从其启动的进程继承 Low IL，
+  被 UIPI 拒绝向 Medium 的 Explorer 注册托盘图标（`NIM_ADD` → `Access is denied`）。
+  取证为排除法：同一二进制在 `C:\Temp`/`D:\`/`D:\app-cache` 全部 `ret=1 OK`，
+  只有 `D:\workdesktop\**` 失败；且 Low 进程自己修不了（`icacls` 返回 1299）。
+  四层处置：① 目录标签提升为 Medium（实测图标立即出现）；② `tests/keepalive.ps1`
+  每分钟自愈（Medium 上下文）；③ `internal/tray/integrity_windows.go` 进程内自检 +
+  失败原因经 `tray.Options.OnWarn` 上报日志与事件流（杜绝"静默少一个图标"）；
+  ④ `setup/build.ps1` 新增完整性标签门禁。顺带：托盘图标改为取 EXE 自带图标
+  （原为 `IDI_APPLICATION` 通用白板图），并接 `TaskbarCreated` 广播在 Explorer
+  重启后重新注册。
+- **`--silent` 未覆盖「已在运行」分支**：守护/压测/自愈用 `--silent` 撞上既有实例时，
+  原实现仍会往桌面弹面板（老大反复反馈"一直在跳"的来源之一）。现两处面板调用点
+  统一经 `shouldOpenPanel(silent)` 判断，并新增 `已打开面板：` 输出标记，
+  使该行为可被黑盒判据抓住（双向判据 + 变异测试验证可证伪）。
+- **桌面快捷方式被临时目录副本劫持（复发性「打不开」根因）**：`isCanonicalExe` 原判据
+  只判「文件名 + 同目录数据根」，而隔离 e2e 为了模拟真实实例，**正是**在
+  `t.TempDir()` 里复制二进制并建出 `runtime/`、`workbench-output/` —— 形状完全一致。
+  于是只要机器上跑过一次端到端测试，`ensureShortcuts` 就把桌面快捷方式改写到
+  `D:\app-cache\temp\Test* 002\workbench.exe`（该目录随后被测试框架清掉），
+  老大双击就是"打不开"。本轮实测抓获：快捷方式 TargetPath 指向已不存在的临时路径。
+  修复：判据加第三条「不落在系统临时目录内」，并拆成 `hasInstallShape` + `underTempDir`
+  两条正交判据分别可测（合成判据在测试里恒假）。变异测试验证：去掉临时目录排除即判红；
+  连跑两轮全量测试后快捷方式始终指向 `dist\workbench.exe`。
+  这也解释了该现象为何此前"修好了又复发"——不是同一 bug 反复，而是两个 bug 轮流生效。
+- **产物 MOTW 安全警告**：带 `Zone.Identifier` 的 EXE 双击必弹「无法验证发布者」，
+  属"必须人工点一下"的步骤，无人值守下直接卡死启动（实测 ShellExecute 报
+  `The operation was canceled by the user`）。`setup/build.ps1` 新增 MOTW 门禁：
+  带标记即 `Unblock-File`，清不掉则构建判红。
+
+### Added
+- **首页子页面入口条**（老大 2026-10-19 当轮指令：「其它子页面的入口在哪？出现在这个页面上」）：
+  首页按钮下方新增三个可见入口「管理面板 / 模型池 / 治理」（`.home-entries`，href 服务端注入 token）。
+  旧「隐藏后门 ·」契约随之作废——`TestIndexPageMinimalContract`/`TestHiddenBackdoorIsDotOnly` 改写为
+  `TestIndexPageEntryContract`（1 按钮 + 3 可见入口 + 禁 aria-hidden/tabindex=-1 + 禁表单），
+  占位符 6→8、探针 HOME_DEFAULTS anchors 1→3、textVisibleLen 阈值改走期望常量（曾硬编码 6 致自测假红）。
+  实测：`go test ./internal/web` 全绿；前端门禁 19/19 PASS；三个入口逐一真实点击均带 token 落地对应子页；
+  发布件换件重启后 17890 活实例复验（入口可见 + 点「模型池」→ `/modelpool?token=`）。
+- **开源对标报告入主树**：`docs/benchmark/WorkBench-开源对标报告.md`（8 个 peer：
+  n8n / dify / AutoGPT / autogen / temporal / river / asynq / windmill，八维对比 +
+  P0/P1/P2 清单 + M0-M4 路径），此前只存在于受 `.gitignore` 屏蔽的 `src-backup/`。
+- **知识盲区与学习计划**：`docs/知识盲区与学习计划.md`，B1-B8 盲区绑容器实测读数，
+  L1-L9 学习路径含精读对象与机器判据。
+- **开源化三件套**：`ARCHITECTURE.md`（单页定位/进程模型/包结构/五条架构取舍）、
+  `.github/workflows/ci.yml`（vet + `go test -race` + 覆盖率门禁 + 产物校验）、
+  `autonomy-e2e.yml`（容器内确定性通道跑完整自主闭环）。
+- **issue/PR 协作模板**：`.github/ISSUE_TEMPLATE/`（缺陷报告 / 功能请求 / config.yml）、
+  `.github/pull_request_template.md`（判据必须贴命令与真实输出）、
+  `.github/labels.json` + `setup/labels.ps1`（12 个正交标签）。
+- **零弹窗拉起共用件** `tests/lib_silent_launch.ps1`：按 PE 子系统分流，
+  GUI 走 `Win32_Process.Create`（保持脱离作业对象），CONSOLE 走
+  `Start-Process -WindowStyle Hidden`。
+- **崩溃救援额度（L4）**：`model.Task.CrashRescues` 记录跨崩溃的救援轮次，
+  `internal/engine/stuck_rescue.go` 的 `decideRescue` 分流「重新入队 / 判死」，
+  状态机新增 `interrupted → failed` 出口。修的是**无界崩溃循环**：
+  原先 `Recover()` 把 interrupted 无条件转回 queued，而 `Attempts` 是单次 `runOne`
+  内的序号（每轮被覆盖），不能当崩溃预算 —— 于是"一跑就弄死进程"的任务
+  配合 KeepAlive 每分钟拉起会无限重投，看起来"一直在干活"实际零产出。
+  判死写 `ErrorKind=crash_loop`，面板失败原因分布可区分。
+- **社区协作面（L7）**：`.github/ISSUE_TEMPLATE/`（缺陷报告 8 字段 / 功能请求 7 字段 /
+  config.yml）、`.github/pull_request_template.md`、`.github/labels.json` +
+  `setup/labels.ps1`（12 个正交标签，含本仓特有的 `flaky` / `platform-coupling` /
+  `external-constraint`）。模板把本项目的判据文化写成必填项：
+  「取不到数写 UNVERIFIED 不要填 0」「必须贴命令与真实输出」「外部约束另打标签」。
+- **三条仓库级门禁（已挂 CI 的 Repo hygiene gates 步骤）**：
+  `tests/check_changelog.ps1`（Unreleased 必须居首 / 日期必须 YYYY-MM-DD / 版本降序）、
+  `tests/check_noninteractive.ps1`（禁 `Invoke-WebRequest` 缺 `-UseBasicParsing`、
+  计划任务缺 `-NonInteractive`、以及 Read-Host / Get-Credential / -Confirm 等交互构造）、
+  `tests/check_issue_forms.ps1`（Issue Forms 结构：顶层三键、每块 attributes.label、
+  dropdown/checkboxes 的 options 必须位于 attributes 之内、contact_links 必须用 about）。
+  三条判据均经**变异测试**验证能抓回对应缺陷（不是"跑过了"就算数）。
+- **CONTRIBUTING 新增三节**：九 协作流程与判据文化、十 零弹窗纪律、十一 延伸文档。
+
+### Fixed
+- **无人值守弹窗挂死**（老大 2026-10-19 17:29 反馈"这个东西后台静默不要弹出窗口"）：
+  守护计划任务每分钟拉起 `tests/keepalive.ps1`，其中一条 `Invoke-WebRequest` 缺
+  `-UseBasicParsing` —— PowerShell 5.1 因此调用 IE 引擎解析响应页，而面板页含 `<script>`
+  （实测 2 处），触发 "Security Warning: Script Execution Risk … Do you want to continue?"
+  等人工按键；同时任务注册命令行缺 `-NonInteractive`，两者叠加 = 桌面弹窗 + 任务永久挂起。
+  修复：`-UseBasicParsing` + `$ConfirmPreference="None"` + `$ProgressPreference` +
+  注册补 `-NonInteractive` 与 `Settings.Hidden`；新增 `tests/check_noninteractive.ps1`
+  静态门禁（已挂 CI，变异测试验证可抓「只在注释里提 flag」的洗绿形态）。
+- **自主闭环决策留痕顺序**（issue #1）：`autonomy.advanceLocked` 与 `bootstrapLocked`
+  的恢复路径原先「先切活跃目标、后写 nextGoal 决策」，而两者写不同文件
+  （goals.json / decisions.jsonl，非原子），留下一个可观测窗口 —— 面板与
+  `--selftest` 判据 7b 会看到「目标已切换但台账无推导记录」，CI 上
+  `TestRunOneDrivesAutonomyClosedLoop` 的偶发红即源于此。现收敛为
+  `writeLedgerThenActivate`（先留痕后生效），并由顺序守卫测试钉死。
+- **非 Windows 删除无安全阀**（issue #2）：`retention.Trash` 的 `!windows` 分支此前是裸
+  `os.RemoveAll`，危险路径判定只存在于 Windows 分支 —— 实测 `Trash("/")` 在 Linux
+  会递归删掉文件系统根。现 `refuseDangerousPath` 上移为平台无关实现，两条删除路径同过闸。
+- **产物子系统门禁**：`setup/build.ps1` 校验 EXE 的 PE `Subsystem` 必须为 2(GUI)，
+  非 GUI 直接判红。控制台子系统 EXE 被计划任务/`Win32_Process.Create` 拉起时
+  Windows 必分配可见控制台窗口（桌面反复弹窗的根因）。
+- **测试硬编码 Windows 工具链**（issue #2）：engine / verify 的 10 个用例改为解释器探针
+  （pwsh→python3→python→node）；Windows 上全缺时 `t.Fatal`，禁止 `t.Skip` 洗绿。
+  Linux 容器 `go test ./...` 从「3 包 10 用例 FAIL」转为全绿。
+- **失败判据被偷换**：`TestMaterializeArtifactsFail` 原先只断言 `Pass == false`，
+  而解释器缺失导致的「启动失败」同样 Pass=false —— 测试绿但什么都没验。
+  现补断 `FailReason` 必须含「退出码 2」。
+
+### Changed
+- **覆盖率提升并固化基线**（issue #3）：`internal/chain` 0% → 88.6%、
+  `internal/judge` 0% → 63.7%（含空输入 / 非法 JSON / 越界钳位 / 40 万字符超长负面用例）；
+  `build.ps1 -PerPackageCover` 新增 `chain=80`、`judge=55` 诚实基线（只许抬不许降）。
+- CI 触发分支补 `master`（建仓默认分支实为 master，此前 workflow 只写 main 导致 push 不触发）。
+- Windows 8.3 短路径（`RUNNER~1`）导致的 CI 假失败：路径比较统一经 `evalExisting` 归一。
+- `store.Update` 由原地写改为换指针，消除与 `runOne` defer 的真 data race（`-race` 哨兵抓出）。
+
 ## [1.3.0] - 2026-10-19
 
 ### Added
@@ -263,4 +542,3 @@
 
 ### Known issues
 - 7×24 长时压测未跑满 24h（已完成 3 轮长时 + 3 次崩溃注入）。
-

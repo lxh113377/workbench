@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -52,6 +53,11 @@ func main() {
 			os.Exit(runStatusCLI())
 		case "--stop":
 			os.Exit(runStopCLI())
+		case "--quit":
+			// 整体退出（2026-10-19 现场补齐）：产品此前**只能靠 taskkill 强杀** ——
+			// tray 的「退出工作台」要 UI 自动化，signal 对 GUI 进程收不到，--stop 只停引擎。
+			// 这条命令走与信号处理同一条优雅路径，让运维/自动化能无人工地让实例整体停下。
+			os.Exit(runQuitCLI())
 		case "--setup":
 			os.Exit(runSetupCLI())
 		case "--governance", "--gov":
@@ -72,6 +78,18 @@ func main() {
 			os.Exit(runSoakCLI(args[1:]))
 		case "--acceptance", "--ac":
 			os.Exit(runAcceptanceCLI(args[1:]))
+		case "--ui-probe":
+			// 前端验收的确定性通道（ui_probe.go）。
+			//
+			// 事故（2026-10-19 19:17 实测，且 20:10 又复现一次）：这一格曾在并发改写
+			// main.go 时**整段消失**，源码能编译、测试全绿，但主入口二进制跑 --ui-probe
+			// 会**静默回落**成 GUI 启动（打印「工作台已在运行」后退出 0）。
+			// 前端门禁因此拿不到确定性通道，整轮读数变成 unverified ——
+			// 属于「没测成被当成没问题」，比断言失败更危险。
+			// 回落路径由 TestMainDispatchKeepsUIProbeFlag 用真实二进制守住（见 main_dispatch_test.go）。
+			os.Exit(runUIProbeCLI(args[1:]))
+		case "--prune":
+			os.Exit(runPruneCLI(args[1:]))
 		case "--export-all":
 			dir := ""
 			if len(args) > 1 {
@@ -89,7 +107,15 @@ func main() {
 func runApp(args []string) error {
 	silent := false
 	for _, a := range args {
-		if a == "--silent" {
+		switch a {
+		case "--silent":
+			silent = true
+		case "--headless":
+			// --headless 是 --silent 的显式子集（2026-10-21 老大指令「无头执行」）：
+			// 两者都"不弹面板"，区别在语义来源 —— --silent 表达"服务化启动"，
+			// --headless 表达"本次运行根本不该出现任何窗口"。
+			// 保留两个名字是因为既有计划任务/守护脚本已经用 --silent 在跑，
+			// 改名会静默失效（历史教训：快捷方式参数改动没同步 = 永远起不来）。
 			silent = true
 		}
 	}
@@ -108,16 +134,44 @@ func runApp(args []string) error {
 		return err
 	}
 	if alreadyRunning {
+		// 面板地址只能用**精确**的实例自报地址来定位，不能用端口顺延扫描。
+		//
+		// 现场（2026-10-19 老大：快捷方式打开显示「重试」）：
+		//   原实现 ProbeRunning(host, basePort, 10) 从 basePort 起连扫 10 个端口，
+		//   任何监听成功的端口都被当成「工作台面板」。实测 17890 是主实例、
+		//   17891 是压测副本（wbsoak26.exe），于是二次启动把浏览器指向了副本；
+		//   副本一死 URL 成死端口，页面 fetch 全失败 -> 按钮落进 error 态「重试」。
+		//   语义错误在于：端口号相邻 ≠ 同一实例。
+		//
+		// 现在只认两处权威来源：实例自写的 runtime/panel.url；其次配置里的精确端口。
+		//
+		// --silent 必须覆盖本分支（2026-10-19 实测事故）：守护进程/压测/自愈都会用
+		// --silent 拉起自身，一旦它们撞上"已在运行"，原实现仍然会往桌面弹一个面板窗口 ——
+		// 服务化启动污染桌面，正是老大反复反馈"一直在跳这个"的来源之一。
+		if url := resolveRunningPanelURL(layout); url != "" {
+			if shouldOpenPanel(silent) {
+				// 先声明意图再动手：输出即契约，黑盒测试据此判定
+				// 「服务化启动有没有污染桌面」，不依赖浏览器是否真的起来。
+				fmt.Println(panelOpenedMarker + url)
+				openPanel(url)
+			}
+			fmt.Println("工作台已在运行：" + url)
+			return nil
+		}
 		preCfg, _ := config.NewStore(layout.ConfigFile)
 		basePort := 17890
 		if preCfg != nil {
 			basePort = preCfg.Get().Server.Port
 		}
-		if p, ok := single.ProbeRunning("127.0.0.1", basePort, 10); ok {
-			openPanel(fmt.Sprintf("http://127.0.0.1:%d/", p))
-			fmt.Println("工作台已在运行：" + fmt.Sprintf("http://127.0.0.1:%d/", p))
+		if p, ok := single.ProbeExactPort("127.0.0.1", basePort); ok {
+			url := fmt.Sprintf("http://127.0.0.1:%d/", p)
+			if shouldOpenPanel(silent) {
+				fmt.Println(panelOpenedMarker + url)
+				openPanel(url)
+			}
+			fmt.Println("工作台已在运行：" + url)
 		} else {
-			fmt.Println("工作台已在运行，但未能定位面板端口")
+			fmt.Println("工作台已在运行，但未能定位面板地址（panel.url 缺失且精确端口不通）")
 		}
 		return nil
 	}
@@ -204,18 +258,61 @@ func runApp(args []string) error {
 		hub.Emit(model.Event{Type: "error", At: model.Now(), Msg: "恢复状态失败: " + err.Error()})
 	}
 
+	// 优雅退出的唯一实现（2026-10-19）：信号与 /api/engine/quit 共用这一段，
+	// 避免两条退出路径各自为政（例如一条落盘相位、另一条不落）。
+	quitOnce := sync.Once{}
+	gracefulQuit := func() {
+		quitOnce.Do(func() {
+			_ = eng.Stop()
+			srv.Close()
+			os.Exit(0)
+		})
+	}
+	// quitByUser 是「用户主动退出」的**唯一实现**（托盘「退出工作台」走这里）。
+	//
+	// 为什么必须落标记（2026-10-19 现场缺陷：托盘点「退出工作台」关不掉）：
+	//
+	//	gracefulQuit 只做 Stop→Close→Exit，**不表达「这是用户主动退出」**；
+	//	而外部守护（tests/keepalive.ps1 + 计划任务 WorkBenchKeepAlive，每分钟一次）
+	//	只看面板 data-state=stopped/idle 就判定「该拉起来」，于是：
+	//	  点退出 → 进程结束、相位落 stopped → ≤60s 被重新拉起
+	//	  → 新实例 POST /api/engine/start → 回到 running
+	//	用户观感 = "关不掉"，且 7x24 语义被反转成"用户无权停机"。
+	//
+	// MarkUserQuit 落两个消费者都能读到的证据：state.json 的 userQuit 字段
+	// 与 runtime/user-quit.flag；守护据此跳过拉起。清除点 = Engine.Start()
+	// （用户点「启动引擎」/面板「开始」= 恢复运行 = 恢复正常守护语义）。
+	//
+	// 面板 /api/engine/quit 已走同一处理（internal/web/server.go handleEngineQuit），
+	// 本条补齐托盘这条**不经 HTTP** 的入口。
+	quitByUser := func() {
+		if err := eng.MarkUserQuit(); err != nil {
+			logger.At("tray").Warn("记录用户主动退出标记失败", "err", err)
+			hub.Emit(model.Event{Type: "warn", At: model.Now(), Msg: "记录用户主动退出标记失败: " + err.Error()})
+		}
+		gracefulQuit()
+	}
 	stopSignal := make(chan os.Signal, 2)
 	signal.Notify(stopSignal, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-stopSignal
-		_ = eng.Stop()
-		srv.Close()
-		os.Exit(0)
+		gracefulQuit()
 	}()
+	// 让面板也能触发整体退出（--quit CLI 就是走这条路）。
+	srv.SetQuitHook(gracefulQuit)
 
 	state := st.State()
 	cfg := cstore.Get()
-	shouldAutoStart := cfg.AutoStart || (cfg.AutoResume && (state.Phase == model.PhaseRunning || state.Phase == model.PhasePaused))
+	// 接续判据（2026-10-19 现场缺陷修正）：
+	//
+	// 原判据只看 (running|paused)，但**自愈停机会把 phase 落成 stopped** ——
+	// 于是「资源自愈」重启后引擎永不恢复，7x24 只重启了壳。见 engine.AbortForSelfHeal。
+	//
+	// 现在加入 explicit 的 ResumeAfterRestart 标记（仅被动中断时置位）：
+	//   - running/paused        : 进程被杀/断电等，恢复运行
+	//   - resumeAfterRestart    : 自愈触发的重启，必须接续
+	//   - 其它（含用户主动 stop）: 尊重用户意愿，保持停止
+	shouldAutoStart := shouldAutoStart(cfg, state.Phase, state.ResumeAfterRestart)
 	if shouldAutoStart {
 		if err := eng.Start(); err != nil {
 			hub.Emit(model.Event{Type: "error", At: model.Now(), Msg: "自动恢复运行失败: " + err.Error()})
@@ -230,7 +327,9 @@ func runApp(args []string) error {
 	srv.SetSupervisor(sup)
 	sup.OnHeal(func(reason string) {
 		hub.Emit(model.Event{Type: "warn", At: model.Now(), Msg: "资源自愈触发: " + reason})
-		_ = eng.Stop()
+		// 用 AbortForSelfHeal 而非 Stop：前者会落 ResumeAfterRestart 标记，
+		// 保证重启后引擎真的接续干活（否则 7x24 只是重启了壳）。
+		_ = eng.AbortForSelfHeal(reason)
 		if err := sup.SelfHeal(reason); err != nil {
 			hub.Emit(model.Event{Type: "error", At: model.Now(), Msg: "自愈重启失败: " + err.Error()})
 			return
@@ -277,16 +376,24 @@ func runApp(args []string) error {
 			Title:    "个人 AI 工作台",
 			Tooltip:  "个人 AI 工作台",
 			Status:   func() string { return string(eng.Phase()) },
-			OnOpen:   func() { openPanel(srv.URL()) },
+			// 托盘降级必须可见（2026-10-19 老大："状态栏也没有图标"）：注册失败时把
+			// 原因写进日志与事件流，而不是静默少一个图标让人无从排查。
+			OnWarn: func(msg string) {
+				logger.At("tray").Warn(msg)
+				hub.Emit(model.Event{Type: "warn", At: model.Now(), Msg: msg})
+			},
+			OnOpen: func() { openPanel(srv.URL()) },
 			OnStart:  func() { _ = eng.Start() },
 			OnPause:  func() { _ = eng.Pause() },
 			OnResume: func() { _ = eng.Resume() },
 			OnStop:   func() { _ = eng.Stop() },
-			OnQuit: func() {
-				_ = eng.Stop()
-				srv.Close()
-				os.Exit(0)
-			},
+			// 「退出工作台」必须走 quitByUser（用户主动退出），不得裸调 gracefulQuit。
+			//
+			// 托盘是**不经 HTTP** 的退出入口：gracefulQuit 只落 stopped、不表达用户意图，
+			// 于是外部守护（tests/keepalive.ps1，每分钟一次）看到 stopped 就把实例重新拉起。
+			// 2026-10-19 现场实测：点「退出工作台」后 ≤60s 被拉起并自动 start，
+			// 70s 后又被拉起一次 —— 用户观感「关不掉」。见 quitByUser 注释。
+			OnQuit: quitByUser,
 		})
 	}()
 	<-trayDone
@@ -455,10 +562,50 @@ func openPanelOrPrint(layout config.Layout) {
 	fmt.Println("工作台已在运行：" + url)
 }
 
+// panelOpenedMarker 是「已把面板推到桌面」的输出标记。
+//
+// 为什么要一行输出（2026-10-19 现场）：--silent 的语义是"服务化启动，不弹面板"，
+// 但旧实现只在**首次启动**分支尊重它，"已在运行"分支无条件弹窗 —— 结果是守护/
+// 压测/自愈在桌面上反复弹面板。这类缺陷靠"看代码"极易漏，必须能被黑盒判据抓住：
+// 约定凡是**真的要弹面板**就先打这一行，测试据此断言 --silent 下不出现。
+const panelOpenedMarker = "已打开面板："
+
+// shouldOpenPanel 判断本次启动要不要把面板推到桌面。
+//
+// 唯一授权来源 = 没带 --silent。两处调用点都必须经它，禁止各自判断
+// （历史上正是"一处判断、另一处漏判"造成服务化启动弹窗）。
+func shouldOpenPanel(silent bool) bool { return !silent }
+
 func openPanel(url string) {
+	// 无头开关兜底（2026-10-21 老大指令「不要给我跳出来窗口，无头执行」）：
+	// 即便调用点漏判 silent，只要环境要求无头，就**绝不**拉起浏览器。
+	// 双层防护的理由：shouldOpenPanel 是"代码里的决定"，环境变量是"运行期的强制"，
+	// 后者覆盖前者 —— 测试/CI/无人值守不该因为某处分支漏判而污染桌面。
+	if headlessEnv() {
+		return
+	}
 	if err := browser.Open(url); err != nil {
 		fmt.Println("请手动打开：" + url)
 	}
+}
+
+// resolveRunningPanelURL 返回「可以放心交给浏览器」的面板地址；没有则返回空串。
+//
+// 权威来源只有一处：实例自写的 runtime/panel.url。
+//
+// 为什么必须校验存活（2026-10-19 现场）：残留的 panel.url 会指向已经死掉的端口，
+// 直接把老大送进「页面 fetch 全失败 -> 按钮落 error 态」的死页。
+// 因此这里要求地址**当前真的能 2xx 打开**，否则视为不可用、返回空串，
+// 让调用方退回到「精确端口探测」这条更保守的路径。
+func resolveRunningPanelURL(layout config.Layout) string {
+	url := readRunningURL(layout)
+	if url == "" {
+		return ""
+	}
+	if !panelAlive(url) {
+		return "" // 写入者已死，盘上的地址不可信
+	}
+	return url
 }
 
 // readRunningURL 从 runtime 目录读取当前实例写入的面板地址。
@@ -477,16 +624,19 @@ func ensureShortcuts(layout config.Layout, hub *web.Hub) {
 	if !shortcut.Guard() {
 		return
 	}
-	marker := filepath.Join(layout.RuntimeDir, "shortcut.ok")
-	if _, err := os.Stat(marker); err == nil {
-		return
-	}
+	// 幂等性从"跑过一次就永远跳过"改成"每次启动都校验并修复"。
+	//
+	// 为什么改（2026-10-19 现场）：原实现用 runtime\shortcut.ok 做一次性标记，
+	// 于是当年写坏的快捷方式（带着 --silent 参数）**永远不会被自动纠正** ——
+	// 老大双击后 app 在后台跑起来但桌面无窗口，看起来就是"点不开"，
+	// 而且重启多少次都不会自己好。现在每次启动都让 Create() 校验并重写一遍
+	// （Create 自身带 TargetPath + Arguments 回读校验），代价是一次短命的 powershell 调用。
 	if err := shortcut.Create(); err != nil {
 		hub.Emit(model.Event{Type: "warn", At: model.Now(), Msg: "创建快捷方式失败: " + err.Error()})
 		return
 	}
+	marker := filepath.Join(layout.RuntimeDir, "shortcut.ok")
 	_ = os.WriteFile(marker, []byte(time.Now().Format(time.RFC3339)), 0o644)
-	hub.Emit(model.Event{Type: "ready", At: model.Now(), Msg: "已创建桌面快捷方式"})
 }
 
 // ── CLI 子命令 ─────────────────────────────────────────────────
@@ -548,6 +698,26 @@ func runStopCLI() int {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
+	// 跨进程盲写的风险（2026-10-19 现场缺陷）：
+	//
+	// 本命令在**另一个进程**里自开 store，只能看到磁盘快照，看不到运行中实例的内存相位。
+	// 改造前它无条件把 stopped 写盘 —— 于是内存仍在 running 时，磁盘被写坏成 stopped，
+	// 且因为 Engine.Start() 幂等分支不落盘，这个分歧**永久化**。
+	// 后果：重启后的接续判据 shouldAutoStart 读磁盘 => 误判为「用户停过」=> 不自启 => 7x24 断链。
+	//
+	// 修法：写盘前先看面板/进程是否仍活着。
+	//   活着的实例 => 磁盘相位代表不了内存，**只发停机请求、不写 phase**；
+	//   无实例      => 才是真正的停机，可安全落盘 stopped。
+	alive := panelAlive(readRunningURL(layout))
+	if alive {
+		// 仍在运行：交给运行中的实例自己优雅停机（它会正确落盘）。
+		if err := requestPanelStop(layout); err != nil {
+			fmt.Println("已请求停机，但面板未确认：" + err.Error())
+			return 1
+		}
+		fmt.Println("已请求运行中的工作台优雅停机（未改写磁盘相位，避免与内存分歧）。")
+		return 0
+	}
 	st, err := store.Open(layout)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -564,6 +734,74 @@ func runStopCLI() int {
 	_ = st.Savepoint()
 	fmt.Println("已标记停止；若进程仍在运行，请通过面板或托盘退出。")
 	return 0
+}
+
+// runQuitCLI 让运行中的实例**整体退出**（进程结束，不只是引擎停）。
+//
+// 为什么需要（2026-10-19 现场缺陷）：
+//
+//	产品此前**没有任何程序化退出入口**：
+//	  - tray 菜单「退出工作台」是 WM_COMMAND 1006，需要 UI 自动化；
+//	  - signal.Notify(os.Interrupt/SIGTERM) 对无控制台的 GUI 进程收不到；
+//	  - --stop 只停引擎、不停进程（那是它的正确语义，但换二进制时不够用）。
+//	=> 运维/自动化想重启实例只能 taskkill 强杀，违反「零人工干预」。
+//
+// 实现方式：走与 main() 里信号处理**同一条**优雅路径 ——
+//
+//	面板发 POST /api/engine/quit，运行中的实例收到后自行 eng.Stop -> srv.Close -> 退出。
+//	自己不擅自写磁盘相位（相位由**运行中的实例**在优雅退出时落盘，语义唯一）。
+//
+// 退出码：0 = 已请求（实例会自己退出）/ 1 = 无实例或请求失败。
+func runQuitCLI() int {
+	layout, err := config.ResolveLayout("")
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	if !panelAlive(readRunningURL(layout)) {
+		fmt.Println("没有运行中的实例（面板不可达），无需退出。")
+		return 1
+	}
+	if err := requestPanelQuit(layout); err != nil {
+		fmt.Println("已请求退出，但面板未确认：" + err.Error())
+		return 1
+	}
+	fmt.Println("已请求运行中的工作台整体退出（优雅路径，相位由实例自行落盘）。")
+	return 0
+}
+
+// requestPanelQuit 请求运行中的实例整体退出。
+func requestPanelQuit(layout config.Layout) error {
+	url := readRunningURL(layout)
+	if url == "" {
+		return fmt.Errorf("未能定位面板地址")
+	}
+	page, err := httpGet(url)
+	if err != nil {
+		return err
+	}
+	token := extractWBTokens(page)
+	if token == "" {
+		return fmt.Errorf("页面未暴露 token")
+	}
+	return httpPostJSON(strings.TrimRight(url, "/")+"/api/engine/quit", token, map[string]any{})
+}
+
+// requestPanelStop 让运行中的实例优雅停机（面板 /api/engine/stop，需要实例自己的 token）。
+func requestPanelStop(layout config.Layout) error {
+	url := readRunningURL(layout)
+	if url == "" {
+		return fmt.Errorf("未能定位面板地址")
+	}
+	page, err := httpGet(url)
+	if err != nil {
+		return err
+	}
+	token := extractWBTokens(page)
+	if token == "" {
+		return fmt.Errorf("页面未暴露 token")
+	}
+	return httpPostJSON(strings.TrimRight(url, "/")+"/api/engine/stop", token, map[string]any{})
 }
 
 // runGovernanceCLI 是治理子系统的命令行出口（只读优先，写动作必须显式子命令）。
@@ -937,4 +1175,29 @@ func sanitizeFileName(s string) string {
 		out = string([]rune(out)[:60])
 	}
 	return out
+}
+
+// shouldAutoStart 是「进程启动时是否自动开跑」的**唯一**判据（纯函数，便于单测）。
+//
+// 现场缺陷（2026-10-19）：原判据只看 (running|paused)，而自愈停机把 phase 落成 stopped，
+// 于是「资源自愈保证 7x24」重启后引擎永不恢复 —— 只重启了壳，不恢复干活。
+//
+// 判据矩阵：
+//
+//	AutoStart=true                     => 启动（开机自启语义，无条件）
+//	AutoResume=true 且 running/paused  => 启动（进程被杀/断电后恢复）
+//	AutoResume=true 且 resumeMarked    => 启动（自愈触发的被动中断，必须接续）
+//	其它（含用户主动 stop 的 stopped）  => 不启动（尊重用户意愿）
+func shouldAutoStart(cfg config.Config, phase model.EnginePhase, resumeMarked bool) bool {
+	if cfg.AutoStart {
+		return true
+	}
+	if !cfg.AutoResume {
+		return false
+	}
+	if phase == model.PhaseRunning || phase == model.PhasePaused {
+		return true
+	}
+	// 自愈重启：phase 已是 stopped，但标记说明「停机前确实在跑」，必须接续。
+	return resumeMarked && phase == model.PhaseStopped
 }

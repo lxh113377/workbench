@@ -44,6 +44,10 @@ type Server struct {
 
 	mu       sync.Mutex
 	starting bool
+
+	// onQuit 是「整体退出」钩子，由 main 注入（做 eng.Stop + srv.Close + 退出）。
+	// 放在 web 层只做触发、不自己决定怎么退，避免 web 与 main 的退出语义分叉。
+	onQuit func()
 }
 
 // NewServer 构造服务（token 每次进程启动随机生成）。
@@ -56,6 +60,9 @@ func (s *Server) SetGovernance(g *gov.Engine) { s.gov = g }
 
 // SetModelPool 注入模型池服务（模型清单/探测/调度策略的配置面）。
 func (s *Server) SetModelPool(p *modelpool.Service) { s.pool = p }
+
+// SetQuitHook 注入「整体退出」钩子（不注入时 /api/engine/quit 返回 503）。
+func (s *Server) SetQuitHook(f func()) { s.onQuit = f }
 
 // SetSupervisor 注入资源治理器（/api/metrics 读取其最近采样）。
 func (s *Server) SetSupervisor(m *supervisor.Manager) { s.supervisor = m }
@@ -84,7 +91,28 @@ func (s *Server) cfgHost() string {
 }
 
 // Listen 启动监听；端口被占用时自动 +1 重试。
+//
+// 幂等保护（2026-10-19 现场缺陷修复）：
+//
+// 现场：Server 声明了 mu + starting 两个字段，本意是防「并发/重复启动」，
+// 但 starting **从未被读或写**（全库只出现在结构体声明处）——
+// 于是重复调用会 net.Listen 成功、覆盖 s.ln/s.port、再起一个 Serve 循环：
+// 实测端口从 17892 漂到 17894，且两个监听并存。
+//
+// 危害：端口漂移会让 panel.url 指向错误实例（现场「重试」事故的同源风险）；
+// 双 Serve 让面板响应时有时无。main.go 与 ui_probe.go 都会调用 Listen()，
+// 路径不止一条，所以这道保护必须真的生效。
+//
+// 实现：用 starting 做「已启动」标记（持 mu 读写），已启动则直接返回 nil。
 func (s *Server) Listen() error {
+	// 先判是否已启动：幂等 —— 重复调用不得换端口、不得起第二个 Serve。
+	s.mu.Lock()
+	if s.starting {
+		s.mu.Unlock()
+		return nil
+	}
+	s.mu.Unlock()
+
 	cfg := s.cstore.Get()
 	host := s.cfgHost()
 	base := cfg.Server.Port
@@ -99,6 +127,8 @@ func (s *Server) Listen() error {
 		s.mu.Lock()
 		s.ln = ln
 		s.port = base + i
+		// 置已启动标记：后续重复调用在入口即返回，不再换端口、不再起 Serve。
+		s.starting = true
 		s.mu.Unlock()
 		mux := http.NewServeMux()
 		s.routes(mux)
@@ -111,8 +141,8 @@ func (s *Server) Listen() error {
 				_ = err
 			}
 		}()
-		_ = os.WriteFile(filepath.Join(s.layout.RuntimeDir, "panel.url"), []byte(s.URL()), 0o644)
-		// 写入面板地址与端口，供二次启动/CLI 定位
+		// 写入面板地址与端口，供二次启动/CLI 定位。
+		// 注：这里曾把 panel.url 连写两遍（复制粘贴残留），已清理。
 		_ = os.WriteFile(filepath.Join(s.layout.RuntimeDir, "panel.url"), []byte(s.URL()), 0o644)
 		_ = os.WriteFile(filepath.Join(s.layout.RuntimeDir, "panel.port"), []byte(strconv.Itoa(s.Port())), 0o644)
 		return nil
@@ -160,11 +190,19 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("/assets/app.css", s.handleCSS)
 	mux.HandleFunc("/assets/app.js", s.handleJS)
 	mux.HandleFunc("/assets/gov.js", s.handleGovJS)
+	// 图标 + 旧浏览器兜底（favicon.go）。2026-10-19 实测回归：两个处理器早已实现，但 routes() 从未注册，页面声明的 /assets/favicon.svg 落到 handleIndex 的 404；
+	// 既有 TestPagesDeclareFavicon 只断言 HTML 里有这行 link，所以一直是绿的。
+	// 交叉校验见 asset_route_contract_test.go。
+	mux.HandleFunc("/assets/favicon.svg", s.handleFavicon)
+	mux.HandleFunc("/favicon.ico", s.handleFaviconICO)
 	mux.HandleFunc("/api/status", s.guard(s.handleStatus))
 	mux.HandleFunc("/api/engine/start", s.guard(s.handleEngineStart))
 	mux.HandleFunc("/api/engine/pause", s.guard(s.handleEnginePause))
 	mux.HandleFunc("/api/engine/resume", s.guard(s.handleEngineResume))
 	mux.HandleFunc("/api/engine/stop", s.guard(s.handleEngineStop))
+	// /api/engine/quit 是**整体退出**入口（2026-10-19 现场补齐）：
+	// 产品此前没有程序化退出路径，运维换二进制只能强杀。见 handleEngineQuit。
+	mux.HandleFunc("/api/engine/quit", s.guard(s.handleEngineQuit))
 	mux.HandleFunc("/api/queue", s.guard(s.handleQueue))
 	mux.HandleFunc("/api/tasks", s.guard(s.handleTasks))
 	mux.HandleFunc("/api/tasks/", s.guard(s.handleTaskDetail))
@@ -180,7 +218,7 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/logs", s.guard(s.handleLogs))
 	mux.HandleFunc("/api/metrics", s.guard(s.handleMetrics))
 	mux.HandleFunc("/api/failures", s.guard(s.handleFailures))
-	// P1-3：Prometheus 文本格式指标导出（外部监控系统直抓），与 /api/metrics 同源同口径。
+	// P1-3：Prometheus 文本格式导出（外部监控系统直抓），与 /api/metrics 同源同口径。
 	mux.HandleFunc("/metrics", s.guard(s.handleMetricsProm))
 	mux.HandleFunc("/api/autonomy", s.guard(s.handleAutonomySummary))
 	mux.HandleFunc("/api/autonomy/decisions", s.guard(s.handleAutonomyDecisions))
@@ -313,13 +351,10 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		// 限流状态自证：上游 429 时工作台会"运行中但 0 产出"，
 		// 必须让面板能说清"我为什么没在干活"（否则 24/7 系统会静默停摆）。
 		"rateLimit": s.engine.RateLimitStatus(),
-		// 请求速率闸门状态（2026-10-19 事故后新增）：让"限速是否真的在工作"
-		// 成为可读读数，而不是靠日志猜。
-		"rateLimiter": s.engine.RateLimiterSnapshot(),
-		// 车道健康：区分「临时限速（能等）」与「上游 IP 封禁（等也没用）」。
-		"laneHealth": s.engine.LaneHealth(),
-		"requestsPerMinute": cfg.Executor.RequestsPerMinute,
-		"requestBurst":      cfg.Executor.RequestBurst,
+		// 停摆原因自证（2026-10-21 现场）：用户报告的正是"运行中但今日产出 0"。
+		// 只报 running + 0 而不说为什么，等于把排查成本全推给人；
+		// stallReason 把"为什么现在没有产出"归纳成稳定原因码 + 一句人话。
+		"stallReason": s.engine.StallReason(),
 	})
 }
 
@@ -350,6 +385,32 @@ func (s *Server) handleEngineResume(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleEngineStop(w http.ResponseWriter, r *http.Request) {
 	go func() { _ = s.engine.Stop() }()
 	ok(w, map[string]any{"phase": "stopping"})
+}
+
+// handleEngineQuit 触发**整体退出**（进程结束），而不只是停引擎。
+//
+// 语义分工：
+//
+//	/api/engine/stop —— 停引擎，进程与服务继续（用户可再点「开始」）；
+//	/api/engine/quit —— 整体退出，交给 main 注入的钩子走优雅路径。
+//
+// 为什么不在 web 层直接 os.Exit：退出要落盘相位、关服务、等 drain，
+// 那是 main 的职责；web 只负责「被请求了」这件事。
+func (s *Server) handleEngineQuit(w http.ResponseWriter, r *http.Request) {
+	if s.onQuit == nil {
+		http.Error(w, "quit hook not installed", http.StatusServiceUnavailable)
+		return
+	}
+	// 先落「用户主动退出」标记（2026-10-19 现场）：
+	// 外部守护者（tests/keepalive.ps1）原本把 stopped/idle 一律拉回 running，
+	// 区分不出「意外停机」与「用户主动退出」——于是 --quit 后 60 秒又被拉起。
+	// 产品侧先表达出来，外部才有据可依；Start() 时会清掉它。
+	if err := s.engine.MarkUserQuit(); err != nil {
+		http.Error(w, "mark user quit failed: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+	ok(w, map[string]any{"quitting": true})
+	go s.onQuit()
 }
 
 func (s *Server) handleQueue(w http.ResponseWriter, r *http.Request) {

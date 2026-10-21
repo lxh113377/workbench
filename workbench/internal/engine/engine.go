@@ -83,12 +83,12 @@ type Engine struct {
 	// rateLimit 记录连续限流次数（用于整池冷却的指数退避），rateLimitMu 保护它。
 	rateLimitMu sync.Mutex
 	rateLimit   rateLimitState
-	// pendingWarn 缓存**构造期**的降级原因（2026-10-20 实测缺陷 D12）。
+	// pendingWarn 缓存**构造期**的降级原因（L6 接线收口，2026-10-20 实测缺口）。
 	//
 	// 问题形态：New() 里 e.log 先是 Nop，而 main.go 是在 New() **返回之后**才
 	// SetLogger(logger)。于是构造期所有"失败只告警不阻断"的告警（审计文件打不开、
-	// 自主子系统初始化失败）写进 io.Discard —— 永久消失。现场表现为自主链路没起来、
-	// 越权审计文件一直是空的，但日志与面板里一条原因都查不到，只能靠猜。
+	// 自主子系统初始化失败）写进了 io.Discard —— 永久消失。注释承诺"只告警"，
+	// 实际是"零可观测"：现场表现为自主链路没起来，日志里一条原因都查不到。
 	// 这里先缓冲，SetLogger 时一次性冲刷；未注入日志器时保持零输出（库默认语义不变）。
 	pendingWarnMu sync.Mutex
 	pendingWarn   []pendingWarnRecord
@@ -108,6 +108,13 @@ type Engine struct {
 	routeLogMu       sync.Mutex
 	routeFingerprint string
 	routeLogAt       time.Time
+	// rejectBreakerAt 记录每个目标最近一次"拒绝熔断"告警时刻（按目标去抖）。
+	//
+	// 现场（2026-10-21）：同一目标连续 2000 条草案被评估拒绝、连续 12 小时零产出，
+	// 期间**没有任何日志**说明正在空转，只能靠事后翻 queue.json 才发现。
+	// 静默空转是 24/7 系统最坏的失效形态：熔断必须自己发声。
+	rejectBreakerMu sync.Mutex
+	rejectBreakerAt map[string]int64
 }
 
 // New 构造引擎。
@@ -129,10 +136,13 @@ func New(layout config.Layout, cstore *config.Store, st *store.Store, reg *templ
 		slots:  make(chan struct{}, cfg.Executor.Concurrency),
 		log:    logging.Nop(),
 		ws:     workspace.New(layout.DataRoot, layout.Root, cfg.Workspace),
+
+		rejectBreakerAt: map[string]int64{},
 	}
 	// 工作目录审计：允许/拒绝都落盘，越权尝试可事后复核（打开失败只告警不阻断）。
-	// L6 接线收口（D12）：改造前 aerr 被直接丢掉，"越权审计没开"完全不可见 ——
-	// 面板显示 external 模式正常，但 workspace-audit.jsonl 始终为空，事后复核无从谈起。
+	// L6 接线收口：改造前这里 aerr 被直接丢掉，且紧随其后的 e.log 又被重设成 Nop，
+	// 于是"越权审计没开"这件事在现场完全不可见 —— 面板显示 external 模式正常，
+	// 但 workspace-audit.jsonl 一直是空的，事后复核无从谈起。
 	if audit, aerr := workspace.OpenAudit(layout.WorkspaceAuditFile); aerr == nil {
 		e.ws.SetAudit(audit)
 	} else {
@@ -143,19 +153,19 @@ func New(layout config.Layout, cstore *config.Store, st *store.Store, reg *templ
 	e.wireWorkspaceRunner()
 	e.applyWorkspaceMode()
 	// 语义层（自评/摘要/判分）必须与引擎用同一个执行器（2026-10-20 实测缺陷 D7）：
-	// 改造前 judge.run() 每次自己 executor.New(...)，语义子任务于是绕过引擎的
-	// FailoverRunner（模型故障转移+车道健康度）与全局限速闸门，单测里还绕过
+	// 改造前 judge.run() 每次自己 executor.New(...)，于是语义子任务绕过引擎的
+	// FailoverRunner（模型故障转移 + 车道健康度）与全局限速闸门，单测里还绕过
 	// SetRunner 注入的假执行器 —— 直接后果是 go test 会真的拉起 DSH 子进程。
+	// 详细取证见 judge.SetRunner 的注释。
 	e.sem.SetRunner(e.runner)
-	// 闸门必须在**构造期**就装上（不能只等 ReloadConfig）：cmd/workbench/main.go 有第二个引擎
-	// 入口（一次性 CLI 自检路径，只 engine.New 后直接 SelfTestArtifactPipeline，全程不调
-	// ReloadConfig），那里若不装就等于该路径不限速。生产主路径随后还会 ReloadConfig 再装一次：
-	// applyRateLimit 幂等（替换令牌桶而非叠加），且 New→SetLogger→ReloadConfig 之间不发请求。
+	// 闸门必须在**构造期**就装上（不能只等 ReloadConfig）：
+	// cmd/workbench/main.go 有第二个引擎入口（--diagnose 类一次性 CLI，只 engine.New 后直接
+	// SelfTestArtifactPipeline，全程不调 ReloadConfig），那里若不装就等于该路径不限速。
+	// 生产路径随后还会 ReloadConfig 再装一次：applyRateLimit 幂等（替换令牌桶而非叠加），
+	// 且 New→SetLogger→ReloadConfig 之间不发请求，不会丢已在途的令牌状态。
 	e.applyRateLimit(cfg.Executor)
 	e.retryPol = buildRetryPolicy(cfg.Executor)
 	// 自主子系统：初始化失败只降级，不阻断引擎构造。
-	// 这里**不能**重设 e.log = logging.Nop()（改造前有这行）：结构体初始化已把 log
-	// 设为 Nop，再设一次等于把 SetLogger 之前的缓冲打回零输出（缺陷 D12）。
 	e.initAutonomy()
 	return e, nil
 }
@@ -182,8 +192,8 @@ type pendingWarnRecord struct {
 
 // warnDeferred 记录"不阻断但必须可见"的降级原因。
 //
-// 用法边界：只用于 New() 及其调用的构造期函数。运行期直接用 e.log.Warn ——
-// 那时日志器已装好，缓冲反而推迟可见性。
+// 用法边界：只用于 New() 及其被调用的构造期函数。运行期直接用 e.log.Warn ——
+// 那时日志器已经装好，缓冲反而会推迟可见性。
 func (e *Engine) warnDeferred(msg string, kv ...any) {
 	e.pendingWarnMu.Lock()
 	e.pendingWarn = append(e.pendingWarn, pendingWarnRecord{msg: msg, kv: kv})
@@ -191,7 +201,7 @@ func (e *Engine) warnDeferred(msg string, kv ...any) {
 }
 
 // flushPendingWarn 把构造期缓冲的降级原因写进真实日志器（SetLogger 时调用一次）。
-// 冲刷后清空：重复 SetLogger 不得把同一条原因写两遍。
+// 冲刷后清空：重复调用不得把同一条原因写两遍。
 func (e *Engine) flushPendingWarn() {
 	e.pendingWarnMu.Lock()
 	pending := e.pendingWarn
@@ -204,40 +214,40 @@ func (e *Engine) flushPendingWarn() {
 
 // attachAttemptLogging 把「尝试开始/尝试结束」日志挂成执行器钩子（L5 收敛）。
 //
-// 改造前的形态 e.runner.(*executor.Runner) 在接口里带具体类型，等于没脱离结构体：
-// main.go 用 FailoverRunner 包住真实执行器后再 SetRunner，这条断言就不匹配，
-// 尝试日志对模型池路径静默失效（功能正常、只是没日志，运行期发现不了）。
-// 现在沿 Inner() 链找 AttachHooks 能力；装不上也不报错（钩子是观测面，不影响执行）。
+// 改造前的形态是 e.runner.(*executor.Runner) —— 接口签名里带具体类型，等于没脱离
+// 结构体：main.go 用 FailoverRunner 包住真实执行器后再 SetRunner，这条断言就不匹配了，
+// 钩子只留在构造期那个对象上（碰巧还是同一个内层对象才没出事）。
+// 现在沿 Inner() 链找 AttachHooks 能力，装不上也不报错（钩子是观测面，不影响执行）。
 func (e *Engine) attachAttemptLogging() {
-		hooks := executor.NewHooks(
-			[]executor.BeforeRunFunc{func(ctx context.Context, task *model.Task, modelID string) error {
-				e.log.Info("尝试开始", logging.Redact([]any{
-					"taskId", task.ID, "model", modelID, "attempt", task.Attempts, "title", model.Truncate(task.Title, 60),
-				})...)
-				return nil
-			}},
-			[]executor.AfterRunFunc{func(ctx context.Context, task *model.Task, modelID string, res *executor.Result, err error) {
-				kind := "ok"
-				if err != nil {
-					kind = "error"
+	hooks := executor.NewHooks(
+		[]executor.BeforeRunFunc{func(ctx context.Context, task *model.Task, modelID string) error {
+			e.log.Info("尝试开始", logging.Redact([]any{
+				"taskId", task.ID, "model", modelID, "attempt", task.Attempts, "title", model.Truncate(task.Title, 60),
+			})...)
+			return nil
+		}},
+		[]executor.AfterRunFunc{func(ctx context.Context, task *model.Task, modelID string, res *executor.Result, err error) {
+			kind := "ok"
+			if err != nil {
+				kind = "error"
+			}
+			elapsed := int64(0)
+			stalled := false
+			if res != nil {
+				elapsed = res.Elapsed.Milliseconds()
+				stalled = res.Stalled
+				if res.ErrorKind != "" {
+					kind = res.ErrorKind
 				}
-				elapsed := int64(0)
-				stalled := false
-				if res != nil {
-					elapsed = res.Elapsed.Milliseconds()
-					stalled = res.Stalled
-					if res.ErrorKind != "" {
-						kind = res.ErrorKind
-					}
-				}
-				e.log.Info("尝试结束", logging.Redact([]any{
-					"taskId", task.ID, "model", modelID, "kind", kind,
-					"elapsedMs", elapsed, "stalled", stalled,
-				})...)
-			}},
-		)
+			}
+			e.log.Info("尝试结束", logging.Redact([]any{
+				"taskId", task.ID, "model", modelID, "kind", kind,
+				"elapsedMs", elapsed, "stalled", stalled,
+			})...)
+		}},
+	)
 	attachHooksToRunner(e.runner, hooks)
-	}
+}
 
 // SetRunner 替换执行器实现（P1-2 接口化的直接收益：可注入假执行器做单测）。
 func (e *Engine) SetRunner(r executor.RunnerContract) {
@@ -246,8 +256,8 @@ func (e *Engine) SetRunner(r executor.RunnerContract) {
 		// 换执行器后必须重新挂工作目录钩子与沙箱开关，否则 external 模式会静默失效。
 		e.wireWorkspaceRunner()
 		e.applyWorkspaceMode()
-		// 语义层跟着换（D7）：main.go 在这里才把 FailoverRunner 装上来，不同步的话
-		// 构造期注入的执行器会继续留在语义层上，限速与故障转移照样被绕开。
+		// 语义层跟着换（D7）：main.go 在这里才把 FailoverRunner 装上来，
+		// 不同步的话构造期注入的裸执行器会继续留在语义层上，限速与故障转移照样绕开。
 		e.sem.SetRunner(r)
 		// 换执行器后重装限速闸门（D9）：闸门挂在装饰器链最内层，只换外层不重装时，
 		// 新链若没有已装闸门的内层就退化成「面板显示限速、实际不限速」。
@@ -257,10 +267,11 @@ func (e *Engine) SetRunner(r executor.RunnerContract) {
 
 // SetSemanticRunner 单独替换语义层（自评/摘要/判分）使用的执行器。
 //
-// 与 SetRunner 的区别：SetRunner 换任务主链路执行器并同步钩子/沙箱开关；这里只影响
-// 语义子任务。用途：① 生产上语义层可用不同车道；② 测试里注入桩执行器，防止单测把
-// 真实 DSH 子进程拉起来（实测一次 go test 遗留 20+ 个子进程，并把 t.TempDir 的文件
-// 占用成 engine 包假红）。
+// 与 SetRunner 的区别：SetRunner 换的是任务主链路执行器，会同时重挂工作目录钩子与
+// 沙箱开关；这里只影响语义子任务。两个用途：
+//  1. 生产：语义层可与主链路用不同车道（如更便宜/更短超时的模型）；
+//  2. 测试：注入桩执行器，防止单元测试把真实 DSH 子进程拉起来（实测一次
+//     go test 遗留 20+ 个子进程、并把 t.TempDir 的文件占用成 engine 包假红）。
 func (e *Engine) SetSemanticRunner(r executor.RunnerContract) { e.sem.SetRunner(r) }
 
 // Runner 返回当前执行器实现（模型池装配故障转移装饰器时需要拿到底层实例）。
@@ -373,8 +384,34 @@ func (e *Engine) Start() error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.phase == model.PhaseRunning {
+		// 幂等分支也必须**对齐磁盘**（2026-10-19 现场缺陷）。
+		//
+		// 现场：老大要 7x24，我为换二进制执行了 --stop（CLI 在**另一个进程**里自开 store、
+		// 盲写 stopped，不知道内存里引擎仍在 running），随后用面板 POST /api/engine/start
+		// 让内存回到 running。结果：
+		//   磁盘 state.json = stopped（被 CLI 写的）
+		//   内存 phase      = running
+		// 而这条 early-return **不落盘**，于是分歧**永久化**、再也纠正不过来。
+		//
+		// 为什么对 7x24 致命：重启后的接续判据 shouldAutoStart(cfg, phase, resumeMarked)
+		// 读的是**磁盘** state.json。磁盘说 stopped => 重启后不自启 => 无人值守断在这一步。
+		//
+		// 修法：幂等分支也把磁盘对齐到 running。磁盘可能被别的进程写坏，
+		// 这里以「内存真实相位」为准做自愈。
+		if st := e.store.State(); st.Phase != model.PhaseRunning {
+			st.Phase = model.PhaseRunning
+			st.StartedAt = e.started
+			st.StoppedAt = 0
+			_ = e.store.SaveState(st)
+		}
+		// 幂等分支同样要清「用户主动退出」标记：
+		// 用户点「开始」的语义是「我要它跑」，与内存是否已是 running 无关。
+		// （测试实测：只在正常分支清会被这条 early-return 跳过，标记残留。）
+		e.clearUserQuit()
 		return nil
 	}
+	// 用户点「开始」= 恢复运行 = 恢复正常守护语义（清掉主动退出标记）。
+	e.clearUserQuit()
 	e.ctx, e.cancel = context.WithCancel(context.Background())
 	e.phase = model.PhaseRunning
 	e.started = model.Now()
@@ -394,6 +431,40 @@ func (e *Engine) Start() error {
 	return nil
 }
 
+// MarkUserQuit 记录「用户主动退出」（--quit / 面板退出）。
+//
+// 为什么必须有这个显式标记（2026-10-19 现场）：
+//
+//	外部守护者（tests/keepalive.ps1）的分支是「stopped 或 idle 都拉回 running」，
+//	它**区分不出**「意外停机」与「用户主动退出」——
+//	于是用户 --quit 后 60 秒内又被拉起来，--quit 等于不生效。
+//
+// 产品侧先把这件事表达出来，外部才有据可依；同时落一个 flag 文件，
+// 让 shell/PS 一行即可判断（不必解析 JSON）。
+//
+// 清除点：Start()（用户点「开始」= 恢复运行 = 恢复守护语义）。
+func (e *Engine) MarkUserQuit() error {
+	st := e.store.State()
+	st.UserQuit = true
+	if err := e.store.SaveState(st); err != nil {
+		return err
+	}
+	flag := filepath.Join(e.layout.RuntimeDir, "user-quit.flag")
+	if err := os.MkdirAll(e.layout.RuntimeDir, 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(flag, []byte("user quit at "+fmt.Sprint(model.Now())+"\n"), 0o644)
+}
+
+// clearUserQuit 清掉「用户主动退出」标记（用户点「开始」时调用）。
+func (e *Engine) clearUserQuit() {
+	if st := e.store.State(); st.UserQuit {
+		st.UserQuit = false
+		_ = e.store.SaveState(st)
+	}
+	_ = os.Remove(filepath.Join(e.layout.RuntimeDir, "user-quit.flag"))
+}
+
 // Stop 优雅停止：分两段 drain（对标 riverqueue/river 的 SoftStopTimeout / StopAndCancel）。
 //
 // 第一段（软停）：立刻停止取新任务，等在跑任务自然收尾，最多等到宽限期；
@@ -402,6 +473,26 @@ func (e *Engine) Start() error {
 // 改造前只有一个 30s + 60s 的"等"，到期直接返回却留下还在跑的子进程，
 // 这次把"到期强制取消"补上（P0-3）。
 func (e *Engine) Stop() error {
+	// 用户主动停机：磁盘留 stopped，且**不**希望自愈重启后接续。
+	return e.stop(false)
+}
+
+// AbortForSelfHeal 是「自愈停机」：与用户主动停机语义不同。
+//
+// 背景（2026-10-19 现场缺陷）：自愈链路是
+// supervisor 越阈值 -> OnHeal -> eng.Stop() -> SelfHeal 拉起新进程 -> 旧进程 os.Exit(0)。
+// 而 Stop() 把 phase 落盘成 stopped；新进程的自动接续判据只看
+// (running|paused)，于是 stopped 不在允许集合里 —— **自愈只重启了壳，不恢复干活**。
+//
+// 两者的真实差别是「停机前是否确实在跑」：若在跑，说明这是被动中断（崩溃/自愈/被杀），
+// 应当接续；若本来就没跑（idle/已 stopped），则是用户主动停机，应当尊重。
+// 因此这里额外落一个 resumeAfterRestart 标记，供下次启动判定。
+func (e *Engine) AbortForSelfHeal(reason string) error {
+	e.log.Warn("自愈停机（重启后应自动接续）", "reason", model.Truncate(reason, 160))
+	return e.stop(true)
+}
+
+func (e *Engine) stop(selfHeal bool) error {
 	e.mu.Lock()
 	cancel := e.cancel
 	wasRunning := e.phase == model.PhaseRunning || e.phase == model.PhasePaused
@@ -441,6 +532,25 @@ func (e *Engine) Stop() error {
 	st := e.store.State()
 	st.Phase = model.PhaseStopped
 	st.StoppedAt = model.Now()
+	// 只对「自愈/被动中断」落接续标记，且仅在**停机前确实在跑**时落：
+	// 用户主动停机（wasRunning=false，或走了 Stop()）不落，避免把用户意愿覆盖掉。
+	if selfHeal && wasRunning {
+		st.ResumeAfterRestart = true
+		// 重启次数必须真实累计（2026-10-19 现场缺陷）。
+		//
+		// 现场：EngineState.RestartCount 在整个代码库里**只出现在结构体定义处**，
+		// 从未被任何代码写入 —— state.json 永远显示 restartCount: 0。
+		//
+		// 危害（7x24 视角）：重启次数是判断「系统是否在反复崩溃」的核心健康指标。
+		// 恒为 0 会掩盖自愈频繁重启：运维看面板以为一直稳，实际可能每次内存/句柄
+		// 超阈值都在重启（只是「壳活着」）。
+		//
+		// 语义边界：只在「自愈且停机前确实在跑」时 +1 —— 用户主动停机不是重启。
+		st.RestartCount++
+	} else {
+		// 任何一次正常（用户）停机都清掉标记，防止旧标记把「用户停过」又拉起来。
+		st.ResumeAfterRestart = false
+	}
 	_ = e.store.SaveState(st)
 	msg := "引擎已停止"
 	if hardStop {
@@ -654,14 +764,13 @@ func (e *Engine) supplyCandidates(ctx context.Context, cfg config.Config) {
 		return
 	}
 	all := e.store.List()
-	// 统计今天已生成数量
-	todayStart := startOfToday()
-	daily := 0
-	for _, t := range all {
-		if t.CreatedAt >= todayStart {
-			daily++
-		}
-	}
+	// 统计今天已生成数量。
+	//
+	// 口径必须与 tasksToday() 完全一致（2026-10-21 现场缺陷）：两处若一处含 rejected
+	// 一处不含，会出现"自主链路以为还有额度、模板链路以为已满"的错位，
+	// 或者反过来"两条链同时以为满了"而整机静默 —— 后者正是本轮 12 小时零产出的直接成因。
+	// 因此这里不再就地重算，统一走 tasksToday()。
+	daily := e.tasksToday()
 	if daily >= cfg.Eval.DailyCap {
 		return
 	}
@@ -1649,8 +1758,8 @@ func (e *Engine) ReloadConfig() {
 	e.gen.UpdateConfig(cfg.Chain)
 	e.sem.UpdateConfig(cfg.Executor)
 	e.runner.UpdateConfig(cfg.Executor)
-	// 限速闸门必须在每次热更新时重算（D9）：改配置里的 requestsPerMinute 要真的
-	// 改变发出的请求速率，而不是只改面板上那行读数。
+	// 限速闸门必须在每次热更新时重算（D9 修复）：改配置里的 requestsPerMinute
+	// 要真的改变发出的请求速率，而不是只改面板上那行读数。
 	e.applyRateLimit(cfg.Executor)
 	e.retryPolMu.Lock()
 	e.retryPol = buildRetryPolicy(cfg.Executor)

@@ -4,21 +4,47 @@ package browser
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"syscall"
 )
 
 // Open 用 Edge 的 --app 模式打开（无地址栏，接近原生窗口）；Edge 缺失时回落默认浏览器。
+//
+// 无头开关（2026-10-21 老大指令「不要跳窗，无头执行」）：
+// WB_HEADLESS=1 时**不启动任何浏览器**，只做判定并返回。
+// 为什么需要：测试与无人值守场景会通过真实二进制拉起实例，
+// 若代码路径无条件调起 Edge --app，桌面就会在跑测试时反复弹窗。
+// 这类"测试污染桌面"的行为与被测逻辑无关，必须可以从环境层关掉。
 func Open(url string) error {
+	if headless() {
+		return nil
+	}
 	if edge := findEdge(); edge != "" {
 		cmd := exec.Command(edge, "--app="+url, "--window-size=1280,880")
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: false}
+		// 隐藏属性：Edge 自身是 GUI 进程，HideWindow 主要作用于它可能分配的
+		// 控制台/启动提示；配合 CREATE_NO_WINDOW 保证不闪壳窗口。
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 		if err := cmd.Start(); err == nil {
 			go func() { _ = cmd.Wait() }()
 			return nil
 		}
 	}
 	return fallback(url)
+}
+
+// headless 判断是否处于"无头执行"（不弹任何窗口）。
+//
+// 取值口径：WB_HEADLESS 为 1/true/yes（大小写不敏感）即视为开启。
+// 也接受标准 CI 环境变量，避免 CI 上误弹窗。
+func headless() bool {
+	if v := os.Getenv("WB_HEADLESS"); v != "" {
+		switch v {
+		case "1", "true", "TRUE", "True", "yes", "YES", "on", "ON":
+			return true
+		}
+	}
+	return os.Getenv("CI") != ""
 }
 
 func findEdge() string {
@@ -35,7 +61,10 @@ func findEdge() string {
 }
 
 func fallback(url string) error {
-	if err := exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start(); err != nil {
+	// 回落路径同样隐藏（rundll32 会短暂分配控制台）。
+	cmd := exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
+	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("打开浏览器失败: %w", err)
 	}
 	return nil

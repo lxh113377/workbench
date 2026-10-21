@@ -39,7 +39,7 @@ func (e *Engine) initAutonomy() {
 	st, err := autonomy.OpenStore(e.layout.AutonomyFile("goals.json"), e.layout.AutonomyFile("decisions.jsonl"))
 	if err != nil {
 		e.autonomy = nil
-		// 构造期用 warnDeferred（缺陷 D12）：此处 e.log 还是 Nop（main 在 New()
+		// 构造期用 warnDeferred（L6 接线收口）：此处 e.log 还是 Nop（main 在 New()
 		// 返回后才 SetLogger），直接 Warn 会写进 io.Discard —— 自主链路没起来但
 		// 日志里一条原因都没有，只能靠猜。缓冲后由 SetLogger 冲刷出来。
 		e.warnDeferred("自主子系统初始化失败，已降级为固定模板模式", "err", err.Error())
@@ -88,6 +88,24 @@ func (e *Engine) supplyAutonomous(ctx context.Context, cfg config.Config) bool {
 	if !e.autonomyEnabled() {
 		return false
 	}
+	// 每日上限是**终止条件**，必须先于规划检查（2026-10-19 现场缺陷）。
+	//
+	// 现场数据（6.8 小时真实运行，decisions.jsonl 1408 条）：
+	//   plan 1360 条 vs accept 只有 33 条（41:1），其中 980 条 evidence 是
+	//   「已达每日任务上限」，连续 766 次同一拒绝，中位间隔 3000ms。
+	//
+	// 机理：tick 每 3 秒跑一次 -> 走到这里的规划 -> Evaluate 命中 DailyCap -> 拒绝、
+	//   任务落 rejected **不入队** -> 「自主线串行」水位判据（autonomyQueued>=1）永远
+	//   不成立 -> 下一个 tick 再来一遍。形成「规划 -> 拒绝 -> 3 秒后再规划」的空转热循环：
+	//   **零产出，但台账每 3 秒膨胀一条**（7x24 下会写爆磁盘、淹没真实故障信号）。
+	//
+	// 修法：在**规划之前**判定上限，命中即直接返回 false（把机会让给模板链路，
+	// 由它自己的 daily 判据决定是否补货），从根上断掉这个循环。
+	// 注意返回 false 而不是 true：自主链路此刻只是「今天不干活」，
+	// 不是「已处理完本轮的补货职责」—— 返回 true 会挡住模板链路。
+	if e.tasksToday() >= cfg.Eval.DailyCap && cfg.Eval.DailyCap > 0 {
+		return false
+	}
 	if !cfg.Autonomy.Enabled {
 		return false
 	}
@@ -125,6 +143,18 @@ func (e *Engine) supplyAutonomous(ctx context.Context, cfg config.Config) bool {
 		// 会基于过期的阶段序号生成同一阶段的任务（实测 07:46 沙箱复现）。
 		if pending := pendingAcceptance(allTasks, activeGoal); pending {
 			return true
+		}
+	}
+	// 拒绝熔断（2026-10-21 现场缺陷）：同一目标连续被评估拒绝到阈值后，
+	// 本 tick 不再规划，改为把机会让给模板链路 —— 否则"恒定被拒的草案"
+	// 会以每 3 秒一条的速度刷爆台账并吃满当日配额（现场 2000 条 / 12 小时零产出）。
+	//
+	// 注意熔断只影响"本轮是否规划"，不清空、不修改任何台账；
+	// 候选修复（配额口径、新颖度口径）落地后 streak 自然归零。
+	if hasGoal && activeGoal != nil {
+		if streak, tripped := e.rejectionPressure(activeGoal.ID); tripped {
+			e.logRejectBreakerOnce(activeGoal.ID, streak)
+			return false
 		}
 	}
 	recent := recentTitles(allTasks, 30)
@@ -308,11 +338,36 @@ func pendingAcceptance(all []*model.Task, goal *autonomy.Goal) bool {
 			recorded[st.TaskID] = true
 		}
 	}
+	// 时间上界（2026-10-19 现场缺陷修复）：
+	//
+	// 现场铁证（真实运行时间线）：
+	//   21:11:43  任务完成 [task-...173184-c87c]  <- 任务变 done，验收尚未写入 stages
+	//   21:12:11  引擎已启动                    <- 运维重启（换二进制）打断异步验收
+	//   => 任务成了「孤儿」：state=done 但 goal.stages 里没有它的 taskId
+	//   => 本函数恒返回 true => supplyAutonomous 永久不规划（实测 36.5 分钟零活动）
+	//
+	// 为什么必须有上界：7x24 下重启是常态（换二进制/自愈/宕机），
+	// 不可能要求「永不在 done→记录 的窗口内重启」。一旦命中，自主链路**永久死锁**，
+	// 而且没有任何日志说明卡住了（只有 plan 归零）——比「偶发重复规划」严重得多。
+	//
+	// 语义：孤儿只在**时间窗口内**算「在途」（用于防止窗口期重复规划）；
+	// 超过窗口说明这次验收已经失去机会，宁可让规划继续（任务可能被重做），
+	// 也不能永久停摆。
+	const orphanGraceMs = 10 * 60 * 1000 // 10 分钟：远大于正常验收耗时，又远小于人工发现延迟
+	now := model.Now()
 	for _, t := range all {
 		if t == nil || t.GoalID != goal.ID {
 			continue
 		}
-		if t.State == model.StateDone && !recorded[t.ID] {
+		if t.State != model.StateDone || recorded[t.ID] {
+			continue
+		}
+		// FinishedAt 为 0 时退回 CreatedAt（老数据兼容）。
+		ts := t.FinishedAt
+		if ts == 0 {
+			ts = t.CreatedAt
+		}
+		if ts == 0 || now-ts <= orphanGraceMs {
 			return true
 		}
 	}
@@ -370,16 +425,98 @@ func (e *Engine) lastCompletedTask() *model.Task {
 	return nil
 }
 
-// tasksToday 返回今日已生成任务数（与 supplyCandidates 口径一致）。
+// tasksToday 返回今日**有效工作量**（与 supplyCandidates 口径一致）。
+//
+// 口径演化（2026-10-21 现场缺陷，直接造成"运行中但今日产出 0"）：
+//
+// 旧口径把**所有**当天创建的任务都算进去，包括 state=rejected 的评估拒绝草案。
+// 评估拒绝的草案从未执行、从未产出、也不消耗模型额度 —— 它只是"这条点子不行"，
+// 不是"今天已经干了这么多活"。把它计入每日上限的直接后果：
+//
+//	现场 2026-10-21 00:00-01:39 连续产生 2000 条被拒草案（标题逐字相同），
+//	01:39:59 之后 dailyCap=2000 被吃满 =>
+//	  supplyAutonomous 在规划前就 return false（每日上限是终止条件，by design）
+//	  supplyCandidates 的 daily 判据也命中 => 直接 return
+//	=> **两条供货链同时停机，此后一整天零任务、零产出**，而面板仍显示"运行中"。
+//	  这正是用户报告的"显示运行中但显示产出为 0"。
+//
+// 正确口径：已拒草案不计入每日上限（它们不是工作），但拒绝压力另有独立闸门
+// 约束（见 rejectionPressure），避免"不计入上限"退化成"无限刷台账"。
 func (e *Engine) tasksToday() int {
 	start := startOfToday()
 	n := 0
 	for _, t := range e.store.List() {
-		if t.CreatedAt >= start {
-			n++
+		if t == nil || t.CreatedAt < start {
+			continue
 		}
+		if t.State == model.StateRejected {
+			continue // 被拒草案不是工作量
+		}
+		n++
 	}
 	return n
+}
+
+// rejectStreakLimit 是"同一目标连续被评估拒绝"的熔断阈值。
+//
+// 为什么必须有（2026-10-21 现场缺陷）：规划器产出的草案若因任何原因恒定被评估器
+// 拒绝（本轮根因是标题被字节截断吃掉了阶段后缀，导致每轮产出逐字相同的标题），
+// 调度循环每 3 秒重试一次，一晚上写下 2000 条拒绝与 5724 条决策台账，
+// 而**产出始终为 0**。这类"看起来在规划、实际在空转"的失效必须自己叫停。
+//
+// 阈值取 5：给规划器留出跨过"某个阶段暂时产不出合格草案"的余量，
+// 又不至于让空转持续到把 dailyCap 吃满。
+const rejectStreakLimit = 5
+
+// rejectionPressure 返回「同一自主目标连续被拒次数」的熔断判定。
+//
+// 语义：
+//   - streak >= rejectStreakLimit 时返回 true，本 tick 不再规划；
+//   - 一旦出现被受理（入队）的自主任务，streak 自然归零（只看尾部连续段）；
+//   - 只统计 autonomy 来源的 rejected，且只数**连续**尾部，不看历史总量。
+func (e *Engine) rejectionPressure(goalID string) (int, bool) {
+	if goalID == "" {
+		return 0, false
+	}
+	all := e.store.List()
+	streak := 0
+	// 从最新往回数：遇到非 autonomy/非本目标/非 rejected 的任务即停。
+	for i := len(all) - 1; i >= 0; i-- {
+		t := all[i]
+		if t == nil || t.Source != "autonomy" || t.GoalID != goalID {
+			continue
+		}
+		if t.State != model.StateRejected {
+			break
+		}
+		streak++
+		if streak >= rejectStreakLimit {
+			break
+		}
+	}
+	return streak, streak >= rejectStreakLimit
+}
+
+// logRejectBreakerOnce 记录一次拒绝熔断（同一目标每秒只写一条，避免日志噪音）。
+//
+// 为什么要记：熔断是"主动停机"，如果不留痕，现场就只剩"没有新任务"这个现象 ——
+// 那正是本轮 32 小时零产出最难排查的地方（没有任何错误、没有任何告警）。
+func (e *Engine) logRejectBreakerOnce(goalID string, streak int) {
+	e.rejectBreakerMu.Lock()
+	if e.rejectBreakerAt == nil {
+		e.rejectBreakerAt = map[string]int64{}
+	}
+	last := e.rejectBreakerAt[goalID]
+	now := model.Now()
+	if now-last < 60_000 {
+		e.rejectBreakerMu.Unlock()
+		return
+	}
+	e.rejectBreakerAt[goalID] = now
+	e.rejectBreakerMu.Unlock()
+	msg := fmt.Sprintf("自主规划熔断：目标 %s 连续 %d 条草案被评估拒绝，暂停规划（等待评估口径修复或人工介入）", goalID, streak)
+	e.log.Warn("自主规划熔断", "goalId", goalID, "streak", streak)
+	e.emitEvent(model.Event{Type: "warn", At: now, Msg: msg})
 }
 
 // recentTitles 取最近 limit 条已完成任务标题（防重复规划）。

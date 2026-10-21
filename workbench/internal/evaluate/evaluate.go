@@ -200,12 +200,21 @@ func (e *Evaluator) gates(in Input, now int64) []string {
 		// 跨目标的相似产出仍然受门禁约束。
 		fp := fingerprint(t.Title, t.Prompt)
 		for _, it := range e.recent {
-			if sameGoal(it.GoalID, t.GoalID) && it.TaskID != t.ID {
+			if it.TaskID == t.ID {
 				continue
 			}
+			// 精确重复 vs 模糊相似必须分开判（2026-10-21 现场缺陷）：
+			//   同目标豁免的初衷是「不要因为同项目上下文天然相似而全拒」，
+			//   但旧写法把**精确重复**也一起豁免了 —— 同一目标的同一条任务可以
+			//   被反复规划、反复进入执行，考核指标上完全看不出来。
+			//   现在：精确指纹（标题+Prompt 归一化后完全相同）**任何目标都要拦**；
+			//   模糊相似才按目标豁免（同目标阶段任务本就共享上下文）。
 			if it.Fingerprint == fp {
 				out = append(out, "与最近任务完全重复")
 				break
+			}
+			if sameGoal(it.GoalID, t.GoalID) {
+				continue
 			}
 			sim := similarity(t.Title+" "+t.Prompt, it.Title+" "+it.Prompt)
 			if sim >= cfg.SimilarityCap {
@@ -229,13 +238,32 @@ func (e *Evaluator) gates(in Input, now int64) []string {
 }
 
 // novelty 计算新颖度：与最近任务的最大相似度越低越新颖。
+//
+// 同目标口径必须与 gates() 保持一致（2026-10-21 现场缺陷，代价是 32 小时零产出）：
+//   - 自主任务的 Prompt 由 buildLadderPrompt 生成，**天然注入项目意图 + 已完成阶段**，
+//     同目标相邻阶段的全文相似度长期在 0.9 以上；
+//   - 旧写法对同目标不做区分，于是「合法的新阶段任务」被判成旧任务的重放：
+//     实测 value = 60×0.6 + novelty(0)×0.3 + chain(50)×0.1 = 41，
+//     综合分 0.5×41 + 0.2×(100-60) + 0.3×65 = 48 < 阈值 55 => **永不可能通过**；
+//   - gates() 里早已按「同目标豁免」放行模糊相似（注释在册），novelty 却没跟上 ——
+//     同一套语义两处实现不一致，等于豁免被 novelty 抵消掉（组件齐全、接线断一节）。
+//
+// 现在的口径：同目标只用**精确指纹**判重放（完全相同 = 新颖度 0），
+// 模糊相似不再参与同目标的新颖度计算；跨目标的新颖度判定完全不变。
 func (e *Evaluator) novelty(t *model.Task) float64 {
 	if t == nil || len(e.recent) == 0 {
 		return 80
 	}
 	text := t.Title + " " + t.Prompt
+	fp := fingerprint(t.Title, t.Prompt)
 	maxSim := 0.0
 	for _, it := range e.recent {
+		if sameGoal(it.GoalID, t.GoalID) {
+			if it.Fingerprint == fp {
+				return 0 // 同一目标下逐字相同的任务 ＝ 重放，无新颖度
+			}
+			continue
+		}
 		sim := similarity(text, it.Title+" "+it.Prompt)
 		if sim > maxSim {
 			maxSim = sim
@@ -301,6 +329,10 @@ func (e *Evaluator) Observe(t *model.Task, quality int, diversity string, maxKee
 	defer e.mu.Unlock()
 	e.recent = append(e.recent, recentItem{
 		TaskID: t.ID, Title: t.Title, Prompt: t.Prompt, Domain: t.Domain,
+		// GoalID 必须记（2026-10-19 现场缺陷）：gates() 的「同目标豁免」依赖它 ——
+		// sameGoal(a,b) 是 a != "" && a == b，漏了 GoalID 就等于豁免恒不生效，
+		// 自主任务会被相似度门禁全量拒掉，形成「重复被拒 -> 不入队 -> 3 秒后再试」热循环。
+		GoalID:    t.GoalID,
 		Diversity: diversity, TemplateID: t.TemplateID, CreatedAt: t.CreatedAt,
 		Quality: quality, Fingerprint: fingerprint(t.Title, t.Prompt),
 	})
@@ -329,6 +361,8 @@ func (e *Evaluator) Seed(tasks []*model.Task, maxKeep int) {
 		}
 		e.recent = append(e.recent, recentItem{
 			TaskID: t.ID, Title: t.Title, Prompt: t.Prompt, Domain: t.Domain,
+			// GoalID 必须记（同 Observe 的理由）：重启恢复后豁免同样要生效。
+			GoalID:     t.GoalID,
 			TemplateID: t.TemplateID, CreatedAt: t.CreatedAt, Quality: q,
 			Fingerprint: fingerprint(t.Title, t.Prompt),
 		})
@@ -336,6 +370,17 @@ func (e *Evaluator) Seed(tasks []*model.Task, maxKeep int) {
 	if len(e.recent) > maxKeep {
 		e.recent = e.recent[len(e.recent)-maxKeep:]
 	}
+}
+
+// RecentItemsForTest 暴露滚动窗口的快照（供测试断言窗口字段完整性）。
+//
+// 命名带 ForTest 是为了明确「这不是业务 API」；生产代码不应依赖它。
+func (e *Evaluator) RecentItemsForTest() []recentItem {
+	e.mu.Lock()
+	defer e.mu.Unlock()
+	out := make([]recentItem, len(e.recent))
+	copy(out, e.recent)
+	return out
 }
 
 // RecentTitles 返回最近的标题（供后继生成去重）。

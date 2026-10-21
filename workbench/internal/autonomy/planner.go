@@ -126,6 +126,16 @@ func ladderFor(domain string) []string {
 	return domainLadder["content"]
 }
 
+// MaxDraftsForTest 暴露当前生效的规划产出上限（供测试断言边界钳制真的生效）。
+//
+// 命名带 ForTest 是为了明确「这不是业务 API」：生产代码不应依赖它。
+func (p *Planner) MaxDraftsForTest() int {
+	if p == nil {
+		return 0
+	}
+	return p.cfg.MaxDrafts
+}
+
 // Plan 推导当前阶段的任务草案（按优先级返回 1..MaxDrafts 条）。
 //
 // 规划优先级：
@@ -172,7 +182,13 @@ func (p *Planner) Plan(ctx PlanContext) []Draft {
 			step = len(lad) - 1
 		}
 		focus := lad[step]
-		title := strings.TrimSpace(goal.Title) + " · " + shortFocus(focus)
+		// 标题必须用 composeTitle 拼（2026-10-21 现场缺陷，代价 32 小时零产出）：
+		// 旧写法是 goal.Title + " · " + focus 之后由下游 model.Truncate 按**字节**裁剪，
+		// 而模型层 Truncate 的 n 是字节数、MaxTitleRunes 是 rune 上限（80）——
+		// 中文 3 字节/rune，现场目标标题已 78 字节，" · 阶段6" 一加就 89 字节，
+		// 截到 80 再回退合法边界后正好停在 78 字节：**追加的焦点后缀被整体吃掉**，
+		// 标题退化成目标标题本身。composeTitle 保证焦点段永不被裁掉。
+		title := composeTitle(goal.Title, shortFocus(focus))
 		d := Draft{
 			Title:     title,
 			Prompt:    p.buildLadderPrompt(goal, focus, ctx),
@@ -194,10 +210,13 @@ func (p *Planner) Plan(ctx PlanContext) []Draft {
 	// decisions.jsonl 连续 12 条 "与最近任务高度相似（0.92）"、0 产出）。
 	// 兜底路径的使命是"保证不断线"，因此它必须产出唯一标题。
 	if len(out) == 0 {
-		base := model.Truncate(goal.Title+" · 阶段"+fmt.Sprint(ctx.StageIndex+1), MaxTitleRunes)
-		title := base
+		stage := fmt.Sprint(ctx.StageIndex + 1)
+		title := composeTitle(goal.Title, "阶段"+stage)
+		// 去重循环同样走 composeTitle：旧写法先 Truncate 再追加"（第N次推进）"，
+		// 追加部分在长标题下同样会被下一次 Truncate 吃掉，于是 20 轮循环产出的
+		// 仍是同一个标题 —— 兜底路径的"保证唯一"承诺在长目标标题下完全落空。
 		for i := 2; duplicated(title, ctx.Recent); i++ {
-			title = model.Truncate(fmt.Sprintf("%s（第%d次推进）", base, i), MaxTitleRunes)
+			title = composeTitle(goal.Title, fmt.Sprintf("阶段%s·第%d次推进", stage, i))
 			if i > 20 {
 				break
 			}
@@ -312,7 +331,17 @@ func (p *Planner) DeriveNextGoal(prev *Goal, lastGaps []string, now int64, cfg G
 	if focus == "" {
 		focus = lad[step]
 	}
-	title := model.Truncate(firstLine(prev.Title)+" · 深化："+shortFocus(focus), MaxTitleRunes)
+	// 标题必须基于「根标题」重拼，不能在上一代标题上继续追加（2026-10-21 现场缺陷）。
+	//
+	// 旧写法是 prev.Title + " · 深化：" + focus，每完成一代目标就复利叠加一层：
+	//   持续产出与能力沉淀
+	//   → 持续产出与能力沉淀 · 深化：复盘
+	//   → 持续产出与能力沉淀 · 深化：复盘 · 深化：复盘
+	//   → …（现场实测第 5 代已 31 rune / 78 字节）
+	// 叠加到 78 字节后正好触发下游"按字节截断把新后缀吃掉"的连锁缺陷，
+	// 标题退化成目标标题本身 —— 这是「32 小时运行中但 0 产出」的上游起点。
+	// 正确口径：根标题（首个「 · 」之前的部分）恒定不变，只换焦点段。
+	title := composeTitle(rootGoalTitle(prev.Title), "深化："+shortFocus(focus))
 	intent := fmt.Sprintf("在已完成目标「%s」的基础上，继续推进%s，重点解决：%s。", prev.Title, domain, focus)
 	return &NextGoalDraft{
 		Title:    title,
@@ -460,6 +489,44 @@ func normTitle(s string) string {
 	return string(rs)
 }
 
+// composeTitle 用「目标标题 · 焦点」拼一个**按 rune 限长**的标题。
+//
+// 为什么需要专门的函数（2026-10-21 现场缺陷，代价 32 小时零产出）：
+//   - 全仓的 model.Truncate(s, n) 里 n 是**字节**数，而标题上限常量叫
+//     MaxTitleRunes（80，按 rune 计）。中文 3 字节/rune，两者差 3 倍；
+//   - 直接拼接后再由下游按字节截断，会把**刚追加的焦点后缀**优先裁掉
+//     （裁剪发生在尾部，而焦点恰在尾部）—— 标题退化成目标标题本身，
+//     每轮规划产出同一条标题，评估器按"无新颖度"拒绝，形成 3 秒热循环。
+//
+// 语义保证（三条，都有单测守护）：
+//   1) 焦点段**必须完整保留**（阶段信息是标题的唯一区分点，裁掉即等于没规划）；
+//   2) 目标前缀按 rune 预算自适应收缩（超出预算时截断并补省略号）；
+//   3) 结果按 rune 计不超过 MaxTitleRunes。
+func composeTitle(goalTitle, focus string) string {
+	goalTitle = strings.TrimSpace(goalTitle)
+	focus = strings.TrimSpace(focus)
+	if focus == "" {
+		return truncateRunes(goalTitle, MaxTitleRunes)
+	}
+	// 焦点 + 分隔符优先占预算；余下的预算给目标前缀。
+	sep := " · "
+	rest := MaxTitleRunes - utf8.RuneCountInString(sep) - utf8.RuneCountInString(focus)
+	if rest < MinTitleRunes {
+		// 焦点本身就接近上限：只保留焦点，前缀退化为可辨识的最短片段。
+		head := truncateRunes(goalTitle, MinTitleRunes)
+		if head == "" {
+			return truncateRunes(focus, MaxTitleRunes)
+		}
+		rest = MaxTitleRunes - utf8.RuneCountInString(sep) - utf8.RuneCountInString(head)
+		if rest < 2 {
+			return truncateRunes(head+sep+focus, MaxTitleRunes)
+		}
+		// 焦点优先：前缀再让一点，保证焦点整体可读。
+		return truncateRunes(head, utf8.RuneCountInString(head)) + sep + truncateRunes(focus, MaxTitleRunes-utf8.RuneCountInString(head)-utf8.RuneCountInString(sep))
+	}
+	return truncateRunes(goalTitle, rest) + sep + focus
+}
+
 // shortFocus 把长焦点句压成短标题片段（最多 18 字）。
 func shortFocus(focus string) string {
 	focus = strings.TrimSpace(focus)
@@ -467,6 +534,20 @@ func shortFocus(focus string) string {
 		focus = focus[:i]
 	}
 	return truncateRunes(focus, 18)
+}
+
+// rootGoalTitle 取目标标题的根段（首个「 · 」之前的部分）。
+//
+// 用途：目标代际推导时以它为基座重拼标题，避免"深化：X · 深化：X"复利叠加。
+// 历史上没有分隔符的标题原样返回；首段为空（畸形标题）时退回整串。
+func rootGoalTitle(title string) string {
+	s := firstLine(title)
+	if i := strings.Index(s, " · "); i > 0 {
+		if head := strings.TrimSpace(s[:i]); head != "" {
+			return head
+		}
+	}
+	return s
 }
 
 // firstLine 取文本第一行。

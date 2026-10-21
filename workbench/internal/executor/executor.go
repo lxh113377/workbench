@@ -92,7 +92,20 @@ const (
 	// KindRateLimited 是上游 429 限流（车道级，不是任务问题）。
 	// 引擎据此只冷却出问题的车道并把任务退回队列（不计失败）。
 	KindRateLimited Kind = "rate_limited"
-	KindUnknown     Kind = "unknown"
+	// KindTransport 是**网络/传输层**故障（2026-10-19 现场补齐）。
+	//
+	// 现场（扫描 130 个任务的 events.jsonl，202 条 turn_end 错误）：
+	//   TRANSPORT|ETIMEDOUT 11 次、ENOTFOUND 7 次、EACCES 5 次 —— 合计 23 次
+	//   STREAM_CUT 6 次
+	// 这些错误此前**没有专属分支**，落进兜底后被显示成「启动失败」（boot_failed），
+	// 于是排查方向被误导到「进程/环境启动问题」，而真实原因是网络连不上或流被中断。
+	//
+	// 语义：transport = 连不上对端（DNS/连接/权限）；与「模型进程起不来」完全不同域。
+	KindTransport Kind = "transport_failed"
+	// KindStreamCut 是上游流**中途被切断**（连上了但读一半断了）。
+	// 与 transport 区分：transport 是「没连上」，stream_cut 是「连上后断了」。
+	KindStreamCut Kind = "stream_cut"
+	KindUnknown   Kind = "unknown"
 )
 
 // Retryable 判断该类错误是否值得重试。
@@ -232,7 +245,12 @@ func linkDir(src, dst string) error {
 		return err
 	}
 	if runtime.GOOS == "windows" {
-		cmd := exec.Command("cmd", "/c", "mklink", "/J", dst, src)
+		// 必须用 hiddenCmd 而不是裸 exec.Command（2026-10-19 现场修复）：
+		// cmd.exe 是 CONSOLE(3) 子系统程序，不隐藏就会**每个任务闪一次控制台窗口** ——
+		// linkDir 在每个任务准备阶段都会执行（挂 profiles junction）。
+		// 同一文件里 DSH 主进程早已用 jobSysProcAttr() 带 HideWindow + CREATE_NO_WINDOW，
+		// 唯独这处裸奔。现在统一收敛到 hiddenCmd。
+		cmd := hiddenCmd("cmd", "/c", "mklink", "/J", dst, src)
 		if out, err := cmd.CombinedOutput(); err != nil {
 			return fmt.Errorf("junction 失败: %v (%s)", err, strings.TrimSpace(string(out)))
 		}
@@ -273,7 +291,17 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	}
 	taskDir := r.layout.TaskDir(task.ID)
 	workDir := filepath.Join(taskDir, "workspace")
-	if err := os.MkdirAll(workDir, 0o755); err != nil {
+	if strings.TrimSpace(task.WorkRoot) != "" {
+		// external（用户目录）模式：cwd 指向用户真实项目，**不建任务沙箱**。
+		//
+		// 现场缺陷（2026-10-19）：改造前这里无条件 MkdirAll(taskDir/workspace)，
+		// 于是 external 模式下数据根里仍留一堆空沙箱目录，e2e 断言
+		// "no task sandbox dir in external mode" 因此变红（实测 dirs=2）。
+		workDir = task.WorkRoot
+		if err := os.MkdirAll(workDir, 0o755); err != nil {
+			return nil, fmt.Errorf("创建用户工作目录失败: %w", err)
+		}
+	} else if err := os.MkdirAll(workDir, 0o755); err != nil {
 		return nil, fmt.Errorf("创建任务工作目录失败: %w", err)
 	}
 
@@ -309,13 +337,15 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	if ferr != nil {
 		return nil, fmt.Errorf("创建事件文件失败: %w", ferr)
 	}
-	// 句柄生命周期（2026-10-20 实测缺陷 D8）：用 sync.Once 包一个 closeEvents，
-	// 既保证**所有早退路径**（pipe 接管失败、任务隔离环境准备失败、cmd.Start 失败）
-	// 都释放句柄，又让正常路径由 consume 自己收尾。
-	// 改造前只有这里的 defer：consume 协程可能在 Run 返回后仍在写（wg.Wait 有 15 秒
-	// 超时兜底），对已关闭文件继续 Write 的错误被 _ 吞掉，事件尾部静默丢失。
-	// 只交给 consume 关闭也不对：早退路径会永久泄漏句柄（实测 executor 包
-	// TestRunnerLimiterThrottlesRequests 的 t.TempDir 报 events.jsonl 被占用）。
+	// 句柄生命周期（2026-10-20 实测缺陷 D8 的正确修法）：
+	// 用 sync.Once 包一个 closeEvents，既保证**所有早退路径**（pipe 接管失败、
+	// 任务隔离环境准备失败、cmd.Start 失败）都释放句柄，又让正常路径由 consume
+	// 自己收尾 —— 改造前只有 run 的 defer，consume 协程可能在 Run 返回后仍在写
+	// （wg.Wait 有 15 秒超时兜底），对已关闭文件继续 Write 的错误被 _ 吞掉、
+	// 事件尾部静默丢失；反之只交给 consume 关闭则会把句柄永久泄漏在早退路径上
+	// （实测：executor 包 TestRunnerLimiterThrottlesRequests 因用不存在的 exe
+	// 触发 Start 失败，t.TempDir 清理报 events.jsonl "used by another process"）。
+	// 超时兜底路径另外主动关掉两个读端解阻塞 consume，避免协程永久持有句柄。
 	closeEventsOnce := &sync.Once{}
 	closeEvents := func() { closeEventsOnce.Do(func() { _ = eventsFile.Close() }) }
 	defer closeEvents()
@@ -429,14 +459,16 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	case <-waitCh:
 	case <-time.After(15 * time.Second):
 		// 读取协程卡住（多半是 pipe 未关闭）：放弃等待，继续收尾。
-		// 必须主动关掉两个读端把 consume/stderr 协程解阻塞（配合 D8）：句柄改由
-		// consume 自己关闭后，若这里只放弃等待而不解阻塞，卡死的协程会永久持有
-		// events.jsonl 句柄 —— 比改造前更糟（后续该文件的原子替换与清理都会撞
-		// "被另一进程占用"）。看门狗路径早已用同样手法解阻塞，这里补齐超时路径。
+		// 必须主动关掉两个读端把 consume/stderr 协程解阻塞（2026-10-20，配合 D8）：
+		// 事件文件句柄改由 consume 自己关闭之后，若这里只放弃等待而不解阻塞，
+		// 卡死的协程会永久持有 events.jsonl 句柄 —— 比改造前更糟（Windows 上
+		// 后续该文件的原子替换与清理都会撞「被另一进程占用」）。
+		// 看门狗路径早已用同样的手法解阻塞，这里补齐超时路径。
 		_ = stdout.Close()
 		_ = stderr.Close()
-		// 解阻塞后给一次**有界**等待，让 consume 有机会自己写完并释放句柄；
-		// 不等就继续往下走的话，run 的 defer 可能抢先关闭而 consume 仍在 Write。
+		// 解阻塞后再给一次**有界**等待：让 consume 有机会自己收尾（写完并关闭句柄）。
+		// 不做这件事时 run 的 defer 可能先释放句柄，而 consume 仍在 Write ——
+		// 那正是 D8 的原始形态，只是概率变低；有界等待把它压到可忽略。
 		select {
 		case <-waitCh:
 		case <-time.After(2 * time.Second):
@@ -505,7 +537,7 @@ func (r *Runner) environment() []string {
 }
 
 func (r *Runner) consume(reader io.Reader, eventsFile *os.File, res *Result, closeEvents func()) {
-	// 写方自己收尾（与 run() 里 sync.Once 的 defer 去重，缺陷 D8）。
+	// 写方自己收尾（缺陷 D8 的一面）；与 run() 的 defer 由 sync.Once 去重。
 	if closeEvents != nil {
 		defer closeEvents()
 	}
@@ -613,6 +645,18 @@ func classify(stderr string, res *Result) Kind {
 		return KindModelDead
 	case strings.Contains(lower, "unsupported_reasoning_effort"):
 		return KindModelDead
+	// 流中断与网络类必须先于「upstream」判定（2026-10-19 现场）：
+	// 实测文案是 "our-free-model: upstream stream read failed: aborted" ——
+	// 含 "upstream" 子串，若把 upstream 分支放前面会把流中断吞成 upstream_failed，
+	// 丢掉「流被切断」这一更精确、更可行动的类别。
+	case strings.Contains(lower, "stream read failed"), strings.Contains(lower, "stream_cut"),
+		strings.Contains(lower, "stream failed"):
+		return KindStreamCut
+	case strings.Contains(lower, "etimedout"), strings.Contains(lower, "enotfound"),
+		strings.Contains(lower, "eacces"), strings.Contains(lower, "econnrefused"),
+		strings.Contains(lower, "econnreset"), strings.Contains(lower, "fetch failed"),
+		strings.Contains(lower, "transport"):
+		return KindTransport
 	case strings.Contains(lower, "upstream"), strings.Contains(lower, "timeout"):
 		return KindUpstream
 	case strings.Contains(stderr, "dsh:"):
@@ -623,9 +667,45 @@ func classify(stderr string, res *Result) Kind {
 	return KindUnknown
 }
 
+// modelOverlay 生成任务级模型覆盖层（喂给 DSH 的 --patch）。
+//
+// **不得写死 reasoningEffort**（2026-10-21 现场缺陷，是「运行中但产出 0」的最后一层阻塞）：
+//
+//	现场 events.jsonl 第一轮 turn 就结束在：
+//	  provider "our-free-model" model "combo:auto-main" does not support
+//	  reasoning effort "high"  (code=UNSUPPORTED_REASONING_EFFORT)
+//	随后引擎换模型重试，每个新模型又被同一行配置拒一次 —— 因为覆盖层无条件写死
+//	reasoningEffort: high，而池里多个免费/组合车道不支持显式推理档位。
+//	结果：31 个「可用」模型没有一个能跑完，任务全部 bad_exit。
+//
+// 正确口径：默认不写该字段（让每个模型用它自己的默认档位）；确实需要时走
+// modelOverlayWithEffort 显式传，做到「要用才写、不用不写」。
 func modelOverlay(modelID string) string {
-	if strings.TrimSpace(modelID) == "" {
-		modelID = "z-ai/glm-5.3"
-	}
-	return "- id: agent-default-model\n  config:\n    provider: our-free-model\n    model: " + modelID + "\n    reasoningEffort: high\n"
+	return modelOverlayWithEffort(modelID, "")
 }
+
+// modelOverlayWithEffort 生成覆盖层，effort 非空时才写入 reasoningEffort。
+//
+// effort 取值由调用方决定（例如 "high"/"medium"/"low"）；
+// 传空串 = 不干预，用模型默认 —— 这是唯一对所有模型都安全的取值。
+func modelOverlayWithEffort(modelID, effort string) string {
+	modelID = strings.TrimSpace(modelID)
+	if modelID == "" {
+		modelID = defaultOverlayModel
+	}
+	var b strings.Builder
+	b.WriteString("- id: agent-default-model\n  config:\n    provider: our-free-model\n    model: ")
+	b.WriteString(modelID)
+	b.WriteString("\n")
+	if e := strings.TrimSpace(effort); e != "" {
+		b.WriteString("    reasoningEffort: ")
+		b.WriteString(e)
+		b.WriteString("\n")
+	}
+	return b.String()
+}
+
+// defaultOverlayModel 是模型 ID 缺失时的兜底模型。
+//
+// 真正的模型选择由上层路由决定；这里只是「绝不产出非法 YAML / 空模型」的最后一道兜底。
+const defaultOverlayModel = "z-ai/glm-5.3"
