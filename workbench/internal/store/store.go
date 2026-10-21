@@ -53,6 +53,23 @@ type EngineState struct {
 	RestartCount int               `json:"restartCount"`
 	LastError    string            `json:"lastError,omitempty"`
 	UpdatedAt    int64             `json:"updatedAt"`
+	// ResumeAfterRestart 表示「上一次停机是被动中断（自愈/崩溃），重启后应当自动接续」。
+	//
+	// 为什么需要（2026-10-19 现场缺陷）：自愈链路 Stop() 会把 phase 写成 stopped，
+	// 而启动时的接续判据只看 (running|paused)，于是自愈重启后引擎永不恢复 ——
+	// 「资源自愈保证 7x24」实际只重启了壳。此标记把「被动中断」与「用户主动停机」区分开：
+	//   被动中断 -> true  -> 重启后自动接续
+	//   用户停机 -> false -> 重启后保持停止（尊重用户意愿）
+	ResumeAfterRestart bool `json:"resumeAfterRestart,omitempty"`
+	// UserQuit 表示「用户主动退出（--quit / 面板退出）」。
+	//
+	// 为什么需要（2026-10-19 现场）：外部守护者（tests/keepalive.ps1）的分支是
+	// 「stopped 或 idle 都拉回 running」——它**区分不出**「意外停机」与「用户主动退出」，
+	// 于是用户 --quit 后 60 秒内又被拉起来，--quit 等于不生效。
+	//
+	// 产品侧必须先把「这是用户主动退出」这件事表达出来，外部才有据可依。
+	//   置位：MarkUserQuit（--quit 路径）；清除：Start（用户点「开始」）。
+	UserQuit bool `json:"userQuit,omitempty"`
 }
 
 // Snapshot 是队列的磁盘结构。
@@ -326,11 +343,22 @@ func (s *Store) Create(t *model.Task) error {
 	}
 	t.UpdatedAt = model.Now()
 	s.tasks[t.ID] = t
-	dir := s.layout.TaskDir(t.ID)
+	// 这里**刻意不再**创建任务目录（2026-10-19 现场缺陷修复）。
+	//
+	// 现场数据：tasks/ 下 **1314 个空目录**，恰好等于 audit.jsonl 里
+	// candidate->rejected 的 1314 次 —— 完全相等。
+	//
+	// 机理：调用方（engine_autonomy.go）是**先 Create、后 Evaluate**：
+	//   Create 建目录 -> Evaluate 命中硬门禁 -> 拒 -> 目录留下、永远空着。
+	// 空转热循环期间（每 3 秒被拒一次）就每 3 秒落一个空目录。
+	//
+	// 为什么 Create 不该建目录：
+	//   1) 目录是**执行期**资源；Create 只是「登记」，耦合导致「被拒也占地」；
+	//   2) executor.go 已经有懒建逻辑（真正要跑时才 MkdirAll(workspace)），
+	//      这里那行是冗余的、且是有害的那一半；
+	//   3) 与 executor 已修的同类现场（external 模式留空沙箱）方向一致：
+	//      **不该建的时候不要建**。
 	s.mu.Unlock()
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return fmt.Errorf("创建任务目录失败: %w", err)
-	}
 	_ = s.audit.Append(AuditRecord{At: model.Now(), TaskID: t.ID, To: string(t.State), Actor: "engine", Kind: "create", Message: t.Title})
 	cp := *t
 	return s.record(walRecord{Op: OpCreate, Task: &cp})
@@ -367,6 +395,9 @@ func (s *Store) List() []*model.Task {
 }
 
 // Update 用 mutator 修改任务并落盘。mutator 返回错误时放弃修改。
+//
+// 并发契约：本函数**换指针**（map 槽位指向新副本），绝不原地写调用方已持有的 *Task；
+// 调用方（Get/List/Transition 返回值）拿到的都是副本或不再被写的旧对象。
 func (s *Store) Update(id string, mutator func(*model.Task) error) (*model.Task, error) {
 	s.mu.Lock()
 	t, ok := s.tasks[id]
@@ -383,6 +414,10 @@ func (s *Store) Update(id string, mutator func(*model.Task) error) (*model.Task,
 	// 换指针而非原地写（*t = cp）：原地写会让「持有旧指针的读方」（如 engine runOne
 	// 的 defer 读 running.ChainID）与本次写形成 data race。改为把 map 槽位指向新副本，
 	// 旧指针指向的对象从此不再被写，与 Transition/Get 返回副本的语义一致。
+	//
+	// 2026-10-19 复验：这个修复曾被整文件覆盖丢掉（工作树又回到 *t = cp），
+	// 容器内 `go test -race ./...` 立刻在 internal/engine 抓到 data race
+	// （store.Update 写  vs  runOne 的 defer 读）。此注释即为防丢标记。
 	s.tasks[id] = &cp
 	result := cp
 	s.mu.Unlock()
