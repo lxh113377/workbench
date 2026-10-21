@@ -9,6 +9,7 @@ package engine
 // ②每种能解释"为什么 0 产出"的情形都要有稳定原因码 + 人话文案。
 
 import (
+	"strings"
 	"testing"
 
 	"workbench/internal/config"
@@ -171,6 +172,65 @@ func TestStallReasonRunningWithoutUpstreamErrorIsNormal(t *testing.T) {
 	}
 	if r := e.StallReason(); r.Code != "" {
 		t.Fatalf("没有上游拒绝证据时不得误报停摆，实际 %s: %s", r.Code, r.Text)
+	}
+}
+
+// TestStallReasonQueuedButNoLane 是「排队 14 但是 0 正在执行」这句用户报障的回归。
+//
+// 现场（2026-10-21 22:31~22:39 活实例实测，watcher 每 10 秒一条）：
+//
+//	queuedTasks=14 runningTasks=0 rateLimit.limited=true remainingSeconds=442
+//	stallReason={}  ← 这就是缺陷：服务端握着两个能说清的字段，却什么都没说
+//
+// 判据：队列非空 + 一条都没在跑 + 整池闸门仍按住调度 ⇒ 必须给出可读原因与等待时长。
+func TestStallReasonQueuedButNoLane(t *testing.T) {
+	e, st, _ := newTestEngine(t)
+	startRunning(t, e)
+	if err := st.Create(&model.Task{
+		ID: "task-queued-gated", Title: "排队中的任务", Prompt: "p", State: model.StateQueued,
+		CreatedAt: model.Now(), UpdatedAt: model.Now(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// 复刻现场：闸门推到 20 分钟后，退避已到第 3 档。
+	e.poolWaitUntil.Store(model.Now() + 20*60*1000)
+	e.rateLimitMu.Lock()
+	e.rateLimit.consecutive = 3
+	e.rateLimit.lastAt = model.Now() - 60_000
+	e.rateLimitMu.Unlock()
+
+	r := e.StallReason()
+	if r.Code != StallQueuedNoLane {
+		t.Fatalf("有排队任务但闸门按住调度时必须报 %s，实际 %q（text=%s）",
+			StallQueuedNoLane, r.Code, r.Text)
+	}
+	if r.Text == "" || r.Detail == "" {
+		t.Fatal("必须同时给出人话原因与证据（用户看到的就是 text/detail 两句）")
+	}
+	// text 里必须带出排队条数与等待时长，否则用户还是不知道要等多久。
+	if !strings.Contains(r.Text, "1 个任务在排队") || !strings.Contains(r.Text, "秒后自动重试") {
+		t.Fatalf("text 必须给出排队数与等待时长，实际：%s", r.Text)
+	}
+	if !strings.Contains(r.Detail, "第 3 次") {
+		t.Fatalf("detail 必须给出退避档位（解释为什么等这么久），实际：%s", r.Detail)
+	}
+}
+
+// TestStallReasonQueuedWithoutGateIsNormal 保证新判据不制造噪音。
+//
+// 有任务排队、闸门没关（还在正常轮转）时，绝不能报停摆 —— 那只是"还没轮到执行"。
+func TestStallReasonQueuedWithoutGateIsNormal(t *testing.T) {
+	e, st, _ := newTestEngine(t)
+	startRunning(t, e)
+	if err := st.Create(&model.Task{
+		ID: "task-queued-normal", Title: "普通排队任务", Prompt: "p", State: model.StateQueued,
+		CreatedAt: model.Now(), UpdatedAt: model.Now(),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	// 闸门已过期（0 值即"没有闸门"）。
+	if r := e.StallReason(); r.Code != "" {
+		t.Fatalf("闸门没关时不得报停摆，实际 %s: %s", r.Code, r.Text)
 	}
 }
 

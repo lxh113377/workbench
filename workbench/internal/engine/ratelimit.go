@@ -91,6 +91,22 @@ func (e *Engine) setPoolCooldown(seconds int) {
 		Msg: "上游限流：整池冷却 " + itoaSeconds(wait) + "（连续第 " + itoaSeconds(consec) + " 次）"})
 }
 
+// endCooldownEpisode 在整池闸门到点（冷却窗口走完）时清零退避层级。
+//
+// 与 clearRateLimit 的分工（别混，两者触发条件不同）：
+//   - clearRateLimit：真的成功了一次（最强的恢复证据），同时清 lastAt；
+//   - endCooldownEpisode：闸门到点、调度即将恢复，只清层级、保留 lastAt。
+//
+// 为什么必须清：闸门按住的正是唯一能"成功"的路径，所以"成功即清零"在这条
+// 路径上永远不可达 —— 层级只能单调上升，最多 4 次就到 1800 秒档并永久停在那
+// （现场 2026-10-21 22:19 实测：1200 秒档把 14 条任务按住 20 分钟，且下一次
+// 已注定是 1800 秒）。到点归零让每轮冷却之后都有一次公平的重探机会。
+func (e *Engine) endCooldownEpisode() {
+	e.rateLimitMu.Lock()
+	e.rateLimit.consecutive = 0
+	e.rateLimitMu.Unlock()
+}
+
 // clearRateLimit 在成功一次后清零限流计数（说明车道已恢复）。
 func (e *Engine) clearRateLimit() {
 	e.rateLimitMu.Lock()

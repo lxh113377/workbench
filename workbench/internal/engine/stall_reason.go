@@ -50,6 +50,19 @@ const (
 	StallAutonomyStalled = "autonomy_stalled"
 	// StallNoSupply：既没有自主草案也没有模板候选（模板池为空/全被拒）。
 	StallNoSupply = "no_supply"
+	// StallQueuedNoLane：有任务排队，但模型池整池冷却调度闸门挡着，一个都没在跑。
+	//
+	// 现场形态（2026-10-21 22:3x，用户报「排队 14 但是 0 正在执行」）：
+	// 上游 429 把整池闸门推到 20~30 分钟后，tick 直接早退；队列里 14 条任务
+	// 一条都不在跑，runningTasks=0、todayDone 冻结。旧口径把"有排队任务"
+	// 一律当成"只是还没轮到"（见上方早退条件），于是这个形态既不报停摆、
+	// 也没有任何读数解释 —— 用户看到的正是"排队 14 / 正在执行 0"这句矛盾的话。
+	//
+	// 与 StallPoolCooling 的区别（别混）：
+	//   - StallPoolCooling 只在"没有任何任务排队/在跑"时才走到（下方第 4 条）；
+	//   - 本条是它的现实常态：队列里明明有活，闸门却把它们全按住了。
+	// 两条都必须存在，否则用户能看到的两种形态总有一种没有解释。
+	StallQueuedNoLane = "queued_no_lane"
 )
 
 // StallUpstreamRejecting 表示"任务在跑，但上游在系统性拒答"。
@@ -98,6 +111,45 @@ func (e *Engine) upstreamFailingStall(now int64) (StallReason, bool) {
 	}, true
 }
 
+// queuedWaitingForLane 判断"有活排队，但一个都没在跑，且整池闸门按住调度"这一形态。
+//
+// 现场（2026-10-21 22:31~22:39 实测，用户报的就是这个画面）：
+//
+//	queuedTasks=14 runningTasks=0，stallReason 为空；rateLimit.limited=true
+//	remainingSeconds=442；tick 因 e.poolWaitUntil 早退，日志里一小时没有一行
+//	"任务开始执行"。用户只能看到"排队 14 / 正在执行 0"，既不知道在等什么，
+//	也不知道要等多久 —— 而服务端明明握着两个字段能说清（rateLimit + 队列长度）。
+//
+// 判据（三条同时成立，缺一不报，避免把"刚起队列的正常空窗"喊成故障）：
+//  1) 队列里有任务（QueuedTasks > 0）；
+//  2) 一条都没在跑（RunningTasks == 0）—— 跑着属于别的形态；
+//  3) 整池冷却闸门仍在生效（poolWaitUntil > now）。
+//
+// 不依赖 TodayDone：这条原因解释的是"为什么此刻 0 个在跑"，不是"今天有没有产出"。
+func (e *Engine) queuedWaitingForLane(now int64) (StallReason, bool) {
+	stats := e.Stats()
+	if stats.QueuedTasks == 0 || stats.RunningTasks > 0 {
+		return StallReason{}, false
+	}
+	until := e.poolWaitUntil.Load()
+	if until <= now {
+		return StallReason{}, false
+	}
+	wait := (until - now) / 1000
+	rl := e.RateLimitStatus()
+	detail := fmt.Sprintf("整池冷却第 %d 次，剩余约 %d 秒后自动重试（闸门到点即恢复调度）。",
+		rl.Consecutive, wait)
+	if rl.LastReason != "" {
+		detail += " " + rl.LastReason
+	}
+	return StallReason{
+		Code:   StallQueuedNoLane,
+		Text:   fmt.Sprintf("模型池冷却中：%d 个任务在排队，一个都没在跑；约 %d 秒后自动重试", stats.QueuedTasks, wait),
+		Since:  rl.LastAt,
+		Detail: detail,
+	}, true
+}
+
 // upstreamRejectKind 从错误文本里识别上游拒绝类别（空串 = 不是这类错误）。
 //
 // 识别的是 OFM 插件与上游网关都会给出的稳定错误码/文案；
@@ -134,6 +186,13 @@ func (e *Engine) StallReason() StallReason {
 	//   旧的早退条件（RunningTasks > 0 就不报停摆）恰好把这个形态判成"正常"，
 	//   于是最需要解释的现象反而没有解释。必须先判"跑着但没有任何完成"。
 	if stall, hit := e.upstreamFailingStall(now); hit {
+		return stall
+	}
+	// 「有排队任务」不等于「不用解释」（2026-10-21 22:3x 现场补判）：
+	// 整池闸门按住调度时队列会一直满着而 running 恒为 0，旧早退条件把这个形态
+	// 当成"只是还没轮到"，于是用户看到的"排队 14 / 正在执行 0"没有任何解释。
+	// 这条必须在下面的早退之前判 —— 它比"还没轮到"更具体，有确定的等待时长。
+	if stall, hit := e.queuedWaitingForLane(now); hit {
 		return stall
 	}
 	if stats.TodayDone > 0 || stats.RunningTasks > 0 || stats.QueuedTasks > 0 {

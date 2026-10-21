@@ -59,6 +59,53 @@ func TestBackoffResetsAfterLongRecovery(t *testing.T) {
 	}
 }
 
+// TestEndCooldownEpisodeResetsEscalation 是「30 分钟档永久钉死」缺陷的回归。
+//
+// 现场（2026-10-21 20:0x~22:3x 冷却日志）：
+//
+//	21:45:13 consecutive=1 wait=300
+//	21:56:55 consecutive=1 wait=300
+//	22:02:04 consecutive=2 wait=600
+//	22:02:06 consecutive=3 wait=1200
+//	22:02:10 consecutive=4 wait=1800
+//	22:19:20 consecutive=2 wait=600
+//	22:19:26 consecutive=3 wait=1200   <- 闸门落在 22:39，期间 14 条任务一条没跑
+//
+// 旧语义里退避层级只在"成功一次"时清零，而闸门按住的恰恰是唯一能成功的那条路：
+// 每次开闸后的第一批请求必然又吃 429，层级只涨不落，最终永久停在 1800 秒档 ——
+// 把上游几秒级的限流窗口人为拖成"半小时一探、次次撞墙"。
+// 新语义：闸门到点即视为冷却窗口走完，退避层级归零（每轮窗口一次公平重探）。
+func TestEndCooldownEpisodeResetsEscalation(t *testing.T) {
+	e, _, _ := newTestEngine(t)
+	// 复刻现场：连续限流把层级推到 4（1800 秒档）。
+	for i := 0; i < 4; i++ {
+		e.setPoolCooldown(rateLimitCooldownSeconds)
+	}
+	e.rateLimitMu.Lock()
+	before := e.rateLimit.consecutive
+	e.rateLimitMu.Unlock()
+	if before < 4 {
+		t.Fatalf("准备阶段应升到第 4 档，实际 %d", before)
+	}
+	// 闸门到点：tick 的守卫是「until <= now 才继续」，所以先把它置为已过期，
+	// 再走 0.5 步的归零分支（复刻真实时序，不假设闸门会自己变短）。
+	e.poolWaitUntil.Store(model.Now() - 1000)
+	e.endCooldownEpisode()
+	e.rateLimitMu.Lock()
+	after := e.rateLimit.consecutive
+	e.rateLimitMu.Unlock()
+	if after != 0 {
+		t.Fatalf("冷却窗口走完后 consecutive = %d, want 0（否则下一轮 429 直接又跳 1800 秒档）", after)
+	}
+	// 再次限流必须从 5 分钟重新起算，而不是继承上一轮的 1800 秒。
+	now := model.Now()
+	e.setPoolCooldown(rateLimitCooldownSeconds)
+	waitSec := (e.poolWaitUntil.Load() - now) / 1000
+	if waitSec > 400 {
+		t.Fatalf("新一轮限流冷却应回到 ~%d 秒，实际 %d 秒（退避没归零）", rateLimitCooldownSeconds, waitSec)
+	}
+}
+
 // TestCooldownGateBlocksScheduling 保证闸门真的会挡住 tick。
 func TestCooldownGateBlocksScheduling(t *testing.T) {
 	e, _, _ := newTestEngine(t)
