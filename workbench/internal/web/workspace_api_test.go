@@ -193,14 +193,25 @@ func TestWorkspaceMethodsRejected(t *testing.T) {
 	}
 }
 
-// TestAdminPageHasWorkspaceTab 覆盖 UI 可发现性：管理面板必须出现「工作目录」页签。
-func TestAdminPageHasWorkspaceTab(t *testing.T) {
+// TestAdminPageHasWorkspaceSection 覆盖 UI 可发现性：工作目录的入口仍在管理面板上。
+//
+// 2026-10-20 信息架构简化（老大「页面太乱」）：管理面板从 10 个页签收敛到 5 个，
+// 「工作目录」不再是独立页签，而是「设置」页里的一块（含换目录与访问审计两个折叠块）。
+// 判据随之改为「设置页可被点到 + 工作目录这块会被渲染出来」——能力不能因简化而消失：
+// ① 设置页签必须在；② appJS 必须真的有 fillWorkspace（渲染当前目录/换目录/审计）；
+// ③ 设置页签的渲染入口必须调用它，否则那块永远是「读取中…」。
+func TestAdminPageHasWorkspaceSection(t *testing.T) {
 	srv, _, _ := newTestServer(t)
 	html := adminHTML(srv.Token())
-	if !strings.Contains(html, "data-tab=\"workspace\"") || !strings.Contains(html, "tab-workspace") {
-		t.Fatalf("管理面板缺少工作目录页签")
+	if !strings.Contains(html, "data-tab=\"settings\"") || !strings.Contains(html, "tab-settings") {
+		t.Fatalf("管理面板缺少设置页签（工作目录就在这一页里）")
 	}
-	if !strings.Contains(html, "data-tab=\"settings\"") {
-		t.Fatalf("既有页签不应被破坏")
+	for _, need := range []string{"async function fillWorkspace()", "/api/workspace", "fillWorkspace();"} {
+		if !strings.Contains(appJS, need) {
+			t.Fatalf("设置页缺少工作目录能力 %q（简化不能把功能删掉）", need)
+		}
+	}
+	if strings.Contains(html, "data-tab=\"workspace\"") {
+		t.Fatal("工作目录已并入设置页，不应再是独立页签（信息架构回退）")
 	}
 }
