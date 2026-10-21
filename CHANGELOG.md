@@ -12,6 +12,18 @@
 > 并立刻补一个空的 `## [Unreleased]` 回顶（CI 的 changelog 门禁会校验这一条）。
 
 ### Added
+- **产物体积归因 + 双向体积护栏 + 清单/趋势双收口（issue #8 四判据收口，2026-10-21）**：
+  ① **体积归因**：两天 +83.3%（7,747,072 增至 14,199,296 B）主因 = **在未提交合并工作区上构建**
+  （模型池分组 UI、assets 重写等在途改动全部进了旧 EXE），非依赖/代码膨胀；提交态
+  （61decb5）构建为 9,650,176 B，对照 10-18 基准真实增量 +24.6%（四项改造 + Prometheus 导出 + 前端改动），
+  归类**预期**。② **exeMinBytes 双向判**（判据 3）：基线加 exeMinBytes=7,747,072（=10-18 基准原值，
+  锚定上一代完整功能），check_perf.ps1 增判定 1b，ci.yml 的 3MB 硬编码下界改引基线；
+  跌破下界=产物缺重大组件（资产丢失/误裁包/半成品），与膨胀同为回归、只是方向相反。
+  ③ **SHA256SUMS 读回校验**（判据 2 后半）：CI Verify artifact 步独立比对清单 hash 与实测 hash，
+  漂移判红不允许跳过（setup/build.ps1 构建后强制重写清单已在 HEAD 就位）。
+  ④ **perf 趋势时间序列**（判据 4）：每次 CI 把 verdict+体积读数落盘 perf-trend/perf-verdict.jsonl
+  并 upload 成 artifact（命名含 run_id 防覆盖、retention 90 天）——上界拦翻倍级膨胀，
+  趋势拦每次涨 5% 的缓慢贴边。
 - **Prometheus 文本格式指标导出（P1-3）**：`internal/web/metrics_prom.go` 提供 `GET /metrics`
   （exposition v0.0.4，纯标准库），把任务状态分布、尝试总数、**按 ErrorKind 的失败分类**、
   任务耗时 sum/count 与进程侧 goroutine/堆/GC 暂停投影成监控系统可直接抓取的形式。
@@ -251,3 +263,4 @@
 
 ### Known issues
 - 7×24 长时压测未跑满 24h（已完成 3 轮长时 + 3 次崩溃注入）。
+

@@ -94,15 +94,31 @@ jobs:
           # 基线读不到时**退回原硬编码 40MB 并告警**：本步骤不把「没读到基线」当成产物不合格 ——
           # 那种情形由下一步 "Perf baseline gate" 判 rc=2 UNVERIFIED，三态各归各位（口径见 docs/benchmark/性能基线口径.md）。
           $maxBytes = 40MB
+          $minBytes = 3MB
           $bl = "docs/benchmark/perf-baseline.json"
           if (Test-Path $bl) {
             try {
-              $v = ([IO.File]::ReadAllText($bl) | ConvertFrom-Json).exeMaxBytes
+              $blObj = [IO.File]::ReadAllText($bl) | ConvertFrom-Json
+              $v = $blObj.exeMaxBytes
               if ($v -and $v -gt 0) { $maxBytes = [long]$v } else { Write-Warning "基线 exeMaxBytes 为 null/非法，退回 40MB（体积上界未被基线约束）" }
-            } catch { Write-Warning "基线解析失败，退回 40MB: $($_.Exception.Message)" }
-          } else { Write-Warning "缺 docs/benchmark/perf-baseline.json，退回 40MB" }
+              $mv = $blObj.exeMinBytes
+              if ($mv -and $mv -gt 0) { $minBytes = [long]$mv } else { Write-Warning "基线 exeMinBytes 为 null/非法，退回 3MB（体积下界未被基线约束）" }
+            } catch { Write-Warning "基线解析失败，退回 40MB/3MB: $($_.Exception.Message)" }
+          } else { Write-Warning "缺 docs/benchmark/perf-baseline.json，退回 40MB/3MB" }
           $maxMB = [math]::Round($maxBytes / 1MB, 2)
-          if ($size -lt 3MB -or $size -gt $maxBytes) { throw "产物大小异常: $size bytes（区间 3MB..${maxMB}MB，上界取自 perf-baseline.json）" }
+          $minMB = [math]::Round($minBytes / 1MB, 2)
+          if ($size -lt $minBytes -or $size -gt $maxBytes) { throw "产物大小异常: $size bytes（区间 $minMB..$maxMB MB，双向界均取自 perf-baseline.json）" }
+          # SHA256SUMS 读回校验（issue #8 判据 2 后半）：build.ps1 5/6 段尾自动重写清单，
+          # 本步独立读回比对 —— 防清单与产物漂移（2026-10-20 实发：产物重建后清单还是旧 hash，
+          # 当时所有以清单为凭的验收证据全部失效）。不一致判红，不允许跳过。
+          $sums = "dist/SHA256SUMS"
+          if (-not (Test-Path $sums)) { throw "缺 dist/SHA256SUMS：build.ps1 未产出校验清单（不应出现——构建链已含重写段）" }
+          $listed = (Get-Content $sums | Where-Object { $_ -match "workbench\.exe" } | Select-Object -First 1)
+          if (-not $listed) { throw "dist/SHA256SUMS 无 workbench.exe 条目" }
+          $actual = (Get-FileHash $exe -Algorithm SHA256).Hash
+          $listedHash = ($listed -split "\s+")[0]
+          if ($listedHash -ne $actual) { throw "SHA256SUMS 漂移: 清单 $listedHash != 实测 $actual（产物与清单不一致，issue #8 判据）" }
+          Write-Host "SHA256SUMS 校验通过: $actual"
           # EXE 是 GUI 子系统（-H=windowsgui）：CI 无控制台会话时 stdout 捕获可能为空或退出码非零，
           # 本机有控制台则正常。--version 作为「能跑起来」探针，输出经 Out-String 兜底；
           # 退出码非零仅告警（GUI 程序在 headless CI 的常见行为），存在性/大小/版本/SHA256 由 build.ps1 6/6 段已硬校验。
@@ -124,8 +140,26 @@ jobs:
         # 不在 runner 上冒充判定（避免误报把整个护栏的信任打掉）。
         run: |
           ./tests/check_perf.ps1 -Exe dist/workbench.exe
-          if ($LASTEXITCODE -eq 1) { throw "性能基线门禁未通过：产物超出 perf-baseline.json 的上界（见上方 CHECK 行）" }
-          if ($LASTEXITCODE -ne 0) { throw "性能基线无法判定（UNVERIFIED rc=$LASTEXITCODE）：产物或基线数据件缺失/解析失败 —— 护栏没跑成，不等于性能合格" }
+          $perfRc = $LASTEXITCODE
+          # verdict + 读数落盘成时间序列（issue #8 判据 4）：单次 verdict 只有「过/不过」，
+          # 看不见「每次涨 5% 缓慢贴边」。落盘件由下步 upload 成 artifact，跨 run 可比。
+          $blObj2 = [IO.File]::ReadAllText("docs/benchmark/perf-baseline.json") | ConvertFrom-Json
+          $exeItem = Get-Item dist/workbench.exe
+          $row = [pscustomobject]@{
+            ts = (Get-Date).ToString("o")
+            sha = $env:GITHUB_SHA
+            runId = $env:GITHUB_RUN_ID
+            verdict = $(if ($perfRc -eq 0) { "PASS" } elseif ($perfRc -eq 1) { "FAIL" } else { "UNVERIFIED" })
+            rc = $perfRc
+            exeBytes = $exeItem.Length
+            exeMinBytes = $blObj2.exeMinBytes
+            exeMaxBytes = $blObj2.exeMaxBytes
+          }
+          New-Item -ItemType Directory -Force -Path perf-trend | Out-Null
+          $row | ConvertTo-Json -Compress | Add-Content -Path perf-trend/perf-verdict.jsonl -Encoding UTF8
+          Write-Host "趋势读数已落盘: perf-trend/perf-verdict.jsonl => $($row | ConvertTo-Json -Compress)"
+          if ($perfRc -eq 1) { throw "性能基线门禁未通过：产物超出 perf-baseline.json 的双向界（见上方 CHECK 行）" }
+          if ($perfRc -ne 0) { throw "性能基线无法判定（UNVERIFIED rc=$perfRc）：产物或基线数据件缺失/解析失败 —— 护栏没跑成，不等于性能合格" }
 
       - name: Upload EXE
         uses: actions/upload-artifact@v4
@@ -133,3 +167,14 @@ jobs:
           name: workbench-exe
           path: dist/workbench.exe
           retention-days: 7
+
+      # 性能趋势时间序列（issue #8 判据 4）：每次 CI 的 verdict + 体积读数 upload 成 artifact。
+      # 命名含 run_id 保证每次 run 独立成件（同名会覆盖，时间序列就断了）；
+      # retention 90 天跨 run 拼出趋势——上界拦「翻倍」，趋势拦「每次涨 5% 缓慢贴边」。
+      - name: Upload perf trend
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-trend-${{ github.run_id }}
+          path: perf-trend/perf-verdict.jsonl
+          retention-days: 90
+          if-no-files-found: error
