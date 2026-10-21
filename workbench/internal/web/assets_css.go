@@ -139,8 +139,11 @@ body.home::before{
           mask-image:radial-gradient(circle at 50% 50%,#000 0%,rgba(0,0,0,.8) 40%,transparent 70%);
   transform-origin:50% 50%;
   /* conic 扇面无法自转（伪元素已用尽、DOM 契约禁止新增节点），
-     改为「亮度呼吸 + 扇面角度由关键帧切换」不可行 ⇒ 保留静态扇面，让整体做极缓慢明暗呼吸。 */
-  animation:bloom 12s ease-in-out infinite alternate;
+     改为「亮度呼吸 + 扇面角度由关键帧切换」不可行 ⇒ 保留静态扇面，让整体做极缓慢明暗呼吸。
+     入场第一段（环境光从景深亮起）与常驻 bloom 必须写在同一个 animation 列表里：
+     拆成两条声明会让后者整体覆盖前者（走查实测：入场被静默关掉）。 */
+  animation:homeStageEnv 1.5s var(--ease) both,
+            bloom 12s ease-in-out 1.5s infinite alternate;
 }
 /* 胶片颗粒：内联 SVG 噪声，零外部请求；强度压到几乎只在暗部可感 */
 body.home::after{
@@ -241,7 +244,12 @@ body.home::after{
     0 2px 0 rgba(255,255,255,.05) inset,
     0 -18px 44px -22px var(--glow) inset,
     0 0 120px -46px var(--glow);
-  animation:respire 7s ease-in-out infinite,angspin 9s linear infinite;
+  /* 动画顺序即优先级：animation-play-state:paused（hover 时）只暂停**列表第一个**动画，
+     所以常驻的 respire 必须放第一位 —— 入场放最后，用户在入场途中 hover 不会把推近卡死。
+     入场 .28s 起、.92s 长 ⇒ 1.2s 结束，与 respire/angspin 的 1.2s delay 精确衔接。*/
+  animation:respire 7s ease-in-out 1.2s infinite,
+            angspin 9s linear 1.2s infinite,
+            homeStageHero .92s var(--ease) .28s both;
   transition:transform .3s var(--ease),letter-spacing .32s var(--ease),
              box-shadow .3s var(--ease),color .2s var(--ease);
   touch-action:manipulation;-webkit-tap-highlight-color:transparent;
@@ -328,11 +336,32 @@ body.home::after{
   50%{box-shadow:0 50px 120px -38px rgba(0,0,0,.98),0 0 0 1px rgba(0,0,0,.55),0 2px 0 rgba(255,255,255,.07) inset,0 -18px 52px -20px rgba(var(--accent-rgb),.44) inset}
 }
 @keyframes bloom{from{opacity:.72}to{opacity:1}}
+/* ── 首页入场序列（2026-10-21 获奖级走查）──────────────────────────────
+   获奖级第一屏的标准是「镜头推进」而不是「东西都在那儿」：环境光先亮起，
+   主体从景深里推近并点亮，最后入口条落位。三段共用一条 1.5s 时间轴，
+   全部只驱动 transform/opacity/filter（合成层属性，不触发 layout）。
+   受极简契约限制不能新增 DOM，因此由 CSS animation 直接驱动现有元素。
+   prefers-reduced-motion 下由全局 reduce 规则退化为静态（契约已覆盖）。 */
+@keyframes homeStageEnv{
+  from{opacity:0;filter:blur(6px)}
+  to{opacity:1;filter:blur(0)}
+}
+@keyframes homeStageHero{
+  0%{opacity:0;transform:translateY(14px) scale(.965);filter:blur(10px)}
+  62%{opacity:1;filter:blur(0)}
+  100%{opacity:1;transform:none;filter:blur(0)}
+}
+@keyframes homeStageEntries{
+  from{opacity:0;transform:translateY(10px)}
+  to{opacity:1;transform:none}
+}
 
 /* 隐藏式后门（配置面可达但不占视觉）：右下角一个点，悬停/聚焦才显形 */
 /* 子页面入口条（2026-10-19 老大指令：入口直接出现在首页上）。
    仪器铭牌风格：发丝线框 + 等距小字，克制不抢主按钮的视觉中心。 */
 .home-entries{
+  /* 入场第三段：入口条在主按钮落定后落位（.62s 起，与主体推进错峰） */
+  animation:homeStageEntries .6s var(--ease) .62s both;
   /* 入口带：与主按钮同宽，形成一条稳定的纵向中轴（原先是三个孤立胶囊，重心散）。
      视觉重量刻意压到主按钮的 1/8：发丝线分隔 + 微型字距 + 无背景块。 */
   width:min(320px,78vw);min-width:min(260px,72vw);

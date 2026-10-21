@@ -16,7 +16,16 @@ param(
   # 这些测试刻意**不**随覆盖率数字浮动：真正创建窗口的 Run() 只能在有 Explorer 的真机上跑，
   # 单测环境断言它只会得到假绿。因此 tray 的实际覆盖率长期停在 16.x%，
   # 阈值按实测基线设为 16（不许降到 16 以下，也不虚设到够不着的高位）。
-  [string[]]$PerPackageCover = @("workbench/internal/engine=20", "workbench/internal/web=15", "workbench/internal/executor=26", "workbench/internal/modelpool=49", "workbench/internal/supervisor=46", "workbench/cmd/workbench=3", "workbench/internal/evaluate=50", "workbench/internal/modelroute=50", "workbench/internal/shortcut=23", "workbench/internal/chain=80", "workbench/internal/judge=55", "workbench/internal/single=16", "workbench/internal/tray=16")
+  [string[]]$PerPackageCover = @("workbench/internal/engine=20", "workbench/internal/web=15", "workbench/internal/executor=26", "workbench/internal/modelpool=49", "workbench/internal/supervisor=46", "workbench/cmd/workbench=3", "workbench/internal/evaluate=50", "workbench/internal/modelroute=50", "workbench/internal/shortcut=23", "workbench/internal/chain=80", "workbench/internal/judge=55", "workbench/internal/single=16", "workbench/internal/tray=16", "workbench/internal/dshprofile=2.5")
+
+# dshprofile 阈值说明（2026-10-21 复核对账，与 tray/single 同型）：
+# 该包 18 个函数里只有 profilePatch 是纯函数（已 100% 覆盖），
+# 其余全是 IO 型：真实 DSH 安装目录探测（LocateDSH/resolveFromShim）、
+# 文件复制（copyDir/linkOFM/ensureProfile/ensureOFMData）、
+# 进程属性（hiddenProcAttr）—— 这些在单测环境里要么依赖真实安装态、
+# 要么只能在有 Explorer 的真机跑，硬凑覆盖率只会造假绿。
+# 实测基线 2.6%（纯函数那一个），阈值按实测设为 2.5（略低于实测，
+# 也不虚设到够不着的高位）；将来补真实 IO 测试时只许抬不许降。
 )
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
@@ -35,15 +44,38 @@ if (Test-Path $makeIcon) {
 }
 
 Write-Host "==> 2/6 编译资源（图标 + 版本信息）" -ForegroundColor Cyan
-$windres = Get-ChildItem "C:\Users\$env:USERNAME\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs*" -Recurse -Filter windres.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($windres) {
-  Push-Location $build
-  & $windres.FullName -i app.rc -o rsrc_windows_amd64.syso -O coff
-  Pop-Location
-  Copy-Item (Join-Path $build "rsrc_windows_amd64.syso") (Join-Path $wb "cmd\workbench\rsrc_windows_amd64.syso") -Force
-  Write-Host "    资源编译完成"
+# 缺件分级（2026-10-21 实测修复）：app.rc / make-icon.ps1 在本机不存在且从未入库
+# （git ls-files 零命中），而 $ErrorActionPreference="Stop" 会让 cc1 报
+# "app.rc: No such file" 直接把全链构建炸在 2/6 —— 之后所有版本都只能走手工通道。
+# 现在的判据落在**资源面本身**，不是「工具在不在」：
+#   · app.rc 在  -> 照常 windres 编译并覆盖 syso（版本信息随 -Version 更新）；
+#   · app.rc 不在 -> 校验 git 跟踪的静态 syso 在盘且带 VS_VERSION_INFO
+#     （实测 12116 B / Unicode 串含版本号）=> 声明降级「图标与 FileVersion 用静态件」，
+#     不炸链；syso 也不在 => 判红（那才是真的缺资源）。
+$rcPath = Join-Path $build "app.rc"
+$sysoDst = Join-Path $wb "cmd\workbench\rsrc_windows_amd64.syso"
+if (Test-Path $rcPath) {
+  $windres = Get-ChildItem "C:\Users\$env:USERNAME\AppData\Local\Microsoft\WinGet\Packages\BrechtSanders.WinLibs*" -Recurse -Filter windres.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+  if ($windres) {
+    Push-Location $build
+    & $windres.FullName -i app.rc -o rsrc_windows_amd64.syso -O coff
+    Pop-Location
+    Copy-Item (Join-Path $build "rsrc_windows_amd64.syso") $sysoDst -Force
+    Write-Host "    资源编译完成（图标 + 版本信息随 -Version 更新）"
+  } else {
+    Write-Warning "    未找到 windres，跳过资源编译（EXE 仍可用，版本信息为上次静态值）"
+  }
 } else {
-  Write-Warning "    未找到 windres，跳过图标与版本信息（EXE 仍可用）"
+  if (Test-Path $sysoDst) {
+    $sysoBytes = [IO.File]::ReadAllBytes($sysoDst)
+    $sysoText = [Text.Encoding]::Unicode.GetString($sysoBytes)
+    if ($sysoText -notmatch 'VS_VERSION_INFO') {
+      throw "静态 syso 存在但不含 VS_VERSION_INFO（资源件损坏，需重新提供 app.rc 或恢复 syso）"
+    }
+    Write-Host ("    app.rc 缺件 => 用 git 跟踪的静态 syso（" + $sysoBytes.Length + " B，含版本信息）；图标与 FileVersion 保持静态值")
+  } else {
+    throw "app.rc 与静态 syso 都不在：产物将没有图标与版本信息（把 app.rc 入库或恢复 cmd\workbench\rsrc_windows_amd64.syso）"
+  }
 }
 
 Write-Host "==> 3/6 代码检查" -ForegroundColor Cyan
@@ -114,6 +146,14 @@ if (Test-Path $subChecker) {
   # 注意：此处不能 Pop-Location —— 位置栈已在 5/6 段尾弹出，再弹会抛错并掩盖真实判据。
   if ($LASTEXITCODE -ne 0) { throw "产物子系统不合规（会弹控制台窗口），见上方 FAIL 提示" }
   Write-Host "    子系统: GUI（无控制台窗口）OK"
+} else {
+  # 校验器不在（例如 CI 上 tests/check_subsystem.ps1 尚未入库）时**内联自证**，
+  # 而不是跳过 —— 跳过会让门禁在 CI 上静默失效，等于没有门禁。
+  $fs2 = [IO.File]::OpenRead($exe); $b = New-Object byte[] 4096; [void]$fs2.Read($b, 0, 4096); $fs2.Close()
+  $peOff = [BitConverter]::ToInt32($b, 0x3C)
+  $sub = [BitConverter]::ToUInt16($b, ($peOff + 4 + 20 + 68))
+  if ($sub -ne 2) { throw ("产物子系统不合规: Subsystem=" + $sub + "（2=GUI 不弹窗 / 3=CONSOLE 会弹控制台窗口）") }
+  Write-Host "    子系统: GUI（内联校验，无控制台窗口）OK"
 }
 
 # 首页契约门禁（2026-10-20 现场：老大「打开的是旧的页面,已经有新的了」）。
@@ -137,14 +177,6 @@ if (Test-Path $homeChecker) {
   if (-not $htext.Contains("home-entries")) { throw "产物缺新首页锚点 home-entries：不是当前源码构建的" }
   if (-not $htext.Contains("UI_PROBE_READY")) { throw "产物缺 --ui-probe 通道：探针会静默回落成 GUI" }
   Write-Host "    首页: 内联校验（无旧页锚点 + 有探针通道）OK"
-} else {
-  # 校验器不在（例如 CI 上 tests/check_subsystem.ps1 尚未入库）时**内联自证**，
-  # 而不是跳过 —— 跳过会让门禁在 CI 上静默失效，等于没有门禁。
-  $fs2 = [IO.File]::OpenRead($exe); $b = New-Object byte[] 4096; [void]$fs2.Read($b, 0, 4096); $fs2.Close()
-  $peOff = [BitConverter]::ToInt32($b, 0x3C)
-  $sub = [BitConverter]::ToUInt16($b, ($peOff + 4 + 20 + 68))
-  if ($sub -ne 2) { throw ("产物子系统不合规: Subsystem=" + $sub + "（2=GUI 不弹窗 / 3=CONSOLE 会弹控制台窗口）") }
-  Write-Host "    子系统: GUI（内联校验，无控制台窗口）OK"
 }
 $info = (Get-Item $exe).VersionInfo
 $size = [math]::Round((Get-Item $exe).Length / 1MB, 2)

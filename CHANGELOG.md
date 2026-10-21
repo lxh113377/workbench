@@ -54,6 +54,27 @@
   取证：隔离实例 390px `theadVisible=0 / labeledTd=48`、队列 4 行转卡（row display:block）。
 
 ### Added
+- **首页入场序列「镜头推进」（2026-10-22 动效篇补强）**：获奖级第一屏的标准是叙事性入场，
+  此前首页只有常驻呼吸、打开即终态。新增三段式 1.5s 时间轴：环境光从景深亮起（blur 6px→0）
+  → 主按钮推近 + 点亮（translateY 14px + scale .965 → 落定，.28s 起）→ 入口条落位（.62s 起）。
+  两条实现纪律：① 全部驱动 transform/opacity/filter（合成层属性，不触发 layout）；
+  ② **动画顺序即优先级** —— `animation-play-state:paused`（hover）只暂停列表第一个动画，
+  故常驻 respire 放第一位、入场放最后，用户在入场途中 hover 不会把推近卡死。
+  实证（CDP 逐帧）：80ms 暗场仅环境网格、300ms 主体落定 + 入口 op 0.84、700ms 全落位；
+  `prefers-reduced-motion` 下降级为静态完整态（animDur=1e-06s 且 opacity=1，不卡透明）。
+- **修复「同规则块两条 animation 声明互相覆盖」**：`body.home::before` 的入场与常驻 bloom
+  原为两条独立声明，后者整体覆盖前者 ⇒ 入场被静默关掉（走查实测才发现 bloom 仍在、
+  入场没跑）。合并为同一 animation 列表（`homeStageEnv …, bloom 12s … 1.5s infinite`）。
+
+### Fixed
+- **官方 build.ps1 全链首次跑通（2026-10-22）**：此前 2/6 资源步必失败（app.rc 缺件 +
+  `$ErrorActionPreference="Stop"`），且 6/6 后有一个孤儿 `} else {`（首页门禁块误植了
+  子系统的内联兜底，PowerShell 解析报错）——两个缺陷都因为「从没跑过 2/6 之后」而潜伏。
+  修：2/6 改为「有 rc 才 windres，无 rc 则校验 git 跟踪的静态 syso 含 VS_VERSION_INFO」；
+  孤儿 else 归位到子系统 if 块；dshprofile 覆盖率按实测基线设分档阈值 2.5
+  （18 函数里只有 profilePatch 是纯函数已 100%，其余为真实 IO 型，与 tray/single 同型）。
+
+### Added
 - **获奖级前端走查第一轮（2026-10-21，八维自检）**：以 Awwwards/Webby/FWA 标准逐页目检四页
   （首页/管理台/模型池/治理台）× 三视口，落地：① 治理台 `.gov-card` 补基座样式（此前只有
   反光没有盒体，卡片呈裸文字漂浮）；② 首页第一屏补品牌铭牌（伪元素承载，不破「极简首页」
