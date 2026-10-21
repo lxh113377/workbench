@@ -75,6 +75,14 @@ Section '托盘窗口样式（消息窗不得进任务视图）' {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Root $Root
 }
 
+# 纯净检出编译门禁（2026-10-21 新增）：工作树里跑测试全绿 ≠ 提交的东西能跑。
+# 实测抓到过：git archive 导出 HEAD 后 go build 报 undefined，因 4 个依赖文件从未入库。
+Section '纯净检出编译（防提交编译不过的快照）' {
+  $g = Join-Path $Root 'tests\check_snapshot_build.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Repo $Root
+}
+
 if ($Source -ne '' -or $Target -ne '') {
   Section '覆盖安全（禁止整文件覆盖丢改动）' {
     $g = Join-Path $Root 'tests\check_no_shrink.ps1'
