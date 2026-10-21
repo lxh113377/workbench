@@ -50,6 +50,14 @@
 - git 提交 d311436（11 文件 +455/−107，限定写域提交不扫并发脏面）；
   **推送未成**：GitHub 直连与 7897 代理均 TLS 断（curl 000），记 07 part132 P1。
 
+## 终态补记（1.4.0-final，21:5x）
+- **openTask 两处漏网补齐并换件**：任务详情裸 h3+doc 浮在页底 ⇒ 落 .card 壳；
+  领域列漏中文化 ⇒ 走 domainText。终版发布件 frontend-gate 23/23 PASS + 双门禁 PASS，
+  SHA256 **F39390C3…B6DE**（替换首版 4A40ECB0…668A），17890 活实例复验 card 壳 +
+  domainText 均在产物字节。git 4cf6593。
+- 三个未目检交互面补 CDP 实证：模板编辑器展开（hasCard=true、7 个 label）、
+  任务详情（hasCard=true、元信息一行中文化）、池行「⋯」展开（密钥/接口地址字段出现）。
+
 ## 踩坑（新增）
 1. **backdrop-filter 为 fixed 后代创建 containing block**：品牌铭牌 position:fixed 挂在
    .home-entries（有 backdrop-filter）上被拉回该层裁剪 ⇒ 换宿主到无滤镜的取景框层。
