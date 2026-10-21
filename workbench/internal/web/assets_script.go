@@ -185,7 +185,7 @@ const appJS = `(() => {
         models.map(function (m) {
           const cd = m.cooldownTo && m.cooldownTo > Date.now();
           const badge = cd ? '<span class="tag">冷却中</span>' : '<span class="state-done">可用</span>';
-          return '<tr><td>' + esc(m.model) + '</td><td>' + esc(m.tier || '-') +
+          return '<tr><td data-label="模型">' + esc(m.model) + '</td><td data-label="层级">' + esc(m.tier || '-') +
             '</td><td>' + (m.success || 0) + ' / ' + (m.failure || 0) + '</td><td>' + badge + '</td></tr>';
         }).join('') + '</tbody></table>'
       : emptyHint('还没有可用模型。到「更多 → 模型池」里同步或添加一个。');
@@ -197,7 +197,7 @@ const appJS = `(() => {
       : '<table><thead><tr><th>原因</th><th>次数</th><th>占比</th></tr></thead><tbody>' +
         (failRes.buckets || []).map(function (b) {
           const pct = Math.round(100 * b.count / Math.max(1, failRes.total));
-          return '<tr><td>' + esc(kindText[b.kind] || b.kind) + '</td><td>' + b.count + '</td><td>' + pct + '%</td></tr>';
+          return '<tr><td data-label="原因">' + esc(kindText[b.kind] || b.kind) + '</td><td data-label="次数">' + b.count + '</td><td data-label="占比" class="num">' + pct + '%</td></tr>';
         }).join('') + '</tbody></table>';
 
     const metRes = await api('/api/metrics').catch(function () { return null; });
@@ -247,7 +247,7 @@ const appJS = `(() => {
 
     const rows = q.map(function (t) {
       const badge = '<span class="' + stateCls(t.state) + '">' + (STATE_TEXT[t.state] || t.state) + '</span>';
-      return '<tr><td>' + esc(t.title) + '</td><td>' + esc(domainText(t.domain)) + '</td><td class="num">' + (t.priority || 0) + '</td><td>' + badge + '</td>' +
+      return '<tr><td data-label="标题">' + esc(t.title) + '</td><td data-label="领域">' + esc(domainText(t.domain)) + '</td><td class="num" data-label="优先级">' + (t.priority || 0) + '</td><td data-label="状态">' + badge + '</td>' +
         '<td class="ops"><button class="btn sm" onclick="WB.priority(&apos;' + t.id + '&apos;)">置顶</button>' +
         '<button class="btn sm" onclick="WB.cancel(&apos;' + t.id + '&apos;)">终止</button></td></tr>';
     }).join('');
@@ -255,7 +255,7 @@ const appJS = `(() => {
       const badge = '<span class="' + stateCls(t.state) + '">' + (STATE_TEXT[t.state] || t.state) + '</span>';
       const ops = (t.state === 'running' ? '<button class="btn sm" onclick="WB.cancel(&apos;' + t.id + '&apos;)">终止</button>' : '') +
         '<button class="btn sm" onclick="WB.openTask(&apos;' + t.id + '&apos;)">详情</button>';
-      return '<tr><td>' + esc(t.title) + '</td><td>' + badge + '</td><td>' + fmtTime(t.startedAt || t.updatedAt) + '</td><td class="ops">' + ops + '</td></tr>';
+      return '<tr><td data-label="标题">' + esc(t.title) + '</td><td data-label="状态">' + badge + '</td><td data-label="更新时间">' + fmtTime(t.startedAt || t.updatedAt) + '</td><td data-label="操作" class="ops">' + ops + '</td></tr>';
     }).join('');
 
     const addBody = '<label>标题</label><input id="mTitle" placeholder="例如：整理本周 AI 工具评测">' +
@@ -305,9 +305,9 @@ const appJS = `(() => {
     const verifiedN = done.filter(function (t) { return t.verified; }).length;
     const rowOf = function (t) {
       const q = t.critique ? t.critique.quality + '/10' : '—';
-      return '<tr><td>' + esc(t.title) + '</td><td>' + esc(domainText(t.domain)) + '</td><td class="num">' + fmtMin(t.elapsedMs) + '</td>' +
-        '<td class="num">' + q + '</td><td>' + verifyBadge(t) + '</td><td>' + repairBadge(t) + '</td><td class="num">' + fmtBytes(t.outputBytes) + '</td>' +
-        '<td class="ops"><button class="btn sm" onclick="WB.openTask(&apos;' + t.id + '&apos;)">查看</button>' +
+      return '<tr><td data-label="标题">' + esc(t.title) + '</td><td data-label="领域">' + esc(domainText(t.domain)) + '</td><td class="num" data-label="耗时">' + fmtMin(t.elapsedMs) + '</td>' +
+        '<td class="num" data-label="自评">' + q + '</td><td data-label="验收">' + verifyBadge(t) + '</td><td data-label="返工">' + repairBadge(t) + '</td><td class="num" data-label="大小">' + fmtBytes(t.outputBytes) + '</td>' +
+        '<td class="ops" data-label="操作"><button class="btn sm" onclick="WB.openTask(&apos;' + t.id + '&apos;)">查看</button>' +
         (t.state === 'done' ? '<button class="btn sm" onclick="WB.rate(&apos;' + t.id + '&apos;,5)">★5</button>' : '') + '</td></tr>';
     };
     const head = '<table><thead><tr><th>标题</th><th>领域</th><th>耗时</th><th>自评</th><th>验收</th><th>返工</th><th>大小</th><th>操作</th></tr></thead><tbody>';
@@ -340,8 +340,8 @@ const appJS = `(() => {
     const shown = tplShowAll || q ? hit : hit.slice(0, 8);
     const rows = shown.map(function (t) {
       const enabled = t.enabled ? '<span class="state-done">启用</span>' : '<span class="muted">停用</span>';
-      return '<tr><td>' + esc(t.name) + '</td><td>' + esc(domainText(t.domain)) + '</td><td class="num">' + t.priorityWeight + '</td><td class="num">' + (t.valuePrior || 0) + '</td><td>' + enabled + '</td>' +
-        '<td class="ops"><button class="btn sm" onclick="WB.editTemplate(&apos;' + t.id + '&apos;)">编辑</button>' +
+      return '<tr><td data-label="名称">' + esc(t.name) + '</td><td data-label="领域">' + esc(domainText(t.domain)) + '</td><td class="num" data-label="优先级">' + t.priorityWeight + '</td><td class="num" data-label="价值先验">' + (t.valuePrior || 0) + '</td><td data-label="状态">' + enabled + '</td>' +
+        '<td class="ops" data-label="操作"><button class="btn sm" onclick="WB.editTemplate(&apos;' + t.id + '&apos;)">编辑</button>' +
         '<button class="btn sm" onclick="WB.deleteTemplate(&apos;' + t.id + '&apos;)">删除</button></td></tr>';
     }).join('');
     const more = (!q && !tplShowAll && hit.length > shown.length)

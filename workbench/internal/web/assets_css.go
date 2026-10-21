@@ -1173,6 +1173,22 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
   body{font-size:14px}
   /* 超窄屏顶栏：操作按钮缩小内距，保证 4 个按钮一行放得下 */
   .topbar .btn{min-height:32px;padding:0 8px;font-size:11.5px}
+  /* ≤480px 管理面板表格转卡片模式（2026-10-21 窄屏走查实测）：
+     390px 下 table-layout:fixed 把 6-8 列均分成每列 ~48px，「价值先验」折成 4 行、
+     「状态」列跑位 —— 那是列宽塌陷，不是内容问题。复用池表已验证的
+     data-label 卡片范式：thead 隐藏、每 tr 变一张卡、td 前置字段名。
+     只对 .content 内表格生效（池表 .pool-table 在 720px 已切，且是 5-6 列无中文长头）。 */
+  .content table thead{display:none}
+  .content table tbody{display:block}
+  .content table tr{display:block;border:1px solid var(--line-2);border-radius:12px;padding:12px 14px;margin:0 0 12px;background:rgba(255,255,255,.02)}
+  .content table tr:last-child{margin-bottom:0}
+  .content table td{display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:0}
+  .content table td::before{content:attr(data-label);flex:0 0 auto;min-width:4.2em;color:var(--dim);font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em}
+  .content table td:not([data-label])::before{content:'';min-width:0}
+  .content table td.ops,.content table td.num{justify-content:flex-end}
+  .content table td.ops::before,.content table td.num::before{margin-right:auto}
+  .content table td.ops .btn{min-height:36px}
+  .table-scroll{max-height:none;border:0;background:transparent;overflow:visible}
   .topstat{font-size:10.5px}
   .content{padding:10px 10px 42px}
   .pagebar{padding:6px 10px 0}
