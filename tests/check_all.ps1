@@ -139,6 +139,13 @@ Section '未跟踪 Go 文件（本地判据：CI 干净检出恒 PASS，不接 r
   if ($LASTEXITCODE -eq 0) { Write-Host '    （差额见上方三行读数）' }
 }
 
+Section '注释时效（现状型数字断言必须带日期，round 31/32 同型教训）' {
+  $g = Join-Path $Root 'tests\check_comment_staleness.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section '.ps1 语法可解析（字节层之上的第三层：能解析才能跑）' {
   $g = Join-Path $Root 'tests\check_ps1_syntax.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
