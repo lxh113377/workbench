@@ -15,6 +15,21 @@
 > 未重新输出）—— 本轮恢复，并记下这条教训：以「包含后文的多行锚点」做插入时，
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
+### Changed
+- **收尾对账：ds 端欠账 7 项 → 清 3 项（两项实测证伪）、剩 4 类全部有外部卡点（2026-10-23 r29）**：
+  本轮把 28 轮以来登记的 ds 端未闭环项逐条核验：
+  **① 模型池「网关在线 vs 可用数口径不一致」→ 证伪撤销**：实测 `/api/pool` 为 42 模型
+  （41 healthy + 1 degraded），三车道 `available == total`（free 18/18、kilo 19/19、eac 5/5）。
+  此前记录的「48/65」是旧偶发截图，当前口径完全一致，非缺陷。
+  **② 产出解析器「两套主产出判定口径分裂」→ 证伪撤销**：引擎 `engine.go:1164` 已把 primary
+  完整路径写入 `task.OutputFile`；实测 86/86 done 任务全部有 outputFile，抽查 5 个文件实际
+  文件大小与记录**完全一致**（4363/705/5948/4799/3383 字节）⇒ `readTaskArtifact` ① 级永远命中，
+  ②③ 级是纯兜底，口径分裂隐患不存在。
+  **③ CHANGELOG Unreleased 段 14 小节头 → 已清**（前轮已合并，实测无 `### ` 小节头）。
+  **仍未闭环 4 类，全部 blocked（非我方可解）**：P1-FONT6 三款商业字体缺授权（blocked-external）；
+  P2 技能镜像同步（镜像侧 -Fix 工具本机未定位，blocked-tooling）；P1-FOOTERHOOK pre-commit 接
+  evolution 门禁 + P1-PREAD Step 0.55 + 技能升级落库（均 blocked-by-other-holder，他端在途件 `M`）；
+  P1-DShB-1 Blender 插件 lib 需宿主重启（重启会掐死在跑会话，P0#35 须有把握）。
 ### Fixed
 - **1920+ 宽屏取景框刻度被稀释成看不见（2026-10-23 CDP 逐档实测）**：
   `@media (min-width:1600px)` 此前只调后台页（content/pagebar/topbar/kpi），**完全没管首页取景框**。
