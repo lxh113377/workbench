@@ -1,29 +1,54 @@
-# gofmt 格式债务登记（2026-10-22 建立）
+﻿# gofmt 格式债务登记（2026-10-22 建立）
 #
-# 【2026-10-22 二轮清理】原 35 条里 33 条已失效（对应文件已由并行会话入库并格式化），
-# 已删除。剩下 2 条 live —— 仍是并行会话在途件（git status M，工作区未格式化）。
+# 语义：登记在此的文件仍会被 check_gofmt.ps1 **点名并计数**，但不计入 rc。
+# 有豁免时门禁输出三态，绝不打纯 PASS。
 #
-# 失效检测已上闸：check_gofmt.ps1 现在会**主动点名「登记但已不漂移」的条目并判红**，
-# 要求删除。原因：在册豁免会让该文件**将来的漂移**静默放过（门禁对该文件永久失明），
-# 而门禁外表仍是绿的 —— 这比缺判据更危险。实测这一轮就是靠它发现 33 条腐烂条目。
+# 【登记基准 = HEAD，不是工作区】（2026-10-22 四轮校准，这条是核心）：
+#   CI 判的是 HEAD；本机工作区常被并行会话改得比 HEAD 更新（甚至本地已合规）。
+#   若按工作区判，会产生两个死结：① 本地绿但 CI 红（豁免被误删）；
+#   ② 本地红但 CI 绿（在途件被当违规）。故必要性一律按 HEAD 版本复算。
 #
-# 语义：登记在此的文件仍会被 check_gofmt.ps1 **点名并计数**，但不计入 rc —— 区别于
-# 「静默跳过」。有豁免时门禁输出三态表述「PASS 但 N 个豁免未清」，绝不打「合规」。
+# 【失效检测同上闸】：登记但 HEAD 已不漂移 = 腐烂条目，门禁判红要求删除
+#   （防止在册豁免把该文件将来的漂移永久遮住）。
+# 【并行在途件不登记】：工作区漂移但 HEAD 合规的文件由门禁自动归入
+#   「并行在途件，不计 rc」，无需在此列条。
 #
-# 为什么存在（分工硬约束，不是懒政）：
-#   这些文件此刻都是**并行会话的在途件**（git status M，内容正在被它们改）。代跑 gofmt 会：
-#   ① 代写他人代码（违反「不碰他人在途件」分工）；
-#   ② 与其并发写入产生覆盖竞争（本仓记过多次整文件覆盖丢改动事故）。
-#   2026-10-22 实测：这 35 个正是 CI 上剩余的漂移集，与本地同集。
+# 清零条件：HEAD 上的漂移修复后（并行会话提交其格式化），删除对应行。
 #
-# 清零条件（写清楚，才有清零的那天）：
-#   并行会话把这些文件入库后，逐行删除对应行 —— 门禁即恢复零豁免。
-#   若某文件入库后仍未格式化，删行后 CI 立刻点名，届时由该文件作者补 gofmt。
-#
-# 清零路径已自证可行：另有 30 个同样漂移但**不在并行 dirty 集**的文件，
-# 已由本会话 gofmt 修复并入库（27ff6d8）；机器证明「暂存内容 == gofmt(HEAD)」0 处偏差。
+# 本轮账（2026-10-22 18:5x，HEAD=7375eca 实测）：33 个文件 HEAD 漂移 + 工作区皆 M（在途），
+# 另 2 个 shortcut 件同在途。全部为并行会话在途，本会话不代改（避免覆盖竞争）。
 
-# 登记原因：并行在途件（2026-10-22 17:2x 现场 git status 实测）
-# 注：shortcut 两件最早登记（gofmt 会重排其文档注释结构）。
+tests/docker-autonomy/fakedsh/main.go
+tests/docker/httpget/main.go
+workbench/cmd/workbench/acceptance.go
+workbench/cmd/workbench/acceptance_test.go
+workbench/cmd/workbench/plan_selftest_dispatch_test.go
+workbench/internal/artifact/artifact.go
+workbench/internal/artifact/protocol.go
+workbench/internal/artifact/protocol_test.go
+workbench/internal/autonomy/manager.go
+workbench/internal/autonomy/planner.go
+workbench/internal/blueprint/plan.go
+workbench/internal/config/config.go
+workbench/internal/engine/interp_probe_test.go
+workbench/internal/engine/plan_helpers.go
+workbench/internal/engine/replan.go
+workbench/internal/engine/replan_test.go
+workbench/internal/engine/stall_reason.go
+workbench/internal/executor/ratelimit_test.go
+workbench/internal/gov/engine.go
+workbench/internal/gov/lifecycle.go
+workbench/internal/modelpool/gateway_check.go
+workbench/internal/modelpool/judge_test.go
+workbench/internal/modelpool/pool_test.go
+workbench/internal/modelpool/types.go
+workbench/internal/retention/danger.go
+workbench/internal/single/instance.go
+workbench/internal/supervisor/metrics_csv_test.go
+workbench/internal/tray/tray_window_style_test.go
+workbench/internal/web/assets_gov.go
+workbench/internal/web/autostart_windows.go
+workbench/internal/web/export.go
+workbench/internal/web/pool_page.go
+workbench/internal/workspace/deadlock_test.go
 workbench/internal/shortcut/shortcut_windows.go
-workbench/internal/shortcut/shortcut_windows_test.go

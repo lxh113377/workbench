@@ -61,15 +61,80 @@ try {
   Remove-Item -Recurse -Force $tmpdir -ErrorAction SilentlyContinue
 }
 
-foreach ($d0 in @($drift)) { if ($debt.ContainsKey($d0)) { continue } } # no-op keeps shape
-$exempt = @($drift | Where-Object { $debt.ContainsKey($_) })
-$drift = @($drift | Where-Object { -not $debt.ContainsKey($_) })
+# 工作区 vs HEAD 两面分开计（2026-10-22 三轮修正，解死结）：
+#   本机工作区常有并行会话**未提交**的改动，它在漂移而 HEAD 已合规 —— 若一律判红，
+#   本机会长期红；而 CI 判的是 HEAD，那里是绿的。同一门禁两个环境两种结论，没人会信。
+#   故：① HEAD 漂移 = 真需关注（计入 rc）
+#       ② 仅工作区漂移且该文件在 HEAD 合规 = 并行在途件（提示，不计 rc）
+#       ③ 登记豁免 = 已知缺陷（逐条点名，不计 rc），必要性按 HEAD 判定（见下）
+$headDriftAll = @{}
+$gitProbeAll = (& git -C $Root rev-parse --show-toplevel 2>$null)
+$hasGitAll = ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace([string]$gitProbeAll))
+if ($hasGitAll) {
+  $rr = ([string]$gitProbeAll).Trim()
+  $td = Join-Path ([IO.Path]::GetTempPath()) ('hwchk-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+  New-Item -ItemType Directory -Force $td | Out-Null
+  try {
+    foreach ($rel in @($tracked)) {
+      $tf = Join-Path $td (($rel -replace '[\\/]', '__'))
+      cmd /c "git -C `"$rr`" cat-file blob HEAD:$rel > `"$tf`"" 2>$null
+      if ($LASTEXITCODE -ne 0 -or -not (Test-Path $tf)) { $headDriftAll[$rel] = $true; continue }
+      $o = & gofmt -l $tf 2>$null
+      $headDriftAll[$rel] = [bool]$o
+    }
+  } finally { Remove-Item -Recurse -Force $td -ErrorAction SilentlyContinue }
+}
+# 分类（2026-10-22 四轮校准：全程按 HEAD 判定，因为 CI 判的就是 HEAD）：
+#   exempt     = 登记于债务清单且 HEAD 仍漂移（已知缺陷，点名不计 rc）
+#   fatal      = HEAD 漂移但未登记（CI 会红，计入 rc）
+#   inflightOnly = 工作区漂移但 HEAD 合规（并行在途件，不计 rc；附加信息）
+$exempt = @()
+$driftFatal = @()
+$inflightOnly = @()
+foreach ($rel in $tracked) {
+  if (-not $headDriftAll.ContainsKey($rel)) { continue }
+  if (-not $headDriftAll[$rel]) {
+    # HEAD 合规：若工作区漂移，只是并行在途件
+    if ($drift -contains $rel) { $inflightOnly += $rel }
+    continue
+  }
+  if ($debt.ContainsKey($rel)) { $exempt += $rel; continue }
+  $driftFatal += $rel
+}
+$drift = @($driftFatal)
 
 # 失效豁免检测（2026-10-22 实测补）：债务清单会腐烂 —— 文件修好后条目仍在册，
 # 于是该文件将来**再次漂移也不会判红**（豁免把它永久遮住），而门禁看上去一直是绿的。
 # 实测：35 条债务里 33 条已失效（对应文件已由并行会话入库并格式化），只剩 2 条 live。
 # 判据：登记但已不再漂移 = 失效条目，必须点名要求删除；计入 rc（否则没人会去清）。
-$staleDebt = @($debt.Keys | Where-Object { $exempt -notcontains $_ })
+# 必要性按 **HEAD** 判定（ISO CI 判的就是 HEAD）：若某条目在 HEAD 版本已不漂移，
+# 它就是腐烂条目 —— 无论本地工作区是否临时又漂移起戥（并行在途件）。
+# 但豁免匹配本身仍按工作区（那才是本次扫描的对象）。两面分工写清，避免死结。
+$staleDebt = @()
+if ($debt.Count -gt 0) {
+  $headDrift = @{}
+  $gitProbe = (& git -C $Root rev-parse --show-toplevel 2>$null)
+  $hasGit = ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace([string]$gitProbe))
+  if ($hasGit) {
+    $repoRootForGit = ([string]$gitProbe).Trim()
+    $tdir = Join-Path ([IO.Path]::GetTempPath()) ('headchk-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+    New-Item -ItemType Directory -Force $tdir | Out-Null
+    try {
+      foreach ($k in @($debt.Keys)) {
+        # 取 HEAD 内容必须走 cmd 重定向写原始字节（2026-10-22 实测三次同族坑）：
+        #   - `git show | -join "`n"` 丢最后一个换行（2659 vs 2660）=> gofmt 误判缺结尾换行
+        #   - PowerShell 管道还会按出站编码改写内容（CRLF/BOM 同族问题本轮已踩）
+        # cmd 重定向是唯一不��改写层的通道。
+        $tf = Join-Path $tdir (($k -replace '[\\/]', '__'))
+        cmd /c "git -C `"$repoRootForGit`" cat-file blob HEAD:$k > `"$tf`"" 2>$null
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $tf)) { $headDrift[$k] = $false; continue }
+        $o = & gofmt -l $tf 2>$null
+        $headDrift[$k] = [bool]$o
+      }
+    } finally { Remove-Item -Recurse -Force $tdir -ErrorAction SilentlyContinue }
+    $staleDebt = @($debt.Keys | Where-Object { -not $headDrift[$_] })
+  }
+}
 if ($staleDebt.Count -gt 0) {
   Write-Host ("失效的债务豁免（登记但已不漂移，必须从 tests/gofmt-debt.txt 删除）：" + $staleDebt.Count) -ForegroundColor Red
   foreach ($s in ($staleDebt | Sort-Object)) { Write-Host ("  x " + $s) -ForegroundColor Red }
@@ -80,6 +145,10 @@ if ($staleDebt.Count -gt 0) {
 if ($exempt.Count -gt 0) {
   Write-Host ("显式债务豁免（并发在途件，非静默跳过）：" + $exempt.Count + " 个") -ForegroundColor Yellow
   foreach ($e in $exempt) { Write-Host ("  ~ " + $e + "（登记于 tests/gofmt-debt.txt）") -ForegroundColor Yellow }
+}
+if ($inflightOnly.Count -gt 0) {
+  Write-Host ("并行在途件（工作区漂移、HEAD 已合规，不计 rc）：" + $inflightOnly.Count) -ForegroundColor DarkGray
+  foreach ($e in $inflightOnly) { Write-Host ("  . " + $e) -ForegroundColor DarkGray }
 }
 if ($drift.Count -gt 0) {
   Write-Host ("Go 格式门禁未通过（" + $drift.Count + " 个文件 LF 归一化后仍需 gofmt）：") -ForegroundColor Red
