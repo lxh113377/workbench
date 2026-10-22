@@ -70,11 +70,11 @@ type Policy struct {
 // DefaultPolicy 返回默认保留策略。
 func DefaultPolicy() Policy {
 	return Policy{
-		DSHHomeDays:       DefaultDSHHomeDays,
-		WorkspaceDays:     DefaultWorkspaceDays,
-		TaskDirDays:       DefaultTaskDirDays,
-		TerminalTaskDays:  DefaultTerminalTaskDays,
-		MaxTerminalTasks:  DefaultMaxTerminalTasks,
+		DSHHomeDays:      DefaultDSHHomeDays,
+		WorkspaceDays:    DefaultWorkspaceDays,
+		TaskDirDays:      DefaultTaskDirDays,
+		TerminalTaskDays: DefaultTerminalTaskDays,
+		MaxTerminalTasks: DefaultMaxTerminalTasks,
 	}
 }
 

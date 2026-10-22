@@ -147,7 +147,7 @@ func TestPruneTasksDryRunRemovesNothing(t *testing.T) {
 	}
 	// 但候选数要如实报出，否则 dryRun 没有指导意义。
 	if res.RemovedByAge == 0 {
-		t.Fatal("dryRun 应报出「按龄本可删几条」，否则运维看不到收益", )
+		t.Fatal("dryRun 应报出「按龄本可删几条」，否则运维看不到收益")
 	}
 }
 

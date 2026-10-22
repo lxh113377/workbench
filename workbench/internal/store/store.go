@@ -221,12 +221,12 @@ func (s *Store) Reconcile() (int, error) {
 
 // PruneResult 是一次终态任务记录裁剪的结果。
 type PruneResult struct {
-	RemovedByAge    int   `json:"removedByAge"`    // 超过保留天数被删的条数
-	RemovedByCap    int   `json:"removedByCap"`    // 超过条数上限被删的条数
-	Kept            int   `json:"kept"`            // 保留下来的任务记录数
-	RemovedChains   int   `json:"removedChains"`   // 一并清掉的孤立链数
-	EligibleForKeep int   `json:"eligibleTotal"`   // 裁剪前的记录总数
-	BytesBefore     int64 `json:"bytesBefore"`     // 裁剪前 queue.json 字节数（估算）
+	RemovedByAge    int   `json:"removedByAge"`  // 超过保留天数被删的条数
+	RemovedByCap    int   `json:"removedByCap"`  // 超过条数上限被删的条数
+	Kept            int   `json:"kept"`          // 保留下来的任务记录数
+	RemovedChains   int   `json:"removedChains"` // 一并清掉的孤立链数
+	EligibleForKeep int   `json:"eligibleTotal"` // 裁剪前的记录总数
+	BytesBefore     int64 `json:"bytesBefore"`   // 裁剪前 queue.json 字节数（估算）
 	DryRun          bool  `json:"dryRun"`
 }
 
@@ -239,13 +239,13 @@ type PruneResult struct {
 // 实测常驻 170MB / 并发高峰 752MB，而基线 residentMBMax 是 64MB。
 //
 // 安全边界（缺一不可）：
-//  1) **只删终态**（done/failed/cancelled/degraded/rejected）—— 非终态（queued/running/
+//  1. **只删终态**（done/failed/cancelled/degraded/rejected）—— 非终态（queued/running/
 //     approved/evaluating/candidate/interrupted）一律不动，否则会丢在跑或待跑任务；
-//  2) 终态里**按年龄**：只删 createdAt 早于 TerminalTaskDays 的；
-//  3) 再按**条数上限**：若仍超 MaxTerminalTasks，从**最旧**的开始删直到达标；
-//  4) 孤立的 chain 记录一并清（其 TaskIDs 全被删掉的），有任务引用的 chain 保留；
-//  5) 只改内存记录，**磁盘写仍是 persist 全量快照**（原子写，不会留下半截文件）；
-//  6) 删除后立刻写一次 WAL 标记（OpPrune），让回放路径知道这是一次有意的裁剪，
+//  2. 终态里**按年龄**：只删 createdAt 早于 TerminalTaskDays 的；
+//  3. 再按**条数上限**：若仍超 MaxTerminalTasks，从**最旧**的开始删直到达标；
+//  4. 孤立的 chain 记录一并清（其 TaskIDs 全被删掉的），有任务引用的 chain 保留；
+//  5. 只改内存记录，**磁盘写仍是 persist 全量快照**（原子写，不会留下半截文件）；
+//  6. 删除后立刻写一次 WAL 标记（OpPrune），让回放路径知道这是一次有意的裁剪，
 //     而不是「记录凭空消失」。
 //
 // 注意：本函数**不删** tasks/<id>/ 目录里的产出与事件（那是 retention.PruneTaskDir 的职责，
