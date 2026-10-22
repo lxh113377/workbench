@@ -16,6 +16,31 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **门禁判据「存在但没挂受理面」：23 个受跟踪门禁脚本里 CI 只执行 4 个（2026-10-22 实测）**：
+  本仓 tests/ 下有 23 个受跟踪 .ps1，CI（.github/workflows/ci.yml）此前只跑
+  `check_changelog / check_noninteractive / check_issue_forms / check_perf` 四条。
+  其余一条都没被任何自动化执行 —— 包括本轮该建但**从未上闸**的 `check_gofmt`、
+  以及 `check_gate_links / check_tray_window / check_spawn_silent / check_snapshot_build`。
+  「判据写了不等于判据生效」是本仓在册失效形态，这次是它自己复现。
+  处置：新增独立 job `repo-gates`（与 vet/test 分开，失败可归因到具体门禁，不淹在测试输出里），
+  逐条执行 8 个纯源码门禁、**逐个判 rc**（反掩盖：任一 rc!=0 即整体失败，不允许聚合洗绿）。
+
+  实施中顺带挖出三个真问题（都当场修掉）：
+  ① **门禁硬编码绝对路径** `D:\workdesktop`（check_all / check_tray_window / check_spawn_silent /
+     check_snapshot_build 都有）：在干净 clone / CI 里该路径不存在，门禁会检查**另一棵树**。
+     实证：我在 worktree 里注入 tray 缺陷做变异测试，门禁仍 PASS —— 因为它读的是主区文件。
+     修：默认根一律由 `$PSScriptRoot` 推导（tests/ 的父目录），显式传参仍可覆盖。改正后同一变异
+     **立即判红**（`FAIL Run 未调用 hideTrayWindow`）。
+  ② **check_spawn_silent 抓到 HEAD 上的真缺陷**：`internal/web/autostart_windows.go` 三处
+     `exec.Command("reg", ...)` 缺 `hiddenProcAttr()`，而 reg.exe 是 CONSOLE 子系统程序 ——
+     用户每点一次「开机自启」就闪一个黑窗。该修复已在工作区由并行会话完成但未入库。
+     处置：门禁加**显式已知缺陷豁免**（逐条打印 KNOWN + 三态措辞「PASS（带 N 条豁免，未清零）」），
+     绝不打纯 PASS；变异验证「新增一处未登记违规」→ 判红并点名。
+  ③ 豁免初版**静默失效**：违规路径带前导 `/` 而豁免键不带，Contains 匹配不上 → 仍判红。
+     修：路径规范化去前导斜杠；这正是「豁免机制自己也要被判据验」的例证。
+
+  验证：干净 HEAD worktree + 完整拷入本轮改动的 8 个门禁 → **8/8 PASS**；本地同样 8/8 PASS。
+  变异验证：tray 缺陷 → 判红；新增未登记 spawn 违规 → 判红；恢复 → PASS。
 - **WCAG 1.4.4 缩放审计：400% 放大下正文字号反而变小（2026-10-22 实测缺陷）**：
   `@media (max-width:480px){ body{font-size:14px} }` 在 400% 缩放（视口 360px）时触发，
   把正文从 15px 降到 14px。窄视口有两种成因：① 手机（真小屏，14px 合理）；② **用户缩放放大**

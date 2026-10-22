@@ -13,7 +13,8 @@
 # 退出码: 0=快照可编译 / 1=快照编译失败 / 2=环境缺工具
 
 param(
-  [string]$Repo = "D:\workdesktop",
+  # 默认由脚本位置推导（tests/ 的父目录），不硬编码 —— 否则 CI 里指向不存在的 D:\workdesktop。
+  [string]$Repo = "",
   # 快照里 Go 模块根（相对快照根）
   [string]$ModuleDir = "workbench",
   # 超时（秒）
@@ -22,6 +23,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+
+# 默认根目录由脚本位置推导（tests/ 的父目录 = 仓库根），显式传参可覆盖。
+# 为什么改（2026-10-22 实测）：原先硬编码 D:\workdesktop —— 干净 clone / CI 里该路径不存在，
+# 门禁会检查另一棵树甚至静默判绿；本轮变异测试在 worktree 注入缺陷仍 PASS 就是这个失真。
+if ([string]::IsNullOrWhiteSpace($Repo)) { $Repo = Split-Path -Parent $PSScriptRoot }
 
 $gitDir = Join-Path $Repo ".git"
 if (-not (Test-Path -LiteralPath $gitDir)) {

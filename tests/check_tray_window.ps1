@@ -16,7 +16,10 @@
 # 退出码: 0=通过 / 1=失败
 
 param(
-  [string]$Root = "D:\workdesktop",
+  # 默认根目录由脚本位置推导（tests/ 的父目录），不得硬编码 D:\workdesktop ——
+  # 实测事故（2026-10-22）：硬编码使本门禁在干净 clone / CI 里检查**另一棵树的同名文件**，
+  # 变异测试在 worktree 里注入缺陷却仍 PASS（它读的是 D:\workdesktop 主区）。
+  [string]$Root = "",
   [string]$SourceFile = "",
   [switch]$CheckLive,
   [string]$ClassName = "PersonalWorkbenchTrayClass"
@@ -24,6 +27,11 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
+
+# 默认根目录由脚本位置推导（tests/ 的父目录 = 仓库根），显式传参可覆盖。
+# 为什么改（2026-10-22 实测）：原先硬编码 D:\workdesktop —— 干净 clone / CI 里该路径不存在，
+# 门禁会检查另一棵树甚至静默判绿；本轮变异测试在 worktree 注入缺陷仍 PASS 就是这个失真。
+if ([string]::IsNullOrWhiteSpace($Root)) { $Root = Split-Path -Parent $PSScriptRoot }
 
 if ([string]::IsNullOrWhiteSpace($SourceFile)) {
   $SourceFile = Join-Path $Root "workbench\internal\tray\tray_windows.go"
