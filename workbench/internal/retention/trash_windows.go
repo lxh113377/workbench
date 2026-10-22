@@ -19,17 +19,17 @@ import (
 // 注意：仅本包使用。别处若需要"永久删除"应显式声明理由。
 
 var (
-	shell32          = syscall.NewLazyDLL("shell32.dll")
+	shell32              = syscall.NewLazyDLL("shell32.dll")
 	procSHFileOperationW = shell32.NewProc("SHFileOperationW")
 )
 
 // FO_* 与 FOF_* 常量。
 const (
-	foDelete = 0x0003
-	fofAllowUndo = 0x0040
+	foDelete          = 0x0003
+	fofAllowUndo      = 0x0040
 	fofNoConfirmation = 0x0010
-	fofSilent = 0x0004
-	fofNoErrorUI = 0x0400
+	fofSilent         = 0x0004
+	fofNoErrorUI      = 0x0400
 )
 
 // shFileOp 是 SHFileOperationW 的输入结构（Windows SDK）。
@@ -39,7 +39,7 @@ type shFileOp struct {
 	pFrom                 *uint16
 	pTo                   *uint16
 	fFlags                uint16
-	fAnyOperationsAborted  int32
+	fAnyOperationsAborted int32
 	hNameMappings         uintptr
 	lpszProgressTitle     *uint16
 }

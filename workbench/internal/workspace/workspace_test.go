@@ -76,7 +76,7 @@ func TestIsWithinBoundaries(t *testing.T) {
 		{root, root, true},
 		{root, filepath.Join(root, "a"), true},
 		{root, filepath.Join(root, "a", "b"), true},
-		{root, root + "-evil", false},          // 前缀同形但不是子目录（关键边界）
+		{root, root + "-evil", false},                 // 前缀同形但不是子目录（关键边界）
 		{root, filepath.Join(root, "..", "x"), false}, // 归一化后越界
 		{root, "", false},
 		{"", root, false},
@@ -88,7 +88,6 @@ func TestIsWithinBoundaries(t *testing.T) {
 	}
 	_ = sep
 }
-
 
 // normCanonical 归一化路径用于跨环境比较：解析软链接与 Windows 8.3 短路径名，
 // 使 CI（runneradmin 临时目录常为 RUNNER~1 短名）与本机（长名）结果一致。

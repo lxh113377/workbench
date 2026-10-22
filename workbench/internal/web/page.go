@@ -67,6 +67,7 @@ func phaseHint(p model.EnginePhase) string {
 		return "待启动，点击开始"
 	}
 }
+
 // adminHTML 生成管理面板外壳（内容由 app.js 渲染）。
 func adminHTML(token string) string {
 	return fmt.Sprintf(adminPage, token, token, token, tokenScript(token))

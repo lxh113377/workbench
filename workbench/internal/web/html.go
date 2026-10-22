@@ -31,7 +31,6 @@ const indexPage = `<!DOCTYPE html>
 </html>
 `
 
-
 const adminPage = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>

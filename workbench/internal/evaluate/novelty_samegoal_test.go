@@ -47,8 +47,8 @@ func TestSameGoalNewStageIsNotKilledByNovelty(t *testing.T) {
 	// 新一轮阶段任务：目标是下一个阶段，标题带新焦点
 	next := &model.Task{
 		ID: "task-next", GoalID: "goal-A", ChainID: "chain-A",
-		Title:  "工作台自身质量提升 · 复盘",
-		Prompt: sameGoalPrompt(6),
+		Title:     "工作台自身质量提升 · 复盘",
+		Prompt:    sameGoalPrompt(6),
 		CreatedAt: model.Now(),
 	}
 	scores := ev.Evaluate(Input{Task: next, Now: model.Now()})
@@ -163,5 +163,5 @@ func itoaSmall(n int) string {
 	if n < 10 {
 		return string(rune('0' + n))
 	}
-	return string(rune('0' + n/10)) + string(rune('0'+n%10))
+	return string(rune('0'+n/10)) + string(rune('0'+n%10))
 }

@@ -79,7 +79,9 @@ func TestHooksPanicIsRecovered(t *testing.T) {
 			func(ctx context.Context, task *model.Task, modelID string) error { panic("boom") },
 		},
 		[]AfterRunFunc{
-			func(ctx context.Context, task *model.Task, modelID string, res *Result, err error) { panic("after boom") },
+			func(ctx context.Context, task *model.Task, modelID string, res *Result, err error) {
+				panic("after boom")
+			},
 			func(ctx context.Context, task *model.Task, modelID string, res *Result, err error) { reached = true },
 		},
 	)

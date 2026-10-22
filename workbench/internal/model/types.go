@@ -55,7 +55,7 @@ func TransitionAllowed(from, to TaskState) bool {
 		// 环境恢复是正确的语义。改造前引擎绕过状态机直接改字段（store.Update），
 		// 导致审计流水与真实状态不一致、且没有护栏拦得住热循环；补上这条合法迁移后
 		// 退回动作会留下 transition 审计，Attempts 也不计入失败。
-		StateRunning:     {StateDone, StateFailed, StateTimeout, StateCancelled, StateInterrupted, StateQueued, StateDegraded},
+		StateRunning: {StateDone, StateFailed, StateTimeout, StateCancelled, StateInterrupted, StateQueued, StateDegraded},
 		// StateDegraded -> StateQueued：返工通道（验收失败后带着报错重做）。
 		StateDegraded: {StateQueued, StateCancelled, StateRejected},
 		// StateInterrupted -> StateFailed：崩溃救援额度耗尽时的判死出口（L4）。
@@ -168,30 +168,30 @@ type ChainSpec struct {
 type Task struct {
 	// WorkRoot 是 external（用户目录）模式下该任务的真实工作目录。
 	// 项目模式下留空，执行器在数据根的沙箱里跑。
-	WorkRoot string `json:"workRoot,omitempty"`
-	ID           string    `json:"id"`
-	ChainID      string    `json:"chainId"`
-	SessionID    string    `json:"sessionId"`
-	TemplateID   string    `json:"templateId"`
-	Title        string    `json:"title"`
-	Prompt       string    `json:"prompt"`
-	Domain       string    `json:"domain"`
-	Tags         []string  `json:"tags"`
-	Priority     int       `json:"priority"`
-	State        TaskState `json:"state"`
-	Source       string    `json:"source"`           // template/chain/synthesis/manual/autonomy
-	GoalID       string    `json:"goalId,omitempty"` // 所属自主目标（仅 source=autonomy 时有值）
-	ParentID     string    `json:"parentId"`
-	ChainDepth   int       `json:"chainDepth"`
-	Attempts     int       `json:"attempts"`
+	WorkRoot   string    `json:"workRoot,omitempty"`
+	ID         string    `json:"id"`
+	ChainID    string    `json:"chainId"`
+	SessionID  string    `json:"sessionId"`
+	TemplateID string    `json:"templateId"`
+	Title      string    `json:"title"`
+	Prompt     string    `json:"prompt"`
+	Domain     string    `json:"domain"`
+	Tags       []string  `json:"tags"`
+	Priority   int       `json:"priority"`
+	State      TaskState `json:"state"`
+	Source     string    `json:"source"`           // template/chain/synthesis/manual/autonomy
+	GoalID     string    `json:"goalId,omitempty"` // 所属自主目标（仅 source=autonomy 时有值）
+	ParentID   string    `json:"parentId"`
+	ChainDepth int       `json:"chainDepth"`
+	Attempts   int       `json:"attempts"`
 	// CrashRescues 是「崩溃救援」累计轮次（L4）。不能复用 Attempts：
 	// Attempts 是单次 runOne 内的重试序号（engine.go 每轮直接赋值 t.Attempts = attempt），
 	// 崩溃恢复后重跑会被重置覆盖 —— 拿它当崩溃预算等于没有预算。
-	CrashRescues int       `json:"crashRescues,omitempty"`
-	MaxAttempts  int       `json:"maxAttempts"`
-	Model        string    `json:"model"`
-	OutputFormat string    `json:"outputFormat"`
-	TimeoutMin   int       `json:"timeoutMin"`
+	CrashRescues int    `json:"crashRescues,omitempty"`
+	MaxAttempts  int    `json:"maxAttempts"`
+	Model        string `json:"model"`
+	OutputFormat string `json:"outputFormat"`
+	TimeoutMin   int    `json:"timeoutMin"`
 
 	Scores   *EvalScores `json:"scores,omitempty"`
 	Critique *Critique   `json:"critique,omitempty"`
@@ -241,11 +241,11 @@ type Task struct {
 // 放在 model 包而不是直接复用 verify.Report，是为了避免 model ↔ verify 的循环依赖：
 // verify 依赖 artifact，engine 同时依赖两者，持久化类型归 model 最干净。
 type VerifyReport struct {
-	Round      int            `json:"round"`
-	Pass       bool           `json:"pass"`
-	FailReason string         `json:"failReason,omitempty"`
+	Round      int             `json:"round"`
+	Pass       bool            `json:"pass"`
+	FailReason string          `json:"failReason,omitempty"`
 	Outcomes   []VerifyOutcome `json:"outcomes,omitempty"`
-	At         int64          `json:"at"`
+	At         int64           `json:"at"`
 }
 
 // VerifyOutcome 是单条验收命令的结果。
@@ -315,24 +315,24 @@ const (
 
 // Stats 是面板展示的统计快照。
 type Stats struct {
-	TotalTasks    int     `json:"totalTasks"`
-	DoneTasks     int     `json:"doneTasks"`
-	FailedTasks   int     `json:"failedTasks"`
-	QueuedTasks   int     `json:"queuedTasks"`
-	RunningTasks  int     `json:"runningTasks"`
-	RejectedTasks int     `json:"rejectedTasks"`
+	TotalTasks    int `json:"totalTasks"`
+	DoneTasks     int `json:"doneTasks"`
+	FailedTasks   int `json:"failedTasks"`
+	QueuedTasks   int `json:"queuedTasks"`
+	RunningTasks  int `json:"runningTasks"`
+	RejectedTasks int `json:"rejectedTasks"`
 	// DegradedTasks 是"有产出但未通过验收"的任务数（P3）。
 	// 它们**不计入** DoneTasks / TodayDone，避免"截断也算成功"的虚报。
-	DegradedTasks int `json:"degradedTasks"`
+	DegradedTasks int     `json:"degradedTasks"`
 	TodayDone     int     `json:"todayDone"`
 	SuccessRate   float64 `json:"successRate"`
 	AvgSeconds    float64 `json:"avgSeconds"`
 	TotalBytes    int64   `json:"totalBytes"`
 	// VerifiedTasks 是通过**真实执行验收**的任务数（P3）。
 	// 与 DoneTasks 区分：done 只表示流程跑完，verified 才表示产物真能跑。
-	VerifiedTasks int `json:"verifiedTasks"`
-	TotalTokenIn  int64   `json:"totalTokenIn"`
-	TotalTokenOut int64   `json:"totalTokenOut"`
+	VerifiedTasks int   `json:"verifiedTasks"`
+	TotalTokenIn  int64 `json:"totalTokenIn"`
+	TotalTokenOut int64 `json:"totalTokenOut"`
 }
 
 // Now 返回当前毫秒时间戳。

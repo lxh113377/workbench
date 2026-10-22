@@ -118,12 +118,12 @@ func ReadAudit(path string) ([]Record, error) {
 
 // Summary 汇总审计：总数 / 拒绝数 / 最近拒绝原因（面板概览用）。
 type Summary struct {
-	Total     int      `json:"total"`
-	Allowed   int      `json:"allowed"`
-	Denied    int      `json:"denied"`
-	LastDeny  string   `json:"lastDeny,omitempty"`
-	LastDenyAt int64   `json:"lastDenyAt,omitempty"`
-	Reasons   []string `json:"reasons,omitempty"`
+	Total      int      `json:"total"`
+	Allowed    int      `json:"allowed"`
+	Denied     int      `json:"denied"`
+	LastDeny   string   `json:"lastDeny,omitempty"`
+	LastDenyAt int64    `json:"lastDenyAt,omitempty"`
+	Reasons    []string `json:"reasons,omitempty"`
 }
 
 // Summarize 把审计记录汇总成人读概览。

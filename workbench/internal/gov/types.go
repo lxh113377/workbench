@@ -13,16 +13,15 @@
 // 本包只做纯计算与状态迁移，不直接做磁盘 IO 之外的副作用；持久化由 store.go 承担。
 package gov
 
-
 // ContractStage 是契约生命周期阶段。
 type ContractStage string
 
 const (
-	StageDraft     ContractStage = "draft"     // 起草
-	StageReview    ContractStage = "review"    // 审核
-	StageSigned    ContractStage = "signed"    // 签署
+	StageDraft      ContractStage = "draft"      // 起草
+	StageReview     ContractStage = "review"     // 审核
+	StageSigned     ContractStage = "signed"     // 签署
 	StagePerforming ContractStage = "performing" // 履约监控
-	StageArchived  ContractStage = "archived"  // 归档
+	StageArchived   ContractStage = "archived"   // 归档
 )
 
 // AllStages 返回生命周期阶段的固定顺序（用于遍历与校验）。
@@ -52,13 +51,13 @@ func StageWeight(s ContractStage) float64 {
 type Role string
 
 const (
-	RoleOwner        Role = "owner"        // 负责人：结果问责（A）
-	RoleDrafter      Role = "drafter"      // 起草人
-	RoleReviewer     Role = "reviewer"     // 审核人
-	RoleSigner       Role = "signer"       // 签署/审批人
-	RolePerfMonitor  Role = "perf-monitor" // 履约监控人
-	RoleArchivist    Role = "archivist"    // 归档人
-	RoleCompliance   Role = "compliance"   // 合规官
+	RoleOwner       Role = "owner"        // 负责人：结果问责（A）
+	RoleDrafter     Role = "drafter"      // 起草人
+	RoleReviewer    Role = "reviewer"     // 审核人
+	RoleSigner      Role = "signer"       // 签署/审批人
+	RolePerfMonitor Role = "perf-monitor" // 履约监控人
+	RoleArchivist   Role = "archivist"    // 归档人
+	RoleCompliance  Role = "compliance"   // 合规官
 )
 
 // NodeDuty 描述一个生命周期节点的权责定义（规范表，供文档与校验共用）。
@@ -98,28 +97,28 @@ type Clause struct {
 
 // Contract 是一份契约的全生命周期记录。
 type Contract struct {
-	ID         string        `json:"id"`
-	Title      string        `json:"title"`
-	Counterpart string       `json:"counterpart"` // 相对方
-	Stage      ContractStage `json:"stage"`
-	Owner      string        `json:"owner"`
-	Drafter    string        `json:"drafter"`
-	Reviewer   string        `json:"reviewer"`
-	Signer     string        `json:"signer"`
-	PerfMonitor string       `json:"perfMonitor"`
-	Archivist  string        `json:"archivist"`
-	Amount     float64       `json:"amount"`    // 契约金额（元）
-	Currency   string        `json:"currency"`
-	EffectiveAt string       `json:"effectiveAt"` // YYYY-MM-DD 生效
-	ExpireAt    string       `json:"expireAt"`    // YYYY-MM-DD 到期
-	Deliverables []string    `json:"deliverables"`
-	Clauses    []Clause      `json:"clauses"`
-	Milestones []Milestone   `json:"milestones"`
+	ID           string        `json:"id"`
+	Title        string        `json:"title"`
+	Counterpart  string        `json:"counterpart"` // 相对方
+	Stage        ContractStage `json:"stage"`
+	Owner        string        `json:"owner"`
+	Drafter      string        `json:"drafter"`
+	Reviewer     string        `json:"reviewer"`
+	Signer       string        `json:"signer"`
+	PerfMonitor  string        `json:"perfMonitor"`
+	Archivist    string        `json:"archivist"`
+	Amount       float64       `json:"amount"` // 契约金额（元）
+	Currency     string        `json:"currency"`
+	EffectiveAt  string        `json:"effectiveAt"` // YYYY-MM-DD 生效
+	ExpireAt     string        `json:"expireAt"`    // YYYY-MM-DD 到期
+	Deliverables []string      `json:"deliverables"`
+	Clauses      []Clause      `json:"clauses"`
+	Milestones   []Milestone   `json:"milestones"`
 	// 履约监控指标
 	DeliveryOnTime float64 `json:"deliveryOnTime"` // 按期交付率 0-1
 	PaymentOnTime  float64 `json:"paymentOnTime"`  // 按期付款率 0-1
 	QualityScore   float64 `json:"qualityScore"`   // 质量评分 0-100
-	Disputes       int     `json:"disputes"`        // 争议次数
+	Disputes       int     `json:"disputes"`       // 争议次数
 	ReviewNote     string  `json:"reviewNote"`
 	SignedAt       string  `json:"signedAt"`   // 实际签署时间 RFC3339（空 = 未签）
 	ArchivedAt     string  `json:"archivedAt"` // 归档时间 RFC3339（空 = 未归档）

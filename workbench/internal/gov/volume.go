@@ -49,11 +49,11 @@ type Budget struct {
 	ContractAmountMax float64 `json:"contractAmountMax"` // 单契约金额上限（元）
 	OutputBytesMax    int64   `json:"outputBytesMax"`    // 产出区总量上限（字节）
 	// 资源承载
-	MemLimitMB      int `json:"memLimitMB"`
-	HandleLimit     int `json:"handleLimit"`
-	GoroutineLimit  int `json:"goroutineLimit"`
-	ConcurrencyMax  int `json:"concurrencyMax"`
-	EventsBytesMax  int64 `json:"eventsBytesMax"`
+	MemLimitMB     int   `json:"memLimitMB"`
+	HandleLimit    int   `json:"handleLimit"`
+	GoroutineLimit int   `json:"goroutineLimit"`
+	ConcurrencyMax int   `json:"concurrencyMax"`
+	EventsBytesMax int64 `json:"eventsBytesMax"`
 	// 运营规模
 	BacklogMax         int     `json:"backlogMax"`
 	ThroughputDailyMin int     `json:"throughputDailyMin"`
@@ -66,9 +66,9 @@ func DefaultBudget() Budget {
 	return Budget{
 		TaskDailyMax: 200, ActiveContractMax: 120, ContractAmountMax: 5_000_000,
 		OutputBytesMax: 5 << 30,
-		MemLimitMB: 700, HandleLimit: 3000, GoroutineLimit: 1500, ConcurrencyMax: 6,
+		MemLimitMB:     700, HandleLimit: 3000, GoroutineLimit: 1500, ConcurrencyMax: 6,
 		EventsBytesMax: 32 << 20,
-		BacklogMax: 60, ThroughputDailyMin: 8, AvgCycleSecondsMax: 900, FailureRateMax: 0.10,
+		BacklogMax:     60, ThroughputDailyMin: 8, AvgCycleSecondsMax: 900, FailureRateMax: 0.10,
 	}
 }
 
@@ -118,28 +118,28 @@ func (b *Budget) Normalize() {
 
 // Sample 是一次体量采样（由调度循环定期落盘，JSONL 追加）。
 type Sample struct {
-	At             int64   `json:"at"` // Unix 毫秒
-	TasksDaily     int     `json:"tasksDaily"`
-	ContractsActive int    `json:"contractsActive"`
-	ContractAmount float64 `json:"contractAmount"` // 单笔最大金额
-	OutputBytes    int64   `json:"outputBytes"`
-	MemMB          float64 `json:"memMB"`
-	Handles        int     `json:"handles"`
-	Goroutines     int     `json:"goroutines"`
-	Concurrency    int     `json:"concurrency"`
-	EventsBytes    int64   `json:"eventsBytes"`
-	Backlog        int     `json:"backlog"`
-	ThroughputDaily int    `json:"throughputDaily"`
-	AvgCycleSec    float64 `json:"avgCycleSec"`
-	FailureRate    float64 `json:"failureRate"`
+	At              int64   `json:"at"` // Unix 毫秒
+	TasksDaily      int     `json:"tasksDaily"`
+	ContractsActive int     `json:"contractsActive"`
+	ContractAmount  float64 `json:"contractAmount"` // 单笔最大金额
+	OutputBytes     int64   `json:"outputBytes"`
+	MemMB           float64 `json:"memMB"`
+	Handles         int     `json:"handles"`
+	Goroutines      int     `json:"goroutines"`
+	Concurrency     int     `json:"concurrency"`
+	EventsBytes     int64   `json:"eventsBytes"`
+	Backlog         int     `json:"backlog"`
+	ThroughputDaily int     `json:"throughputDaily"`
+	AvgCycleSec     float64 `json:"avgCycleSec"`
+	FailureRate     float64 `json:"failureRate"`
 }
 
 // 指标等级。
 const (
-	LevelOK       = "ok"
-	LevelWarn     = "warn"
-	LevelRed      = "red"
-	LevelUnknown  = "unverified"
+	LevelOK      = "ok"
+	LevelWarn    = "warn"
+	LevelRed     = "red"
+	LevelUnknown = "unverified"
 )
 
 // Direction 表示指标方向：high=越高越差（管上限），low=越低越差（管下限）。
@@ -267,14 +267,14 @@ func bytesToMiB(n int64) float64 { return round2(float64(n) / (1 << 20)) }
 
 // DomainSummary 是单域汇总。
 type DomainSummary struct {
-	Domain    Domain `json:"domain"`
-	Name      string `json:"name"`
-	Total     int    `json:"total"`
-	OK        int    `json:"ok"`
-	Warn      int    `json:"warn"`
-	Red       int    `json:"red"`
-	Unknown   int    `json:"unknown"`
-	Level     string `json:"level"`
+	Domain    Domain  `json:"domain"`
+	Name      string  `json:"name"`
+	Total     int     `json:"total"`
+	OK        int     `json:"ok"`
+	Warn      int     `json:"warn"`
+	Red       int     `json:"red"`
+	Unknown   int     `json:"unknown"`
+	Level     string  `json:"level"`
 	PeakRatio float64 `json:"peakRatio"`
 }
 
@@ -318,12 +318,12 @@ func Summarize(evals []Eval) []DomainSummary {
 
 // Adjustment 是自适应调整建议（可执行、带滞回依据）。
 type Adjustment struct {
-	Metric     string `json:"metric"`
-	Domain     Domain `json:"domain"`
-	Action     string `json:"action"`     // 调整动作（人可读、带建议值）
-	Kind       string `json:"kind"`       // escalate（收紧）/ relax（放宽）/ hold（维持）
-	Basis      string `json:"basis"`      // 依据：连续 N 个样本红/绿
-	Delta      string `json:"delta"`      // 建议变动量（如 "+20%"）
+	Metric     string  `json:"metric"`
+	Domain     Domain  `json:"domain"`
+	Action     string  `json:"action"`     // 调整动作（人可读、带建议值）
+	Kind       string  `json:"kind"`       // escalate（收紧）/ relax（放宽）/ hold（维持）
+	Basis      string  `json:"basis"`      // 依据：连续 N 个样本红/绿
+	Delta      string  `json:"delta"`      // 建议变动量（如 "+20%"）
 	Confidence float64 `json:"confidence"` // 0-1，样本数越多越高
 }
 
@@ -355,9 +355,9 @@ func Adjust(history []Sample, b Budget) []Adjustment {
 			if streak >= HysteresisRedStreak {
 				out = append(out, Adjustment{
 					Metric: e.Key, Domain: e.Domain, Kind: "escalate",
-					Action: adjustAction(e, b, true),
-					Basis:  fmt.Sprintf("连续 %d 个样本处于红区（阈值 %d）", streak, HysteresisRedStreak),
-					Delta:  fmt.Sprintf("+%.0f%% 容量或 -%.0f%% 负载", MaxAdjustPct, MaxAdjustPct),
+					Action:     adjustAction(e, b, true),
+					Basis:      fmt.Sprintf("连续 %d 个样本处于红区（阈值 %d）", streak, HysteresisRedStreak),
+					Delta:      fmt.Sprintf("+%.0f%% 容量或 -%.0f%% 负载", MaxAdjustPct, MaxAdjustPct),
 					Confidence: conf,
 				})
 			}
@@ -367,9 +367,9 @@ func Adjust(history []Sample, b Budget) []Adjustment {
 			if streak >= HysteresisGreenStreak && e.Ratio > 0 && e.Ratio < 0.5 {
 				out = append(out, Adjustment{
 					Metric: e.Key, Domain: e.Domain, Kind: "relax",
-					Action: adjustAction(e, b, false),
-					Basis:  fmt.Sprintf("连续 %d 个样本占用率 < 50%%（当前 %.0f%%），可回收余量", streak, e.Ratio*100),
-					Delta:  fmt.Sprintf("-%.0f%% 预算或 +%.0f%% 负载", MaxAdjustPct*0.5, MaxAdjustPct),
+					Action:     adjustAction(e, b, false),
+					Basis:      fmt.Sprintf("连续 %d 个样本占用率 < 50%%（当前 %.0f%%），可回收余量", streak, e.Ratio*100),
+					Delta:      fmt.Sprintf("-%.0f%% 预算或 +%.0f%% 负载", MaxAdjustPct*0.5, MaxAdjustPct),
 					Confidence: math.Min(1, float64(streak)/float64(HysteresisGreenStreak+2)),
 				})
 			}

@@ -455,11 +455,11 @@ type Checklist struct {
 
 // CheckItem 是单项考核校验。
 type CheckItem struct {
-	Code     string `json:"code"`
-	Name     string `json:"name"`
-	Target   string `json:"target"`
-	Actual   string `json:"actual"`
-	Pass     bool   `json:"pass"`
+	Code   string `json:"code"`
+	Name   string `json:"name"`
+	Target string `json:"target"`
+	Actual string `json:"actual"`
+	Pass   bool   `json:"pass"`
 	// State 是三态判定（ok / fail / unverified）。前端矩阵卡按它着色；
 	// 此前只有 bool Pass，unverified 被序列化进「pass:false」，
 	// 前端拿不存在的 it.level ⇒ 六格全渲染 FAIL，与头部计数自相矛盾（2026-10-21 走查实测）。

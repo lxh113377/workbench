@@ -92,7 +92,6 @@ func TestDefaultCriteriaIncludesVerified(t *testing.T) {
 	}
 }
 
-
 // TestDefaultCriteriaVerifiedIsAchievable 守护一个真实产品缺口：
 // 绝对计数型 c-verified（要求 ≥60% 阶段"真实验收通过"）在真实通道上恒不可达
 // （模型对产物协议遵从率不稳定），会把目标永远卡在未完成，goalDone/nextGoal 永不出现。

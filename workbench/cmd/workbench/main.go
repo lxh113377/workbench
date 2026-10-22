@@ -380,16 +380,16 @@ func runApp(args []string) error {
 	go func() {
 		defer close(trayDone)
 		tray.Run(tray.Options{
-			Title:    "个人 AI 工作台",
-			Tooltip:  "个人 AI 工作台",
-			Status:   func() string { return string(eng.Phase()) },
+			Title:   "个人 AI 工作台",
+			Tooltip: "个人 AI 工作台",
+			Status:  func() string { return string(eng.Phase()) },
 			// 托盘降级必须可见（2026-10-19 老大："状态栏也没有图标"）：注册失败时把
 			// 原因写进日志与事件流，而不是静默少一个图标让人无从排查。
 			OnWarn: func(msg string) {
 				logger.At("tray").Warn(msg)
 				hub.Emit(model.Event{Type: "warn", At: model.Now(), Msg: msg})
 			},
-			OnOpen: func() { openPanel(srv.URL()) },
+			OnOpen:   func() { openPanel(srv.URL()) },
 			OnStart:  func() { _ = eng.Start() },
 			OnPause:  func() { _ = eng.Pause() },
 			OnResume: func() { _ = eng.Resume() },

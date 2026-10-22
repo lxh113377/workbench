@@ -37,9 +37,9 @@ func TestInlineEditorsAreKeyboardDismissible(t *testing.T) {
 			src:  appJS,
 			need: []string{
 				"box._returnFocus = document.activeElement", // 同上：断言赋值本身（新建/编辑两处）
-				"closeTemplateEditor", // 关闭方法（取消按钮与 Escape 共用）
-				"ev.key !== 'Escape'", // 键判据
-				">取消</button>",        // 可见的鼠标退出通道（本轮补的第一个）
+				"closeTemplateEditor",                       // 关闭方法（取消按钮与 Escape 共用）
+				"ev.key !== 'Escape'",                       // 键判据
+				">取消</button>",                              // 可见的鼠标退出通道（本轮补的第一个）
 			},
 		},
 	}

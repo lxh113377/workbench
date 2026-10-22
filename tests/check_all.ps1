@@ -84,6 +84,11 @@ Section '纯净检出编译（防提交编译不过的快照）' {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Repo $Root
 }
 
+Section 'Go 代码格式（LF 归一化口径，与 .gitattributes 分工）' {
+  $g = Join-Path $Root 'tests\check_gofmt.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+}
 Section '门禁引用完整性（受跟踪脚本的引用不得断链）' {
   $g = Join-Path $Root 'tests\check_gate_links.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }

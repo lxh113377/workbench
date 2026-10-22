@@ -342,11 +342,11 @@ func (p *Prober) headJSON(base, key string) ([]byte, int, error) {
 
 // ProbeSummary 汇总一轮探测结果（面板与日志用）。
 type ProbeSummary struct {
-	At      int64 `json:"at"`
-	Total   int   `json:"total"`
-	OK      int   `json:"ok"`
-	Down    int   `json:"down"`
-	Unknown int   `json:"unknown"`
+	At      int64         `json:"at"`
+	Total   int           `json:"total"`
+	OK      int           `json:"ok"`
+	Down    int           `json:"down"`
+	Unknown int           `json:"unknown"`
 	Results []ProbeResult `json:"results"`
 }
 

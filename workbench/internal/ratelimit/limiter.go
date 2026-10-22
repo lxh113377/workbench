@@ -69,7 +69,7 @@ func (l *Limiter) Wait(ctx context.Context) error {
 		}
 		// 还差多少令牌 -> 需要等多久
 		need := 1 - l.tokens
-	wait := time.Duration(need / l.rate * float64(time.Second))
+		wait := time.Duration(need / l.rate * float64(time.Second))
 		if wait < time.Millisecond {
 			wait = time.Millisecond
 		}

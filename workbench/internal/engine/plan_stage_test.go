@@ -28,8 +28,8 @@ import (
 // 为什么不用 noopTestRunner：双角色闭环的判据就是"调用了几次、每次给的是什么"，
 // 不记录调用细节就无法证明方案阶段真的发生了。
 type recordRunner struct {
-	mu    sync.Mutex
-	calls []recordedCall
+	mu     sync.Mutex
+	calls  []recordedCall
 	script []scriptedResult
 }
 

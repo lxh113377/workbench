@@ -34,8 +34,8 @@ import (
 
 // planProbeRunner 是自检用的桩执行器：按脚本返回，并记录每次调用。
 type planProbeRunner struct {
-	mu    sync.Mutex
-	calls []planProbeCall
+	mu     sync.Mutex
+	calls  []planProbeCall
 	script []string
 }
 

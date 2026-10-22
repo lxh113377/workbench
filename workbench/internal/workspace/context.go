@@ -34,7 +34,7 @@ var keyFiles = []string{
 
 // Entry 是工作目录内的一个文件条目。
 type Entry struct {
-	Path  string `json:"path"`  // 相对工作目录，斜杠分隔
+	Path  string `json:"path"` // 相对工作目录，斜杠分隔
 	Size  int64  `json:"size"`
 	IsDir bool   `json:"isDir,omitempty"`
 	Key   bool   `json:"key,omitempty"` // 是否项目关键文件

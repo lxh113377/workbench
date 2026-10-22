@@ -34,6 +34,24 @@
   产物经 `setup/build.ps1` 七道门禁重建（9.79 MB，SHA256 `EAAB680D…`），旧件备份在 `dist/archive/`。
 
 ### Fixed
+- **仓库全库 Go 格式漂移 + 上闸（2026-10-22 实测：73/286 个假红根因是 CRLF，真漂移 52 个）**：
+  本仓长期「CI 无 gofmt 门禁」，此前只记过一句「所以仓库存在长期格式漂移」。本轮把它挖到底：
+  ① **直接原因是假红淹没** —— 仓库无 `.gitattributes` 且 `core.autocrlf=true`，工作副本全是 CRLF，
+  而 gofmt 只接受 LF：对工作副本跑 `gofmt -l .` 得 **73 个**，干净 clone 上得 **286 个**（整文件重写）。
+  实测反证：chain.go 归一化成 LF 后立刻为 0。② **但里面确实混着真漂移** —— 归一化后仍有 54 个文件
+  需要格式化（config.go / main.go / html.go 等），全是 struct tag 与 composite literal 的对齐空格。
+  两类混在一起，谁上闸谁被假红劝退，这就是门禁至今缺位的机制性原因。
+  修：① 新增 `.gitattributes`：`*.go text eol=lf`（gofmt 口径）+ 脚本/yml/md `text=auto` + 二进制 binary；
+  ② 新增 `tests/check_gofmt.ps1`：**把每个受跟踪 .go 归一化成 LF 再判**，只判代码格式、不判行尾
+  （两者职责分开、互不掩盖），首跑点名 55 个真漂移；③ 批量 `gofmt -w` 修复 **52 个**（纯空白，
+  已机器证明：253 个文件的「剥离全部空白后逐字节比对」0 处内容变化）；④ 接入 `build.ps1 3/6` 与
+  `check_all` 独立一段，CI 侧待 `.github/workflows/ci.yml`（并行会话在途件）入库后再接。
+  豁免机制（非静默跳过）：`tests/gofmt-debt.txt` 显式登记 2 个**并行会话在途**的 shortcut 文件
+  （gofmt 会重排其文档注释结构 = 代改他人代码，本轮不碰）；门禁仍点名+计数，措辞用三态
+  「PASS 但 N 个豁免未清」，绝不在有豁免时打「合规」。清零条件写进 debt 文件。
+  变异验证：清空 debt → 判红并点名 2 个；注入未登记漂移（queue.go struct 对齐）→ 判红并点名该文件；
+  恢复 → PASS。回归：`go build`/`go vet`/`go test ./...` 全 rc=0（52 个纯空白改动零行为变化），
+  `check_all` 九段全 PASS/合规 SKIP。
 - **预检总门禁断链：check_all 引用的 4 个门禁从未入库，干净 clone 里静默降级（2026-10-22 盘点实测）**：
   `tests/check_all.ps1`（受跟踪）把散落的单点门禁串成一次调用，但它 Join-Path 引用的
   `check_subsystem / check_spawn_silent / check_no_shrink / check_homepage` 全部 untracked ——

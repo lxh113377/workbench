@@ -27,8 +27,8 @@ func crossBase() Config {
 // stalled 分类永不可达 —— 面板永远看不到「卡死」。
 func TestCrossFieldStallBelowTimeout(t *testing.T) {
 	c := crossBase()
-	c.Executor.DefaultTimeout = 30          // 30min = 1800s
-	c.Executor.StallSeconds = 3600          // >= 1800，死配置
+	c.Executor.DefaultTimeout = 30 // 30min = 1800s
+	c.Executor.StallSeconds = 3600 // >= 1800，死配置
 	c.Warnings = nil
 	c.Normalize()
 	if c.Executor.StallSeconds >= c.Executor.DefaultTimeout*60 {

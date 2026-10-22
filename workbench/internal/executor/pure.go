@@ -224,14 +224,15 @@ func IsStalled(lastEventMs int64, workDir string, baseSeconds int, sawThinking b
 	limit := stallLimitFor(baseSeconds, sawThinking)
 	return nowMs-last > limit.Milliseconds()
 }
+
 // LatestOutputMtimeMs 返回目录下最新一个产出文件的修改时间（毫秒时间戳）。
 // 没有产出文件或目录不可读时返回 0（调用方按「无信号」处理）。
 //
 // 设计要点：
-//  - 只认扩展名白名单，避免把日志/临时文件当产出；
-//  - 单次全量 Walk（任务 workspace 通常几十个文件，开销远小于 5s 的看门狗周期）；
-//  - 出错不扩散： Walk 的任何错误都被忽略，最坏情况退化为「无产出信号」，
-//    与改造前行为一致（不会因为探测失败而误判）。
+//   - 只认扩展名白名单，避免把日志/临时文件当产出；
+//   - 单次全量 Walk（任务 workspace 通常几十个文件，开销远小于 5s 的看门狗周期）；
+//   - 出错不扩散： Walk 的任何错误都被忽略，最坏情况退化为「无产出信号」，
+//     与改造前行为一致（不会因为探测失败而误判）。
 func LatestOutputMtimeMs(dir string) int64 {
 	if strings.TrimSpace(dir) == "" {
 		return 0

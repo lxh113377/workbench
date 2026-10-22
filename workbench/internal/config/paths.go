@@ -10,13 +10,13 @@ import (
 // Layout 描述工作台在磁盘上的全部固定路径。运行时一切读写都必须经由此结构，
 // 禁止在业务包里拼接裸路径字符串。
 type Layout struct {
-	Root        string // EXE 所在目录（便携根）
-	DataRoot    string // <Root>\workbench-output
-	ConfigFile  string // <DataRoot>\config.json
-	QueueFile   string // <DataRoot>\queue.json
-	StateFile   string // <DataRoot>\state.json
+	Root       string // EXE 所在目录（便携根）
+	DataRoot   string // <Root>\workbench-output
+	ConfigFile string // <DataRoot>\config.json
+	QueueFile  string // <DataRoot>\queue.json
+	StateFile  string // <DataRoot>\state.json
 	// WALFile 是队列状态的追加日志（P2-3）：每次迁移追加一行，定期压缩进 QueueFile。
-	WALFile string // <DataRoot>\queue.wal.jsonl
+	WALFile     string // <DataRoot>\queue.wal.jsonl
 	TasksDir    string // <DataRoot>\tasks
 	LogsDir     string // <DataRoot>\logs
 	ExportsDir  string // <DataRoot>\exports

@@ -1,0 +1,11 @@
+# gofmt 格式债务登记（2026-10-22 建立）
+#
+# 语义：登记在此的文件仍会被 check_gofmt.ps1 **点名并计数**，但不计入 rc —— 区别于
+# 「静默跳过」。为什么需要：这些文件属并行会话的在途件，gofmt 会重排其文档注释结构
+# （实测 shortcut_windows.go 101-112 行注释块被整体改写），代改他人代码违反分工。
+#
+# 清零条件：并行会话把这两件入库后，删除对应行，门禁即恢复零豁免。
+# 登记此刻（2026-10-22 17:2x）：两文件在 HEAD 即漂移，且同时被并行会话改动（git status M）。
+
+workbench/internal/shortcut/shortcut_windows.go
+workbench/internal/shortcut/shortcut_windows_test.go

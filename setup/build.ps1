@@ -78,7 +78,13 @@ if (Test-Path $rcPath) {
   }
 }
 
-Write-Host "==> 3/6 代码检查" -ForegroundColor Cyan
+Write-Host "==> 3/6 代码检查（go vet + gofmt）" -ForegroundColor Cyan
+# gofmt 门禁（2026-10-22 补）：本仓长期没有格式门禁，根因是 core.autocrlf 下工作副本全 CRLF、
+# 直接 gofmt -l 会满屏假红（实测 73/286 个文件），谁都只能撤掉。
+# check_gofmt.ps1 的口径是「LF 归一化后判代码格式」，行尾由 .gitattributes(*.go eol=lf) 负责，
+# 两件事分开判，互不掩盖；实测首跑点名 55 个真漂移（全部纯空白，go build/vet/test 零变化）。
+& powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path (Split-Path $PSScriptRoot -Parent) "tests\check_gofmt.ps1")
+if ($LASTEXITCODE -ne 0) { Pop-Location; throw "gofmt 门禁未通过（代码格式漂移）" }
 Push-Location $wb
 & go vet ./...
 if ($LASTEXITCODE -ne 0) { Pop-Location; throw "go vet 失败" }

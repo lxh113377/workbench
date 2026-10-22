@@ -20,13 +20,13 @@ type LinkPoint struct {
 
 // LinkSignal 是协同决策信号（两条治理线联动的结论）。
 type LinkSignal struct {
-	ID         string  `json:"id"`
-	Severity   string  `json:"severity"`
-	Title      string  `json:"title"`
-	Detail     string  `json:"detail"`
-	Decision   string  `json:"decision"`
+	ID          string  `json:"id"`
+	Severity    string  `json:"severity"`
+	Title       string  `json:"title"`
+	Detail      string  `json:"detail"`
+	Decision    string  `json:"decision"`
 	Correlation float64 `json:"correlation"`
-	Confidence float64 `json:"confidence"`
+	Confidence  float64 `json:"confidence"`
 }
 
 // Allocation 是单份契约的体量风险分摊（协同决策的直接输入）。
@@ -34,9 +34,9 @@ type Allocation struct {
 	ContractID string  `json:"contractId"`
 	Title      string  `json:"title"`
 	Amount     float64 `json:"amount"`
-	Share      float64 `json:"share"`      // 金额占比 0-1
-	LoadScore  float64 `json:"loadScore"`  // 综合负载分 0-100（金额占比 × 履约质量）
-	Rating     string  `json:"rating"`     // 承载评级 A/B/C/D
+	Share      float64 `json:"share"`     // 金额占比 0-1
+	LoadScore  float64 `json:"loadScore"` // 综合负载分 0-100（金额占比 × 履约质量）
+	Rating     string  `json:"rating"`    // 承载评级 A/B/C/D
 	Suggestion string  `json:"suggestion"`
 }
 
@@ -50,10 +50,10 @@ type LinkageReport struct {
 	ContractsActive int          `json:"contractsActive"`
 	ComplianceAvg   float64      `json:"complianceAvg"`
 	DeliveryAvg     float64      `json:"deliveryAvg"`
-	LoadRatio       float64      `json:"loadRatio"`      // 契约负载率（在履约数/上限）
-	CorrCycle       float64      `json:"corrCycle"`      // 契约负载 × 平均耗时 相关系数
-	CorrFailure     float64      `json:"corrFailure"`    // 契约负载 × 失败率 相关系数
-	DataGaps        []string     `json:"dataGaps"`       // 数据缺口（缺样本时必须显式声明，不许当 0）
+	LoadRatio       float64      `json:"loadRatio"`   // 契约负载率（在履约数/上限）
+	CorrCycle       float64      `json:"corrCycle"`   // 契约负载 × 平均耗时 相关系数
+	CorrFailure     float64      `json:"corrFailure"` // 契约负载 × 失败率 相关系数
+	DataGaps        []string     `json:"dataGaps"`    // 数据缺口（缺样本时必须显式声明，不许当 0）
 	Level           string       `json:"level"`
 }
 
@@ -273,7 +273,7 @@ func LinkageToAlerts(rep LinkageReport) []Alert {
 			Severity: s.Severity, Scope: ScopeLinkage, Subject: s.ID,
 			Title: s.Title, Detail: s.Detail, Suggestion: s.Decision,
 			Evidence: fmt.Sprintf("corr=%.2f confidence=%.2f level=%s", s.Correlation, s.Confidence, rep.Level),
-			At: rep.GeneratedAt,
+			At:       rep.GeneratedAt,
 		})
 	}
 	return out

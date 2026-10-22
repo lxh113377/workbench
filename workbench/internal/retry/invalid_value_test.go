@@ -119,6 +119,7 @@ func TestNextDelayJitterCollapseFallsBackToBaseDelay(t *testing.T) {
 		t.Fatal("抖动塌陷兜底必须登记 Warnings")
 	}
 }
+
 // TestWarningsDeduplicated 验证同一条告警不重复累计（nextDelay 被高频调用）。
 func TestWarningsDeduplicated(t *testing.T) {
 	p := New(Policy{MaxRetries: 5, BackoffMs: []int{0, 0, 0}, Jitter: 0})

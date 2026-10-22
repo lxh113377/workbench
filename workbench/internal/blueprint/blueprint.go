@@ -55,7 +55,7 @@ type Blueprint struct {
 	// PlannerModel 是产出这份方案的模型 id（审计与面板展示）。
 	PlannerModel string `json:"plannerModel,omitempty"`
 	// Round 是方案轮次（0 = 首轮；>0 = 验收失败后重新规划）。
-	Round int `json:"round,omitempty"`
+	Round int   `json:"round,omitempty"`
 	At    int64 `json:"at,omitempty"`
 }
 

@@ -1,0 +1,39 @@
+# .gitattributes —— 行尾与文本判定政策（2026-10-22 新增）
+#
+# 为什么必须有（实测根因）：仓库此前无 .gitattributes 且 core.autocrlf=true，
+# 于是工作副本全是 CRLF。而 gofmt 只接受 LF —— 拿工作副本跑 `gofmt -l .` 会把
+# **73 个文件**全判成未格式化（干净 clone 上更是 286 个/每个文件整体重写）。
+# 实测反证：把 chain.go 归一化成 LF 后 gofmt -l 立刻为 0；而 config.go / main.go /
+# html.go 归一化后仍有真漂移（对齐空格），说明「CRLF 假漂移」与「真格式漂移」混在一起，
+# 这正是本仓长期「CI 无 gofmt 门禁」的直接原因：一上闸就满屏假红，谁都只能撤掉。
+#
+# 政策（keep simple，只约束判定面）：
+#   1) Go 源码强制 LF（gofmt 的唯一口径，跨平台一致）
+#   2) 构建脚本（ps1/psm1/cmd/bat）/ yml / md 统一 text=auto 交由 git 归一化
+#      —— PowerShell 5.1 读 LF 脚本没问题，但为稳妥保留 auto。
+#   3) 二进制与产物不干预（git 自身会识别，显式标注只是防止误判）。
+#
+# 落地注意：本文件入库后**不会**自动改工作副本。要一次性消掉历史 CRLF，需要
+# `git add --renormalize .` 并单独提交 —— 那会触碰大量文件，故与并行会话在途件
+# 分开做（见 CHANGELOG：本条只立政策 + 加门禁，重归一化单独一笔）。
+
+# Go 源码：强制 LF（与 gofmt 口径一致）
+*.go text eol=lf
+
+# 脚本与配置：交给 git 按文本归一化，检出时用平台默认（Windows 侧 CRLF 可接受）
+*.ps1  text=auto
+*.psm1 text=auto
+*.cmd  text=auto
+*.bat  text=auto
+*.yml  text=auto
+*.yaml text=auto
+*.sh   text eol=lf
+*.md   text=auto
+*.json text=auto
+
+# 二进制/产物：不做行尾转换
+*.exe   binary
+*.syso  binary
+*.png   binary
+*.ico   binary
+*.zip   binary

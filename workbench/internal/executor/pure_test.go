@@ -85,7 +85,6 @@ func TestStderrSummary(t *testing.T) {
 	}
 }
 
-
 func TestFinalizeResultStalled(t *testing.T) {
 	res := &Result{}
 	res.markStalled()

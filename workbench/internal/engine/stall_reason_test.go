@@ -127,6 +127,7 @@ func TestStallReasonEmptyWhenStopped(t *testing.T) {
 		t.Fatalf("停机状态不该报停摆，实际 %s: %s", r.Code, r.Text)
 	}
 }
+
 // TestStallReasonUpstreamRejectingWhileRunning 是用户所报现象的正解回归。
 //
 // 现场形态：running=6 / queued=3（看起来在干活）但 todayDone=0，

@@ -46,10 +46,10 @@ var (
 
 // 完整性级别 RID（token 的 TokenIntegrityLevel → SID 最后一段）。
 const (
-	ilLow     = 0x1000
-	ilMedium  = 0x2000
-	ilHigh    = 0x3000
-	ilSystem  = 0x4000
+	ilLow    = 0x1000
+	ilMedium = 0x2000
+	ilHigh   = 0x3000
+	ilSystem = 0x4000
 	// tokenIL 是 TOKEN_INFORMATION_CLASS.TokenIntegrityLevel = **25**。
 	//
 	// 踩坑实测（2026-10-19）：18 是 TokenElevationType，用它会"成功"返回 4 字节

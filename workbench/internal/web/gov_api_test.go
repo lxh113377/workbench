@@ -211,8 +211,8 @@ func TestGovRecomputeReturnsAllSections(t *testing.T) {
 		t.Fatalf("重算失败 %d: %s", rec.Code, rec.Body.String())
 	}
 	var out struct {
-		Alerts      []gov.Alert      `json:"alerts"`
-		Adjustments []gov.Adjustment `json:"adjustments"`
+		Alerts      []gov.Alert       `json:"alerts"`
+		Adjustments []gov.Adjustment  `json:"adjustments"`
 		Linkage     gov.LinkageReport `json:"linkage"`
 	}
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
