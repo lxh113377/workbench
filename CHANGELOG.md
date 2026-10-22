@@ -15,6 +15,23 @@
 > 未重新输出）—— 本轮恢复，并记下这条教训：以「包含后文的多行锚点」做插入时，
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
+### Changed
+- **判据健壮性系统扫描（2026-10-23 r39，验证型工作，无代码改动）**：
+  承接 r38「我自己写的判据也可能带 CI 隐患」的教训，全仓 134 个 _test.go 扫四类脆弱模式：
+  A runtime.Caller 定位 / B 绝对路径字面量 / C t.Skip / D os.Getenv。逐项核实后**全部为误报或合法**：
+  A 只剩 reporoot_test.go 的解释性注释（非调用）；B 是 CSS 正则里的字母冒号反斜杠被扫描式误认
+  成盘符 + retention 测试故意喂的危险路径样本；D 零命中；C 的 14 处 skip 都是合法环境守卫。
+  **静态扫描只提嫌疑，真正定论靠运行**：
+  ① 全量 `go test -trimpath ./...` → **rc=0、0 FAIL、29 包全过**（r38 隐患的直接反证：
+  仓库内已无 runtime.Caller 定位残留）。
+  ② 编译测试二进制 `-trimpath` 后从**外部目录**（xtmp）运行两条仓根判据 → **PASS 非 SKIP**，
+  真正逼出 findRepoRoot「从 cwd 向上走找 tests/ui」这条 go test 平时走不到的分支（go test 总在
+  包目录跑），证明 r38 修法在最硬场景成立。
+  ③ 全量 `-test.v` 枚举 → **SKIP=0**，即当前无任何休眠守卫（每条带 t.Skip 的判据此刻都实跑，
+  如 toast 守卫因 gov.js 确有 2 处调用而实跑 PASS，非跳过蒙混）。
+  附带再证一条发布纪律：验证期间 `gov_api.go`（非我写域）被并发会话瞬时写成 `encoding/json`
+  未使用而 vet 红，我做 3 次有界重试未代改，它自清后 build clean —— 「不碰他人在途件、等其落定」
+  第四次被实测证明是对的。
 ### Fixed
 - **自我更正：上一轮新加的两个判据在 -trimpath 下假红（2026-10-23 r38）**：
   上轮加的 ui_script_portability_test / gate_files_tracked_test 用 runtime.Caller(0) 取本文件
