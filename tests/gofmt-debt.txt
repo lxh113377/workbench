@@ -24,7 +24,6 @@ workbench/cmd/workbench/acceptance.go
 workbench/cmd/workbench/acceptance_test.go
 workbench/cmd/workbench/plan_selftest_dispatch_test.go
 workbench/internal/artifact/artifact.go
-workbench/internal/artifact/protocol.go
 workbench/internal/artifact/protocol_test.go
 workbench/internal/autonomy/manager.go
 workbench/internal/autonomy/planner.go
