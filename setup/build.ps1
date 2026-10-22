@@ -7,27 +7,38 @@ param(
   [double]$CoverThreshold = 55,
   # PerPackageCover：按"包:阈值"覆盖个别包的基线。
   #
-  # **2026-10-23 全量复核（阈值与实测脱节过大会让护栏失效，故整表重校）**：
-  # 复核方法：go test ./... -count=1 -cover 连跑两次，读数完全一致（覆盖率稳定，可直接作依据）；
-  # 新阈值 = 实测值 - 3pp 余量（留出正常波动与小幅重构空间，同时仍能抓住 3pp 以上的真实退化）。
-  # 复核前的问题：14 个阈值里 **9 个比实测低 15pp 以上**（最离谱 single 16 vs 实测 89.2、
-  # dshprofile 2.5 vs 79.5）—— 意味着这些包损失 20%+ 覆盖门禁都不会报，护栏形同虚设。
-  # 复核后的对照（实测 -> 新阈值）：
-  #   engine 75.9->72 / web 57.4->54 / executor 54.3->51 / modelpool 70.2->67 / supervisor 68.0->65
-  #   cmd/workbench 10.5->7 / evaluate 73.7->70 / modelroute 54.4->51 / shortcut 37.9->34
-  #   chain 88.6->85 / judge 78.6->75 / single 89.2->86 / tray 21.3->18 / dshprofile 79.5->76
+  # **2026-10-23 重校两次（第二次是必须的，见下）**：
+  # 方法：go test ./... -count=1 -cover 连跑两次，读数完全一致（覆盖率本身稳定）。
+  # 新阈值 = 实测 - 3pp 余量。
   #
-  # tray 阈值说明（2026-10-21 立、2026-10-23 复核更新）：托盘包的守护测试全部是「常量/契约」型断言
-  # （WS_EX_TOOLWINDOW 必须是 0x80、类名不得漂移、标题必须自述内部窗、结构体尺寸、
-  # 完整性级别判定），守的是「消息窗不得进任务视图」这条 2026-10-20 现场缺陷的根因。
-  # 真正创建窗口的 Run() 只能在有 Explorer 的真机上跑，单测环境断言它只会得到假绿，
-  # 故该包上限本就不高。2026-10-23 实测 21.3%（比 10-21 的 16.x% 高约 5pp），阈值按「实测-3pp」设为 18。
-  [string[]]$PerPackageCover = @("workbench/internal/engine=72", "workbench/internal/web=54", "workbench/internal/executor=51", "workbench/internal/modelpool=67", "workbench/internal/supervisor=65", "workbench/cmd/workbench=7", "workbench/internal/evaluate=70", "workbench/internal/modelroute=51", "workbench/internal/shortcut=34", "workbench/internal/chain=85", "workbench/internal/judge=75", "workbench/internal/single=86", "workbench/internal/tray=18", "workbench/internal/dshprofile=76")
+  # ⚠️ **阈值必须按 CI 环境定，不能按本机**（本轮实测教训）：
+  # 首次按**本机**读数设定后，CI 直接判红 —— 同一份代码、同一条命令，CI 覆盖率系统性低 10~20pp：
+  #   single 71.4(CI) vs 89.2(本机) / web 37.7 vs 57.4 / executor 42.7 vs 54.3
+  #   supervisor 51.7 vs 68.0 / retention 61.5 vs 77.6
+  # 原因：CI 无桌面会话、无网络、无真实 DSH 安装，部分测试走不同分支（或被环境跳过），
+  # 覆盖率天然更低。**门禁在 CI 跑，所以基准必须是 CI**。
+  #
+  # 复核前的问题：14 个阈值里 9 个比实测低 15pp 以上（single 16 vs 89.2、dshprofile 2.5 vs 79.5），
+  # 这些包损失 20%+ 覆盖门禁都不会报 —— 护栏形同虚设。
+  # 最终对照（CI 实测 -> 新阈值）：
+  #   engine 68.3->65 / web 37.7->34 / executor 42.7->39 / modelpool 58.5->55 / supervisor 51.7->48
+  #   cmd/workbench 5.7->2 / evaluate 63.8->60 / modelroute 50.6->47 / shortcut 28.9->25
+  #   chain 88.6->85 / judge 81.1->78 / single 71.4->68 / tray 见下 / dshprofile 77.8->74
+  # tray 双环境实测：CI 26.3% / 本机 21.3%（**本机更低**——该包断言依赖 Explorer 桌面会话），
+  #   故阈值必须取下界：21.3 - 3 = 18。这是「两个环境都要过」的取值规则。
+  #
+  # tray 说明（2026-10-21 立、2026-10-23 两次复核更新）：守护测试全是「常量/契约」型断言
+  # （WS_EX_TOOLWINDOW 必须 0x80、类名不漂移、标题自述内部窗、结构体尺寸、完整性级别），
+  # 守「消息窗不得进任务视图」这条 2026-10-20 现场缺陷的根因。真正创建窗口的 Run()
+  # 只能在有 Explorer 的真机跑，单测断言只会假绿，故上限本就不高。CI 实测 26.3%，阈值设 23。
+  #
+  # 维护规则：只许抬不许降；若某包实测跌破阈值，先补测试再谈降阈值（降阈值必须写清理由）。
+  [string[]]$PerPackageCover = @("workbench/internal/engine=65", "workbench/internal/web=34", "workbench/internal/executor=39", "workbench/internal/modelpool=55", "workbench/internal/supervisor=48", "workbench/cmd/workbench=2", "workbench/internal/evaluate=60", "workbench/internal/modelroute=47", "workbench/internal/shortcut=25", "workbench/internal/chain=85", "workbench/internal/judge=78", "workbench/internal/single=68", "workbench/internal/tray=18", "workbench/internal/dshprofile=74")
 
 # dshprofile 阈值说明（2026-10-21 立、2026-10-23 复核更新）：该包原被判「只能真机跑」
-# （LocateDSH/resolveFromShim 探测、copyDir/linkOFM 复制、hiddenProcAttr 进程属性全是 IO 型）。
-# **该判断已过时**：后来补了真实测试（env override + 临时目录），实测 79.5% ——
-# 13 个测试、0 个 t.Skip。阈值按「实测-3pp」设为 76。
+# （LocateDSH/resolveFromShim 探测、copyDir/linkOFM 复制、hiddenProcAttr 全是 IO 型）。
+# **该判断已过时**：后来补了真实测试（env override + 临时目录），CI 实测 77.8%、
+# 13 个测试 0 个 t.Skip。阈值按「实测-3pp」设为 74。
 # 教训：包的能力描述会随测试补齐而失效，阈值必须定期按实测重校，不能一次设定管到底。
 )
 $ErrorActionPreference = "Stop"
