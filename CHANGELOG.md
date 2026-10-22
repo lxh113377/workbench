@@ -16,6 +16,20 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **执行钩子（P1-2 公开扩展点）零测试：三条契约无判据守着（2026-10-22 补）**：
+  逐函数覆盖率扫描发现 `internal/executor/hooks.go` **全部函数 0% 覆盖** ——
+  `NewHooks` / `AddBefore` / `AddAfter` / `RunBefore` / `RunAfter` / `AttachHooks` 无一有判据。
+  而 hooks 是 P1-2 交付的**公开扩展点**（对标 river 的 HookWorkBegin/HookWorkEnd 与
+  asynq 的 middleware），引擎靠它插入日志/指标/审计等横切逻辑。三条契约一旦破，故障形态是
+  **横切逻辑静默不生效**或**钩子把任务搞死**，都不会让编译或其它测试失败：
+  ① 前置钩子返回错误 ⇒ 本次不执行（不能照样跑）；
+  ② 后置钩子必须**必然**被调用（含失败路径），否则记账缺口 = 观测面破洞；
+  ③ 任何钩子 panic 都被 recover，绝不影响任务本身。
+  新增 `hooks_contract_test.go` 九条判据：注册顺序、动态追加、首个错误即停且可 `errors.Is` 溯源、
+  前置 panic 转错误、**后置单个 panic 不影响其余（三条都执行）**、失败路径如实传 res/err、
+  nil 集合与 nil 函数项均安全、`SetHooks`/`AttachHooks` 两个装配入口不分叉。
+  变异验证：MUT-A 去掉后置 recover → **panic 逃逸判红**；MUT-B 前置钩子忽略错误 →
+  **两条判据同时判红**。executor 覆盖 52.9% → **53.9%**。
 - **SSE 每秒 10 次全量重渲染 → 滚动被反复弹回顶部（2026-10-23 并发时序走查）**：
   6 个任务并跑现场实测 SSE 峰值约 **10 条/秒**，而 `onmessage` 每条都对 overview/queue
   做全量 `innerHTML` 重渲染。两个真问题：
