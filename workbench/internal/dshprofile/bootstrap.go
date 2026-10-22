@@ -116,7 +116,10 @@ func resolveFromShim(shim string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	for _, line := range strings.Split(string(data), "\\n") {
+	// 按真正的换行切分（旧实现写的是 "\\n" 字面量反斜杠+n，永远切不开，
+	// 整个文件被当成一行 —— 只有碰巧首个引号恰好包住目标 exe 时才正确，
+	// shim 里存在更早的带引号路径即取错，2026-10-22 补判据时实测暴露）。
+	for _, line := range strings.Split(string(data), "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.Contains(line, "DSH Desktop.exe") {
 			continue

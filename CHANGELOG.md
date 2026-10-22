@@ -16,6 +16,22 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **CI 覆盖率门禁判红（build 5/6 步）：dshprofile 只有 patch 文案判据、环境构建链零覆盖（2026-10-22 实测）**：
+  上一条修复把 test job 变绿后，红点下移到 **build + coverage gate**：`覆盖率门禁未通过：
+  workbench/internal/dshprofile=1.4%<阈值2.5%`。根因不是阈值设错，是该包此前 3 条判据全在
+  验 cordis.patch.yml 的文案，而 LocateDSH / ensureOFMData / ensureProfile / Bootstrap 这条
+  「环境准备主链」没有任何测试。**处置是补真判据而不是降阈值**。
+  新增 `bootstrap_env_test.go` 十条（外部依赖全走环境变量注入，CI runner 无 DSH Desktop 也能跑）：
+  LocateDSH 优先 DSH_DESKTOP_EXE、CLI 文件缺失必须点名报错、resolveFromShim 双向、
+  ofmSourceDir 认 index.js 不认空目录、ensureOFMData 落「caveman/ponytail=off + 32768」质量配置
+  且已存在不重写、writeIfChanged 内容未动不碰 mtime、copyDir 嵌套、Bootstrap 端到端 + 二次幂等。
+  **顺带抓到并修掉一个真 bug**：`resolveFromShim` 按 `"\\n"` 字面量（反斜杠+n）切分 shim，
+  永远切不开 —— 整文件被当一行，首个引号落在哪全看 shim 写法；已装的真实 shim 恰好写法配合才正确，
+  前置有多条带引号路径时**解析出错误 exe**。改为按真换行切分，并加反向判据
+  `TestResolveFromShimSkipsEarlierQuotedPaths`（旧实现下必红：实测抓到它返回 "Junk First.exe"）。
+  变异验证：把修复回退成字面量切分 → 判据 CAUGHT；恢复 → dshprofile 覆盖 1.4% → **79.5%**。
+  实测：`go test ./... -cover` 29 包对照 PerPackageCover 全表零未达标、`go vet ./...` rc=0、
+  `go test -race -count=1 ./...` rc=0。
 - **远端 CI 连续 8 次假红：契约测试的收尾方式在 Windows 上不成立（2026-10-22 实测）**：
   远端 CI 自 08:46(+08) 起连续 8 次 red，失败点全部是同型的一句 ——
   `TempDir RemoveAll cleanup: unlinkat ...\TestSilentDoesNotOpenPanel*\002: The process cannot access
