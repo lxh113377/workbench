@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"math"
 )
 
 // TimeLayout 是治理记录统一使用的天数日期格式。
@@ -318,8 +319,18 @@ func deductions(c Contract) float64 {
 	return d
 }
 
+// round2 保留两位小数。
+//
+// 旧实现 float64(int64(v*100+0.5)) / 100 是「向正无穷舍入」，负数会算错方向：
+// -1234.5 → int64(-123449.5) = -123449 → -1234.49（应为 -1234.5）。
+// 本包里 pearson() 返回的相关系数取值域是 [-1, 1]，负相关是真正常态
+// （面板「负载×耗时相关」直接显示它），所以这不是理论问题。
+// 2026-10-22 由 metric_text_test.go 的千分位用例抓到。
 func round2(v float64) float64 {
-	return float64(int64(v*100+0.5)) / 100
+	if math.IsNaN(v) || math.IsInf(v, 0) {
+		return v
+	}
+	return math.Round(v*100) / 100
 }
 
 // StageDwell 返回当前阶段停留时长；now 之前无时间依据返回 0。

@@ -75,8 +75,8 @@ func ContractAlerts(c Contract, opt AlertOptions) []Alert {
 	var out []Alert
 	add := func(kind, sev, title, detail, suggestion, evidence string) {
 		out = append(out, Alert{
-			ID:     fmt.Sprintf("C-%s-%s", c.ID, strings.ReplaceAll(kind, ".", "-")),
-			Kind:   kind, Severity: sev, Scope: ScopeContract, Subject: c.ID,
+			ID:   fmt.Sprintf("C-%s-%s", c.ID, strings.ReplaceAll(kind, ".", "-")),
+			Kind: kind, Severity: sev, Scope: ScopeContract, Subject: c.ID,
 			Title: title, Detail: detail, Suggestion: suggestion, Evidence: evidence, At: at,
 		})
 	}
@@ -208,12 +208,17 @@ func VolumeAlerts(evals []Eval, at string) []Alert {
 			sev = SeverityCritical
 		}
 		out = append(out, Alert{
-			ID:     "V-" + e.Key + "-" + e.Level,
-			Kind:   "volume.metric-" + e.Level,
+			ID:       "V-" + e.Key + "-" + e.Level,
+			Kind:     "volume.metric-" + e.Level,
 			Severity: sev, Scope: ScopeVolume, Subject: e.Key,
-			Title:  fmt.Sprintf("%s %s", DomainName(e.Domain), e.Name),
-			Detail: fmt.Sprintf("%s 当前 %.2f%s，警示线 %.2f，红线 %.2f（占用率 %.0f%%）",
-				e.Name, e.Value, e.Unit, e.Warn, e.Red, e.Ratio*100),
+			Title: fmt.Sprintf("%s %s", DomainName(e.Domain), e.Name),
+			// 读数格式化落在源头：比例换算成百分数、阈值同量纲、占用率按方向说人话
+			// （详见 metric_text.go 的三手代价记录）。
+			// 不带指标名前缀：面板把 Title 与 Detail 并列渲染，重复主语等于同一行念两遍
+			// （2026-10-22 走查实测「并发执行数 并发执行数 当前 6个」）。
+			Detail: fmt.Sprintf("当前 %s，警示线 %s，红线 %s（%s）",
+				metricValueText(e.Value, e.Unit), metricNumberText(e.Warn, e.Unit),
+				metricNumberText(e.Red, e.Unit), usagePhrase(e)),
 			Suggestion: volumeSuggestion(e),
 			Evidence:   fmt.Sprintf("metric=%s value=%.2f warn=%.2f red=%.2f level=%s", e.Key, e.Value, e.Warn, e.Red, e.Level),
 			At:         at,
