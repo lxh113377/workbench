@@ -17,6 +17,11 @@ const govJS = `(() => {
     return data;
   };
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // toast 反馈（2026-10-22 回归修复）：治理台此前只有 alert，本轮把采样失败提示改成
+  // toast 时漏了本函数 —— 门禁 interact-governance 当场判红「toast is not a function」。
+  // 三张页面（app.js / pool.js / gov.js）各自是独立脚本包，helper 必须**各留一份**，
+  // 不能假设某一页的定义对另一页可见。
+  const toast = (msg) => { const el = document.getElementById('toast'); if (!el) { console.log(msg); return; } el.textContent = msg; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2600); };
   const levelClass = (l) => (l === 'red' ? 'lv-red' : l === 'warn' ? 'lv-warn' : l === 'unverified' ? 'lv-unk' : 'lv-ok');
   const levelName = (l) => (l === 'red' ? '红区' : l === 'warn' ? '黄区' : l === 'unverified' ? '未验证' : '绿区');
   const card = (title, body) => '<section class="gov-card"><h3>' + esc(title) + '</h3>' + body + '</section>';

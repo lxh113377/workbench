@@ -93,7 +93,28 @@
   新增 `loading_feedback_contract_test.go` 两条判据（断言**调用点**而非标识符；含「禁原生 alert」），
   变异验证 M1 占位调用 / M2 失败态替换 / M3 采样 disabled / M4 恢复 alert 全部 CAUGHT。
 
-> ⚠️ 本轮**仍未换件**：树被并行会话在途件连续阻断 —— (a) `internal/retry/retry.go` 的
+### Fixed
+- **治理台 `toast is not a function` 运行时回归（2026-10-22，门禁当场判红）**：把采样失败的
+  `alert()` 换成 `toast()` 时，漏了 gov.js **没有** toast 定义 —— 三张页面（app.js / pool.js /
+  gov.js）是各自独立的脚本包，某一页的 helper 对另一页不可见。前端门禁 `interact-governance`
+  实测报错：`errors=["reject: toast is not a function"]`、`runtimeErrors=1`，判定 **FAIL**
+  （ok=22 fail=1）—— 这是本轮唯一一次真回归，且被门禁在发布前抓住。
+  修：给 gov.js 补同款 `toast` helper；新增 `toast_helper_contract_test.go`
+  （govJS 一旦调用 `toast(` 就必须有 `const toast =`；另两页同规则反向断言），
+  变异验证「摘掉 gov 的 toast 定义」→ CAUGHT。
+  复测：门禁回到 **ok=23 fail=0**（`interact-governance errors=0`），发布 1.5.8。
+
+### Added
+- **慢后端加载反馈**（同日实测）：切页签首帧整片空白（`pane.innerHTML`=0）→ 骨架占位；
+  治理台「立即采样」零反馈（+0/+700/+3700ms 三帧读数一致）→ `disabled + 采样中…` 并在
+  `finally` 复原；`alert()` → `toast()`。端到端复测：采样按钮 `采样中…/true` → 复原；
+  模板页首帧由 0 → 126 字符「读取中」骨架 → 1600ms 后真实内容。
+
+> ⚠️ 本轮**换件已完成**（1.5.8，SHA256 AB9DAD18…DAED），但记录一条过程事实：
+> 本轮 build.ps1 先后被并行会话在途件阻断 **3 次**（retry.go copylocks → stuck_rescue.go
+> 未使用 import → stuck_rescue.go 语法错，均为写入中途的瞬时态），另有 1 次全量测试
+> 撞上写入窗口误报失败；最后一次官方链 7/7 通过。
+> ⚠️ 发布历史（前轮欠账）：树曾被并行会话在途件连续阻断 —— (a) `internal/retry/retry.go` 的
 > `Policy` 含 `sync.Mutex` 仍按值传参（`go vet` copylocks，官方链 3/6 步判红）；
 > (b) `internal/engine/stuck_rescue.go` 未使用 import（`go build` 失败，实测 11:02 仍在编辑）。
 > 本端改动自身 `go vet ./internal/web` rc=0、包内测试全绿、CHANGELOG 门禁合规；
