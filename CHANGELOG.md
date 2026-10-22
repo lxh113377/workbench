@@ -15,6 +15,23 @@
 > 未重新输出）—— 本轮恢复，并记下这条教训：以「包含后文的多行锚点」做插入时，
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
+### Fixed
+- **4 个生产代码文件从未入库 → 「本地绿 ≠ 提交绿」的活实例清零（2026-10-23 实测）**：
+  门禁 `tests/check_untracked_go.ps1` 首轮运行即判红，点名 4 个**已被跟踪代码引用、但从未 git add** 的生产文件
+  （同一形态本仓已记过一次「依赖文件从未入库 → 干净 clone undefined」，这是它的**当前进行时**）：
+  ① `internal/modelpool/lanes.go` —— `PurgeGatewayLanes` 被 `service.go:209`（每轮同步的存量清理）、
+     `cmd/workbench/pool_cli.go:158`（CLI 子命令）、`pool_test.go`（4 处判据）调用；
+  ②③ `internal/web/hiddenproc_{windows,other}.go` —— `hiddenProcAttr` 被 `autostart_windows.go` 4 处调用；
+  ④ `cmd/schedprobe/main.go` —— 独立 CLI（无引用）。
+  **风险窗口**：HEAD 侧 `service.go` 没有该调用，故干净 clone 编译 rc=0（不断裂）；
+  但只要引用方**先提交**而 `lanes.go` 没跟上，`SyncNow` 的网关车道清理逻辑会**静默消失**。
+  处置：按依赖组成组提交（30 文件：4 个新生产件 + 全部调用方 + 全部判据），
+  组装校验方式 = **HEAD + 仅本批文件**的 worktree 里跑 `go build` / `go vet` / 三包 `go test`，
+  通过后才 `git add` 这批文件（不整仓提交，避免误归属并行会话在途件）。
+  顺带按死代码门禁口径删掉 `lanes.go` 的 `LaneGroupLabel`（全工作区零引用）。
+  **提交后读数**：门禁从 `FAIL: 4 个生产代码文件未入库` 变为 `PASS: 未跟踪件均为测试文件`；
+  干净 clone（`git worktree add --detach HEAD`）`go build` rc=0、`go vet` rc=0、`go test ./...` 29 包全 ok。
+
 ### Changed
 - **覆盖率阈值整表重校：14 个阈值里 9 个已低于实测 15pp 以上（护栏失效，2026-10-23）**：
   复核方法：`go test ./... -count=1 -cover` **连跑两次，读数完全一致**（覆盖率稳定，可直接作阈值依据）。
