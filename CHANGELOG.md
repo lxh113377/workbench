@@ -15,6 +15,29 @@
 > 未重新输出）—— 本轮恢复，并记下这条教训：以「包含后文的多行锚点」做插入时，
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
+### Fixed
+- **4 处表单控件缺可访问名称（2026-10-23 Awwwards 四维验收，WCAG 1.3.1 / 4.1.2）**：
+  三处 `<label>领域</label><select id="mDomain">` 形态 —— 视觉上标签就在旁边，但 `<label>`
+  既未用 `for/id` 关联也未包裹控件，**屏幕阅读器读不到控件名**；另 `#strategySel`（模型调度策略）
+  完全无标签。共 4 处：`mDomain` / `tDomain` / `tEnabled` / `strategySel`。
+  修：前三处补 `for` 关联，第四处补 `aria-label="模型调度策略"`。
+  **实测复验**：源码与构建产物（exe 二进制内文本）四处均确认命中。
+  新增 `a11y_name_contract_test.go` 一条判据，双向覆盖：① `<label>文字</label><select id=X>`
+  这种「相邻未关联」形态一律判红；② 每个 `<select id=X>` 必须满足之一（`aria-label` / 被 `<label>`
+  包裹 / 存在 `for=X` 的 label）。变异 V1 去掉 `for` 关联 → CAUGHT、V2 去掉 `aria-label` → CAUGHT。
+
+### Changed
+- **Awwwards 四维验收证据采集（同轮，含一项证伪）**：
+  ① **Design**：四页共用同一套令牌（`--bg #04070d`、`--accent #22d3ee`）；字体族 3-4 个
+  （`Noto Sans SC` / `Segoe UI Variable` / `Bahnschrift SemiCondensed` / `Cascadia Mono`，**全部 Windows
+  系统内置**）；首页 3 种圆角变体、1 个 clip-path、4 个动画元素、6 个过渡元素；治理台 7 个 clip-path
+  （HUD 切角密度最高）。
+  ② **零外部依赖（彻底确认）**：4 页 HTML 外部 URL **0**、CSS `url(http…)`/`@import` **0**、
+  JS 外部域名 **0**、网络字体 `document.fonts.size` = **0**。全部资源来自本机 `/assets/`。
+  ③ **证伪**：判据曾报「externalResources: 3」，逐一核实后是 `favicon.svg`/`app.css`/`app.js` 三个
+  **本机** `/assets/` 资源 —— 我的正则 `/^https?:/` 把 `http://127.0.0.1` 也算成外部。**非缺陷。**
+  ④ **Usability**：四页 `unlabeled` = 0、`tinyControls`（<28px）= 0、`lang=zh-CN` 正确。
+  但「unlabeled=0」只是浏览器只查 `aria-label`/`title` 的浅判据 —— 深查（label 关联）才找出上述 4 处。
 ### Changed
 - **动效流畅度实测（2026-10-23 r30，Awwwards 评审硬指标，此前只验「动效存在」未测帧率）**：
   用 rAF 采样 3 秒统计帧间隔分布，6 个场景实测：

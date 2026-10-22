@@ -296,7 +296,7 @@ const appJS = `(() => {
 
     const addBody = '<label>标题</label><input id="mTitle" placeholder="例如：整理本周 AI 工具评测">' +
       '<label>任务描述</label><textarea id="mPrompt" rows="4" placeholder="描述要产出的成果、格式与要求"></textarea>' +
-      '<label>领域</label><select id="mDomain"><option value="content">内容创作</option><option value="code">代码生成</option><option value="knowledge">知识整理</option><option value="data">数据处理</option><option value="solution">方案撰写</option><option value="report">报告生成</option></select>' +
+      '<label for="mDomain">领域</label><select id="mDomain"><option value="content">内容创作</option><option value="code">代码生成</option><option value="knowledge">知识整理</option><option value="data">数据处理</option><option value="solution">方案撰写</option><option value="report">报告生成</option></select>' +
       '<div class="toolbar" style="margin-top:12px"><button class="btn primary" onclick="WB.manual()">评估并加入队列</button></div>';
 
     // 状态摘要：一行看完「现在有没有活、干到哪」
@@ -660,7 +660,7 @@ const appJS = `(() => {
       box.innerHTML = '<div class="card"><h3>新建模板</h3>' +
         '<label>ID（英文唯一）</label><input id="tId" placeholder="my-template">' +
         '<label>名称</label><input id="tName" placeholder="我的模板">' +
-        '<label>领域</label><select id="tDomain"><option value="content">内容创作</option><option value="code">代码生成</option><option value="knowledge">知识整理</option><option value="data">数据处理</option><option value="solution">方案撰写</option><option value="report">报告生成</option></select>' +
+        '<label for="tDomain">领域</label><select id="tDomain"><option value="content">内容创作</option><option value="code">代码生成</option><option value="knowledge">知识整理</option><option value="data">数据处理</option><option value="solution">方案撰写</option><option value="report">报告生成</option></select>' +
         '<label>任务描述</label><input id="tDesc" placeholder="这个模板产出什么">' +
         '<label>Prompt 模板（必须含 {topic}）</label><textarea id="tPrompt" rows="6" placeholder="请围绕「{topic}」产出……"></textarea>' +
         '<label>优先级权重（1-5）</label><input id="tPriority" type="number" min="1" max="5" value="3">' +
@@ -690,7 +690,7 @@ const appJS = `(() => {
         '<label>Prompt 模板</label><textarea id="tPrompt" rows="6">' + esc(t.promptTemplate || '') + '</textarea>' +
         '<label>优先级权重（1-5）</label><input id="tPriority" type="number" min="1" max="5" value="' + (t.priorityWeight || 3) + '">' +
         '<label>价值先验（0-100）</label><input id="tValue" type="number" min="0" max="100" value="' + (t.valuePrior || 75) + '">' +
-        '<label>是否启用</label><select id="tEnabled"><option value="1"' + (t.enabled ? ' selected' : '') + '>启用</option><option value="0"' + (t.enabled ? '' : ' selected') + '>停用</option></select>' +
+        '<label for="tEnabled">是否启用</label><select id="tEnabled"><option value="1"' + (t.enabled ? ' selected' : '') + '>启用</option><option value="0"' + (t.enabled ? '' : ' selected') + '>停用</option></select>' +
         '<div class="toolbar" style="margin-top:12px"><button class="btn primary" onclick="WB.saveTemplate(&apos;' + id + '&apos;)">保存修改</button>' +
         '<button class="btn ghost" onclick="WB.closeTemplateEditor()">取消</button></div></div>';
       box.scrollIntoView({ behavior: 'smooth' });

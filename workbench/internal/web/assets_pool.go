@@ -76,7 +76,7 @@ const poolJS = `(() => {
     const laneBody = '<div class="pool-table-wrap"><table class="pool-table"><thead><tr><th>车道</th><th>总数</th><th>可用</th><th>下线</th><th>停用</th></tr></thead><tbody>' +
       (laneRows || '<tr><td colspan="5" class="empty">暂无模型</td></tr>') + '</tbody></table></div>';
     const strategies = ['priority','round-robin','weighted','least-loaded'];
-    const stratSel = '<select id="strategySel" style="max-width:220px">' + strategies.map(s => '<option value="' + s + '"' + (d.strategy===s?' selected':'') + '>' + stratName(s) + '</option>').join('') + '</select>';
+    const stratSel = '<select id="strategySel" aria-label="模型调度策略" style="max-width:220px">' + strategies.map(s => '<option value="' + s + '"' + (d.strategy===s?' selected':'') + '>' + stratName(s) + '</option>').join('') + '</select>';
     const lp = d.lastProbe || {};
     const gw = g.base ? (g.hasKey ? '已连接' : '缺密钥') : '未发现';
     document.getElementById('poolOverview').innerHTML =
