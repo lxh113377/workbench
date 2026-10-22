@@ -1,5 +1,12 @@
 # gofmt 格式债务登记（2026-10-22 建立）
 #
+# 【2026-10-22 二轮清理】原 35 条里 33 条已失效（对应文件已由并行会话入库并格式化），
+# 已删除。剩下 2 条 live —— 仍是并行会话在途件（git status M，工作区未格式化）。
+#
+# 失效检测已上闸：check_gofmt.ps1 现在会**主动点名「登记但已不漂移」的条目并判红**，
+# 要求删除。原因：在册豁免会让该文件**将来的漂移**静默放过（门禁对该文件永久失明），
+# 而门禁外表仍是绿的 —— 这比缺判据更危险。实测这一轮就是靠它发现 33 条腐烂条目。
+#
 # 语义：登记在此的文件仍会被 check_gofmt.ps1 **点名并计数**，但不计入 rc —— 区别于
 # 「静默跳过」。有豁免时门禁输出三态表述「PASS 但 N 个豁免未清」，绝不打「合规」。
 #
@@ -18,38 +25,5 @@
 
 # 登记原因：并行在途件（2026-10-22 17:2x 现场 git status 实测）
 # 注：shortcut 两件最早登记（gofmt 会重排其文档注释结构）。
-tests/docker-autonomy/fakedsh/main.go
-tests/docker/httpget/main.go
-workbench/cmd/workbench/acceptance.go
-workbench/cmd/workbench/acceptance_test.go
-workbench/cmd/workbench/plan_selftest_dispatch_test.go
-workbench/internal/artifact/artifact.go
-workbench/internal/artifact/protocol.go
-workbench/internal/artifact/protocol_test.go
-workbench/internal/autonomy/manager.go
-workbench/internal/autonomy/planner.go
-workbench/internal/blueprint/plan.go
-workbench/internal/config/config.go
-workbench/internal/engine/interp_probe_test.go
-workbench/internal/engine/plan_helpers.go
-workbench/internal/engine/replan.go
-workbench/internal/engine/replan_test.go
-workbench/internal/engine/stall_reason.go
-workbench/internal/executor/ratelimit_test.go
-workbench/internal/gov/engine.go
-workbench/internal/gov/lifecycle.go
-workbench/internal/modelpool/gateway_check.go
-workbench/internal/modelpool/judge_test.go
-workbench/internal/modelpool/pool_test.go
-workbench/internal/modelpool/types.go
-workbench/internal/retention/danger.go
-workbench/internal/single/instance.go
-workbench/internal/supervisor/metrics_csv_test.go
-workbench/internal/tray/tray_window_style_test.go
-workbench/internal/web/assets_gov.go
-workbench/internal/web/autostart_windows.go
-workbench/internal/web/export.go
-workbench/internal/web/pool_page.go
-workbench/internal/workspace/deadlock_test.go
 workbench/internal/shortcut/shortcut_windows.go
 workbench/internal/shortcut/shortcut_windows_test.go

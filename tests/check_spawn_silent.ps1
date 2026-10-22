@@ -67,6 +67,68 @@ foreach ($v in $violations) {
   foreach ($k in $known.Keys) { if ($v.Contains($k + ':')) { $hit = $true; break } }
   if ($hit) { $knownHit += $v } else { $fatal += $v }
 }
+# 失效 known 检测（2026-10-22 补，与 check_gofmt 的债务腐烂同类问题）：
+# 登记的已知缺陷一旦被修复，条目仍在册就会让该文件**将来的新违规**被静默放过。
+# 判据：登记的 key 若已不再产生任何违规 = 失效，点名要求删除并计入 rc。
+$knownStale = @()
+foreach ($k in @($known.Keys)) {
+  $hit = $false
+  foreach ($v in $violations) { if ($v.Contains($k + ':')) { $hit = $true; break } }
+  if (-not $hit) { $knownStale += $k }
+}
+if ($knownStale.Count -gt 0) {
+  # 分场景（2026-10-22 实测取舍）：
+  #   - CI / 干净 clone：扫描树 == 提交树。登记了却无违规 => 纯腐烂，必须判红要求删。
+  #   - 本机工作区：并行会话常已修好但**尚未提交**，此时 HEAD 仍是缺陷版。
+  #     若按工作区判红，本机会一直红且删了豁免会让 CI 立刻红 —— 死结。
+  # 判据：用 HEAD 版本复核一次。HEAD 仍有违规 => 豁免仍必要，只提示不判红；
+  #       HEAD 也无违规 => 真腐烂，判红。
+  # 直接对 HEAD 内容重跑一遍同一判据（不复用工作区扫描结果，避免逻辑分叉）。
+  $headViolations = @()
+  # 判据基准（2026-10-22 实测踩到）：$Root 是 <repo>/workbench，其下没有 .git，
+  # 原判据 `Test-Path (Join-Path $Root '.git')` 恒 false => HEAD 复核整段被跳过
+  # => $headViolations 恒空 => 误报「HEAD 也无违规」。改为向 git 询问仓库根。
+  $gitProbe = (& git -C $Root rev-parse --show-toplevel 2>$null)
+  $hasGit = ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace([string]$gitProbe))
+  if ($hasGit) {
+    foreach ($k in $knownStale) {
+      # 路径基准：$Root 是 <repo>/workbench，而 git 的 blob 路径是从仓库根算的。
+      # 直接 -C $Root show 'HEAD:workbench/internal/...' 会找不到（2026-10-22 实测踩到：
+      # 判定于是认为「HEAD 无违规」=> 误报豁免失效）。用 git rev-parse 求仓库根再拼。
+      $repoRootForGit = (& git -C $Root rev-parse --show-toplevel 2>$null)
+      if ($LASTEXITCODE -ne 0) { continue }
+      $repoRootForGit = ([string]$repoRootForGit).Trim()
+      $gitRel = $k.Replace([string][char]92, [string][char]47)
+      $headRaw = & git -C $repoRootForGit show ('HEAD:workbench/' + $gitRel) 2>$null
+      if ($LASTEXITCODE -ne 0) { continue }
+      $hl = @($headRaw)
+      for ($hi = 0; $hi -lt $hl.Count; $hi++) {
+        $hLine = $hl[$hi]
+        if ($hLine -notmatch 'exec[.]Command') { continue }
+        $isC = $false
+        foreach ($b in $consoleBins) { if ($hLine.Contains($DQ + $b + $DQ)) { $isC = $true; break } }
+        if (-not $isC) { continue }
+        $hlo = [Math]::Max(0, $hi - 3); $hhi = [Math]::Min($hl.Count - 1, $hi + 7)
+        $hwin = ($hl[$hlo..$hhi] -join " ")
+        $hok = $false
+        foreach ($m in $hiddenMarkers) { if ($hwin.Contains($m)) { $hok = $true; break } }
+        if (-not $hok) { $headViolations += ($k + ':' + ($hi + 1)) }
+      }
+    }
+  }
+  $headStillBad = $headViolations.Count -gt 0
+  if ($headStillBad) {
+    Write-Host ("已登记的豁免在当前树里无违规（工作区已修、HEAD 未修）：" + $knownStale.Count + " 条") -ForegroundColor Yellow
+    foreach ($s in $knownStale) { Write-Host ("  ~ " + $s + "  <== HEAD 仍是缺陷版，豁免暂不可删") -ForegroundColor Yellow }
+    Write-Host "待修复入库后，从 check_spawn_silent.ps1 的 known 表删除这些条目。" -ForegroundColor Yellow
+  } else {
+    Write-Host ("失效的已知缺陷豁免（HEAD 也已无违规，必须从 known 表删除）：" + $knownStale.Count) -ForegroundColor Red
+    foreach ($s in $knownStale) { Write-Host ("  x " + $s) -ForegroundColor Red }
+    Write-Host "为什么必须删：在册豁免会让该文件**将来的新违规**静默放过（门禁对它失明）。" -ForegroundColor Yellow
+    exit 1
+  }
+}
+
 if ($knownHit.Count -gt 0) {
   Write-Host ("  KNOWN 已登记豁免（缺陷已定位、修复未入库，非静默跳过）：" + $knownHit.Count) -ForegroundColor Yellow
   $knownHit | ForEach-Object { Write-Host ("    ~ " + $_) -ForegroundColor Yellow }

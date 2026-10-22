@@ -65,6 +65,18 @@ foreach ($d0 in @($drift)) { if ($debt.ContainsKey($d0)) { continue } } # no-op 
 $exempt = @($drift | Where-Object { $debt.ContainsKey($_) })
 $drift = @($drift | Where-Object { -not $debt.ContainsKey($_) })
 
+# 失效豁免检测（2026-10-22 实测补）：债务清单会腐烂 —— 文件修好后条目仍在册，
+# 于是该文件将来**再次漂移也不会判红**（豁免把它永久遮住），而门禁看上去一直是绿的。
+# 实测：35 条债务里 33 条已失效（对应文件已由并行会话入库并格式化），只剩 2 条 live。
+# 判据：登记但已不再漂移 = 失效条目，必须点名要求删除；计入 rc（否则没人会去清）。
+$staleDebt = @($debt.Keys | Where-Object { $exempt -notcontains $_ })
+if ($staleDebt.Count -gt 0) {
+  Write-Host ("失效的债务豁免（登记但已不漂移，必须从 tests/gofmt-debt.txt 删除）：" + $staleDebt.Count) -ForegroundColor Red
+  foreach ($s in ($staleDebt | Sort-Object)) { Write-Host ("  x " + $s) -ForegroundColor Red }
+  Write-Host "为什么必须删：在册豁免会让该文件**将来的漂移**静默放过（门禁对该文件永久失明）。" -ForegroundColor Yellow
+  exit 1
+}
+
 if ($exempt.Count -gt 0) {
   Write-Host ("显式债务豁免（并发在途件，非静默跳过）：" + $exempt.Count + " 个") -ForegroundColor Yellow
   foreach ($e in $exempt) { Write-Host ("  ~ " + $e + "（登记于 tests/gofmt-debt.txt）") -ForegroundColor Yellow }
