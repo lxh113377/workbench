@@ -92,6 +92,12 @@ Section '纯净检出编译（防提交编译不过的快照）' {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Repo $Root
 }
 
+Section '文档引用完整性（活文档点名的验收入口必须存在或已披露）' {
+  $g = Join-Path $Root 'tests\check_doc_refs.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+}
+
 Section '报告待办与 CI 现实一致性（防状态栏滞后误导下游）' {
   $g = Join-Path $Root 'tests\check_report_claims.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
