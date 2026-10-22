@@ -139,6 +139,13 @@ Section '未跟踪 Go 文件（本地判据：CI 干净检出恒 PASS，不接 r
   if ($LASTEXITCODE -eq 0) { Write-Host '    （差额见上方三行读数）' }
 }
 
+Section '.ps1 入库 EOL（防 CRLF 混入把 diff 放大成全行改动）' {
+  $g = Join-Path $Root 'tests\check_ps1_eol.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section 'git hooks 启用状态（提交前闸是否真装着）' {
   $g = Join-Path $Root 'tests\check_hooks_enabled.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }

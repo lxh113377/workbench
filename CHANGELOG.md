@@ -16,6 +16,22 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **`.ps1` 的 CRLF 混入索引把 8 行改动放大成 177 增 / 169 删（round 25 真实事故，已上门禁）**：
+  round 25 我改 `tests/check_all.ps1` 后，diff 显示 **177 insertions / 169 deletions** ——
+  一个 8 行的新增被放大成「几乎整个文件重写」，评审者根本看不出真实改动。
+  根因（`git cat-file blob` 实测，不是猜的）：**用 CRLF 覆写已跟踪文件后 `git add`，
+  CRLF 会原样进索引**（实测 CRLF=71 / LF=0；原样 add 是 CRLF=0 / LF=71）。
+  即 `.gitattributes` 的 `*.ps1 text eol=crlf` 的 clean 过滤器对「直接覆写」场景**不生效**。
+  附带发现：**新文件反而会被归一**（探针实测：写 CRLF ⇒ 入库 LF）——
+  所以这个坑**只咬「改已有文件」**，而那正是最需要防的场景。
+  新增 `tests/check_ps1_eol.ps1`：查**已暂存 .ps1 的入库内容**（`git cat-file blob :<path>`）是否含 CRLF。
+  与 `check_ps1_encoding.ps1` 分工：后者管 BOM，本件管换行。
+  验证（用 round 25 的同款场景，**必须用已跟踪文件**才复现）：
+  - MUT-A：CRLF 覆写已跟踪 `.ps1` ⇒ 判红并精确点名「含 71 个 CRLF」；
+  - MUT-B：LF 覆写 ⇒ PASS。
+  （首轮变异曾 MISSED —— 因为用了**新文件**，会被 git 归一，门禁查不到 CRLF。
+  这个 MISS 本身证明了一件事：**变异验证必须复现真实场景的每一个特征**，
+  只形似会漏。已把该特征写进门禁头注。）
 - **两个「从未被执行」的回归测试被解救，并修掉它们对应的两个真实缺陷（2026-10-23）**：
   审计未跟踪文件时发现 `tests/regression/` 下有两个 `.go` 测试文件，声明 `package verify`、
   调用 `splitCommand`，但**物理上不在任何模块内**（`tests/` 无 go.mod）——
