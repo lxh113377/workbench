@@ -16,6 +16,22 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **极端内容溢出：无空格长串把容器撑破、整页横向溢出近 1000px（2026-10-22 CDP 注入实测）**：
+  产出里常出现 URL / 哈希 / 代码标识符这类**无空格长串**。注入构造值实测（容器 900px）：
+  · `.doc` 产出面板里 600 个无空格 ASCII → clientWidth 898 但 scrollWidth **5831**（溢出 6.5 倍）
+  · `pre` 代码块里 800 个无换行字符 → scrollWidth **5657**
+  · 表格里 300 字单元格 → 表格被撑到 **2334px**（容器只有 900px）
+  · 整页横向溢出 `docOverflowX = 979px`
+  中文靠 CJK 原生断行不受影响（同用例中文正常），只有 ASCII 长串需要显式规则。
+  修：`.doc` / `pre,.logbox` / `th,td` 三处补 `overflow-wrap:anywhere;word-break:break-word`。
+  **修复中踩到一个反直觉点**：只给 `<pre>` 加 break 规则**完全无效** —— pre 默认
+  `white-space:pre` 根本不换行，复测 scrollWidth 仍是 5657 分毫未动；必须先 `pre-wrap`
+  才能让断行规则起作用（第一版修复失败即此因）。
+  **修后实测：898 / 898 / 900，docOverflowX = -10（零溢出）。**
+  新增 `overflow_wrap_contract_test.go` 三条判据（三处容器必须能断长串 / pre 必须 pre-wrap
+  且不得退化成 pre-line-nowrap / html-body 上不得出现 overflow-x:hidden 掩盖问题）；
+  变异 E1 删 pre-wrap → CAUGHT、E2 删单元格断行 → CAUGHT、E3 用 overflow-x:hidden 掩盖 → CAUGHT。
+### Fixed
 - **豁免/债务清单会腐烂：35 条 gofmt 债务里 33 条已失效，门禁仍在册遮蔽（2026-10-22 实测）**：
   `tests/gofmt-debt.txt` 建立时有 35 条（并行会话在途件）。那些文件后来陆续被入库并格式化，
   但**债务条目没人清** —— 门禁看上去一直「PASS 带 35 条豁免」，实际只有 2 条仍 live。

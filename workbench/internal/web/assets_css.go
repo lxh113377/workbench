@@ -858,6 +858,10 @@ tbody tr{transition:background .14s var(--ease)}
 tbody tr:hover td{background:rgba(255,255,255,.028)}
 tbody tr:hover td:first-child{box-shadow:inset 2px 0 0 var(--accent),inset 6px 0 14px -10px var(--accent)}
 td{color:var(--fg-2)}
+/* 单元格必须能断长串（2026-10-22 极端内容实测）：表格 width:100% 只约束表格本身，
+   单元格的**最小内容宽度**仍会把表撑开 —— 300 个无空格字符的单元格能让 900px 容器里
+   的表格变成 2334px，并让整页横向溢出。下面的规则此前只写在窄屏断点里，桌面宽度下缺席。 */
+th,td{overflow-wrap:anywhere;word-break:break-word}
 tbody tr:last-child td{border-bottom:0}
 
 /* 长列表：审计日志/工作目录这类「行数不可控」的表格必须限高滚动，
@@ -963,10 +967,21 @@ pre,.logbox{
   background:#080a0d;border:1px solid var(--line);border-radius:var(--radius-sm);
   padding:14px 16px;overflow:auto;max-height:460px;
   font-family:var(--font-mono);font-size:12px;line-height:1.7;color:var(--fg-2);
+  /* 同 .doc：无换行长串（日志行 / JSON / 栈帧）会把容器撑开（实测 5657px 未修时）。
+     关键：only overflow-wrap/word-break 对 pre **无效** —— <pre> 默认 white-space:pre
+     根本不换行，必须先 pre-wrap 才能让断行规则起作用（本轮实测第一版只加 break 无效果）。
+     保留 pre-wrap（仍尊重源码换行与缩进），仅在超长时才在任意字符断。 */
+  white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;
 }
 .doc{
   background:#080a0d;border:1px solid var(--line);border-radius:var(--radius);
   padding:22px 26px;max-height:62vh;overflow:auto;line-height:1.78;color:var(--fg-2);
+  /* 长串必须能断（2026-10-22 极端内容实测）：产出里常出现 URL / 哈希 / 代码标识符
+     这类**无空格长串**，不加断行时 600 字符会把 898px 容器撑到 5831px，
+     并让整页横向溢出近 1000px（实测 docOverflowX=979）。中文靠 CJK 原生断行，
+     只有 ASCII 长串需要显式规则。overflow-wrap:anywhere 比 word-break:break-all
+     温和：优先在自然边界断，实在不行才在任意字符断。 */
+  overflow-wrap:anywhere;word-break:break-word;
 }
 .doc h1,.doc h2,.doc h3{margin:20px 0 10px;font-family:var(--font-display);letter-spacing:.02em}
 .doc h1{font-size:22px}.doc h2{font-size:18px}.doc h3{font-size:15px}
