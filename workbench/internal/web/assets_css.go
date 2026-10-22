@@ -1300,6 +1300,32 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
   .home-admin{bottom:8px}
 }
 @media (min-width:1600px){
+  /* 取景框刻度随画布放大（2026-10-23 CDP 实测）：1440/1920/2560 三档读到**完全相同**的
+     色值（alpha .5/.35）、线宽（1.5px）、间距（46px）—— 而 2560 的画布面积是 1440 的 3.2 倍，
+     刻度被稀释成看不见。宽屏必须加粗、提亮、拉大间距，否则「仪器感」在大屏上消失。
+     实测目标：2560 下刻度线在 1 米外观测距离仍可辨。 */
+  .home-main::after{
+    --tw:2px;
+    background-image:
+      linear-gradient(90deg,var(--accent) 0 var(--corner),transparent var(--corner)),
+      linear-gradient(180deg,var(--accent) 0 var(--corner),transparent var(--corner)),
+      linear-gradient(270deg,var(--accent) 0 var(--corner),transparent var(--corner)),
+      linear-gradient(180deg,var(--accent) 0 var(--corner),transparent var(--corner)),
+      linear-gradient(90deg,var(--accent) 0 var(--corner),transparent var(--corner)),
+      linear-gradient(0deg,var(--accent) 0 var(--corner),transparent var(--corner)),
+      linear-gradient(270deg,var(--accent) 0 var(--corner),transparent var(--corner)),
+      linear-gradient(0deg,var(--accent) 0 var(--corner),transparent var(--corner)),
+      repeating-linear-gradient(90deg,rgba(150,215,255,.72) 0 var(--tw),transparent var(--tw) 64px),
+      repeating-linear-gradient(90deg,rgba(150,215,255,.5) 0 var(--tw),transparent var(--tw) 64px);
+    background-size:
+      var(--corner) var(--tw), var(--tw) var(--corner),
+      var(--corner) var(--tw), var(--tw) var(--corner),
+      var(--corner) var(--tw), var(--tw) var(--corner),
+      var(--corner) var(--tw), var(--tw) var(--corner),
+      100% 9px, 100% 7px;
+    filter:drop-shadow(0 0 8px rgba(var(--accent-rgb),.7));
+    opacity:.92;
+  }
   .content{padding:20px 44px 80px;max-width:1460px}
   .pagebar{max-width:1460px;padding:32px 44px 4px}
   .topbar{max-width:1460px}
