@@ -15,6 +15,54 @@
 > 未重新输出）—— 本轮恢复，并记下这条教训：以「包含后文的多行锚点」做插入时，
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
+### Fixed
+- **retry 策略非法值只静默钳制、无痕迹（2026-10-22 对标 river `job_executor.go:563-571`）**：
+  `retry.Policy.nextDelay` 对「算出来的等待非正」一律钳到 **1ms** —— 那是热循环配方
+  （高频失败时每秒重试一次，既打上游又刷台账）；且配置写坏与「值本来就小」在日志里完全同形。
+  修：构造期跨字段矛盾（`MaxDelayMs < BaseDelayMs`、抖动越界、退避列表非正项）登记 `Policy.Fixes`；
+  运行期算出非正等待时回落可信的默认指数退避并登记 `Policy.Warnings`（去重）；
+  引擎在 3 处装配点（New / Recover / ReloadConfig）读 `Fixes` 写 WARN 日志。
+  判据 18 条（含反向：合法配置零 Fixes/Warnings）；变异两条：删抖动塌陷兜底 → 判红（实测抓到 692ms 热循环值）、
+  删 Fixes 登记 → 判红。retry 覆盖 89.1% → **95.7%**。
+- **`config.Normalize()` 零跨字段校验（31 处钳制全是单字段）+ v3 迁移判据被版本号污染（2026-10-22 对标 river `client.go:528-534`）**：
+  ① 新增 `normalizeCrossField`，三条**功能不可达**判据：`StallSeconds >= DefaultTimeout` 时看门狗
+  永不可能先于硬超时触发（stalled 成死配置）→ 钳到超时一半；`ReplanRounds >= RepairRounds` 推翻
+  「先用便宜手段」的设计顺序 → 钳到返工-1；`PlannerMaxMinutes >= DefaultTimeout` 使方案阶段挤占全部执行预算 → 钳到超时一半。
+  每一条登记 `Config.Warnings`（不入盘，`canonicalizeForCompare` 里抹平，防无谓重写）。
+  ② **实测发现既有缺陷**：`Normalize()` 开头把零值配置的 `SchemaVersion` 直接抬到 6，
+  而 v2→v3 迁移分支的判据用的是这个**被改过的值** ⇒ 零值/半截配置永远不命中迁移，
+  `appendProtocol` 停在 false、`repairRounds` 停在 0（P3 产物协议形同虚设）。
+  这正是本文件记过两次的「版本号被提前抬升」的**第三处复现**；改为用项目自己文档里写的 `fromSchema`（进入时的版本）。
+  ③ 反向判据：跨字段段**不得触碰自洽配置**（默认 420s 不得被改；一轮实测写反方向把默认抬到 1860s 被既有测试抓出）。
+  ④ 一条判据写了又撤（`DailyCap <= Concurrency`）：它把「一天只产 1 条」这种**刻意收紧**当矛盾配置抬到 200，
+  被两条既有测试当场判红 —— 跨字段校验只修「功能不可达」，不替用户调参。留作反例记录。
+  判据 7 条；变异两条：摘掉跨字段调用 → 三条判据同时点名、v3 判据退回污染值 → 判红。config 覆盖 69.1% → **70.0%**。
+- **失败与取消路径「状态已迁、台账未写」（2026-10-22 对标 asynq `processor.go:336-338`）**：
+  ① `failTask` 改造前顺序是 `Update`(迁状态) → `Audit` ⇒ 存在窗口「状态已是 failed，台账查不到为什么」；
+  更糟的是 `Update` 返回错误时只 emit 一条**瞬时事件（不落盘）**，任务停在 running、既不重试也不统计。
+  ② `rescueInterrupted` 的判死分支**改造前零审计** —— 判死是不可逆终态决策，却没有任何可追溯台账。
+  ③ `finishCancelled` 只在迁移**失败**时才写审计，正常取消只有瞬时事件（事后无法区分「用户取消」与「任务失败」）。
+  修：新增 `writeLedgerThenTransition` seam（沿用本仓 `autonomy.writeLedgerThenActivate` 同型范式），
+  三处全部改为「先留痕后生效」；`Store.Audit` 由 `void` 改为**返回错误**（改造前 `_ = s.audit.Append` 把失败全吞），
+  审计写失败时退到任务事件流留痕（两级留痕面写在不同目录，同时不可写的概率极低），保证「至少一处留痕」是结构保证。
+  判据 6 条；变异两条：seam 反序 → 判红（实测抓到 `[state ledger]`）、
+  摘掉判死专用审计 → 判红（**关键**：`Transition` 自己也会写一条 kind=transition 的审计且文案重合，
+  第一版判据只搜文案被一条变异放过，加严为**按 kind=error 过滤**后才真正抓住）。engine 覆盖 74.2% → **75.3%**。
+- **卡死看门狗只认 stdout 事件，不认模型写盘（2026-10-22 对标 river `watchStuck` 后新增，会直接丢产出）**：
+  `res.Touch()` 只在 `consume()` 解析到 stdout 事件时刷新活跃度。而 artifact 产出协议下模型常常
+  「先静默写文件、最后才吐 final 事件」，长文写作类任务的静默写盘期可达数分钟 ——
+  只认事件时，这类任务会在 `StallSeconds`（默认 420s）到期被判卡死并杀进程树，**已写出的产物一并丢失**（不可逆）。
+  修：活跃度改双信号取较新者 —— ① stdout 事件 ② workspace 产出文件 mtime（`LatestOutputMtimeMs`，
+  扩展名白名单与 `hasWorkspaceOutput` 同口径，目录不可读时退化为「无信号」= 改造前行为，不误判）；
+  判定逻辑收敛到纯函数 `IsStalled`（可单测、可变异），看门狗 goroutine 只负责周期调用与善后。
+  判据 5 条；变异一条：`IsStalled` 回退成单信号 → 判红。executor 覆盖 49.2% → **52.9%**。
+- **审计/留痕顺序判据第一版测重了对象（2026-10-22 自查，防重犯）**：
+  第一版在测试里**重写了一遍判据逻辑**（把「取较新者」在测试内实现一次），
+  变异把实现回退成单信号时照样全绿 —— 判据根本没碰到被测代码。
+  同一轮还踩到第二次：看门狗判据写成测试内联逻辑、变异无效；
+  以及 `config` 变异「摘掉跨字段调用」第一版没真摘掉（编辑锚点里调用行仍在注释之后）→ 假绿。
+  教训：**变异测试必须先在实现上制造真实回退、并确认回退后的行为差异**；
+  判据要直接调用被测的纯函数/seam，不重写逻辑。已按此重写全部新判据并复跑变异。
 ### Added
 - **慢后端加载反馈：骨架占位 + 采样按钮 busy（2026-10-22 CDP 限速实测缺陷）**：
   ① 切页签首帧整片空白 —— 实测（CDP 限速 1.2s）模板页 `pane.innerHTML` 长度 = **0**，
@@ -55,6 +103,17 @@
 > 本端改动自身 `go vet ./internal/web ./internal/gov` rc=0、包内测试全绿。
 
 ### Fixed
+- **`retry.Policy` 运行期状态迁出结构体 —— 解掉 go vet copylocks（官方链 3/6 步判红；2026-10-22，清掉上方 ⚠️ 的成因 (a)）**：
+  在途改动给 `Policy` 内嵌了 `warnMu sync.Mutex`（告警去重表 + 抖动随机源），而 `Policy`
+  在本仓是**按值传递**的（`engine/helpers.go` 构造字面量后交给 `New`）—— vet 判死三处：
+  `retry.go:138 New passes lock by value`、`retry.go:179 assignment copies lock value`、
+  `engine/helpers.go:37 call of retry.New copies lock value`。后果不止静态告警：
+  每复制一份策略就多出一份独立告警表，`Warnings()` 读数随副本而异。
+  处置：运行期状态收进 `runtime *policyRuntime`（指针，锁只此一份），配置字段仍可按值传；
+  `New()` 一律重建运行期状态（构造器语义）。新增 `runtime_state_test.go` 三条判据 ——
+  `New` 不得继承入参告警（旧实现在此条判红）、按值复制必须共享同一份告警表、零值策略不 panic。
+  实测：`go vet ./...` rc=0、`go test ./...` rc=0、`-race` 绿；并把本次改动镜像到 HEAD 的干净
+  worktree 复跑全量 vet+test rc=0（等价 CI 判据）。
 - **治理台考核矩阵三态失真（2026-10-21 前端走查实测）**：`CheckItem` 只有 bool `Pass`，
   unverified 项被序列化成 `"pass":false`，而前端去读根本不存在的 `it.level` ⇒ 六格全渲染
   FAIL，与同一页头部「3 PASS / 2 FAIL / 1 未验证」自相矛盾。修复：Go 侧补显式
