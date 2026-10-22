@@ -2,8 +2,6 @@ package web
 
 import (
 	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 )
@@ -16,11 +14,7 @@ import (
 // 而本机一切正常。这是本仓在册失效形态「判据存在但没挂受理面」的升级变体：
 // **受理面的依赖文件不在版本库里**。
 func TestGateCriticalFilesAreTracked(t *testing.T) {
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller 取不到本文件路径")
-	}
-	repoRoot := filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
+	repoRoot := findRepoRoot(t)
 	cmd := exec.Command("git", "ls-files", "tests/ui")
 	cmd.Dir = repoRoot
 	out, err := cmd.Output()

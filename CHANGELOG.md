@@ -16,6 +16,20 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **自我更正：上一轮新加的两个判据在 -trimpath 下假红（2026-10-23 r38）**：
+  上轮加的 ui_script_portability_test / gate_files_tracked_test 用 runtime.Caller(0) 取本文件
+  路径再上溯定位仓根。但 go test -trimpath（发布/CI 构建常见）会把编译期记录的源文件路径裁成
+  去前缀形式 => thisFile 不再是真实磁盘路径 => 仓根算错 => **两判据在 -trimpath 下全红**
+  （实测：probes 数读成 0、只有 0 个）—— 这正是本仓在册的「判据存在但没挂受理面 / 本机绿
+  CI 红」死结类，而这次是**我自己刚引入的**。CI 当前 test job 用 go test -race（不带 -trimpath）
+  侥幸躲过，但属定时炸弹。
+  修：新增共享 helper findRepoRoot（reporoot_test.go）—— 从 os.Getwd() 逐级向上找含 tests/ui
+  的祖先目录。Getwd 是 go test 真实运行目录（文件系统真实路径，不受 -trimpath 影响），无论 cwd
+  是包目录还是仓根都稳定命中；找不到则 **Skip（fail-closed，绝不假绿）**。
+  **三态实测**：plain / -trimpath / -race 全 PASS；全量 web **126 PASS / 0 FAIL / 0 SKIP**
+  （SKIP=0 反证 helper 在真实包目录 cwd 下确实命中仓根，不是靠跳过蒙混）。
+  变异 N1（把定位标记改成不存在目录）=> helper 正确 **SKIP 而非假绿**，证明不恒真。
+### Fixed
 - **前端验收脚本硬编码仓根路径，换机器 / CI 检出即崩（2026-10-23 可移植性审计）**：
   4 个验收脚本把仓根写死成 `const ROOT = "D:\\workdesktop"` 或
   `OUT = "D:\\workdesktop\\dist\\ui-shots"` 这类绝对路径 —— 后果是**前端验收永远无法接进

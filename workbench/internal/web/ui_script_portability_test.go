@@ -4,23 +4,9 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"strings"
 	"testing"
 )
-
-// repoRootFromCaller 用调用栈定位本文件所在目录，再上溯到仓根。
-// 为什么不用相对路径：go test 的 cwd 是包目录，且可能被 -C / 脚本改过，
-// 相对路径会算错（本轮实测踩到：..\..\tests\ui 找不到）。
-func repoRootFromCaller(t *testing.T) string {
-	t.Helper()
-	_, thisFile, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller 取不到本文件路径")
-	}
-	// 本文件在 <ROOT>/workbench/internal/web/，上溯 3 层到 <ROOT>
-	return filepath.Join(filepath.Dir(thisFile), "..", "..", "..")
-}
 
 // TestUIScriptsHaveNoHardcodedRoot 钉住「前端验收脚本不得硬编码仓根路径」。
 //
@@ -31,9 +17,7 @@ func repoRootFromCaller(t *testing.T) string {
 // 修：改为 `path.dirname(fileURLToPath(import.meta.url))` 上溯两级推导仓根。
 // 迁移实证：把脚本复制到 D:\\workdesktop\\xtmp\\relocate-test\\tests\\ui/ 后，ROOT 推导为 relocate-test（正确）。
 func TestUIScriptsHaveNoHardcodedRoot(t *testing.T) {
-	// Go 测试的 cwd = 包目录（workbench/internal/web），仓根需上溯 3 层；
-	// 用 runtime.Caller 更稳（不受 -C/工作目录影响）。
-	uiDir := filepath.Join(repoRootFromCaller(t), "tests", "ui")
+	uiDir := filepath.Join(findRepoRoot(t), "tests", "ui")
 	entries, err := os.ReadDir(uiDir)
 	if err != nil {
 		t.Fatalf("读不到 tests/ui 目录: %v", err)
