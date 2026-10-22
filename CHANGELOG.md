@@ -25,11 +25,16 @@
   两个设计点：① **带 `env`** —— round 22 实测本机与 CI 覆盖率系统性差 10~20pp
   （且 tray 本机反而更低），不带环境标记的序列会把两种口径混成一锅粥；
   ② **带 `minPkg`/`minPct`** —— 最低包比均值更早暴露退化（均值会被高覆盖包稀释）。
-  **验证状态（如实记账）**：逻辑已用隔离输入单元验证通过（解析 3 包 ⇒ avg 68.57%、
-  正确识别最低包 tray=26.3%、env/head 均正确带上）；
-  **但端到端未验证** —— 完整构建在 `go vet` 段就失败（并行会话在途文件
-  `headless_testcmd_windows_test.go` 的 `hiddenTestCmd redeclared`，未跟踪、非我改动），
-  构建根本没到覆盖率段。已把该状态记在此，待下轮构建可通过时补端到端证据。
+  **验证（两级都做实）**：
+  - **单元级**：隔离输入验证通过（解析 3 包 ⇒ avg 68.57%、正确识别最低包 tray=26.3%、
+    env/head 均正确带上）；用完即删掉那条假读数（`pkgCount:3` 是模拟特征，不留脏数据）；
+  - **端到端**：干净 worktree（HEAD=`7d17756`，`go vet` rc=0 证明 vet 失败只是并行会话
+    未跟踪的在途文件）里跑真实 `go test ./... -cover`，29 个包被正确解析并落盘：
+    `{"gate":"coverage","env":"local","pkgCount":29,"avgPct":70.66,
+     "minPkg":"workbench/cmd/workbench","minPct":5.6,"head":"7d17756"}`；
+  - 首轮端到端曾受阻：完整构建在 `go vet` 段失败（并行会话在途文件
+    `headless_testcmd_windows_test.go` 的 `hiddenTestCmd redeclared`，未跟踪、非我改动）。
+    用 worktree 隔离后拿到证据 —— **受阻时要换隔离环境取证，而不是把「未验证」当结论**。
   顺带确认 round 22 的另一条待办**已闭环**：长驻内存判据的「多轮取中位」在
   `check_resident_longrun.ps1` 里已实现（等内存稳定后取稳定段中位，最多等 40s）；
   「记录数上限」由 `check_queue_size.ps1` 守 —— 双口径都到位。
