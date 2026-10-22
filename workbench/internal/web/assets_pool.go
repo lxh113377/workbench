@@ -251,7 +251,11 @@ const poolJS = `(() => {
   // 改为「一个按钮 + 折叠表单」：默认收起；高级参数（权重/失败阈值/冷却）再收一层。
   let editing = null;
   let addOpen = false;
-  const openEditor = (m) => { editing = m || null; addOpen = true; renderAdd(); const el = document.getElementById('poolAdd'); if (el) el.scrollIntoView({behavior:'smooth'}); };
+  // 内联编辑器的键盘可达性（2026-10-22 走查实测缺口）：此前只有鼠标点「取消」
+  // 能退出，键盘用户按 Escape 无反应、且关闭后焦点丢失（a11y 上「可关闭」与「焦点回退」
+  // 是成对要求）。这里记下触发元素，Escape 关闭后把焦点还回去。
+  let editorReturnFocus = null;
+  const openEditor = (m) => { editing = m || null; addOpen = true; editorReturnFocus = document.activeElement; renderAdd(); const el = document.getElementById('poolAdd'); if (el) el.scrollIntoView({behavior:'smooth'}); };
   const renderAdd = () => {
     const box = document.getElementById('poolAdd');
     if (!box) { return; }
@@ -390,6 +394,23 @@ const poolJS = `(() => {
       }
     });
   }
+
+  // Escape 关闭池内联编辑器（新增/编辑同一入口），并把焦点退回触发按钮。
+  // 与顶栏「更多」菜单的 Escape 处理同型：键盘用户没有「点空白处关闭」这条路径。
+  const closePoolEditor = () => {
+    editing = null; addOpen = false; renderAdd();
+    const back = editorReturnFocus;
+    editorReturnFocus = null;
+    if (back && document.contains(back) && typeof back.focus === 'function') {
+      try { back.focus(); } catch (e) { /* 忽略：已从文档移除 */ }
+    }
+  };
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Escape') { return; }
+    if (!editing && !addOpen) { return; }
+    ev.preventDefault();
+    closePoolEditor();
+  });
 
   load();
   setInterval(load, 15000);

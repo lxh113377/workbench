@@ -9,7 +9,25 @@
 ## [Unreleased]
 
 > 规则：未发布的变更一律记在本节；发版时把本节整体提升为新的 `## [x.y.z] - YYYY-MM-DD`，
-> 并立刻补一个空的 `## [Unreleased]` 回顶（CI 的 changelog 门禁会校验这一条）。
+### Added
+- **内联编辑器键盘可达性：Escape 关闭 + 焦点回退（2026-10-22 走查实测缺口）**：
+  池内联编辑器（新增/编辑模型）与模板内联编辑器此前都只能靠鼠标离开 —— 池编辑器有「取消」
+  按钮但**没有 Escape 绑定**，模板编辑器连「取消」入口都没有；键盘用户进得去出不来。
+  两处同型补齐：① Escape 关闭（文档级 keydown，只挂一次，不随重渲染累积监听）；
+  ② 关闭后焦点**精确退回触发按钮**（打开时记 `document.activeElement`，关闭时还回去）；
+  ③ 模板编辑器补可见「取消」按钮（与池编辑器对齐）。
+  端到端实证（CDP 真按键）：池 → 打开时 focus=BUTTON:edit，Escape 后 editorOpen=false 且
+  focus 仍是那个 edit 按钮；模板 → 按钮列表 [保存模板, 取消]，Escape 后内容清空、
+  焦点回到「新建模板」。
+  新增 `keyboard_dismiss_contract_test.go` 两条判据（三构件齐备：Escape 绑定/回焦记录/取消入口；
+  keydown 绑定不得随渲染累积）。变异验证：M-A 摘掉池 Escape → CAUGHT、M-B 摘掉模板取消 →
+  CAUGHT、**M-C 摘掉回焦记录首轮 MISSED**（判据只断言标识符 `editorReturnFocus`，而声明行
+  与关闭函数里都有它 ⇒ 收窄为断言赋值语句本身后才 CAUGHT，与 round 10 的 M2 同源教训）。
+
+> ⚠️ 本轮**未换件**：官方 build.ps1 在 3/6 `go vet` 步失败，根因是**并行会话在途改动**
+> `internal/retry/retry.go`（HEAD 无 sync.Mutex、工作区有，10:30 改）—— `Policy` 含 Mutex
+> 仍按值传参，vet copylocks 判红。不代改他人在途件，也不把已知 vet 缺陷打进 24/7 活实例。
+> 本端改动自身 `go vet ./internal/web ./internal/gov` rc=0、包内测试全绿。
 
 ### Fixed
 - **治理台考核矩阵三态失真（2026-10-21 前端走查实测）**：`CheckItem` 只有 bool `Pass`，

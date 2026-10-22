@@ -599,6 +599,10 @@ const appJS = `(() => {
     },
     newTemplate() {
       const box = document.getElementById('templateEditor');
+      // 键盘可达性（2026-10-22 走查实测缺口）：内联编辑器此前只能靠鼠标点「保存」离开，
+      // 既没有「取消」入口也没有 Escape 关闭 —— 键盘用户进得去出不来。
+      // 这里记下触发元素 + 提供取消按钮 + Escape（见文末 keydown 绑定）。
+      box._returnFocus = document.activeElement;
       box.innerHTML = '<div class="card"><h3>新建模板</h3>' +
         '<label>ID（英文唯一）</label><input id="tId" placeholder="my-template">' +
         '<label>名称</label><input id="tName" placeholder="我的模板">' +
@@ -607,12 +611,25 @@ const appJS = `(() => {
         '<label>Prompt 模板（必须含 {topic}）</label><textarea id="tPrompt" rows="6" placeholder="请围绕「{topic}」产出……"></textarea>' +
         '<label>优先级权重（1-5）</label><input id="tPriority" type="number" min="1" max="5" value="3">' +
         '<label>价值先验（0-100）</label><input id="tValue" type="number" min="0" max="100" value="75">' +
-        '<div class="toolbar" style="margin-top:12px"><button class="btn primary" onclick="WB.saveTemplate()">保存模板</button></div></div>';
+        '<div class="toolbar" style="margin-top:12px"><button class="btn primary" onclick="WB.saveTemplate()">保存模板</button>' +
+        '<button class="btn ghost" onclick="WB.closeTemplateEditor()">取消</button></div></div>';
+    },
+    // closeTemplateEditor 清空内联编辑器并把焦点退回触发按钮（取消按钮与 Escape 共用）。
+    closeTemplateEditor() {
+      const box = document.getElementById('templateEditor');
+      if (!box) { return; }
+      const back = box._returnFocus;
+      box._returnFocus = null;
+      box.innerHTML = '';
+      if (back && document.contains(back) && typeof back.focus === 'function') {
+        try { back.focus(); } catch (e) { /* 已从文档移除 */ }
+      }
     },
     editTemplate(id) {
       const t = cache.templates.find(function (x) { return x.id === id; });
       if (!t) { return; }
       const box = document.getElementById('templateEditor');
+      box._returnFocus = document.activeElement;
       box.innerHTML = '<div class="card"><h3>编辑模板：' + esc(t.name) + '</h3>' +
         '<label>名称</label><input id="tName" value="' + esc(t.name) + '">' +
         '<label>任务描述</label><input id="tDesc" value="' + esc(t.description || '') + '">' +
@@ -620,7 +637,8 @@ const appJS = `(() => {
         '<label>优先级权重（1-5）</label><input id="tPriority" type="number" min="1" max="5" value="' + (t.priorityWeight || 3) + '">' +
         '<label>价值先验（0-100）</label><input id="tValue" type="number" min="0" max="100" value="' + (t.valuePrior || 75) + '">' +
         '<label>是否启用</label><select id="tEnabled"><option value="1"' + (t.enabled ? ' selected' : '') + '>启用</option><option value="0"' + (t.enabled ? '' : ' selected') + '>停用</option></select>' +
-        '<div class="toolbar" style="margin-top:12px"><button class="btn primary" onclick="WB.saveTemplate(&apos;' + id + '&apos;)">保存修改</button></div></div>';
+        '<div class="toolbar" style="margin-top:12px"><button class="btn primary" onclick="WB.saveTemplate(&apos;' + id + '&apos;)">保存修改</button>' +
+        '<button class="btn ghost" onclick="WB.closeTemplateEditor()">取消</button></div></div>';
       box.scrollIntoView({ behavior: 'smooth' });
     },
     async saveTemplate(id) {
@@ -900,6 +918,16 @@ const appJS = `(() => {
       }
     });
   }
+
+  // Escape 关闭模板内联编辑器：键盘用户没有「点别处关闭」这条路径（2026-10-22 走查实测）。
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key !== 'Escape') { return; }
+    const box = document.getElementById('templateEditor');
+    if (box && box.innerHTML) {
+      ev.preventDefault();
+      WB.closeTemplateEditor();
+    }
+  });
 
   try {
     const es = new EventSource('/events?token=' + encodeURIComponent(TOKEN));
