@@ -16,6 +16,15 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **newTestEngine 收尾等待仍失效（一修的反例，2026-10-22 本地 -cpu=1 复现）**：
+  上一条（1852ac2）把等待写成「进入 newTestEngine 就 `go inflight.Wait()`、cleanup 时 `<-fin`」——
+  **结构上不成立**：WaitGroup 计数为 0 时 Wait 立即返回，那个 fin 通道只反映「构造瞬间没有在途」，
+  runOne 之后才 `Add(1)` 的 postProcess（engine.go:1243）永远等不到；CI 上 1852ac2 自己的 run
+  （39733004935）随即同判据再红即为证据。本机普通跑不复现，用 `-cpu=1` 放大调度窗口后
+  20 连跑 7 红（三个 plan 用例同根因）。修法：把 Wait 挪进 cleanup 闭包**内**才启动 go Wait()，
+  等的是「测试跑完时真正在途的工作」；5s 有界兜底不变。修复后 20 连跑全绿、整包 -cpu=1 ×3 全绿。
+  教训（与本仓「判据要直接测真实现」同型）：**修并发时序问题，必须先在能稳定复现的口径下
+  证伪旧修法**（-cpu=1 / 高 count），否则「本机绿 + 结构错」的修法会上线再红一轮。
 - **engine 包 CI 独有假红（第二次同型）：newTestEngine 收尾不等在途 postProcess，RemoveAll 被并发新增击穿（2026-10-22 实测）**：
   docs-only 提交 609135a 的 CI run 判红 `TestPlanModelDiffersFromExecutorRole: TempDir RemoveAll
   cleanup: ... workbench-output: The directory is not empty` —— 与「契约测试连红 8 次」同族：

@@ -68,39 +68,30 @@ func newTestEngine(t *testing.T) (*Engine, *store.Store, config.Layout) {
 	// 需要真实执行路径的用例自己 SetRunner 覆盖即可。
 	e.SetRunner(&noopTestRunner{})
 	e.ReloadConfig()
-	// 先等后台在途工作（postProcess 的自评/摘要/链式后继，engine.go 用 e.inflight 记账）
-	// 全部落地，再关 store —— t.Cleanup 后进先出：本条注册在前，故 st.Close 先跑、
-	// 这条后跑、t.TempDir 的自动清理最后跑，顺序正好。
+	// 收尾三件套的注册顺序（t.Cleanup 后进先出 ⇒ 实际执行顺序如下）：
+	//   ① 排空在途后台工作 → ② 关 store（WAL 长句柄）→ ③ t.TempDir 自动删目录。
+
+	// ①为什么必须有（2026-10-22 远端 CI 两轮实测假红）：runOne 成功路径把 postProcess
+	// （自评/摘要/链式后继，engine.go:1244，e.inflight 记账）丢给 goroutine，
+	// 它继续往 layout.TaskDir 写 events.jsonl / 产物；测试函数返回时没写完，
+	// RemoveAll 删到一半被并发新增击穿 —— CI 报
+	// 「TempDir RemoveAll cleanup: ... workbench-output: The directory is not empty」，
+	// 本机快机器窗口关着、20 连跑全绿（慢 runner 才张开）。
 	//
-	// 为什么必须有（2026-10-22 CI 实测假红）：TestPlanModelDiffersFromExecutorRole 判红
-	// 「TempDir RemoveAll cleanup: ... workbench-output: The directory is not empty」——
-	// runOne 的成功路径会把 postProcess 丢给 goroutine 异步跑（engine.go:1244），
-	// 它继续往 layout.TaskDir 里写 events.jsonl / 产物；测试函数返回时它还没写完，
-	// RemoveAll 删到一半被并发新增击穿。Windows 上表现为「目录非空」，
-	// Linux 容器里表现为「文件被占用」—— 同一根因，两种报错。
-	// 有界等待（5s）与 stop() 的宽限同一形态：等待本身不许把测试挂死。
-	// WAL 文件是长期打开的句柄：测试结束时必须先关闭，否则 t.TempDir 的
-	// RemoveAll 在 Windows 上会因文件被占用而失败（现场 28 个用例集体假红）。
-	t.Cleanup(func() { _ = st.Close() })
-	// 再等后台在途工作（postProcess 的自评/摘要/链式后继，engine.go 用 e.inflight 记账）
-	// 全部落地 —— t.Cleanup 后进先出：这条注册在 st.Close **之后**，所以它先跑：
-	// 排空在途 → 关 store → t.TempDir 自动清理，顺序正好。
-	//
-	// 为什么必须有（2026-10-22 远端 CI 实测假红）：TestPlanModelDiffersFromExecutorRole 判红
-	// 「TempDir RemoveAll cleanup: ... workbench-output: The directory is not empty」——
-	// runOne 成功路径把 postProcess 丢给 goroutine 异步跑（engine.go:1244），
-	// 它继续往 layout.TaskDir 写 events.jsonl / 产物；测试函数返回时它还没写完，
-	// RemoveAll 删到一半被并发新增击穿。慢 runner 上窗口才张得开
-	// （本机 20 连跑不复现，CI 上判红 —— 与 2026-10-19 那轮「CI 独有残留」同型）。
-	fin := make(chan struct{})
-	go func() { e.inflight.Wait(); close(fin) }()
+	// ①为什么必须用 e.WaitInflight 而不是自己提前起 goroutine 等：
+	// 首版把 go inflight.Wait(); close(fin) 写在 helper 返回前 —— 那一刻计数是 0，
+	// Wait 立刻返回、fin 立刻关闭，测试里后起的 postProcess 根本没人等，
+	// 排空形同虚设（推送 1852ac2 后 CI 同型复红，实证了这个坑）。
+	// WaitInflight 是生产自带 seam（engine_autonomy.go 注释写明「用途：单测与优雅退出」），
+	// 在**调用时刻**才挂 WaitGroup，无此问题。有界 5s，不许把测试挂死。
 	t.Cleanup(func() {
-		select {
-		case <-fin:
-		case <-time.After(5 * time.Second):
+		if !e.WaitInflight(5 * time.Second) {
 			t.Log("在途后台工作 5s 未排空（继续收尾，不等死）")
 		}
 	})
+	// WAL 文件是长期打开的句柄：测试结束时必须先关闭，否则 t.TempDir 的
+	// RemoveAll 在 Windows 上会因文件被占用而失败（现场 28 个用例集体假红）。
+	t.Cleanup(func() { _ = st.Close() })
 	return e, st, layout
 }
 
