@@ -13,6 +13,7 @@ import (
 // 同一份二进制里 --silent 的语义前后不一致 ——
 //   - 首次启动分支：if !silent { openPanel(...) }   ← 尊重 silent
 //   - **已在运行**分支：无条件 openPanel(...)        ← 无视 silent
+//
 // 于是守护进程/压测/自愈用 --silent 撞上既有实例时，照样往桌面弹一个面板窗口。
 //
 // 判据为什么不能只看 stdout：两个分支都会打印同样的「工作台已在运行：<url>」，
@@ -27,7 +28,9 @@ func TestSilentDoesNotOpenPanel(t *testing.T) {
 		t.Fatalf("构建受测二进制失败: %v (%s)", err, strings.TrimSpace(string(out)))
 	}
 
-	root := t.TempDir()
+	// root 是**子进程的工作目录**，不能用 t.TempDir()：它的自动清理失败会被记成
+	// 测试 FAIL（实测：CI 连续 8 次假红全卡在这一句）。用 newSpawnDir 自管清理。
+	root := newSpawnDir(t)
 	installed := filepath.Join(root, "workbench.exe")
 	data, err := os.ReadFile(exe)
 	if err != nil {
@@ -36,6 +39,9 @@ func TestSilentDoesNotOpenPanel(t *testing.T) {
 	if err := os.WriteFile(installed, data, 0o755); err != nil {
 		t.Fatalf("复制二进制失败: %v", err)
 	}
+	// 按 EXE 路径回收残留实例：被测实例可能脱离进程树（常驻/自愈重启），
+	// 只杀直接子进程收不回它们，而它们会让 root 不可删。
+	trackSpawnedExe(t, installed)
 	for _, sub := range []string{"runtime", "workbench-output"} {
 		if err := os.MkdirAll(filepath.Join(root, sub), 0o755); err != nil {
 			t.Fatal(err)
@@ -50,12 +56,7 @@ func TestSilentDoesNotOpenPanel(t *testing.T) {
 	if err := first.Start(); err != nil {
 		t.Fatalf("启动首个实例失败: %v", err)
 	}
-	defer func() {
-		if first.Process != nil {
-			_ = first.Process.Kill()
-			_, _ = first.Process.Wait()
-		}
-	}()
+	defer killTree(first.Process) // 收整棵进程树：只 Kill 直接子进程会留下占住 root 的后代
 
 	urlFile := filepath.Join(root, "runtime", "panel.url")
 	ready := false
@@ -99,7 +100,7 @@ func TestNonSilentDeclaresPanel(t *testing.T) {
 	if out, err := build.CombinedOutput(); err != nil {
 		t.Fatalf("构建受测二进制失败: %v (%s)", err, strings.TrimSpace(string(out)))
 	}
-	root := t.TempDir()
+	root := newSpawnDir(t) // 同上：子进程工作目录不得用 t.TempDir()
 	installed := filepath.Join(root, "workbench.exe")
 	data, err := os.ReadFile(exe)
 	if err != nil {
@@ -108,6 +109,7 @@ func TestNonSilentDeclaresPanel(t *testing.T) {
 	if err := os.WriteFile(installed, data, 0o755); err != nil {
 		t.Fatal(err)
 	}
+	trackSpawnedExe(t, installed)
 	for _, sub := range []string{"runtime", "workbench-output"} {
 		if err := os.MkdirAll(filepath.Join(root, sub), 0o755); err != nil {
 			t.Fatal(err)
@@ -118,12 +120,7 @@ func TestNonSilentDeclaresPanel(t *testing.T) {
 	if err := first.Start(); err != nil {
 		t.Fatalf("启动首实例失败: %v", err)
 	}
-	defer func() {
-		if first.Process != nil {
-			_ = first.Process.Kill()
-			_, _ = first.Process.Wait()
-		}
-	}()
+	defer killTree(first.Process) // 收整棵进程树：只 Kill 直接子进程会留下占住 root 的后代
 	urlFile := filepath.Join(root, "runtime", "panel.url")
 	ready := false
 	for i := 0; i < 120; i++ {

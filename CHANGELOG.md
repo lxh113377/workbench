@@ -16,6 +16,23 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **远端 CI 连续 8 次假红：契约测试的收尾方式在 Windows 上不成立（2026-10-22 实测）**：
+  远端 CI 自 08:46(+08) 起连续 8 次 red，失败点全部是同型的一句 ——
+  `TempDir RemoveAll cleanup: unlinkat ...\TestSilentDoesNotOpenPanel*\002: The process cannot access
+  the file because it is being used by another process`。其中**一次判红的提交是纯文档提交**
+  （docs/changelog），说明红与被推送内容无关：`cmd/workbench` 契约测试把 t.TempDir() 当子进程的
+  工作目录用，而 Windows 上目录里只要有进程还活着或句柄未释放就删不净 —— t.TempDir() 把「删不净」
+  记成**测试 FAIL**，于是契约判据全绿、CI 却连红（门禁形同虚设，且没人发现）。
+  处置（`headless_test.go` 新增三条可复用能力，`silent_contract_test.go` 改用它们）：
+  ① `killTree` 收整棵进程树（taskkill /T /F）—— 旧实现只 Kill 直接子进程，收不回脱离进程树的后代；
+  ② `reapSpawnedExe` 按**可执行文件绝对路径**精确回收残留实例（路径经环境变量传入，避免命令转义；
+  只可能命中本测试自建目录下的实例，不误伤用户正在跑的实例）；
+  ③ `newSpawnDir` + `removeSpawnDirWithin`：自管目录、重试删除、**删不净只留证不判红**
+  （契约判据在收尾前已跑完入库，环境残留不该伪装成契约被破坏），并打印「CommandLine 命中该目录」
+  的进程快照供定位。新增 `spawn_cleanup_test.go` 两条判据 + **变异验证**：
+  M-A 去掉 taskkill → 孙进程判据 CAUGHT（实测报出 9.83s 失败）、M-B 把留证改回判红 → 容忍判据 CAUGHT。
+  实测：`go test -race -count=1 ./...` rc=0（CI 同命令）、`go vet ./...` rc=0；顺带把本包两个被改文件的
+  gofmt 漂移归零。
 - **retry 策略非法值只静默钳制、无痕迹（2026-10-22 对标 river `job_executor.go:563-571`）**：
   `retry.Policy.nextDelay` 对「算出来的等待非正」一律钳到 **1ms** —— 那是热循环配方
   （高频失败时每秒重试一次，既打上游又刷台账）；且配置写坏与「值本来就小」在日志里完全同形。
