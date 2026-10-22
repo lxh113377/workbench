@@ -15,6 +15,24 @@
 > 未重新输出）—— 本轮恢复，并记下这条教训：以「包含后文的多行锚点」做插入时，
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
+### Fixed
+- **前端验收脚本硬编码仓根路径，换机器 / CI 检出即崩（2026-10-23 可移植性审计）**：
+  4 个验收脚本把仓根写死成 `const ROOT = "D:\\workdesktop"` 或
+  `OUT = "D:\\workdesktop\\dist\\ui-shots"` 这类绝对路径 —— 后果是**前端验收永远无法接进
+  CI**：CI 检出到别的目录，脚本一启动就 `ReferenceError` / 找不到文件，判据「存在但只在
+  某台机器上能跑」等于没有受理面（与本仓已登记的「判据存在但没挂受理面」同型失效）。
+  修：全部改为从脚本自身位置推导仓根 —— `path.dirname(fileURLToPath(import.meta.url))`
+  上溯两级。用 `fileURLToPath` 而非 `new URL().pathname`：后者在 Windows 上会得到
+  `/D:/...` 还要再剥前导斜杠，正则易写错（本轮 v1 就写错成正则匹配不到，已改）。
+  **迁移实证**：把 4 个脚本复制到 `xtmp\relocate-test\tests\ui\` 后，ROOT 推导结果为
+  `xtmp\relocate-test`（正确），不再依赖 `D:\workdesktop`。
+  **功能零回归**：门禁复跑 **23/23 PASS、errors 全 0**，且此前 5 个 unverified 用例
+  （真实窗口 594×350 / 1040×613）现在全部通过。
+  新增 `ui_script_portability_test.go` 判据（扫 tests/ui 全部 .mjs，禁绝对路径字面量；
+  浏览器安装路径除外 —— Edge 装在固定位置是事实且已支持 `EDGE_BIN` 环境变量覆盖）。
+  判据自身踩了两个坑并修：① Go 测试 cwd 是包目录，相对路径 `..\..\tests\ui` 算错
+  ⇒ 改用 `runtime.Caller(0)` 定位本文件再上溯 3 层；② 首版误把 Edge 安装路径判成缺陷
+  ⇒ 加排除。变异 M1 恢复硬编码 ROOT → CAUGHT、M2 改用 `process.cwd()` → CAUGHT。
 ### Changed
 - **验收总账（2026-10-23 r35）：八维 + Awwwards 四维 + 规模/异常/性能全部有机器化证据**：
   八维：排版（溢出 0 / 顶距统一 / 卡片语言统一）、留白（三页 padding 同值）、视觉层级（h1 语义已修）、
