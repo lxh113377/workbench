@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"workbench/internal/config"
+	"workbench/internal/logging"
 	"workbench/internal/model"
 	"workbench/internal/retry"
 )
@@ -34,6 +35,30 @@ func buildRetryPolicy(cfg config.ExecutorConfig) *retry.Policy {
 		p.RetryableKinds = append(p.RetryableKinds, retry.ParseKind(k))
 	}
 	return retry.New(p)
+}
+
+// logRetryPolicyFixes 把策略构造期的配置修正写进日志（2026-10-22 对标 river 后新增）。
+//
+// 为什么必须单独一步：retry.New 对矛盾配置是「静默修正 + 登记 Fixes」。
+// 若没有人读 Fixes，修正就仍然不可见 —— 7x24 无人值守系统里
+// 「配置写坏」与「配置正确但值很小」在日志里依然同形，运维无从判断。
+// 这条函数让「修正」本身成为可观测事实。
+//
+// 返回修正条数，便于测试断言「零修正时不写日志」。
+func logRetryPolicyFixes(lg *logging.Logger, p *retry.Policy) int {
+	if p == nil || lg == nil {
+		return 0
+	}
+	fixes := p.Fixes
+	if len(fixes) == 0 {
+		return 0
+	}
+	fields := make([]any, 0, len(fixes)*2)
+	for _, f := range fixes {
+		fields = append(fields, f.Field, f.Reason)
+	}
+	lg.Warn("重试策略配置已被自动修正（原值不可用，已按可信默认继续）", fields...)
+	return len(fixes)
 }
 
 // errText 安全取错误文本。

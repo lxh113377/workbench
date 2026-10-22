@@ -9,6 +9,7 @@ package executor
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -172,6 +173,84 @@ func FinalizeResult(res *Result, stderr string, hasWorkspaceFile bool) error {
 
 // OverlayFromConfig 生成模型覆盖层 YAML（保留独立函数便于单测与未来多 provider 扩展）。
 func OverlayFromConfig(modelID string) string { return modelOverlay(modelID) }
+
+// outputExtensions 是「模型产出文件」的扩展名集合（与 hasWorkspaceOutput 同一口径）。
+// 看门狗把它当作活跃度信号：模型在静默写盘期间不吐 stdout 事件，
+// 但 mtime 会一直前进 —— 只认事件的旧判据会把这类任务误判成卡死并杀掉，
+// 已写出的产物一并丢失（本轮对标 river watchStuck 后新增的覆盖）。
+var outputExtensions = map[string]bool{
+	".md": true, ".txt": true, ".json": true, ".csv": true, ".py": true,
+	".js": true, ".ts": true, ".go": true, ".sql": true, ".sh": true,
+	".ps1": true, ".html": true, ".xml": true, ".yaml": true, ".yml": true,
+}
+
+// stallLimitFor 计算本轮卡死阈值：基础 StallSeconds，出现过 thinking 帧则放大。
+// 纯函数（无 IO、无时钟），便于表驱动测试与变异验证。
+func stallLimitFor(baseSeconds int, sawThinking bool) time.Duration {
+	stall := time.Duration(baseSeconds) * time.Second
+	if stall <= 0 {
+		stall = 420 * time.Second
+	}
+	if !sawThinking {
+		return stall
+	}
+	thinkingStall := stall * 2
+	if thinkingStall < 600*time.Second {
+		thinkingStall = 600 * time.Second
+	}
+	return thinkingStall
+}
+
+// IsStalled 是看门狗的活跃度判定（纯函数，双信号取较新者）。
+//
+//   - lastEventMs：最近一条 stdout 事件的时刻（0 表示从未收到）
+//   - workDir：任务工作目录，用于探测产出文件 mtime（空串表示无目录）
+//   - baseSeconds：StallSeconds 配置
+//   - sawThinking：本轮是否出现过 thinking 帧（阈值放大）
+//   - nowMs：当前时刻（注入以便测试，不使用 time.Now）
+//
+// 语义：事件与产出文件**任一**在前进就不算卡死。只有两者都超过阈值才判卡死。
+// 这是 2026-10-22 对标 river watchStuck 后新增的覆盖：旧判据只认事件，
+// 会把"静默写盘期"的长任务误判成卡死并杀掉，已写出的产物一并丢失。
+func IsStalled(lastEventMs int64, workDir string, baseSeconds int, sawThinking bool, nowMs int64) bool {
+	last := lastEventMs
+	if fm := LatestOutputMtimeMs(workDir); fm > last {
+		last = fm
+	}
+	if last <= 0 {
+		// 两个信号都没有：尚无任何进展证据，不判卡死（启动初期）。
+		return false
+	}
+	limit := stallLimitFor(baseSeconds, sawThinking)
+	return nowMs-last > limit.Milliseconds()
+}
+// LatestOutputMtimeMs 返回目录下最新一个产出文件的修改时间（毫秒时间戳）。
+// 没有产出文件或目录不可读时返回 0（调用方按「无信号」处理）。
+//
+// 设计要点：
+//  - 只认扩展名白名单，避免把日志/临时文件当产出；
+//  - 单次全量 Walk（任务 workspace 通常几十个文件，开销远小于 5s 的看门狗周期）；
+//  - 出错不扩散： Walk 的任何错误都被忽略，最坏情况退化为「无产出信号」，
+//    与改造前行为一致（不会因为探测失败而误判）。
+func LatestOutputMtimeMs(dir string) int64 {
+	if strings.TrimSpace(dir) == "" {
+		return 0
+	}
+	var latest int64
+	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if err != nil || info == nil || info.IsDir() {
+			return nil
+		}
+		if !outputExtensions[strings.ToLower(filepath.Ext(path))] {
+			return nil
+		}
+		if ms := info.ModTime().UnixMilli(); ms > latest {
+			latest = ms
+		}
+		return nil
+	})
+	return latest
+}
 
 // effectiveMaxBytes 计算单任务事件流上限（MB → bytes，带下限保护）。
 func effectiveMaxBytes(maxOutputMB int) int64 {

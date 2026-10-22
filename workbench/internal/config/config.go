@@ -306,6 +306,16 @@ type Config struct {
 	// 零值 = 默认保留窗口（3/30/90 天）。
 	Retention retention.Policy `json:"retention"`
 	UpdatedAt int64            `json:"updatedAt"`
+	// Warnings 记录 Normalize 期间的配置修正（跨字段矛盾为主）。
+	//
+	// 为什么需要（2026-10-22 对标 river client.go:528-534）：river 用一条跨字段判据
+	// 把 rescueAfter 与 jobTimeout 的关系收敛；本项目此前 31 处钳制全是单字段，
+	// 零处跨字段。新增的 normalizeCrossField 把修正写进这里，
+	// 让「配置被改过」成为可观测事实，而不是静默行为差异。
+	//
+	// 语义：只增不减由 addWarning 去重；不入盘（每次 Normalize 重新计算，
+	// 避免把一次性告警固化成配置噪音）。
+	Warnings []string `json:"warnings,omitempty"`
 }
 
 // DefaultConfig 返回开箱即用的默认配置（基于本机实测的模型健康度）。
@@ -478,7 +488,16 @@ func (c *Config) Normalize() {
 	//   - schemaVersion <= 3 且字段是零值 -> 按默认值打开（旧安装的必经路径）；
 	//   - 用户后来显式关闭时，schemaVersion 会被提升到 4（见 Replace/Update），
 	//     因此不会被反复覆盖。
-	if c.SchemaVersion <= 3 {
+	//
+	// 判据必须用 **fromSchema（进入时的版本）** 而不是 c.SchemaVersion（2026-10-22 实测缺陷）：
+	// 函数开头有一条 `if c.SchemaVersion <= 0 { c.SchemaVersion = SchemaVersion }`，
+	// 于是零值配置（{} / 只填了部分字段的外部工具产物 / 半截写入的文件）
+	// 进来就被抬到 6，本分支**永远不命中** —— appendProtocol 停在 false、
+	// repairRounds 停在 0，P3 产物协议形同虚设。
+	// 这正是本文件顶部记过的「版本号被提前抬升导致迁移不命中」的**第三处**复现，
+	// 也是上面 fromSchema 注释里写明的同一条规则，只是本分支当时没跟上。
+	// 实证：crossfield_test.go 的 TestCrossFieldReplanGuardOnZeroRepair 首轮判红。
+	if fromSchema <= 3 {
 		if !c.Executor.AppendProtocol {
 			c.Executor.AppendProtocol = d.Executor.AppendProtocol
 		}
@@ -588,6 +607,114 @@ func (c *Config) Normalize() {
 	}
 	c.normalizeAutonomy(d, fromSchema)
 	c.normalizeWorkspace()
+	// 跨字段一致性校验（2026-10-22 对标 river client.go:528-534 后新增）。
+	// 必须放在所有单字段钳制**之后**：前面的段保证每个字段各自合法，
+	// 但字段之间的关系无人保证。river 用一条
+	//   if c.JobTimeout > 0 && c.RescueStuckJobsAfter < 1 && c.JobTimeout > c.RescueStuckJobsAfter
+	// 就把这类关系收敛了；本项目此前只有单字段钳制，31 处、零处跨字段。
+	c.normalizeCrossField(d)
+}
+
+// normalizeCrossField 校验并修正**字段之间**的矛盾关系。
+//
+// 为什么单独立一段而不是塞进 Normalize 主体：跨字段判据的失效形态与单字段不同 ——
+// 单字段越界是"这个值不合法"，跨字段矛盾是"每个值都合法、合在一起不 work"。
+// 后者更隐蔽（每个字段都过得了自己的钳制），也更难排查（现场看不到任何错误）。
+//
+// 已实测存在的矛盾（2026-10-22 取证）：
+//
+//	StallSeconds(420s) < DefaultTimeout(30min)
+//	  => 任务超时先于卡死判定触发，看门狗对超时类任务**永不生效**。
+//	     river 的对应注释（job_executor.go:392）明确要求
+//	     "RescueStuckJobsAfter 必须 > JobTimeout，否则误判"。
+//
+//	Plan.ReplanRounds(2) >= Executor.RepairRounds(3)
+//	  => 返工额度还没用完就重新规划，"先用便宜手段"的设计被推翻。
+//	     此前只靠 plan_config_test.go 一条测试断言默认配置的大小关系，
+//	     手改配置可突破（测试只测默认值）。
+//
+//	Plan.PlannerMaxMinutes(8) >= Executor.DefaultTimeout(30)
+//	  => 方案调用比整个任务的超时还长，方案阶段必然超时。
+//
+// 修正策略：抬高一侧而不是压低另一侧（压低会让功能直接失效），
+// 并把每一条修正登记到 Config.Warnings，让调用方在启动时说清楚。
+func (c *Config) normalizeCrossField(d Config) {
+	// 1) 卡死阈值必须**小于**单任务超时，否则看门狗永远抢不到执行机会。
+	//
+	// 方向说明（本轮第一次写反，被既有测试 TestMigrationV1AlsoFixesWatchdog 抓出）：
+	// 看门狗判据是「**活动**停滞」（无 stdout 事件且无产出文件写入），不是「跑得太久」；
+	// 而 DefaultTimeout 是硬性墙钟上限。两者是「安全网」与「兜底上限」的关系：
+	// 安全网必须先于兜底触发才有效。若 StallSeconds >= 任务超时，
+	// 任务总会被硬超时先接管，stalled 分类**永不可达** —— 这是一份死配置，
+	// 面板上永远看不到「卡死」，排查时也找不到这条线索。
+	stallSec := c.Executor.StallSeconds
+	timeoutSec := c.Executor.DefaultTimeout * 60
+	if stallSec > 0 && timeoutSec > 0 && int64(stallSec) >= int64(timeoutSec) {
+		c.Executor.StallSeconds = timeoutSec / 2
+		if c.Executor.StallSeconds < 30 {
+			c.Executor.StallSeconds = 30
+		}
+		c.addWarning("executor.stallSeconds",
+			fmt.Sprintf("卡死阈值 %ds 不小于单任务超时 %dmin，看门狗永不可能先于硬超时触发（stalled 死配置）；已钳到 %ds",
+				stallSec, c.Executor.DefaultTimeout, c.Executor.StallSeconds))
+	}
+	// 2) 重新规划轮数必须小于返工轮数（先用便宜手段）。
+	// 守卫 RepairRounds > 0：零值配置（未走迁移分支）下该字段尚未补默认，
+	// 此时比较没有意义，钳下去反而会把 NormalizePlan 刚补好的默认值打回 0
+	// （本轮实测：TestNormalizeRaisesSchemaToSix 因此判红）。
+	if c.Plan.Enabled && c.Executor.RepairRounds > 0 {
+		if c.Plan.ReplanRounds >= c.Executor.RepairRounds {
+			c.Plan.ReplanRounds = c.Executor.RepairRounds - 1
+			if c.Plan.ReplanRounds < 0 {
+				c.Plan.ReplanRounds = 0
+			}
+			c.addWarning("plan.replanRounds",
+				fmt.Sprintf("重新规划轮数 %d 不小于返工轮数 %d（应先用便宜的返工）；已钳到 %d",
+					c.Executor.RepairRounds, c.Executor.RepairRounds, c.Plan.ReplanRounds))
+		}
+		// 3) 方案调用超时必须短于整个任务的超时（否则方案阶段必然超时）。
+		if c.Plan.PlannerMaxMinutes > 0 && c.Executor.DefaultTimeout > 0 &&
+			c.Plan.PlannerMaxMinutes >= c.Executor.DefaultTimeout {
+			c.Plan.PlannerMaxMinutes = c.Executor.DefaultTimeout / 2
+			if c.Plan.PlannerMaxMinutes < 1 {
+				c.Plan.PlannerMaxMinutes = 1
+			}
+			c.addWarning("plan.plannerMaxMinutes",
+				fmt.Sprintf("方案调用超时 %dmin 不小于任务超时 %dmin（方案阶段必然超时）；已钳到 %dmin",
+					c.Executor.DefaultTimeout, c.Executor.DefaultTimeout, c.Plan.PlannerMaxMinutes))
+		}
+	}
+}
+
+// 为什么没有「每日配额必须大于并发」这条（2026-10-22 实测，本轮被既有测试否掉的判据）：
+//
+// 第一版写了这条，理由是「一轮并发就把配额吃满」。但实测两条既有测试立刻判红
+// （TestDailyCapStopsAutonomySupply / TestStallReasonDailyCap）——
+// 它们刻意把 DailyCap 设成很小的值（1~2）来验证「配额耗尽后必须停手」，
+// 而我这条判据把它们抬到 200，断言的前提直接消失。
+//
+// 更根本的问题是语义："一天只产 1 条"是用户的**刻意选择**（配额本来就是
+// 用来收紧的旋钮），不是矛盾配置。把它抬上去属于「宁可多改」——
+// 跨字段校验只能修**功能不可达**的矛盾，不能替用户调参。
+// 保留的三条都满足这个判据：
+//   1) stall >= timeout  -> stalled 分类永不可达（死配置）
+//   2) replan >= repair  -> 「先用便宜手段」的顺序被推翻（设计意图不可达）
+//   3) planTimeout >= taskTimeout -> 方案阶段挤占掉全部执行预算（执行不可达）
+// 且三条的修正方向都是「抬高被压死的一侧 / 压低挤占的一侧」，
+// 绝不是把用户的收紧选择放大。
+
+// addWarning 登记一条配置修正（去重，按发生顺序累积）。
+//
+// 与单字段钳制的分工：钳制是静默的，Warnings 让"被钳过"这件事可观测。
+// 若没有人读 Warnings，跨字段校验就仍然不可见 —— 那与不校验只差一个日志行。
+func (c *Config) addWarning(field, reason string) {
+	msg := field + ": " + reason
+	for _, w := range c.Warnings {
+		if w == msg {
+			return
+		}
+	}
+	c.Warnings = append(c.Warnings, msg)
 }
 
 // normalizeAutonomy 把自主配置钳制到安全区间。
@@ -831,6 +958,11 @@ func canonicalizeForCompare(c *Config) {
 	if c.Autonomy.Bounds.AllowedDomains == nil {
 		c.Autonomy.Bounds.AllowedDomains = []string{}
 	}
+	// Warnings 不入盘、不参与比较：它是每次 Normalize 重新派生的一次性告警。
+	// 不在这里抹平的话，磁盘上（没有该字段）与内存里（跨字段修正产生）
+	// 永远存在差异，每次启动都会白写一次磁盘，
+	// 违反「已迁移配置不应无谓重写」的老判据。
+	c.Warnings = nil
 }
 
 // Get 返回配置副本（调用方不可直接改内存状态）。

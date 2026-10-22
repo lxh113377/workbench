@@ -96,6 +96,21 @@
   以及 `config` 变异「摘掉跨字段调用」第一版没真摘掉（编辑锚点里调用行仍在注释之后）→ 假绿。
   教训：**变异测试必须先在实现上制造真实回退、并确认回退后的行为差异**；
   判据要直接调用被测的纯函数/seam，不重写逻辑。已按此重写全部新判据并复跑变异。
+- **假 running 无人认领：卡死救援只有启动时一次扫，无持续轮询（2026-10-22 第五项，对标 river `internal/maintenance/job_rescuer.go`）**：
+  L4（stuck_rescue.go）覆盖「进程崩溃后重启」；但**进程活着而任务失去归属**
+  （goroutine 未起/早退未收尾/状态与内存表分叉）时，面板显示「正在执行 N」而实际零在跑，
+  这类任务既不重试也不统计、还永久占着 running 计数与其链（queue.Pop 会静默跳过 busy 链上的
+  queued 任务，queue.go:107 ⇒ 回收了但取不出＝假入队）。
+  修：新增 `internal/engine/runtime_rescue.go` —— 调度 tick 内每 30 秒扫台账（river 同款周期），
+  连续 max(StallSeconds×2, 600s) 处于「台账 running 但本进程无 goroutine」才动手；
+  **两阶段确认**（首扫只登记候选，二扫达阈值才回收）。中途改用任务 UpdatedAt 判静默的方案
+  被实测否决：`store.Update` 在 mutator 后无条件覆写 UpdatedAt，无关写入会重置计时且判据不可测。
+  四条安全边界各钉反向判据：在飞(goroutine 存在)不碰、取消中不碰、阈值非法不碰、登记表随任务
+  离开 running 自动清理。回收动作释放链占用 + 与 L4 共用同一份 CrashRescues 额度（防双预算翻倍）；
+  留痕一律 kind=error 审计先于状态生效（沿用本轮 ledger seam）。
+  判据 8 条；变异三条全部判红：摘在飞门 →「误杀在飞」点名、摘两阶段 → 三条点名、
+  摘 ReleaseChain →「busy=1 want 0」点名（第三首版断言写成 busy>1 曾放过变异，已加严 ——
+  「占用没恶化」≠「被释放」，queue.Pop 的静默跳过会让弱断言假绿）。engine 覆盖 75.3% → **75.9%**。
 ### Added
 - **慢后端加载反馈：骨架占位 + 采样按钮 busy（2026-10-22 CDP 限速实测缺陷）**：
   ① 切页签首帧整片空白 —— 实测（CDP 限速 1.2s）模板页 `pane.innerHTML` 长度 = **0**，

@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -66,6 +67,14 @@ type Engine struct {
 	runningIDs sync.Map
 	stopping   atomic.Bool
 	tickBusy   atomic.Bool
+	// rescueSweepAt 是持续卡死救援的节流时刻（毫秒，见 runtime_rescue.go）。
+	// 0 表示从未扫过。用 atomic 而非加锁：它只在 tick 单线程路径里读写，
+	// 但需与 tick 的并发早退（tickBusy）语义一致地做到无锁。
+	rescueSweepAt atomic.Int64
+	// orphanSeen 记录「首次被判定为孤儿候选」的时刻（taskID -> ms），用于两阶段确认。
+	// 由 orphanMu 保护；tick 单线程调用，但测试与未来并行调度都会并发访问。
+	orphanMu   sync.Mutex
+	orphanSeen map[string]int64
 
 	// taskCancels 保存每个运行中任务的取消函数（P0-3）。
 	// 改造前 CancelTask 对 running 任务只写审计、不取消子进程，等于空操作。
@@ -139,6 +148,7 @@ func New(layout config.Layout, cstore *config.Store, st *store.Store, reg *templ
 		ws:     workspace.New(layout.DataRoot, layout.Root, cfg.Workspace),
 
 		rejectBreakerAt: map[string]int64{},
+		orphanSeen:      map[string]int64{},
 	}
 	// 工作目录审计：允许/拒绝都落盘，越权尝试可事后复核（打开失败只告警不阻断）。
 	// L6 接线收口：改造前这里 aerr 被直接丢掉，且紧随其后的 e.log 又被重设成 Nop，
@@ -166,6 +176,7 @@ func New(layout config.Layout, cstore *config.Store, st *store.Store, reg *templ
 	// 且 New→SetLogger→ReloadConfig 之间不发请求，不会丢已在途的令牌状态。
 	e.applyRateLimit(cfg.Executor)
 	e.retryPol = buildRetryPolicy(cfg.Executor)
+	logRetryPolicyFixes(e.log, e.retryPol)
 	// 自主子系统：初始化失败只降级，不阻断引擎构造。
 	e.initAutonomy()
 	return e, nil
@@ -670,6 +681,7 @@ func (e *Engine) Recover() error {
 	e.retryPolMu.Lock()
 	e.retryPol = buildRetryPolicy(cfg.Executor)
 	e.retryPolMu.Unlock()
+	logRetryPolicyFixes(e.log, e.retryPol)
 	if n > 0 {
 		e.emitEvent(model.Event{Type: "engine", At: model.Now(), Msg: fmt.Sprintf("恢复了 %d 个中断任务", n)})
 	}
@@ -712,6 +724,24 @@ func (e *Engine) tick(ctx context.Context) {
 	// 0) 模型池冷却闸门：整池不可用时既不补候选也不取任务，直接等到最早可试时刻。
 	// 没有这道闸门时，池冷却期间任务被反复捞起又放回，空转刷满审计（见 struct 注释）。
 	now := model.Now()
+	// 0.2) 持续卡死救援（2026-10-22 对标 river JobRescuer 的周期轮询）。
+	//
+	// 位置讲究：必须放在**池冷却早退之前**。否则整池冷却期间（现场可达 30 分钟）
+	// 调度循环每 3 秒到这里就 return，扫不到台账 —— 而"假 running"正是最需要
+	// 在这种停摆窗口里被发现的问题。
+	//
+	// 节流 30 秒：tick 本身 3 秒一次，扫描是 O(任务数) 内存遍历，不必每次都扫。
+	// 判定与安全边界见 runtime_rescue.go。
+	if last := e.rescueSweepAt.Load(); now-last >= rescueSweepIntervalMs {
+		e.rescueSweepAt.Store(now)
+		if ids := e.sweepOrphanedRunning(now); len(ids) > 0 {
+			e.emitEvent(model.Event{Type: "warn", At: now,
+				Msg: "台账发现 " + strconv.Itoa(len(ids)) + " 条假 running 孤儿任务，已回收（详见审计台账）"})
+		}
+	}
+	// 0) 模型池冷却闸门：整池不可用时既不补候选也不取任务，直接等到最早可试时刻。
+	// 没有这道闸门时，池冷却期间任务被反复捞起又放回，空转刷满审计。
+	// （闸门放在救援扫描之后：见上方 0.2 的位置说明。）
 	if until := e.poolWaitUntil.Load(); until > now {
 		return
 	}
@@ -1557,19 +1587,48 @@ func (e *Engine) failTask(taskID string, err error, kind retry.Kind) {
 	if kindText == "" {
 		kindText = string(retry.Unknown)
 	}
-	_, uerr := e.store.Update(taskID, func(x *model.Task) error {
-		x.Error = model.Truncate(msg, 800)
-		x.ErrorKind = kindText
-		x.FinishedAt = model.Now()
-		if x.State == model.StateRunning {
-			x.State = model.StateFailed
-		}
-		return nil
-	})
+	// 留痕先于状态生效（2026-10-22 对标 asynq processor.go:336-338）。
+	//
+	// 顺序由 writeLedgerThenTransition seam 强制，单测可用注入闭包直接断言次序
+	//（见 ledger_order.go 的注释与 ledger_order_test.go）。
+	// 改造前的顺序是 Update -> Audit：状态已是 failed 而台账可能缺行；
+	// 且 Update 失败时只 emit 一条瞬时事件（不落盘），任务停在 running 无结构化痕迹。
+	ledgerErr, uerr := writeLedgerThenTransition(
+		func() error {
+			return e.store.Audit(store.AuditRecord{At: model.Now(), TaskID: taskID, From: string(t.State),
+				To: string(model.StateFailed), Actor: "engine", Kind: "error",
+				Message: model.Truncate("["+kindText+"] "+msg, 300)})
+		},
+		func() error {
+			_, err := e.store.Update(taskID, func(x *model.Task) error {
+				x.Error = model.Truncate(msg, 800)
+				x.ErrorKind = kindText
+				x.FinishedAt = model.Now()
+				if x.State == model.StateRunning {
+					x.State = model.StateFailed
+				}
+				return nil
+			})
+			return err
+		},
+	)
+	// 留痕失败不阻断状态收敛，但必须补一条兜底痕迹（否则这条失败路径整体无痕）。
+	if ledgerErr != nil {
+		e.appendAuditOrEvent(
+			store.AuditRecord{At: model.Now(), TaskID: taskID, To: string(model.StateFailed), Actor: "engine",
+				Kind: "error", Message: model.Truncate("[ledger-fallback]["+kindText+"] "+msg, 300)},
+			taskID, "失败台账写入失败（已退到事件流留痕）: "+ledgerErr.Error()+" | kind="+kindText)
+		e.log.Warn("失败台账写入失败，已退到事件流留痕", "taskId", taskID, "kind", kindText, "err", ledgerErr.Error())
+	}
+	// 状态收敛失败：任务会停在 running（既不重试也不统计），必须留痕说明，
+	// 否则它只会静静躺在面板上，运维看不出"这条任务状态没写进去"。
 	if uerr != nil {
+		e.appendAuditOrEvent(
+			store.AuditRecord{At: model.Now(), TaskID: taskID, Actor: "engine", Kind: "error",
+				Message: model.Truncate("[state-update-failed]["+kindText+"] "+uerr.Error(), 300)},
+			taskID, "失败状态写入出错（任务可能停在 running）: "+uerr.Error())
 		e.emitEvent(model.Event{Type: "error", At: model.Now(), TaskID: taskID, Msg: "更新失败状态出错: " + uerr.Error()})
 	}
-	e.store.Audit(store.AuditRecord{At: model.Now(), TaskID: taskID, To: string(model.StateFailed), Actor: "engine", Kind: "error", Message: model.Truncate("["+kindText+"] "+msg, 300)})
 	e.log.Error("任务失败", logging.Redact([]any{
 		"taskId", taskID, "kind", kindText, "title", model.Truncate(t.Title, 60), "error", model.Truncate(msg, 300),
 	})...)
@@ -1592,9 +1651,30 @@ func (e *Engine) finishCancelled(taskID string, err error) {
 	if t := ctxCancelText(err); t != "" {
 		msg = t
 	}
-	if _, terr := e.store.Transition(taskID, model.StateCancelled, "user", msg); terr != nil {
-		// 迁移失败（已是终态等）时只记审计，不覆盖既有状态
-		e.store.Audit(store.AuditRecord{At: model.Now(), TaskID: taskID, Actor: "user", Kind: "cancel", Message: "取消收尾: " + terr.Error()})
+	// 留痕先于状态生效（2026-10-22 对标 asynq processor.go:336-338）。
+	// 取消是**调用方意图**，其痕迹优先级与失败等同：
+	// 先落一条 cancel 审计（含结果），再迁状态 —— 改造前只在迁移**失败**时才写审计，
+	// 正常路径的取消只有一条瞬时事件，事后无法区分「用户取消」与「任务被判失败」。
+	ledgerErr, terr := writeLedgerThenTransition(
+		func() error {
+			return e.store.Audit(store.AuditRecord{At: model.Now(), TaskID: taskID, Actor: "user", Kind: "cancel",
+				Message: model.Truncate("取消收尾: "+msg, 200)})
+		},
+		func() error {
+			_, err := e.store.Transition(taskID, model.StateCancelled, "user", msg)
+			return err
+		},
+	)
+	if ledgerErr != nil {
+		e.log.Warn("取消台账写入失败，已退到事件流留痕", "taskId", taskID, "err", ledgerErr.Error())
+		e.appendAuditOrEvent(
+			store.AuditRecord{At: model.Now(), TaskID: taskID, Actor: "user", Kind: "cancel",
+				Message: model.Truncate("[ledger-fallback] 取消收尾: "+msg, 200)},
+			taskID, "取消台账写入失败（已退到事件流留痕）: "+ledgerErr.Error())
+	}
+	if terr != nil {
+		// 迁移失败（已是终态等）时补一条审计说明，不覆盖既有状态
+		e.store.Audit(store.AuditRecord{At: model.Now(), TaskID: taskID, Actor: "user", Kind: "cancel", Message: "取消收尾迁移失败: " + terr.Error()})
 	}
 	e.emitEvent(model.Event{Type: "task", At: model.Now(), TaskID: taskID, Msg: "任务已取消"})
 }
@@ -1860,6 +1940,7 @@ func (e *Engine) ReloadConfig() {
 	e.retryPolMu.Lock()
 	e.retryPol = buildRetryPolicy(cfg.Executor)
 	e.retryPolMu.Unlock()
+	logRetryPolicyFixes(e.log, e.retryPol)
 	newSlots := make(chan struct{}, cfg.Executor.Concurrency)
 	e.mu.Lock()
 	e.slots = newSlots

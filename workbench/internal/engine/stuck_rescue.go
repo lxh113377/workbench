@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"workbench/internal/model"
+	"workbench/internal/store"
 )
 
 // L4 卡死救援（对标 riverqueue/river 的 RescueStuckJobsAfter + JobStuckHandler）。
@@ -102,9 +103,32 @@ func (e *Engine) rescueInterrupted(t *model.Task) *model.Task {
 			Msg: "崩溃恢复：重新入队续跑（第 " + strconv.Itoa(cur.CrashRescues) + " 次救援）"})
 		return nt
 	default:
-		if _, err := e.store.Transition(id, model.StateFailed, "system",
-			"崩溃救援额度耗尽（已救 "+strconv.Itoa(cur.CrashRescues)+" 次），判死以阻断无界崩溃循环"); err != nil {
-			e.log.Warn("崩溃救援判死迁移失败", "taskId", id, "err", err.Error())
+		// 留痕先于状态生效（2026-10-22 对标 asynq processor.go:336-338 后补齐）。
+		//
+		// 改造前这条**完全没有审计**：判死是一件终态决策（任务从此不再被投递），
+		// 却只在内存里 emit 一条瞬时事件（不落盘）。事后来查「这条任务为什么被判死」
+		// 只能靠现场观察面板，窗口一过就无从追溯 —— 而判死本身不可逆。
+		// 顺序由 writeLedgerThenTransition 强制（见 ledger_order.go）。
+		// 判据按 **kind=error** 区分（ledger_order_test.go）：Transition 自己也会记一条
+		// kind=transition 的审计且 note 文案与本条高度重合，只搜文案的判据会对
+		// 「删掉本条专用审计」这种回归失效（本轮变异实测踩到）。
+		ledgerErr, transitionErr := writeLedgerThenTransition(
+			func() error {
+				return e.store.Audit(store.AuditRecord{At: model.Now(), TaskID: id, From: string(cur.State),
+					To: string(model.StateFailed), Actor: "system", Kind: "error",
+					Message: "崩溃救援额度耗尽（已救 " + strconv.Itoa(cur.CrashRescues) + " 次），判死以阻断无界崩溃循环"})
+			},
+			func() error {
+				_, err := e.store.Transition(id, model.StateFailed, "system",
+					"崩溃救援额度耗尽（已救 "+strconv.Itoa(cur.CrashRescues)+" 次），判死以阻断无界崩溃循环")
+				return err
+			},
+		)
+		if ledgerErr != nil {
+			e.log.Warn("崩溃救援判死台账写入失败，已退到事件流留痕", "taskId", id, "err", ledgerErr.Error())
+		}
+		if transitionErr != nil {
+			e.log.Warn("崩溃救援判死迁移失败", "taskId", id, "err", transitionErr.Error())
 			return nil
 		}
 		_, uerr := e.store.Update(id, func(x *model.Task) error {

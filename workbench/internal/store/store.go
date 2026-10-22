@@ -457,11 +457,23 @@ func (s *Store) Transition(id string, to model.TaskState, actor, note string) (*
 }
 
 // Audit 追加一条审计记录。
-func (s *Store) Audit(rec AuditRecord) {
+//
+// 返回写入错误（2026-10-22 对标 asynq processor.go:336-338 后新增）。
+//
+// 改造前是 `func (s *Store) Audit(rec AuditRecord)`，内部 `_ = s.audit.Append(rec)` ——
+// 写入失败（磁盘满 / 句柄被占用 / 权限变更）被**完全吞掉**，调用方无从知晓。
+// asynq 的结构把「错误处理钩子」放在状态决策之前，使「任何一条失败路径都留痕」
+// 在结构上不可能被跳过；本项目的审计是一条**旁路**，一旦写失败，
+// 失败任务就只剩任务记录（ErrorKind）而没有台账说明「为什么失败」。
+//
+// 兼容性：老调用方仍可忽略返回值（Go 允许丢弃返回的 error），
+// 故签名变化不破坏任何既有调用点（本仓 4 处，其中引擎侧的 failTask / finishCancelled
+// 已改为读取该错误并落兜底痕迹）。
+func (s *Store) Audit(rec AuditRecord) error {
 	if rec.At == 0 {
 		rec.At = model.Now()
 	}
-	_ = s.audit.Append(rec)
+	return s.audit.Append(rec)
 }
 
 // SaveTaskArtifact 把任务的具名产物写入其目录（原子写）。

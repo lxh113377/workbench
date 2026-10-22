@@ -390,17 +390,17 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	// stalled，正是这条造成的结构性失败。
 	// 现在：基础阈值 = StallSeconds（默认 420）；一旦本轮出现过任何 thinking 帧，
 	// 阈值再放大到 thinkingStall（默认 2×基础，下限 600 秒）。
+	//
+	// 活跃度双信号（2026-10-22 对标 river watchStuck 后新增）：
+	//   ① stdout 事件（res.Touch，consume 里每条事件刷新）；
+	//   ② workspace 产出文件的 mtime（LatestOutputMtimeMs）。
+	// 为什么必须加②：artifact 产出协议下，模型常常"先静默写文件、最后才吐 final 事件"，
+	// 长文写作类任务的静默写盘期可达数分钟，期间①完全不刷新。只认①时，
+	// 这类任务会在 StallSeconds 到期被判卡死并杀进程树，**已写出的产物一并丢失**。
+	// 判据取两者较新者：任一信号在前进就算"有进展"。
 	watchDone := make(chan struct{})
 	defer close(watchDone)
 	go func() {
-		stall := time.Duration(r.cfg.StallSeconds) * time.Second
-		if stall <= 0 {
-			stall = 420 * time.Second
-		}
-		thinkingStall := stall * 2
-		if thinkingStall < 600*time.Second {
-			thinkingStall = 600 * time.Second
-		}
 		t := time.NewTicker(5 * time.Second)
 		defer t.Stop()
 		for {
@@ -408,11 +408,10 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 			case <-watchDone:
 				return
 			case <-t.C:
-				limit := stall
-				if res.SawThinking.Load() {
-					limit = thinkingStall
-				}
-				if time.Since(time.UnixMilli(lastActive.Load())) > limit {
+				// 判定逻辑收敛到纯函数 IsStalled（双信号：stdout 事件 + 产出文件 mtime），
+				// 看门狗 goroutine 只负责周期调用与善后。这样"取较新者"这条语义
+				// 可以被单测直接覆盖，变异测试也能真正抓到回归。
+				if IsStalled(lastActive.Load(), workDir, r.cfg.StallSeconds, res.SawThinking.Load(), time.Now().UnixMilli()) {
 					res.markStalled()
 					job.kill()
 					// 主动关闭读端，避免 consume 协程卡在 Read 上导致收尾挂起
