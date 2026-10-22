@@ -129,6 +129,16 @@ Section 'PowerShell 脚本编码（含非 ASCII 必须带 UTF-8 BOM）' {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
 }
 
+Section '未跟踪 Go 文件（本地判据：CI 干净检出恒 PASS，不接 repo-gates）' {
+  $g = Join-Path $Root 'tests\check_untracked_go.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  # 生产代码未跟踪 = 一定坏（工作区与提交语义不一致）=> 计入 FAIL
+  # 测试文件未跟踪 = 并行在途件的正常工作流 => 已逐条点名，不判红
+  #   （差额已打印：提交的测试函数 vs 工作区测试函数）
+  if ($LASTEXITCODE -eq 0) { Write-Host '    （差额见上方三行读数）' }
+}
+
 Section '死代码（未导出函数全树零引用）' {
   $g = Join-Path $Root 'tests\check_deadcode.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
