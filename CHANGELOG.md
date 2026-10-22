@@ -15,6 +15,21 @@
 > 未重新输出）—— 本轮恢复，并记下这条教训：以「包含后文的多行锚点」做插入时，
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
+### Fixed
+- **WCAG 1.4.4 缩放审计：400% 放大下正文字号反而变小（2026-10-22 实测缺陷）**：
+  `@media (max-width:480px){ body{font-size:14px} }` 在 400% 缩放（视口 360px）时触发，
+  把正文从 15px 降到 14px。窄视口有两种成因：① 手机（真小屏，14px 合理）；② **用户缩放放大**
+  （200%/400% 后视口同样变窄）。CSS 无法区分两者，而后者里「为了看清而放大、字号反而变小」
+  与 1.4.4 的意图正好相反。修：删掉该字号覆盖，保留 15px —— 窄视口靠**布局**消化
+  （单列/卡片化/换行），不靠牺牲可读性。
+  实测对比：400% 下 bodyFont **14px → 15px**，且零溢出、零截断不变。
+  新增 `zoom_contract_test.go` 两条判据（body 字号不得被媒体查询改小 + 窄屏适配必须保留
+  布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
+
+### Added
+- **200%/400% 缩放审计（WCAG 1.4.4，同轮）**：5 页 × 2 档实测（720×450 / 360×225，
+  deviceScaleFactor 2/4）：`overflowX` 全 ≤0、越界元素 0、内容截断 0、按钮高度 36px 达标、
+  正文最小 12.5px。缩放场景此前从未实测过，本轮证明布局在极端缩放下不塌。
 ### Added
 - **打印样式（@media print）—— 此前全站零打印规则（2026-10-22 打印介质实测）**：
   CDP 模拟打印介质实测，打印预览里 body 仍是 rgb(4,7,13) 深底 + 极光渐变 + 顶栏 + 页签 +
@@ -51,7 +66,18 @@
   实测：真实网关广播 56 个 id → 入池 38 / 跳过 18；线上实例首轮同步清掉 25 条存量；EAC 池一键停用
   `available 42→37` 且路由表同步收缩、再启用回 42 并落盘。`go build/vet` = 0，`go test ./...` 29 包全绿
   （modelpool 覆盖率 70.2%，门禁阈值 49）。新增回归：modelpool 4 条 + web 3 条（含反假绿坏样本）。
-  产物经 `setup/build.ps1` 七道门禁重建（9.79 MB，SHA256 `EAAB680D…`），旧件备份在 `dist/archive/`。
+  产物经 `setup/build.ps1` 七道门禁重建（旧件备份在 `dist/archive/`）。
+- **测试层 Windows 平台耦合：`go vet` 在 Linux 容器内编译失败（2026-10-22 与上一条同轮修复）**：
+  `internal/executor/linkdir_silent_test.go` 与 `cmd/workbench/headless_test.go` 在**无 build tag** 的
+  `_test.go` 里使用 `syscall.SysProcAttr{HideWindow, CreationFlags}` —— 这两个字段只在 Windows 存在，
+  于是 `tests/docker/run_pool_e2e.ps1` 的「池门禁 go test」段在 `go vet ./...` 就红
+  （实测 `vet: ... HideWindow undefined`），把模型池的 Linux 侧验收整体拖红。
+  修法：Windows 专属断言按平台拆开 —— `linkdir_silent_test.go` 加 `//go:build windows`；
+  `hiddenTestCmd` 从无 tag 文件抽出，拆成 `headless_testcmd_windows_test.go`（真设窗口标志）与
+  `headless_testcmd_other_test.go`（非 Windows 同签名直通，保住 4 个调用方文件的编译）。
+  验证：Windows `go vet ./...`=0、Linux 容器内 `go vet ./...`=0；
+  `DOCKER_GATE_PASS`（debian dash + alpine busybox **双腿各 102/102**、池门禁 go test PASS）。
+  产物重建 9.80 MB / SHA256 `1D64BDCB…`。
 
 ### Fixed
 - **仓库全库 Go 格式漂移 + 上闸（2026-10-22 实测：73/286 个假红根因是 CRLF，真漂移 52 个）**：

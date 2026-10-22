@@ -1226,7 +1226,11 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
   .tabs{min-height:38px}
 }
 @media (max-width:480px){
-  body{font-size:14px}
+  /* 注意：这里**不**缩小 body 字号（2026-10-22 WCAG 1.4.4 实测）。
+     窄视口分两种成因：① 手机（真小屏，14px 合理）；② **缩放放大**（用户把 200%/400%
+     放大后视口同样变窄）。两者在 CSS 里无法区分，而后者一旦把 15px 降到 14px，
+     就是「用户为了看清而放大、字号反而变小」—— 与 1.4.4 的意图正好相反。
+     故保留 15px，靠布局（单列/卡片化/换行）消化窄视口，不靠牺牲可读性。 */
   /* 超窄屏顶栏：操作按钮缩小内距，保证 4 个按钮一行放得下 */
   .topbar .btn{min-height:32px;padding:0 8px;font-size:11.5px}
   /* ≤480px 管理面板表格转卡片模式（2026-10-21 窄屏走查实测）：
