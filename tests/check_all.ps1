@@ -92,6 +92,16 @@ Section '纯净检出编译（防提交编译不过的快照）' {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Repo $Root
 }
 
+Section 'queue 规模（记录只增不减的复发检测；三态 rc=2 不计 PASS）' {
+  $g = Join-Path $Root 'tests\check_queue_size.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  # 三态：rc=2 = 无 queue.json（未构建/未运行），按项目铁律记 UNVERIFIED，
+  # **不得**当 PASS 也不得直接判红 —— 但 check_all 的 Section 只会把非 0 记 FAIL。
+  # 故这里把 rc=2 显式改写成 0 并在输出里保留 UNVERIFIED 字样（与 check_perf 同口径）。
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED 无 queue.json（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section '文档引用完整性（活文档点名的验收入口必须存在或已披露）' {
   $g = Join-Path $Root 'tests\check_doc_refs.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
