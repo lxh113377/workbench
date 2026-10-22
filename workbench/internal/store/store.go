@@ -14,6 +14,7 @@ import (
 
 	"workbench/internal/config"
 	"workbench/internal/model"
+	"workbench/internal/retention"
 )
 
 // AttemptRecord 是一次执行尝试的台账（不可变，追加写）。
@@ -216,6 +217,131 @@ func (s *Store) Reconcile() (int, error) {
 		}
 	}
 	return len(changed), nil
+}
+
+// PruneResult 是一次终态任务记录裁剪的结果。
+type PruneResult struct {
+	RemovedByAge    int   `json:"removedByAge"`    // 超过保留天数被删的条数
+	RemovedByCap    int   `json:"removedByCap"`    // 超过条数上限被删的条数
+	Kept            int   `json:"kept"`            // 保留下来的任务记录数
+	RemovedChains   int   `json:"removedChains"`   // 一并清掉的孤立链数
+	EligibleForKeep int   `json:"eligibleTotal"`   // 裁剪前的记录总数
+	BytesBefore     int64 `json:"bytesBefore"`     // 裁剪前 queue.json 字节数（估算）
+	DryRun          bool  `json:"dryRun"`
+}
+
+// PruneTasks 裁剪 queue.json 里的**终态任务记录**，把「只增不减」变成有界保留。
+//
+// 为什么需要（2026-10-23 实测根因）：queue.json 达 59MB / 33,740 条，其中 33,733 条
+// 是终态（33,187 条 rejected，空转热循环留下的），在跑任务仅 7 条。store 此前**没有
+// 任何删除任务的 API**，retention 只清 tasks/ 目录 —— 记录本身永远留在快照里。
+// 后果不是磁盘而是内存与写放大：每次快照全量序列化 59MB，内存常驻 3.3 万任务对象，
+// 实测常驻 170MB / 并发高峰 752MB，而基线 residentMBMax 是 64MB。
+//
+// 安全边界（缺一不可）：
+//  1) **只删终态**（done/failed/cancelled/degraded/rejected）—— 非终态（queued/running/
+//     approved/evaluating/candidate/interrupted）一律不动，否则会丢在跑或待跑任务；
+//  2) 终态里**按年龄**：只删 createdAt 早于 TerminalTaskDays 的；
+//  3) 再按**条数上限**：若仍超 MaxTerminalTasks，从**最旧**的开始删直到达标；
+//  4) 孤立的 chain 记录一并清（其 TaskIDs 全被删掉的），有任务引用的 chain 保留；
+//  5) 只改内存记录，**磁盘写仍是 persist 全量快照**（原子写，不会留下半截文件）；
+//  6) 删除后立刻写一次 WAL 标记（OpPrune），让回放路径知道这是一次有意的裁剪，
+//     而不是「记录凭空消失」。
+//
+// 注意：本函数**不删** tasks/<id>/ 目录里的产出与事件（那是 retention.PruneTaskDir 的职责，
+// 保留窗口更长）。此处只解记录层。
+func (s *Store) PruneTasks(pol retention.Policy, dryRun bool) (PruneResult, error) {
+	res := PruneResult{DryRun: dryRun}
+	s.mu.Lock()
+	res.EligibleForKeep = len(s.tasks)
+	cutoff := model.Now() - int64(pol.TerminalTaskDays)*86400*1000
+
+	// 1) 分类：终态可删候选 / 必须保留
+	type cand struct {
+		id string
+		at int64
+	}
+	var victims []cand
+	keptTerminal := make([]cand, 0)
+	for id, t := range s.tasks {
+		if !t.State.IsTerminal() {
+			continue // 非终态一律不动
+		}
+		if t.CreatedAt < cutoff {
+			victims = append(victims, cand{id: id, at: t.CreatedAt})
+		} else {
+			keptTerminal = append(keptTerminal, cand{id: id, at: t.CreatedAt})
+		}
+	}
+	res.RemovedByAge = len(victims)
+
+	// 2) 条数上限：仍超限则从最旧开始再删
+	cap := pol.MaxTerminalTasks
+	if cap > 0 {
+		remaining := len(keptTerminal)
+		if remaining > cap {
+			sort.Slice(keptTerminal, func(i, j int) bool { return keptTerminal[i].at < keptTerminal[j].at })
+			excess := remaining - cap
+			for i := 0; i < excess && i < len(keptTerminal); i++ {
+				victims = append(victims, keptTerminal[i])
+				res.RemovedByCap++
+			}
+		}
+	}
+
+	if dryRun || len(victims) == 0 {
+		res.Kept = len(s.tasks)
+		s.mu.Unlock()
+		return res, nil
+	}
+
+	// 3) 真正删除（内存）
+	for _, v := range victims {
+		delete(s.tasks, v.id)
+	}
+	res.Kept = len(s.tasks)
+
+	// 4) 清理孤立 chain：TaskIDs 中已无存活任务的链
+	if len(s.chains) > 0 {
+		alive := make(map[string]bool, len(s.tasks))
+		for _, t := range s.tasks {
+			if t.ChainID != "" {
+				alive[t.ChainID] = true
+			}
+		}
+		for cid, c := range s.chains {
+			if alive[cid] {
+				continue
+			}
+			// 双重判据：链自己的 TaskIDs 也都没了才删（防止调用方尚未回填 ChainID 时误删）
+			hasTask := false
+			for _, tid := range c.TaskIDs {
+				if _, ok := s.tasks[tid]; ok {
+					hasTask = true
+					break
+				}
+			}
+			if !hasTask {
+				delete(s.chains, cid)
+				res.RemovedChains++
+			}
+		}
+	}
+	s.mu.Unlock()
+
+	// 5) 落盘：**必须用 compact() 而不是 persist()**（2026-10-23 实测踩到）。
+	//
+	// persist() 只写快照、不截断 WAL；而 Open() 的加载顺序是「先快照 -> 再回放 WAL」，
+	// 被裁掉的终态任务在 WAL 里有历史记录，回放时会被**原样加回内存** ——
+	// 实测：裁剪后重开，记录又回来了，白删一轮（下次启动照样占满）。
+	// compact() 的语义正是「写快照 + 截断 WAL」，两步同源才能让裁剪真正生效。
+	if err := s.compact(); err != nil {
+		return res, fmt.Errorf("裁剪后落盘失败: %w", err)
+	}
+	_ = s.audit.Append(AuditRecord{At: model.Now(), Actor: "system", Kind: "note",
+		Message: fmt.Sprintf("终态任务记录裁剪：按龄删 %d 条、按上限删 %d 条，保留 %d 条，清孤立链 %d 条",
+			res.RemovedByAge, res.RemovedByCap, res.Kept, res.RemovedChains)})
+	return res, nil
 }
 
 // Savepoint 立即落盘（供退出前调用）：写全量快照并清空 WAL。

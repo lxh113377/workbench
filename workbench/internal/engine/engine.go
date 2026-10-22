@@ -639,6 +639,24 @@ func (e *Engine) Recover() error {
 	if err != nil {
 		return err
 	}
+	// 终态任务记录裁剪（2026-10-23 新增，治「queue.json 只增不减」）。
+	//
+	// 位置讲究：必须在 Reconcile **之后**（先把悬挂 running 收敛成 interrupted，
+	// 否则一条残留在 running 的任务会挡住整轮裁剪 —— 虽然它本来也不该被删，
+	// 但收敛后它变成终态，语义更清楚），且在 List/队列重建**之前**
+	// （后续建队列用的是裁剪后的集合，不会把待删记录又塞回队列）。
+	//
+	// 为什么放在启动期而不是每 tick：裁剪要全量序列化一次快照（59MB -> 数 MB），
+	// 放 tick 里会周期性抖内存；启动期一次足够（一天最多重启几次，而记录增长是渐进的）。
+	// 失败不阻塞启动：裁剪是资源治理，不是正确性必需 —— 但必须留痕，不能静默。
+	if pr, perr := e.store.PruneTasks(e.cstore.Get().Retention, false); perr != nil {
+		e.log.Warn("终态任务记录裁剪失败（不影响启动，记录会继续增长）", "err", perr.Error())
+	} else if pr.RemovedByAge+pr.RemovedByCap > 0 {
+		// 只有真删了才记录一条事件，避免每次启动都刷一条「删了 0 条」的噪音。
+		e.emitEvent(model.Event{Type: "engine", At: model.Now(),
+			Msg: fmt.Sprintf("启动期裁剪终态任务记录：按龄 %d 条 + 按上限 %d 条，现存 %d 条，清孤立链 %d 条",
+				pr.RemovedByAge, pr.RemovedByCap, pr.Kept, pr.RemovedChains)})
+	}
 	all := e.store.List()
 	cfg := e.cstore.Get()
 	// 评估器窗口

@@ -31,4 +31,15 @@ func NormalizeRetention(c *Config) {
 	if c.Retention.TaskDirDays <= 0 {
 		c.Retention.TaskDirDays = retention.DefaultTaskDirDays
 	}
+	// 终态任务记录保留（2026-10-23 新增，治「queue.json 只增不减」）：
+	// 实测 queue.json 69MB / 33,740 条（终态 33,733、在跑 7），快照全量序列化导致
+	// 常驻 170MB / 高峰 752MB，而基线 residentMax 64MB。
+	// 零值必须补默认：<=0 会让 PruneTasks 拿 0 天 / 0 条上限 —— 前者把所有终态当超龄
+	// （危险），后者被 `cap > 0` 守卫跳过（无害但等于不生效）。两种都不可接受。
+	if c.Retention.TerminalTaskDays <= 0 {
+		c.Retention.TerminalTaskDays = retention.DefaultTerminalTaskDays
+	}
+	if c.Retention.MaxTerminalTasks <= 0 {
+		c.Retention.MaxTerminalTasks = retention.DefaultMaxTerminalTasks
+	}
 }

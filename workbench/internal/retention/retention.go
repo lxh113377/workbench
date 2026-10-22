@@ -38,6 +38,19 @@ const (
 	// DefaultTaskDirDays 是任务目录（events.jsonl / final.md 等）的保留天数。
 	// 取 90 天：这些是审计与成果资产，保留最久。
 	DefaultTaskDirDays = 90
+	// DefaultTerminalTaskDays 是**终态任务记录**（queue.json 里的一行）的保留天数。
+	//
+	// 为什么需要（2026-10-23 实测）：queue.json 已达 **59MB / 33,740 个任务**，
+	// 其中 33,733 条是终态（33,187 条 rejected —— 空转热循环留下的），在跑任务只有 7 条。
+	// store 此前**没有任何删除任务的 API**：retention 只清 tasks/ 目录，记录本身只增不减。
+	// 后果不是磁盘（59MB 不算大），而是**每次快照全量序列化 59MB + 内存常驻 3.3 万对象**
+	// —— 实测常驻 170MB、并发高峰 752MB，而基线 residentMBMax 是 64MB。
+	// 取 7 天：足够覆盖「上周怎么失败的」这类追溯，又不让 rejected 无限堆积。
+	DefaultTerminalTaskDays = 7
+	// DefaultMaxTerminalTasks 是终态任务记录的**条数上限**（硬闸，与天数取交集）。
+	// 为什么天数不够：热循环可在数小时内产生数万条 rejected，天数窗口内照样能撑爆快照。
+	// 取 5000 条：按平均 1KB/条 ≈ 5MB 快照，远低于内存与写放大阈值。
+	DefaultMaxTerminalTasks = 5000
 )
 
 // Policy 是保留策略。
@@ -48,14 +61,20 @@ type Policy struct {
 	WorkspaceDays int `json:"workspaceDays"`
 	// TaskDirDays 是任务目录保留天数。
 	TaskDirDays int `json:"taskDirDays"`
+	// TerminalTaskDays 是终态任务**记录**的保留天数（queue.json 条目，非目录）。
+	TerminalTaskDays int `json:"terminalTaskDays"`
+	// MaxTerminalTasks 是终态任务记录的条数上限（与 TerminalTaskDays 取交集）。
+	MaxTerminalTasks int `json:"maxTerminalTasks"`
 }
 
 // DefaultPolicy 返回默认保留策略。
 func DefaultPolicy() Policy {
 	return Policy{
-		DSHHomeDays:   DefaultDSHHomeDays,
-		WorkspaceDays: DefaultWorkspaceDays,
-		TaskDirDays:   DefaultTaskDirDays,
+		DSHHomeDays:       DefaultDSHHomeDays,
+		WorkspaceDays:     DefaultWorkspaceDays,
+		TaskDirDays:       DefaultTaskDirDays,
+		TerminalTaskDays:  DefaultTerminalTaskDays,
+		MaxTerminalTasks:  DefaultMaxTerminalTasks,
 	}
 }
 
@@ -68,6 +87,12 @@ func (p Policy) normalized() Policy {
 	}
 	if p.TaskDirDays <= 0 {
 		p.TaskDirDays = DefaultTaskDirDays
+	}
+	if p.TerminalTaskDays <= 0 {
+		p.TerminalTaskDays = DefaultTerminalTaskDays
+	}
+	if p.MaxTerminalTasks <= 0 {
+		p.MaxTerminalTasks = DefaultMaxTerminalTasks
 	}
 	return p
 }
