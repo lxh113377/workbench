@@ -16,6 +16,28 @@ const poolJS = `(() => {
   };
   const ESC = { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' };
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ESC[c] || c);
+  // 两段式就地确认（armed confirm）—— 取代原生 confirm()，理由见 app.js 同名注释。
+  // 本包**自带**一份：app.js / pool.js / gov.js 是三个独立脚本包，顶层 const 不跨页可见。
+  const ARM_MS = 4000;
+  const disarmArm = (btn) => {
+    if (!btn || btn.dataset.armed !== '1') { return; }
+    clearTimeout(btn._armTimer);
+    if (btn.dataset.label0 != null) { btn.textContent = btn.dataset.label0; }
+    delete btn.dataset.armed;
+    btn.classList.remove('armed');
+  };
+  const armConfirm = (btn, confirmText, run) => {
+    // fail-closed：拿不到宿主元素就中止。早先这里写的是 run()，
+    // 于是「⋯ 菜单漏传元素」会变成**跳过确认直接删除** —— 比改造前更危险。
+    if (!btn) { return; }
+    if (btn.dataset.armed === '1') { disarmArm(btn); run(); return; }
+    document.querySelectorAll('[data-armed="1"]').forEach(disarmArm);
+    btn.dataset.label0 = btn.textContent;
+    btn.dataset.armed = '1';
+    btn.textContent = confirmText;
+    btn.classList.add('armed');
+    btn._armTimer = setTimeout(() => disarmArm(btn), ARM_MS);
+  };
   const toast = (msg) => { const el = document.getElementById('toast'); if (!el) { console.log(msg); return; } el.textContent = msg; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 3000); };
   const fmtMs = (ms) => { if (!ms) return '—'; if (ms < 1000) return ms + ' ms'; return (ms/1000).toFixed(1) + ' s'; };
   const fmtTime = (ms) => ms ? new Date(ms).toLocaleString('zh-CN', {hour12:false}) : '—';
@@ -107,8 +129,14 @@ const poolJS = `(() => {
   //   · 组内保留原有 6 列明细表，操作按钮原样不动；
   //   · 组卡片可折叠（默认全展开），组序号连续，不打断「越靠上越先用」的语义。
   // 分组定义来自 Spec.Group（服务端已按 lane 归好：OFM 免费 / Kilo 免费池 /
-  // EAC 协付 / 聚合渠道 / 网关专属车道 / 自定义），前端不再自己推断。
-  const GROUP_ORDER = ['OFM 免费', 'Kilo 免费池', 'EAC 协付', '聚合渠道', '网关专属车道', '自定义'];
+  // EAC 协付 / 聚合渠道 / 自定义），前端不再自己推断。
+  // 老大 2026-10-22 令：模型池只留 eac/kilo/ofm 等免费车道 —— 「网关专属车道」
+  // 已从服务端同步入口摘除（sync.go 不再纳管）+ 存量由 PurgeGatewayLanes 清理，
+  // 这里不再列该分组；万一账本里还有残留，会落到「未分组」追加区并被下一次同步清掉。
+  const GROUP_ORDER = ['OFM 免费', 'Kilo 免费池', 'EAC 协付', '聚合渠道', '自定义'];
+  // 各免费池一键开关：分组名 → 车道值（后端 SetPoolEnabled 两者都收，
+  // 这里带上 lane 让「一键停用 OFM 免费」这类整池操作语义明确、不受改名影响）。
+  const GROUP_LANE = { 'OFM 免费': 'free', 'Kilo 免费池': 'kilo', 'EAC 协付': 'eac', '聚合渠道': 'aggregate', '自定义': 'custom' };
   const groupTone = (stats) => {
     if (stats.total === 0) return 'unknown';
     const ratio = stats.available / stats.total;
@@ -136,6 +164,12 @@ const poolJS = `(() => {
       '</div></td></tr>';
   };
   const renderList = (d) => {
+    // 重绘前保住「⋯」弹层：renderList 会整体替换 #poolList 的 children，
+    // 若此刻弹层正开着（尤其删除项处于两段式确认的 armed 态），重绘会把它连同
+    // armed 元素一起销毁 —— 用户第二击无处可点，删除功能实际不可用
+    // （2026-10-22 CDP MutationObserver 实测：开层后 ~600ms 一次 load() 落地即 wiped）。
+    const keepPop = document.getElementById('rowMore');
+    const keepOpen = keepPop && !keepPop.hidden;
     const specs = d.specs || [];
     const health = {};
     (d.health || []).forEach(h => { health[h.id] = h; });
@@ -188,6 +222,12 @@ const poolJS = `(() => {
         (idle.length
           ? poolFold('另 ' + idle.length + ' 个停用/下线（点开查看或恢复）', tableOf(idleRows), false)
           : '');
+      // 一键启用/一键停用（老大 2026-10-22 令）：整池批量开关，落 /api/pool/lane。
+      // 停用是危险动作（该组全部模型立刻退出调度），复用既有 armConfirm 二次确认；
+      // 全组已停用/已启用时按钮禁用，避免「点了没反应」的假象。
+      const allOn = stats.disabled === 0 && stats.total > 0;
+      const allOff = stats.available === 0 && stats.down === 0 && stats.total > 0 && stats.disabled === stats.total;
+      const laneVal = GROUP_LANE[key] || '';
       return '<div class="card pool-group">' +
         '<div class="pool-group-head">' +
           '<span class="pill ' + tone + '">' + esc(key) + '</span>' +
@@ -196,6 +236,10 @@ const poolJS = `(() => {
           (stats.disabled ? '<span class="pool-group-stat dim">停用 ' + stats.disabled + '</span>' : '') +
           '<span class="pool-group-stat dim">成功/失败 ' + stats.success + '/' + stats.failure + '</span>' +
           (avgLat === '—' ? '' : '<span class="pool-group-stat dim">均延迟 ' + esc(avgLat) + '</span>') +
+          '<span class="pool-group-actions">' +
+            '<button data-gact="genable" data-group="' + esc(key) + '" data-lane="' + esc(laneVal) + '"' + (allOn ? ' disabled' : '') + '>一键启用</button>' +
+            '<button data-gact="gdisable" data-group="' + esc(key) + '" data-lane="' + esc(laneVal) + '"' + (allOff ? ' disabled' : '') + '>一键停用</button>' +
+          '</span>' +
         '</div>' +
         poolFold('收起 ' + list.length + ' 个模型', body, true) +
         '</div>';
@@ -203,12 +247,34 @@ const poolJS = `(() => {
     box.innerHTML = '<div class="card"><h3>模型清单（按渠道分组 · 同组内越靠上越先用）</h3>' +
       '<div class="muted" style="margin-bottom:4px">' + orderedKeys.length + ' 个分组 / 共 ' + specs.length + ' 个模型。每组头部是该组的聚合健康度，点开看组内明细。</div>' +
       '</div>' + cards;
+    if (keepOpen) { box.appendChild(keepPop); } // 元素本体连同 armed 状态一起搬回来
     box.querySelectorAll('button[data-act]').forEach(btn => {
-      btn.onclick = () => onRowAction(btn.getAttribute('data-act'), btn.getAttribute('data-id'), d);
+      btn.onclick = () => onRowAction(btn.getAttribute('data-act'), btn.getAttribute('data-id'), d, btn);
+    });
+    box.querySelectorAll('button[data-gact]').forEach(btn => {
+      btn.onclick = () => onGroupAction(btn.getAttribute('data-gact'), btn.getAttribute('data-group'), btn.getAttribute('data-lane'), btn);
     });
   };
 
-  const onRowAction = async (act, id, d) => {
+  // 整池一键开关。enabled=false 走 armConfirm 二次确认（一次点错会让整条渠道退出调度）。
+  const onGroupAction = async (gact, group, lane, btn) => {
+    const enabled = gact === 'genable';
+    const run = async () => {
+      try {
+        const body = { enabled };
+        if (lane) body.lane = lane;
+        if (group) body.group = group;
+        const r = await api('/api/pool/lane', { method:'POST', body: JSON.stringify(body) });
+        const t = r.toggle || {};
+        toast('已一键' + (enabled ? '启用' : '停用') + '「' + group + '」：' + ((t.affected && t.affected.length) || 0) + ' 个模型生效' + (t.skipped ? '（' + t.skipped + ' 个已是该状态）' : ''));
+        load();
+      } catch (e) { toast('操作失败：' + e.message); }
+    };
+    if (!enabled) { armConfirm(btn, '再点确认停用整池', run); return; }
+    await run();
+  };
+
+  const onRowAction = async (act, id, d, btn) => {
     try {
       if (act === 'up' || act === 'down') {
         const ids = (d.specs || []).map(x => x.id);
@@ -219,9 +285,11 @@ const poolJS = `(() => {
         await api('/api/pool/reorder', { method:'POST', body: JSON.stringify({ ids }) });
         toast('优先级已调整');
       } else if (act === 'del') {
-        if (!confirm('删除模型 ' + id + '？')) return;
-        await api('/api/pool/models/' + encodeURIComponent(id), { method:'DELETE' });
-        toast('已删除 ' + id);
+        armConfirm(btn, '再点确认删除', async () => {
+          await api('/api/pool/models/' + encodeURIComponent(id), { method:'DELETE' });
+          toast('已删除 ' + id);
+          load();
+        });
       } else if (act === 'edit') {
         openEditor(d.specs.find(x => x.id === id));
         return;
@@ -234,7 +302,12 @@ const poolJS = `(() => {
         pop.innerHTML = '<a href="javascript:void 0" data-more="restore">恢复该模型</a>' + (m.enabled ? '' : '<a href="javascript:void 0" data-more="enable">启用</a>') +
           '<a href="javascript:void 0" data-more="del" style="color:var(--danger)">删除模型</a>';
         pop.querySelectorAll('a[data-more]').forEach(a => {
-          a.onclick = () => { pop.hidden = true; onRowAction(a.getAttribute('data-more'), id, d); };
+          a.onclick = () => {
+            const act = a.getAttribute('data-more');
+            // 删除走两段式确认：第一次点击不能收起弹层，否则 armed 态无处可点
+            if (act !== 'del') { pop.hidden = true; }
+            onRowAction(act, id, d, a);
+          };
         });
         setTimeout(() => { pop.hidden = true; }, 6000);
         return;
@@ -412,7 +485,17 @@ const poolJS = `(() => {
     closePoolEditor();
   });
 
+  // Escape 与「点别处」都要能否定待确认态：原生 confirm 只有两个按钮，
+  // 两段式若不给退出通道，误点一次就会留下一个 4 秒的「假按钮」。
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape') { document.querySelectorAll('[data-armed="1"]').forEach(disarmArm); }
+  });
+  document.addEventListener('click', function (ev) {
+    const armed = document.querySelector('[data-armed="1"]');
+    if (armed && armed !== ev.target && !armed.contains(ev.target)) { disarmArm(armed); }
+  }, true);
+
   load();
   setInterval(load, 15000);
 })();
-`;
+`

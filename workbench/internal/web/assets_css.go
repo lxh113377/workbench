@@ -534,6 +534,15 @@ body.admin{
 .btn.ghost{background:transparent;border-color:var(--line-2);color:var(--dim)}
 .btn.ghost:hover{color:var(--fg);border-color:var(--line-3);background:rgba(255,255,255,.04)}
 .btn.sm{min-height:36px;padding:0 12px;font-size:12px;border-radius:7px}
+/* 两段式确认的「待确认」态：按钮自身变红并改写文案 —— 破坏性操作的第二击
+   必须在视觉上与第一击明确区分（原生 confirm 的系统灰框被换成本体系内的状态）。 */
+.btn.armed{
+  color:#fff;border-color:rgba(var(--danger-rgb),.72);
+  background:linear-gradient(180deg,rgba(var(--danger-rgb),.34),rgba(var(--danger-rgb),.18));
+  box-shadow:0 0 0 1px rgba(var(--danger-rgb),.35),0 0 22px -8px rgba(var(--danger-rgb),.6);
+  animation:armPulse 1.1s ease-in-out infinite alternate;
+}
+@keyframes armPulse{from{box-shadow:0 0 0 1px rgba(var(--danger-rgb),.3),0 0 16px -10px rgba(var(--danger-rgb),.5)}to{box-shadow:0 0 0 1px rgba(var(--danger-rgb),.55),0 0 26px -6px rgba(var(--danger-rgb),.7)}}
 
 /* —— 页签：滑杆式下划线，只有一条在动 —— */
 .tabs{

@@ -19,6 +19,29 @@ const appJS = `(() => {
   const ESC = { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' };
   ESC[String.fromCharCode(39)] = '&#39;';
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ESC[c]);
+  // 两段式就地确认（armed confirm）—— 取代原生 confirm()。
+  // 为什么换（2026-10-22 走查）：项目偏好是「禁弹窗、就地展开」，而原生 confirm 是系统灰框，
+  // 在暗色 HUD 界面里既阻塞界面又脱离设计体系；同时它不可样式化、不可自动化。
+  // 交互范式：第一次点击 → 按钮自身变成「再点一次确认」态（文案 + danger 配色），
+  // 第二次点击才真正执行；4s 无操作自动回退，Escape 也可回退（键盘可达性成对要求）。
+  const ARM_MS = 4000;
+  const disarmArm = (btn) => {
+    if (!btn || btn.dataset.armed !== '1') { return; }
+    clearTimeout(btn._armTimer);
+    if (btn.dataset.label0 != null) { btn.textContent = btn.dataset.label0; }
+    delete btn.dataset.armed;
+    btn.classList.remove('armed');
+  };
+  const armConfirm = (btn, confirmText, run) => {
+    if (!btn) { return; }
+    if (btn.dataset.armed === '1') { disarmArm(btn); run(); return; }
+    document.querySelectorAll('[data-armed="1"]').forEach(disarmArm); // 同时只允许一个待确认
+    btn.dataset.label0 = btn.textContent;
+    btn.dataset.armed = '1';
+    btn.textContent = confirmText;
+    btn.classList.add('armed');
+    btn._armTimer = setTimeout(() => disarmArm(btn), ARM_MS);
+  };
   const toast = (msg) => { const el = document.getElementById('toast'); if (!el) { console.log(msg); return; } el.textContent = msg; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2600); };
   const stateCls = (s) => 'state-' + String(s || '');
   const STATE_TEXT = {candidate:'候选',evaluating:'评估中',rejected:'已拒',approved:'已批',queued:'排队',running:'执行中',done:'已完成',failed:'失败',timeout:'超时',cancelled:'已取消',interrupted:'中断'};
@@ -342,7 +365,7 @@ const appJS = `(() => {
       const enabled = t.enabled ? '<span class="state-done">启用</span>' : '<span class="muted">停用</span>';
       return '<tr><td data-label="名称">' + esc(t.name) + '</td><td data-label="领域">' + esc(domainText(t.domain)) + '</td><td class="num" data-label="优先级">' + t.priorityWeight + '</td><td class="num" data-label="价值先验">' + (t.valuePrior || 0) + '</td><td data-label="状态">' + enabled + '</td>' +
         '<td class="ops" data-label="操作"><button class="btn sm" onclick="WB.editTemplate(&apos;' + t.id + '&apos;)">编辑</button>' +
-        '<button class="btn sm" onclick="WB.deleteTemplate(&apos;' + t.id + '&apos;)">删除</button></td></tr>';
+        '<button class="btn sm" onclick="WB.deleteTemplate(&apos;' + t.id + '&apos;,this)">删除</button></td></tr>';
     }).join('');
     const more = (!q && !tplShowAll && hit.length > shown.length)
       ? '<div class="toolbar" style="margin-top:12px"><button class="btn ghost" onclick="WB.tplMore()">还有 ' + (hit.length - shown.length) + ' 个模板，全部展开</button></div>'
@@ -355,7 +378,7 @@ const appJS = `(() => {
       (rows || '<tr><td colspan="6" class="empty">' + (q ? '没有匹配「' + esc(tplQuery) + '」的模板' : '还没有模板') + '</td></tr>') + '</tbody></table></div>' +
       more +
       '<div class="toolbar" style="margin-top:14px"><button class="btn primary" onclick="WB.newTemplate()">新建模板</button>' +
-      '<button class="btn" onclick="WB.resetTemplates()">恢复默认</button></div>' +
+      '<button class="btn" onclick="WB.resetTemplates(this)">恢复默认</button></div>' +
       '</div>' +
       '<div id="templateEditor"></div>';
     const inp = document.getElementById('tplSearch');
@@ -454,7 +477,7 @@ const appJS = `(() => {
       '<div class="toolbar" style="margin-top:10px"><button class="btn ghost" onclick="WB.wsAudit()">查看审计明细</button></div>' +
       '<pre id="wsAuditOut" style="display:none;margin-top:10px;max-height:260px;overflow:auto"></pre>';
     root.innerHTML = '<div class="status-line">当前：<code>' + esc(view.root || '-') + '</code><span class="sep">·</span>' + modeBadge + '</div>' +
-      (external ? '<div class="toolbar" style="margin-top:10px"><button class="btn ghost" onclick="WB.wsReset()">切回项目模式</button></div>' : '') +
+      (external ? '<div class="toolbar" style="margin-top:10px"><button class="btn ghost" onclick="WB.wsReset(this)">切回项目模式</button></div>' : '') +
       '<div style="margin-top:12px">' + fold('换个工作目录', pickBody) + '</div>' +
       '<div style="margin-top:10px">' + fold('访问审计（允许 ' + (audit.allowed || 0) + ' / 拒绝 ' + (audit.denied || 0) + '）', auditBody) + '</div>';
     if (wsState.browse) { renderBrowseBox(wsState.browse); }
@@ -673,13 +696,15 @@ const appJS = `(() => {
         renderTemplates();
       } catch (e) { toast(e.message); }
     },
-    async deleteTemplate(id) {
-      if (!confirm('确认删除或停用该模板？')) { return; }
-      try { await api('/api/templates/' + id, { method: 'DELETE' }); toast('已处理'); renderTemplates(); } catch (e) { toast(e.message); }
+    async deleteTemplate(id, btn) {
+      armConfirm(btn, '再点一次确认删除', async () => {
+        try { await api('/api/templates/' + id, { method: 'DELETE' }); toast('已处理'); renderTemplates(); } catch (e) { toast(e.message); }
+      });
     },
-    async resetTemplates() {
-      if (!confirm('恢复为内置默认模板？自定义模板会被清除。')) { return; }
-      try { await api('/api/templates/reset', { method: 'POST', body: '{}' }); toast('已恢复默认'); renderTemplates(); } catch (e) { toast(e.message); }
+    async resetTemplates(btn) {
+      armConfirm(btn, '再点确认恢复默认', async () => {
+        try { await api('/api/templates/reset', { method: 'POST', body: '{}' }); toast('已恢复默认'); renderTemplates(); } catch (e) { toast(e.message); }
+      });
     },
     // ── 工作目录（AI 开发功能扩展） ──────────────────────
     async wsBrowse(path) {
@@ -727,13 +752,14 @@ const appJS = `(() => {
         await fillWorkspace();
       } catch (e) { toast('切换失败：' + e.message); }
     },
-    async wsReset() {
-      if (!confirm('切回项目模式？之后的任务会在工作台沙箱目录里执行，不再写你的项目文件夹。')) { return; }
-      try {
-        await api('/api/workspace/reset', { method: 'POST', body: '{}' });
-        toast('已切回项目模式');
-        await fillWorkspace();
-      } catch (e) { toast('切换失败：' + e.message); }
+    async wsReset(btn) {
+      armConfirm(btn, '再点确认切回', async () => {
+        try {
+          await api('/api/workspace/reset', { method: 'POST', body: '{}' });
+          toast('已切回项目模式');
+          await fillWorkspace();
+        } catch (e) { toast('切换失败：' + e.message); }
+      });
     },
     async wsAudit() {
       try {
@@ -916,7 +942,14 @@ const appJS = `(() => {
   const btnStop = document.getElementById('btnStop');
   if (btnPause) { btnPause.onclick = WB.pause; }
   if (btnResume) { btnResume.onclick = WB.resume; }
-  if (btnStop) { btnStop.onclick = function () { if (confirm('确认停止引擎？在跑任务会被中断。')) { WB.stopEngine(); } }; }
+  // 停止引擎是破坏性操作（中断在跑任务），用两段式就地确认替代原生 confirm()。
+  if (btnStop) { btnStop.onclick = function () { armConfirm(btnStop, '再点确认停止', function () { WB.stopEngine(); }); }; }
+
+  // 点别处即否定待确认态（原生 confirm 没有这条退出通道，但它是最直觉的取消方式）。
+  document.addEventListener('click', function (ev) {
+    const armed = document.querySelector('[data-armed="1"]');
+    if (armed && armed !== ev.target && !armed.contains(ev.target)) { disarmArm(armed); }
+  }, true);
 
   // 「更多」菜单：跨页入口收进一个按钮，顶栏不再横向排 6 个按钮（视觉噪音）。
   const btnMore = document.getElementById('btnMore');
@@ -940,9 +973,10 @@ const appJS = `(() => {
     });
   }
 
-  // Escape 关闭模板内联编辑器：键盘用户没有「点别处关闭」这条路径（2026-10-22 走查实测）。
+  // Escape：先解掉待确认态，再关模板编辑器 —— 键盘用户必须能否定破坏性操作。
   document.addEventListener('keydown', function (ev) {
     if (ev.key !== 'Escape') { return; }
+    document.querySelectorAll('[data-armed="1"]').forEach(disarmArm);
     const box = document.getElementById('templateEditor');
     if (box && box.innerHTML) {
       ev.preventDefault();

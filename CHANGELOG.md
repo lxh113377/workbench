@@ -15,7 +15,41 @@
 > 未重新输出）—— 本轮恢复，并记下这条教训：以「包含后文的多行锚点」做插入时，
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
+### Added
+- **模型池：各免费池「一键启用 / 一键停用」+ 网关专属/其它车道下线（老大 2026-10-22 令）**：
+  1) **整池开关** —— 新增 `Manager.SetPoolEnabled(lane, group, enabled, actor)`：面板每张分组卡头部
+     带「一键启用/一键停用」两枚按钮（`POST /api/pool/lane`），CLI 侧 `--model-pool lane <lane> <enable|disable>`
+     同口径。判据要点：**group 优先于 lane**（分组卡就是「池」的单位；自填端点常是 lane=aggregate 而
+     Group=「自定义」，取交集会把真实存在的池判成空池）；手动开关一律清掉 `AutoDisabled`，否则「一键停用」
+     会被下一轮网关同步按「仍在广播」自动 revive，按钮成摆设。停用走两段式确认（armConfirm），
+     一次误点不得让整条渠道退出调度。缺 `enabled` / 缺 lane+group / 未知车道 → 400，绝不静默成功。
+  2) **网关两条车道去掉，只留 eac/kilo/ofm 等免费车道** —— `SpecFromGatewayModel` 的网关专属/网关其它
+     两个分支改为 `default: return Spec{}, false`（非 `our-free-model*` 形态一律不纳管，计入 `SyncResult.Skipped`）；
+     新增 `Manager.PurgeGatewayLanes` 清理**历史账本存量**（判据 provider=="gateway" ∪ 分组名命中，
+     幂等、不误删用户自填端点），`Service.SyncNow` 每轮开头自动调用，另给 `POST /api/pool/purge` 与
+     `--model-pool purge-gateway` 两个人工/脚本入口。前端 GROUP_ORDER 摘除该二组，车道水位只报 3 条免费池。
+  实测：真实网关广播 56 个 id → 入池 38 / 跳过 18；线上实例首轮同步清掉 25 条存量；EAC 池一键停用
+  `available 42→37` 且路由表同步收缩、再启用回 42 并落盘。`go build/vet` = 0，`go test ./...` 29 包全绿
+  （modelpool 覆盖率 70.2%，门禁阈值 49）。新增回归：modelpool 4 条 + web 3 条（含反假绿坏样本）。
+  产物经 `setup/build.ps1` 七道门禁重建（9.79 MB，SHA256 `EAAB680D…`），旧件备份在 `dist/archive/`。
+
 ### Fixed
+- **预检总门禁断链：check_all 引用的 4 个门禁从未入库，干净 clone 里静默降级（2026-10-22 盘点实测）**：
+  `tests/check_all.ps1`（受跟踪）把散落的单点门禁串成一次调用，但它 Join-Path 引用的
+  `check_subsystem / check_spawn_silent / check_no_shrink / check_homepage` 全部 untracked ——
+  而各段的前置检查是「脚本不存在 ⇒ SKIP 且 rc=0」，于是 CI/干净 clone 里总门禁**绿色地**只跑
+  入库的那几条；本机全绿掩盖了「别人拿到的门禁更弱」这个事实。同族事故本仓在册：
+  `check_snapshot_build.ps1`（git archive 导出 HEAD 后 go build 报 undefined，因 4 个依赖从未入库）
+  ——那是 Go 侧，本次是脚本侧复现。
+  修：① 四个门禁脚本 + `keepalive.ps1`（计划任务实际拉起的守护件，10-19/10-20 定稿，非在途件）入库；
+  ② 新增机器判据 `tests/check_gate_links.ps1`：**受跟踪**脚本以代码行引用的每个 `tests\x.ps1`
+  必须存在**且受跟踪**（注释行不算声明，与 check_noninteractive「窗口只取代码行」同口径；
+  untracked 之间的引用不查，不误伤并行在途件），并已接入 check_all 作为独立一段 —— 断链从
+  「静默 SKIP」变成「显式 FAIL」；首跑即点名 5 条（含它自己），入库后全绿。
+  ③ 顺带修 check_noninteractive 一处误报：它把 `xtmp/oss/*`（对标 clone 的上游仓 scratch，
+  .gitignore 已忽略、CI 里不存在）里上游脚本的 Read-Host 判成**本仓**违规（7 处）；skipDirs
+  补 xtmp 后复扫 42 个在册脚本 0 违规。实测：check_all 八段全 PASS/合规 SKIP（rc=0）、
+  check_gate_links 双向验证（先判红 5 条、入库后 rc=0）、check_snapshot_build 纯净检出编译仍绿。
 - **newTestEngine 收尾等待仍失效（一修的反例，2026-10-22 本地 -cpu=1 复现）**：
   上一条（1852ac2）把等待写成「进入 newTestEngine 就 `go inflight.Wait()`、cleanup 时 `<-fin`」——
   **结构上不成立**：WaitGroup 计数为 0 时 Wait 立即返回，那个 fin 通道只反映「构造瞬间没有在途」，
