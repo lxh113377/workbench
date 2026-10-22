@@ -139,6 +139,14 @@ Section '未跟踪 Go 文件（本地判据：CI 干净检出恒 PASS，不接 r
   if ($LASTEXITCODE -eq 0) { Write-Host '    （差额见上方三行读数）' }
 }
 
+Section 'git hooks 启用状态（提交前闸是否真装着）' {
+  $g = Join-Path $Root 'tests\check_hooks_enabled.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  # rc=2 = 不在 git 仓库（CI 干净检出本就不装 hook）=> UNVERIFIED，不计 PASS 不判红
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section '暂存区 gofmt（提交前闸，防「改完忘 gofmt」进提交）' {
   $g = Join-Path $Root 'tests\check_staged_gofmt.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }

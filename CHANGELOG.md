@@ -53,6 +53,17 @@
   干净 clone（`git worktree add --detach HEAD`）`go build` rc=0、`go vet` rc=0、`go test ./...` 29 包全 ok。
 
 ### Changed
+- **补上 hook 覆盖缺口：「hook 在库里」不等于「hook 在生效」（2026-10-24）**：
+  上一轮加了提交前 gofmt 闸，但漏了一个**已被 git 设计注定**的覆盖问题：
+  `core.hooksPath` 写在 `.git/config`（仓库本地配置），**不随 clone 传播**（本轮实测确认）。
+  于是：CI、并行会话的机器、任何新 clone 默认都没启用 hook —— 「以为有保护，其实没有」。
+  三条补全：
+  ① `setup/install-hooks.ps1`：一键启用/卸载（幂等，带自检），把「启用」从手工记忆变成一条命令；
+  ② `tests/check_hooks_enabled.ps1`：把「闸门实际是否装着」变成**可判事实**（三态：
+     PASS=已启用 / FAIL=配置缺失或指向错 / UNVERIFIED=不在 git 仓库，后者按铁律不当 PASS 也不判红）；
+  ③ `docs/handoff/提交前闸启用说明.md`：启用命令、它做什么、如何验证、如何卸载、紧急跳过。
+  判据与 `check_all` 接线；`check_doc_refs` PASS（61 份活文档、82 处引用）。
+  变异验证：取消 `core.hooksPath` ⇒ 判红；指向错误目录 ⇒ 判红；恢复 ⇒ PASS。
 - **给「改完 .go 忘跑 gofmt」加了提交前闸（round 23 立下的机制债，本轮还掉）**：
   上一轮第三次因忘跑 gofmt 被 CI 判红后，我在提交信息里写「记下来不够，得有机制」。本轮还债。
   两层落地：
