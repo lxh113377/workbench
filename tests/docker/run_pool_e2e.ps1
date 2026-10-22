@@ -1,4 +1,4 @@
-# tests/docker/run_pool_e2e.ps1 — 模型池 Docker 端到端验收（宿主驱动）
+﻿# tests/docker/run_pool_e2e.ps1 — 模型池 Docker 端到端验收（宿主驱动）
 #
 # 用法:
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tests\docker\run_pool_e2e.ps1

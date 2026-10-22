@@ -1,4 +1,4 @@
-﻿<#
+﻿﻿<#
   check_all.ps1 — 工作台预检总门禁：把三条独立门禁串成一次调用。
 
   为什么需要（2026-10-19）：
@@ -90,6 +90,12 @@ Section '纯净检出编译（防提交编译不过的快照）' {
   $g = Join-Path $Root 'tests\check_snapshot_build.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Repo $Root
+}
+
+Section 'PowerShell 脚本编码（含非 ASCII 必须带 UTF-8 BOM）' {
+  $g = Join-Path $Root 'tests\check_ps1_encoding.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
 }
 
 Section 'Go 代码格式（LF 归一化口径，与 .gitattributes 分工）' {

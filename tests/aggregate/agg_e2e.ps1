@@ -1,4 +1,4 @@
-# agg_e2e.ps1 -- 聚合车道端到端验收的可复跑入口（Windows）
+﻿# agg_e2e.ps1 -- 聚合车道端到端验收的可复跑入口（Windows）
 #
 # 证明链：池内自填兼容端点 → OFM aggregate 车道 → 真实 DSH headless → 请求真打到该端点。
 # 判据：mock 的 chatHits>=1（不是静默改道免费车道）+ DSH 退出码 0 + 产出 final 文本。

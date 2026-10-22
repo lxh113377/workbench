@@ -16,6 +16,22 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **PowerShell 脚本编码：25 个含中文脚本缺 UTF-8 BOM，CI 的 PS5.1 会 ParserError（2026-10-22 两轮实测）**：
+  本轮把 8 个门禁挂上 CI 后，repo-gates job 判红，报的是
+  `Unexpected token` / `Missing closing ')'`，行号指向 `check_snapshot_build.ps1:42`
+  的 `Write-Host ("  仓库: " + $Repo)` —— 本机 PS7 一切正常，CI 的 PS5.1 却把中文按 ANSI 解码拆坏字节。
+  这是同一坑的**第二次复现**（第一次是本轮新建 check_gofmt/check_gate_links 时）：
+  修好后又踩一次 —— 编辑那三个既有门禁时写回文件把 BOM 剥掉了。
+  危害比缺判据更隐蔽：门禁报的是**它自己**的语法错，不是被测缺陷。
+  排查：写 `tests/check_ps1_encoding.ps1` 扫全仓，实测 **25 个**含非 ASCII 的 .ps1/.psm1 缺 BOM ——
+  不只是我碰过的 3 个，还包括构建链核心 `setup/build.ps1`、以及正在 CI 里跑的 `check_perf.ps1`
+  （它侥幸没炸：含中文的字符串不在解析路径上）。属于系统性技术债，不是个别失误。
+  处置：① 25 个脚本一律**只前置 EF BB BF**（不重写正文，符合判据自身给的修复指引），
+  前置后逐个 `Parser` 语法校验通过（12 个抽查 + 全量）；② 新增编码门禁并接入 CI 的 repo-gates
+  与 check_all：判据只针对真实失效面（**含非 ASCII 才要求 BOM**，纯 ASCII 脚本不强求，避免无意义噪声）；
+  ③ 实现时踩到本仓在册坑：`Get-ChildItem -Include` 在 `-LiteralPath` 下不生效，
+  首版把 4074 个 .md/.json 也判成脚本 —— 改为显式扩展名过滤。
+  验证：PS5.1 真实执行 9 个门禁全 PASS；干净 clone 复核后仅剩「新脚本未入库」的预期断链（提交即清零）。
 - **门禁判据「存在但没挂受理面」：23 个受跟踪门禁脚本里 CI 只执行 4 个（2026-10-22 实测）**：
   本仓 tests/ 下有 23 个受跟踪 .ps1，CI（.github/workflows/ci.yml）此前只跑
   `check_changelog / check_noninteractive / check_issue_forms / check_perf` 四条。

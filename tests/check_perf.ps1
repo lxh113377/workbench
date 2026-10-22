@@ -103,6 +103,26 @@ else {
   Write-Host ("CHECK exeSize result=FAIL value=" + $size + " bound=" + $bound + " 超出=" + [math]::Round(($size - $bound) / 1MB, 2) + "MB（体积膨胀回归，查新增依赖/资产）") -ForegroundColor Red
 }
 
+# ---------- 判定 1b：EXE 体积 >= exeMinBytes（双向判之下界，issue #8 判据 3） ----------
+# 上界拦「膨胀」，下界拦「缩水」：单 EXE 内联全部前端资产与包，体积跌破上一代完整功能基准
+# 只可能是构建半成品/资产丢失/误裁包 —— 那和膨胀一样是回归，只是方向相反。
+$minBound = $null
+if ($null -ne $bl.exeMinBytes) { $minBound = [long]$bl.exeMinBytes }
+if ($null -eq $minBound -or $minBound -le 0) {
+  Skip "exeSizeMin" ("基线 exeMinBytes 为 " + $(if ($null -eq $bl.exeMinBytes) { "null（本项未实测，严禁臆造）" } else { "$minBound（非法值）" }) + " —— 无下界可判")
+}
+elseif ($size -le 0) {
+  # 空产物已在判定 1 单列判红，这里不重复计数（同一次失败只记一次，防双计虚高失败面）。
+}
+elseif ($size -ge $minBound) {
+  $passed++
+  Say ("CHECK exeSizeMin result=PASS value=" + $size + " bound=" + $minBound + " 余量=" + [math]::Round(($size - $minBound) / 1MB, 2) + "MB")
+}
+else {
+  $failed++
+  Write-Host ("CHECK exeSizeMin result=FAIL value=" + $size + " bound=" + $minBound + " 缺失=" + [math]::Round(($minBound - $size) / 1MB, 2) + "MB（体积异常缩水：内联资产/包丢失或构建半成品）") -ForegroundColor Red
+}
+
 # ---------- 判定 2-4：运行期读数（需 -Runtime 且基线字段非 null） ----------
 function Get-FreePort([int]$Start) {
   for ($p = $Start; $p -lt ($Start + 40); $p++) {

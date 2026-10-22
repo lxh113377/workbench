@@ -90,6 +90,7 @@ jobs:
             'tests/check_noninteractive.ps1',
             'tests/check_gate_links.ps1',
             'tests/check_gofmt.ps1',
+            'tests/check_ps1_encoding.ps1',
             'tests/check_tray_window.ps1',
             'tests/check_spawn_silent.ps1',
             'tests/check_snapshot_build.ps1'

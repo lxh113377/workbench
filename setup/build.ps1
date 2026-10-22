@@ -1,4 +1,4 @@
-# build.ps1 — 一键构建「个人 AI 工作台」单 EXE
+﻿# build.ps1 — 一键构建「个人 AI 工作台」单 EXE
 # 用法: powershell -ExecutionPolicy Bypass -File setup\build.ps1 [-Version 1.0.0]
 param(
   [string]$Version = "1.0.0",

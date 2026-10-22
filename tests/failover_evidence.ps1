@@ -1,4 +1,4 @@
-# failover_evidence.ps1 -- 产出「真实故障转移 + 真实闭环」运行时证据（总验收 R4R5 / A2）
+﻿# failover_evidence.ps1 -- 产出「真实故障转移 + 真实闭环」运行时证据（总验收 R4R5 / A2）
 #
 # 为什么需要这个脚本：
 #   R4R5 判据要求 model-status.jsonl 里同时有 probe 与 switch 记录，而 switch 只在

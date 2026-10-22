@@ -1,4 +1,4 @@
-param(
+﻿param(
   # 默认值由脚本位置推导（tests/ 的父目录 + workbench），不硬编码。
   # 硬编码会让 CI/干净 clone 检查另一棵树（本项目 2026-10-22 实测过该失真）。
   [string]$Root = ""

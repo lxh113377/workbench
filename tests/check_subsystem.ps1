@@ -1,4 +1,4 @@
-# check_subsystem.ps1 -- 校验 EXE 的 PE 子系统，禁止产出会弹控制台窗口的产物。
+﻿# check_subsystem.ps1 -- 校验 EXE 的 PE 子系统，禁止产出会弹控制台窗口的产物。
 #
 # 为什么需要（2026-10-19 现场事故）：
 #   workbench.exe 曾是控制台子系统程序；用 Win32_Process.Create 启动时 Windows 会给它

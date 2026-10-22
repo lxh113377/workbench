@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Stop"
+﻿$ErrorActionPreference = "Stop"
 $exe = [string]$args[0]
 $workDir = [string]$args[1]
 $desktop = [Environment]::GetFolderPath("Desktop")
