@@ -129,6 +129,12 @@ Section 'PowerShell 脚本编码（含非 ASCII 必须带 UTF-8 BOM）' {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
 }
 
+Section '死代码（未导出函数全树零引用）' {
+  $g = Join-Path $Root 'tests\check_deadcode.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+}
+
 Section 'Go 代码格式（LF 归一化口径，与 .gitattributes 分工）' {
   $g = Join-Path $Root 'tests\check_gofmt.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }

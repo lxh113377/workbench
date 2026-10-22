@@ -524,17 +524,6 @@ func (r *Runner) environmentWithHome(home string) []string {
 	return env
 }
 
-func (r *Runner) environment() []string {
-	env := os.Environ()
-	env = append(env,
-		"DSH_HOME="+r.layout.DSHHome,
-		"DSH_PERMISSION_MODE=danger-full-access",
-		"DSH_TELEMETRY_DISABLED=1",
-		"ELECTRON_RUN_AS_NODE=1",
-	)
-	return env
-}
-
 func (r *Runner) consume(reader io.Reader, eventsFile *os.File, res *Result, closeEvents func()) {
 	// 写方自己收尾（缺陷 D8 的一面）；与 run() 的 defer 由 sync.Once 去重。
 	if closeEvents != nil {

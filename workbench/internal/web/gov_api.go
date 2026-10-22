@@ -1,7 +1,6 @@
 package web
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
@@ -157,12 +156,6 @@ func (s *Server) handleGovRecompute(w http.ResponseWriter, r *http.Request) {
 	}
 	alerts, adjust, lr := s.gov.Store().Recompute(time.Now())
 	ok(w, map[string]any{"alerts": alerts, "adjustments": adjust, "linkage": lr})
-}
-
-// handleGovSummaryJSON 是给 CLI --governance 复用的 JSON 编码助手。
-func encodeGovJSON(v any) []byte {
-	b, _ := json.MarshalIndent(v, "", "  ")
-	return b
 }
 
 // 保证 strconv 在后续扩展里可用（避免再次出现未用导入）。

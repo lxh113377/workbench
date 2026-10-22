@@ -33,6 +33,23 @@
   未使用而 vet 红，我做 3 次有界重试未代改，它自清后 build clean —— 「不碰他人在途件、等其落定」
   第四次被实测证明是对的。
 ### Fixed
+- **清掉 3 处死代码 + 新增死代码门禁（2026-10-23 审计发现）**：
+  全仓死代码审计（未导出函数，全树词边界计数）发现 **3 处零引用函数**：
+  `cmd/workbench/main.go:562 openPanelOrPrint`、`internal/executor/executor.go:527 (*Runner).environment`、
+  `internal/web/gov_api.go:163 encodeGovJSON`。三处共同形态：**函数体完整、注释还在解释「为什么要它」，
+  但没有任何调用点** —— 整树词边界计数均为 1（仅定义行）。
+  危害不是运行时而是**阅读与维护**：读代码的人会假设它被调用（注释还在承诺行为），
+  于是基于一个假前提做判断。它也是「代码规模只增不减」的微观形态，与 memory 治理同族。
+  处置：① 三处全部删除（已逐一双重验证零引用），连带修掉删除后暴露的
+  `internal/web/gov_api.go` 未使用 `encoding/json` 导入；
+  ② 新增 `tests/check_deadcode.ps1` 把这类缺口变成机器判据，接入 **repo-gates（第 12 个门禁）**
+  与 `check_all`。判据只报「名字在本树零引用」这一**可证伪事实**，删不删由人判 ——
+  这正是「机器判据给证据、人做决定」的分工；已知假阳性形态（接口实现、反射使用）
+  在门禁头部注释里列明，留作后续白名单的输入。
+  顺带确认一个**反面具仓健康的事实**：`go test ./... -count=2 -race` 全仓 29 包**零 flaky**
+  （每条测试连跑两遍仍全绿）—— 说明测试套件本身稳定，没有时序依赖。
+  验证：build rc=0；受影响三包测试全绿；死代码门禁从 rc=1（报 3 处）转为 rc=0（报 0 处）；
+  干净 clone 上判据同样能跑（只依赖 git ls-files + 文件读，不依赖产物）。
 - **自我更正：上一轮新加的两个判据在 -trimpath 下假红（2026-10-23 r38）**：
   上轮加的 ui_script_portability_test / gate_files_tracked_test 用 runtime.Caller(0) 取本文件
   路径再上溯定位仓根。但 go test -trimpath（发布/CI 构建常见）会把编译期记录的源文件路径裁成

@@ -559,16 +559,6 @@ func errText(err error) string {
 	return err.Error()
 }
 
-func openPanelOrPrint(layout config.Layout) {
-	url := readRunningURL(layout)
-	if url == "" {
-		fmt.Println("工作台已在运行，但未能定位面板地址")
-		return
-	}
-	openPanel(url)
-	fmt.Println("工作台已在运行：" + url)
-}
-
 // panelOpenedMarker 是「已把面板推到桌面」的输出标记。
 //
 // 为什么要一行输出（2026-10-19 现场）：--silent 的语义是"服务化启动，不弹面板"，
