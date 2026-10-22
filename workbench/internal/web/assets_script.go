@@ -317,7 +317,13 @@ const appJS = `(() => {
         (activeRows ? '<h4 style="margin-top:20px">执行中 / 待执行</h4><div class="table-scroll"><table><thead><tr><th>标题</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>' + activeRows + '</tbody></table></div>' : '') +
         '<div style="margin-top:16px">' + fold('自己加一个任务', addBody) + '</div></div>';
     }
-    panes.queue.innerHTML = body;
+    // 详情容器（2026-10-23 全链路走查缺陷）：openTask 里「拿到 box 为空就 return」是静默返回，
+    // 而 #taskDetail 此前只在产出页渲染 —— 队列页那 8 个「详情」按钮点了**毫无反应、
+    // 也没有任何提示**（CDP 实测：点击后 taskDetail=null、paneLen 不变、零运行时错误）。
+    // 修：队列页也渲染容器；并把已展开的详情带过来（重渲染不打断阅读）。
+    const openedDetail = document.getElementById('taskDetail');
+    const keepDetail = openedDetail && openedDetail.innerHTML ? openedDetail.innerHTML : '';
+    panes.queue.innerHTML = body + '<div id="taskDetail">' + keepDetail + '</div>';
   }
 
   // P3 验收徽章：只有真实执行验收通过的产出才算「可运行」。
@@ -554,7 +560,12 @@ const appJS = `(() => {
         const res = await api('/api/tasks/' + id);
         const t = res.task;
         const box = document.getElementById('taskDetail');
-        if (!box) { return; }
+        if (!box) {
+          // 静默 return 会让「按钮点了没反应」成为不可诊断故障（本轮实测踩到）。
+          // 容器缺失属渲染契约违背，必须明确报出来。
+          toast('详情面板缺失（渲染契约错误）：#taskDetail 未挂载');
+          return;
+        }
         const q = t.critique ? ' ｜ 自评：' + t.critique.quality + '/10' : '';
         // 详情必须落在卡壳里（与模板编辑器同型）：裸 h3+doc 浮在页底破坏层级（2026-10-21 走查）。
         box.innerHTML = '<div class="card"><h3>' + esc(t.title) + '</h3>' +
