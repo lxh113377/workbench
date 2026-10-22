@@ -92,6 +92,15 @@ Section '纯净检出编译（防提交编译不过的快照）' {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Repo $Root
 }
 
+Section '服务化长驻实例·空闲态内存（三态 rc=2 不计 PASS）' {
+  $g = Join-Path $Root 'tests\check_resident_longrun.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Exe (Join-Path $Root 'dist\workbench.exe')
+  # 三态：rc=2 = 无活实例 / 引擎在跑 / 内存未稳定 —— 按项目铁律记 UNVERIFIED，
+  # 不计 PASS 也不判红（与 check_perf / check_queue_size 同口径）。
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section 'queue 规模（记录只增不减的复发检测；三态 rc=2 不计 PASS）' {
   $g = Join-Path $Root 'tests\check_queue_size.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
