@@ -16,6 +16,19 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **engine 包 CI 独有假红（第二次同型）：newTestEngine 收尾不等在途 postProcess，RemoveAll 被并发新增击穿（2026-10-22 实测）**：
+  docs-only 提交 609135a 的 CI run 判红 `TestPlanModelDiffersFromExecutorRole: TempDir RemoveAll
+  cleanup: ... workbench-output: The directory is not empty` —— 与「契约测试连红 8 次」同族：
+  红与被推送内容无关，本机 20 连跑不复现（窗口关着），慢 runner 上才张开。
+  根因链：runOne 成功路径把 postProcess（自评/摘要/链式后继）丢进 goroutine（engine.go:1244，
+  e.inflight 记账），测试函数返回时它还在往 layout.TaskDir 写；而 newTestEngine 的收尾
+  只关了 store 句柄，没排在途工作 —— RemoveAll 删到一半被新增文件击穿，报「目录非空」。
+  修：t.Cleanup 增加一条**有界 5s** 的 inflight 排空（注册在 st.Close 之后 ⇒ 后进先出，
+  先排空再关 store 再删目录，与生产 stop() 的两段 drain 同型）；等待不许挂死测试。
+  实测：go test ./internal/engine -count=1 -race rc=0、-count=5 -race rc=0；
+  诚实记录：本机 -count=20 下「摘掉排空」的变异体也不判红（窗口关着），
+  判红证据在 CI 侧（docs-only 提交不可能改出功能回归，红点只能来自收尾竞态）。
+  与上一条 dshprofile 修复同理：**这类红一律修测试收尾，绝不降判据、绝不重跑掩盖**。
 - **CI 覆盖率门禁判红（build 5/6 步）：dshprofile 只有 patch 文案判据、环境构建链零覆盖（2026-10-22 实测）**：
   上一条修复把 test job 变绿后，红点下移到 **build + coverage gate**：`覆盖率门禁未通过：
   workbench/internal/dshprofile=1.4%<阈值2.5%`。根因不是阈值设错，是该包此前 3 条判据全在

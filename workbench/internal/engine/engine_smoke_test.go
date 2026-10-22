@@ -68,9 +68,39 @@ func newTestEngine(t *testing.T) (*Engine, *store.Store, config.Layout) {
 	// 需要真实执行路径的用例自己 SetRunner 覆盖即可。
 	e.SetRunner(&noopTestRunner{})
 	e.ReloadConfig()
+	// 先等后台在途工作（postProcess 的自评/摘要/链式后继，engine.go 用 e.inflight 记账）
+	// 全部落地，再关 store —— t.Cleanup 后进先出：本条注册在前，故 st.Close 先跑、
+	// 这条后跑、t.TempDir 的自动清理最后跑，顺序正好。
+	//
+	// 为什么必须有（2026-10-22 CI 实测假红）：TestPlanModelDiffersFromExecutorRole 判红
+	// 「TempDir RemoveAll cleanup: ... workbench-output: The directory is not empty」——
+	// runOne 的成功路径会把 postProcess 丢给 goroutine 异步跑（engine.go:1244），
+	// 它继续往 layout.TaskDir 里写 events.jsonl / 产物；测试函数返回时它还没写完，
+	// RemoveAll 删到一半被并发新增击穿。Windows 上表现为「目录非空」，
+	// Linux 容器里表现为「文件被占用」—— 同一根因，两种报错。
+	// 有界等待（5s）与 stop() 的宽限同一形态：等待本身不许把测试挂死。
 	// WAL 文件是长期打开的句柄：测试结束时必须先关闭，否则 t.TempDir 的
 	// RemoveAll 在 Windows 上会因文件被占用而失败（现场 28 个用例集体假红）。
 	t.Cleanup(func() { _ = st.Close() })
+	// 再等后台在途工作（postProcess 的自评/摘要/链式后继，engine.go 用 e.inflight 记账）
+	// 全部落地 —— t.Cleanup 后进先出：这条注册在 st.Close **之后**，所以它先跑：
+	// 排空在途 → 关 store → t.TempDir 自动清理，顺序正好。
+	//
+	// 为什么必须有（2026-10-22 远端 CI 实测假红）：TestPlanModelDiffersFromExecutorRole 判红
+	// 「TempDir RemoveAll cleanup: ... workbench-output: The directory is not empty」——
+	// runOne 成功路径把 postProcess 丢给 goroutine 异步跑（engine.go:1244），
+	// 它继续往 layout.TaskDir 写 events.jsonl / 产物；测试函数返回时它还没写完，
+	// RemoveAll 删到一半被并发新增击穿。慢 runner 上窗口才张得开
+	// （本机 20 连跑不复现，CI 上判红 —— 与 2026-10-19 那轮「CI 独有残留」同型）。
+	fin := make(chan struct{})
+	go func() { e.inflight.Wait(); close(fin) }()
+	t.Cleanup(func() {
+		select {
+		case <-fin:
+		case <-time.After(5 * time.Second):
+			t.Log("在途后台工作 5s 未排空（继续收尾，不等死）")
+		}
+	})
 	return e, st, layout
 }
 
