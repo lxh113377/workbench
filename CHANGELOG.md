@@ -16,6 +16,25 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Changed
+- **为 4 个在途生产件建立「交接记录」，把并行提交的漏提交风险变成可执行清单（2026-10-23）**：
+  上轮修好门禁后报出 4 个生产文件未入库。本轮**没有**代提交（那是并行会话的所有权），
+  而是做只有我能做的事：把依赖关系查清并写成交接文档。
+  实测依赖图（全工作区扫描）：
+  - `modelpool/lanes.go` 的方法 `PurgeGatewayLanes` 被 **3 处已跟踪代码**调用：
+    `internal/modelpool/service.go:209`（`SyncNow` 的存量清理）、
+    `cmd/workbench/pool_cli.go:158`（CLI 子命令）、`pool_test.go` 4 处（含 `TestPurgeGatewayLanesRemovesLegacy`）；
+  - `web/hiddenproc_windows.go` + `hiddenproc_other.go` 的 `hiddenProcAttr` 被
+    `internal/web/autostart_windows.go` 4 处调用（子进程隐藏窗口属性，`//go:build` 双分支）；
+  - `cmd/schedprobe/main.go` 是独立 CLI（125 行，R3 调度行为验证），无代码引用，单独提交即可。
+  **关键取证**：HEAD 侧 `service.go` **没有**该调用（`PurgeGatewayLanes` 在 HEAD 全树仅 1 处且是注释），
+  故干净 clone 编译 rc=0 —— 当前是**健康的在途状态**（HEAD 自洽、工作区超前）。
+  风险只在一种情况下发生：**引用方先提交而这 4 个文件没跟上**（那会让 `SyncNow` 的清理逻辑静默消失）。
+  处置：① 新增 `docs/handoff/在途件交接记录-2026-10-23.md` —— 含依赖表、状态取证、
+  **给提交方的 git add 命令清单**、提交后自检命令；
+  ② `check_untracked_go.ps1` 判红时直接指向该文档（不只报文件名，还给处置路径）；
+  ③ 记录一条**待决观察**：`lanes.go` 的导出符号 `LaneGroupLabel`/`PurgeResult`/`PoolToggle`
+  全工作区零引用（可能是预留给面板的 API），按死代码门禁口径应由实现方决定补调用点或删掉。
+  验证：doc_refs 门禁 PASS（60 份活文档、80 处引用）；交接文档内的 git add 命令已按依赖组逐条核对。
 - **门禁自身的 bug 被抓到：未跟踪件解析把 41 个在途修改误报成生产未入库（2026-10-23）**：
   上一轮加的 `check_untracked_go.ps1` 首版有一处**解析缺陷**：用 `-like '*.go'` 直接筛
   `git status --porcelain` 全表，会把 ` M path.go` 这类**已跟踪修改行**也匹配进来。

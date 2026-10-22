@@ -91,6 +91,7 @@ if ($prodUntracked.Count -gt 0) {
   Write-Host ("FAIL: " + $prodUntracked.Count + " 个**生产代码**文件未入库：") -ForegroundColor Red
   foreach ($p in $prodUntracked) { Write-Host ("  - " + $p) -ForegroundColor Red }
   Write-Host "  危害：工作区能编译/能跑，但提交出去的东西与工作区不是同一套语义。" -ForegroundColor Red
+  Write-Host "  => 查看 docs/handoff/在途件交接记录-*.md（谁引用它、必须跟谁一起提交）" -ForegroundColor Red
   exit 1
 }
 
