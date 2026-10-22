@@ -92,6 +92,12 @@ Section '纯净检出编译（防提交编译不过的快照）' {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Repo $Root
 }
 
+Section '报告待办与 CI 现实一致性（防状态栏滞后误导下游）' {
+  $g = Join-Path $Root 'tests\check_report_claims.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+}
+
 Section 'PowerShell 脚本编码（含非 ASCII 必须带 UTF-8 BOM）' {
   $g = Join-Path $Root 'tests\check_ps1_encoding.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }

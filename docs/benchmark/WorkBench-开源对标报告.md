@@ -1,4 +1,4 @@
-# WorkBench 开源对标报告（2026-10-18）
+﻿# WorkBench 开源对标报告（2026-10-18）
 
 > 对标主体：`D:\workdesktop`（个人 AI 自动化工作台 v1.0.0，Go 1.27 纯标准库，52 个 .go / 7848 行 / 单 EXE 7.74MB）
 > 取证时刻：**2026-10-18 22:05–22:20（Asia/Shanghai）**，全部读数当日现取，命令与原始输出见 §7 证据附录
@@ -190,9 +190,13 @@ asynq:      client → Redis → server(inspector) → processor(并发池) → 
 |---|---|---|---|---|
 | **M0 对标** | 8 peer 取数、模块映射、八维对比、报告 | 本报告 + `docs/benchmark/evidence/` | 2026-10-18 22:20 | ✅ |
 | **M1 P0 改造** | P0-1~P0-4 全部落地并全绿 | `go vet`/`go test` 全过；新增 `internal/retry` 单测；`-CoverGate` 生效 | 2026-10-18 23:30 | ✅ |
-| **M2 合并与回归** | 合并回主工作区、重建 EXE、e2e 复跑 | `dist/SHA256SUMS` 更新；e2e 20 项全过 | 2026-10-19 | ⏳ |
-| **M3 P1 工程化** | slog / 执行钩子 / 指标 | 面板可见失败原因分布 | 2026-10-19 ~ 10-21 | 待办 |
-| **M4 P2 开源化** | CI / CHANGELOG / 架构单页 | GitHub Actions 全绿 | 2026-10-22 ~ 10-25 | 待办 |
+| **M2 合并与回归** | 合并回主工作区、重建 EXE、e2e 复跑 | `dist/SHA256SUMS` 更新；e2e 20 项全过 | 2026-10-19 | ✅（2026-10-23 复核：清单存在，且 ci.yml 已独立读回校验 hash，不一致即判红） |
+| **M3 P1 工程化** | slog / 执行钩子 / 指标 | 面板可见失败原因分布 | 2026-10-19 ~ 10-21 | ✅（`internal/logging`、`executor/hooks.go`、`web/metrics_prom.go` 均在位） |
+| **M4 P2 开源化** | CI / CHANGELOG / 架构单页 | GitHub Actions 全绿 | 2026-10-22 ~ 10-25 | ✅（CI 最近结论 success；CHANGELOG / ARCHITECTURE 均在位） |
+> **状态栏维护说明（2026-10-23 补）**：本表在 2026-10-18 首轮写作时状态准确，之后三条陆续落地
+> 却未回改，导致本目标（报告是执行入口）的下游 agent 会把已完成项当待办重做。
+> 已按实测证据逐条更新，并新增 `tests/check_report_claims.ps1` 把「⏳ 行点名的具名制品
+> 已出现在 ci.yml」这一可证伪面自动上闸（该门禁首跑即抓出本行 M2）。
 
 ---
 
