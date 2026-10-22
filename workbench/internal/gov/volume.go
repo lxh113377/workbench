@@ -162,6 +162,10 @@ type Eval struct {
 	Red       float64   `json:"red"`
 	Level     string    `json:"level"`
 	Ratio     float64   `json:"ratio"` // 相对红线的占用率（high 方向: value/red；low 方向: red/value）
+	// Note 是**口径提醒**：某些指标是累计口径而非当前状态，不注清楚会被误读成
+	// 「现在正在恶化」而做出错误处置（2026-10-23 风险预警走查看查见：失败率 79%
+	// 实为 328 条历史累计，近 1 小时 0 失败，但文案写「当前 79%」并建议扩容）。
+	Note string `json:"note,omitempty"`
 }
 
 // level 判定：high 方向 value>=red 判红、>=warn 判黄；low 方向取反。
@@ -258,8 +262,19 @@ func Evaluate(s Sample, b Budget) []Eval {
 			float64(s.ThroughputDaily), float64(b.ThroughputDailyMin)*1.2, float64(b.ThroughputDailyMin)),
 		mk("avgCycleSec", "平均单任务耗时", "秒", DomainOperation, DirHigh,
 			s.AvgCycleSec, float64(b.AvgCycleSecondsMax)*0.8, float64(b.AvgCycleSecondsMax)),
-		mk("failureRate", "任务失败率", "比例", DomainOperation, DirHigh,
-			s.FailureRate, b.FailureRateMax*0.7, b.FailureRateMax),
+		// 口径说明（2026-10-23 风险预警走查）：FailureRate 的全时段累计比率
+		// = 累计失败 / (累计完成 + 累计失败)，**无时间窗口**。实测现场：近 1 小时 0 失败，
+		// 但 328 条历史失败让它恒为 79%，治理台据此提「立即降负载或扩容」——把历史陈旧
+		// 数据当成当前恶化，会误导决策。指标名与处置文案都补上「累计」口径，避免被误读。
+		func() Eval {
+			e := mk("failureRate", "任务失败率（累计）", "比例", DomainOperation, DirHigh,
+				s.FailureRate, b.FailureRateMax*0.7, b.FailureRateMax)
+			// 口径提醒：该值是全时段累计比率（累计失败/累计完成），**不是当前状态**。
+			// 现场实测（2026-10-23）：近 1 小时 0 失败、近 24 小时 287 条历史失败，
+			// 累计比率恒为 79%，若无此说明会被读成「现在正在恶化」而错误扩容。
+			e.Note = "全时段累计口径：历史失败会长期顶高。判断当前是否恶化请结合近期失败数。"
+			return e
+		}(),
 	}
 }
 
@@ -435,7 +450,11 @@ func adjustAction(e Eval, b Budget, escalate bool) string {
 	case "avgCycleSec":
 		return fmt.Sprintf("%s：单任务耗时上限 %d 秒 → %s（当前 %.0fs）", verb, b.AvgCycleSecondsMax, dir, e.Value)
 	case "failureRate":
-		return fmt.Sprintf("%s：失败率上限 %.0f%% → %s（当前 %.1f%%）", verb, b.FailureRateMax*100, dir, e.Value*100)
+		// 明确「累计」口径 + 提醒看近期趋势（2026-10-23 走查修复）：
+		// 该值是全时段累计比率，历史失败会长期把它顶在高位；判断「当前是否恶化」
+		// 必须再看近期（如近 1 小时 / 近 24 小时）失败数，不能只看这个累计值。
+		return fmt.Sprintf("%s：失败率上限 %.0f%% → %s（累计 %.1f%%；该值为全时段累计，历史失败会长期顶高，判断当前需结合近期失败数）",
+			verb, b.FailureRateMax*100, dir, e.Value*100)
 	}
 	return fmt.Sprintf("%s：%s 阈值%s（当前 %.2f）", verb, e.Name, dir, e.Value)
 }

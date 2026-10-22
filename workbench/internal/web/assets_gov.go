@@ -99,6 +99,7 @@ const govJS = `(() => {
     };
     const evalRows = (sum.evals || []).map((e) => '<div class="gov-row ' + levelClass(e.level) + '">' +
       '<b>' + esc(e.name) + '</b><span>' + govNum(e.value, e.unit) + (e.unit === '比例' ? '' : esc(e.unit)) + '</span>' +
+        (e.note ? '<span class="gov-dim" style="display:block;font-size:11px;line-height:1.5;margin-top:2px">' + esc(e.note) + '</span>' : '') +
       '<span>警示 ' + govNum(e.warn, e.unit) + ' / 红线 ' + govNum(e.red, e.unit) + '</span><span>' + levelName(e.level) + '</span></div>').join('');
     parts.push(foldCard('量化指标（阈值与红线）', evalRows || '<p class="gov-dim">暂无采样数据（未验证）</p>'));
 
@@ -202,4 +203,4 @@ const govJS = `(() => {
   load();
   setInterval(load, 30000);
 })();
-`;
+`
