@@ -44,6 +44,14 @@ foreach ($f in $files) {
   $hasBom = ($b.Length -ge 3 -and $b[0] -eq 0xEF -and $b[1] -eq 0xBB -and $b[2] -eq 0xBF)
   $hasNonAscii = $false
   foreach ($x in $b) { if ($x -gt 127) { $hasNonAscii = $true; break } }
+  # 双重 BOM（2026-10-22 实测：我自己两次犯）：EF BB BF 连续出现 2 次会让 PS5.1 把
+  # 第二个 BOM 当命令字符，报 `The term '#' is not recognized` / `assignment expression is not valid`。
+  # 判据必须覆盖 —— 「补 BOM」这类修复最容易在一个已有 BOM 的文件上再前置一次。
+  if ($b.Length -ge 6 -and $b[0] -eq 0xEF -and $b[1] -eq 0xBB -and $b[2] -eq 0xBF -and $b[3] -eq 0xEF -and $b[4] -eq 0xBB -and $b[5] -eq 0xBF) {
+    $relD = $f.FullName.Substring($Root.Length).TrimStart([char]92, [char]47)
+    $bad += ($relD + "  <== 双重 BOM（连出两个 EF BB BF）")
+    continue
+  }
   if ($hasNonAscii -and -not $hasBom) {
     $rel = $f.FullName.Substring($Root.Length).TrimStart([char]92, [char]47)
     $bad += $rel

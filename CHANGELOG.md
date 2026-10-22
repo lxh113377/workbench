@@ -33,6 +33,23 @@
   新增 `cross_page_consistency_test.go` 两条判据（两卡基座度量同源 / 内容顶距选择器齐备）；
   变异 C1 gov-card 退回圆角 → CAUGHT、C2 删 `.tabs + .content` → CAUGHT。
 ### Fixed
+- **repo-gates 第二、三轮判红（2026-10-22 连续实测，红因逐个下移）**：
+  门禁挂上 CI 后按预期开始工作，每轮红点都是真问题，逐个修到绿：
+  ① **PS5.1 ParserError**（Unexpected token / Missing closing）：25 个含中文的 .ps1 缺 UTF-8 BOM。
+    不只是我改过的 3 个 —— 构建链核心 `setup/build.ps1`、CI 在跑的 `check_perf.ps1` 都缺。
+    修：全部只前置 EF BB BF；新增 `check_ps1_encoding.ps1` 上闸（含非 ASCII 才要求 BOM）。
+  ② **双重 BOM**（我自己两次犯）：在已有 BOM 的文件上再前置一次 ⇒ PS5.1 把第二个 BOM 当命令字符，
+    报 `assignment expression is not valid`。是「补 BOM」这类修复的高发失误，已扩展编码门禁覆盖
+    （连出两个 EF BB BF 即判红），并当场抓出 `check_all.ps1` 的双重 BOM 修掉。
+  ③ **check_snapshot_build 在 CI 上 `TestRepoRootHasRequiredAnchors` 判红**：
+    `repoRoot()` 靠目录探测找仓库根，在本机各种形态（8.3 短名 / 纯 ASCII TEMP / PS5.1 解包 /
+    非仓库 cwd）全部通过，CI runner 上返回空串 —— 环境（locale/代码页）相关，本机无法复现。
+    处置：快照门禁**已知**根在哪，就显式注入 `repoRoot()` 自带的 `WB_REPO_ROOT` 覆盖位，
+    不让被测代码去猜；探测逻辑本身的正确性仍由工作树里的同一用例守护。
+  ④ **check_gate_links 连续两轮点名新断链**（它自己抓自己）：先抓到 `check_ps1_encoding.ps1`
+    未入库，再抓到 `setup-out-of-box.ps1` 引用的 `fix-runtime-patch.ps1` / `qa-artifacts.ps1` 未入库。
+    两者均入库（`.bak-inject-append` 备份件不提交，无引用）。
+  实测：PS5.1 下 9 个门禁全 PASS；`check_gofmt` 仍为「PASS 带 34 条显式豁免未清」（并行在途件）。
 - **PowerShell 脚本编码：25 个含中文脚本缺 UTF-8 BOM，CI 的 PS5.1 会 ParserError（2026-10-22 两轮实测）**：
   本轮把 8 个门禁挂上 CI 后，repo-gates job 判红，报的是
   `Unexpected token` / `Missing closing ')'`，行号指向 `check_snapshot_build.ps1:42`

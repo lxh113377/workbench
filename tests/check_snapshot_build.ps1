@@ -77,6 +77,15 @@ try {
     Write-Host "PASS 纯净检出 go build ./... 成功" -ForegroundColor Green
 
     # 有测试就再跑一轮（快照里的测试才是提交真相）
+    #
+    # WB_REPO_ROOT（2026-10-22 CI 实测补）：部分测试用 repoRoot() 靠「目录探测」找仓库根
+    # （要求 docs/自主运行方案.md + workbench/internal/web/html.go 并存）。探测在本机可靠，
+    # 但在 CI runner 上实测返回空串 —— 环境（locale/代码页/临时目录形态）差异所致，
+    # 本机用 8.3 短名、纯 ASCII TEMP、PS5.1 解包等多种形态均无法复现。
+    # 既然本门禁**已知**快照根在哪，就不该让被测代码去猜：显式注入 repoRoot() 自己支持的
+    # WB_REPO_ROOT 覆盖位。这不是「改测试让它过」—— 探测逻辑本身的正确性由工作树里的
+    # TestRepoRootHasRequiredAnchors 继续守护；这里只是把快照形态下的已知事实告知被测代码。
+    $env:WB_REPO_ROOT = $snapRoot
     $ErrorActionPreference = "Continue"
     $tout = & go test ./... -count=1 2>&1 | Out-String
     $trc = $LASTEXITCODE
