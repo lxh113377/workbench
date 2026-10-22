@@ -51,11 +51,13 @@ func (s *Server) handleExport(w http.ResponseWriter, r *http.Request) {
 		if !found || t.State != model.StateDone {
 			continue
 		}
-		data, err := s.engine.Store().ReadTaskArtifact(id, "final.md")
-		if err != nil {
+		// 与详情接口同源：产出文件名不固定（final.md 只是兜底名），
+		// 硬编码读 final.md 会把绝大多数任务静默跳过 ⇒ 导出篇数远少于实际产出。
+		content, _, ok := readTaskArtifact(s.engine.Store(), t)
+		if !ok {
 			continue
 		}
-		docs = append(docs, exportDoc{Task: t, Content: string(data)})
+		docs = append(docs, exportDoc{Task: t, Content: content})
 	}
 	if len(docs) == 0 {
 		bad(w, "选中的任务没有可导出的产出")
@@ -109,7 +111,7 @@ func buildCollection(docs []exportDoc, markdown bool) []byte {
 		for i, d := range docs {
 			b.WriteString(fmt.Sprintf("## %d. %s\n\n", i+1, d.Task.Title))
 			b.WriteString(fmt.Sprintf("- 领域：%s\n- 模型：%s\n- 完成时间：%s\n- 耗时：%.1f 分钟\n- 自评：%d/10\n\n",
-				d.Task.Domain, d.Task.Model, time.UnixMilli(d.Task.FinishedAt).Format("2006-01-02 15:04"), float64(d.Task.ElapsedMs)/60000, qualityOf(d.Task)))
+				domainLabel(d.Task.Domain), d.Task.Model, time.UnixMilli(d.Task.FinishedAt).Format("2006-01-02 15:04"), float64(d.Task.ElapsedMs)/60000, qualityOf(d.Task)))
 			b.WriteString(d.Content)
 			b.WriteString("\n\n---\n\n")
 		}
@@ -119,7 +121,7 @@ func buildCollection(docs []exportDoc, markdown bool) []byte {
 	b.WriteString(fmt.Sprintf("导出时间：%s\n共 %d 篇\n\n", time.Now().Format("2006-01-02 15:04:05"), len(docs)))
 	for i, d := range docs {
 		b.WriteString(fmt.Sprintf("===== %d. %s =====\n", i+1, d.Task.Title))
-		b.WriteString(fmt.Sprintf("领域：%s | 耗时：%.1f 分钟 | 自评：%d/10\n\n", d.Task.Domain, float64(d.Task.ElapsedMs)/60000, qualityOf(d.Task)))
+		b.WriteString(fmt.Sprintf("领域：%s | 耗时：%.1f 分钟 | 自评：%d/10\n\n", domainLabel(d.Task.Domain), float64(d.Task.ElapsedMs)/60000, qualityOf(d.Task)))
 		b.WriteString(stripMarkdown(d.Content))
 		b.WriteString("\n\n")
 	}

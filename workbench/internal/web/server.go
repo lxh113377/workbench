@@ -462,8 +462,12 @@ func (s *Server) handleTaskDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	payload := map[string]any{"task": t}
-	if data, err := s.engine.Store().ReadTaskArtifact(id, "final.md"); err == nil {
-		payload["content"] = string(data)
+	// 主产出按三级回落解析（OutputFile 绝对路径 → 目录 final.md → 目录最大 .md/.txt）。
+	// 此前只读 final.md，而产出名由 choosePrimary 按格式与体积决定（如 article.md），
+	// 于是绝大多数已完成任务在面板显示「（暂无产出）」——实测 5935B 的任务只显 6 字符。
+	if content, from, ok := readTaskArtifact(s.engine.Store(), t); ok {
+		payload["content"] = content
+		payload["contentFrom"] = from
 	}
 	if events, err := os.ReadFile(s.layout.TaskFile(id, "events.jsonl")); err == nil {
 		payload["events"] = tailLines(string(events), 200)

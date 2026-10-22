@@ -54,6 +54,28 @@
   取证：隔离实例 390px `theadVisible=0 / labeledTd=48`、队列 4 行转卡（row display:block）。
 
 ### Fixed
+- **已完成任务的产出在面板显示「（暂无产出）」、批量导出静默跳过大半任务
+  （2026-10-22 交互面走查实测，功能级缺陷）**：详情接口与导出都硬编码
+  `ReadTaskArtifact(id, "final.md")`，但产出文件名由 `engine.choosePrimary`
+  按 outputFormat 与体积决定（实测样本 `article.md`），`final.md` 只是
+  「模型一个文件都没写」时的兜底名 ⇒ 绝大多数任务读不到内容。
+  实测读数：outputBytes=5935 的任务，面板 `.doc` 只有 6 个字符（就是那句占位文案）。
+  修复：新增共用解析器 `readTaskArtifact`（三级回落：① `task.OutputFile` 绝对路径
+  ② 目录 final.md ③ 目录内最大 .md/.txt，且拒绝 0 字节文件），详情与导出同源调用；
+  接口另回 `contentFrom` 标明实际命中的文件。修复后面板 `.doc` 91px→620px、
+  6 字符→2040 字符（7 个 h2 + 5 个 li 真渲染、无原始 markdown 泄漏），
+  导出 79 篇 / 311KB / 零空壳。新增 `task_artifact_test.go` 8 例（三级回落 +
+  目录不存在 / nil task / 0 字节三个反向），并对真实源码注入 3 个变异体实测判红：
+  M1 退回硬编码 final.md、M2 空文件算命中、M3 扫描不过滤扩展名（会读到 events.jsonl）。
+- **导出文档的领域标签与面板漂移（md / txt / docx 三条路径）**：面板表格已中文化
+  （app.js 的 DOMAIN_TEXT），但导出在 Go 侧拼元信息行、仍写裸枚举 ⇒ 同一份数据
+  面板显示「内容创作」、导出文档里是「content」。新增 Go 侧 `domainLabels` +
+  `domainLabel()`（未知枚举原样返回以便发现缺项，不吞数据），三处导出接线；
+  `domain_label_test.go` 把「两张表同源」做成构建期判据（正则抠 app.js 的
+  DOMAIN_TEXT 与 Go 表逐键比对，双向差集点名），注入「值漂移」与「缺键」
+  两个变异体均实测判红。修复后导出 79 篇领域行 100% 中文、英文泄漏 0。
+
+### Fixed
 - **首页主体尺度不随画布呼吸（2026-10-22 超宽屏走查实测）**：主按钮与入口条固定 320px，
   在 2560/3440 宽下取景框与雷达环都在放大、唯独主体不变，主体占比塌到 13%/9% ⇒
   「精密仪器」变成「仪器里的小按钮」。改为 `clamp(320px,26vw,460px)` + 高度

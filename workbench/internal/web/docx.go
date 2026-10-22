@@ -77,7 +77,7 @@ func buildDocumentXML(docs []exportDoc) string {
 	doc.WriteString(docxPara("Normal", fmt.Sprintf("导出时间：%s ｜ 共 %d 篇", time.Now().Format("2006-01-02 15:04:05"), len(docs))))
 	for i, d := range docs {
 		doc.WriteString(docxPara("Heading1", fmt.Sprintf("%d. %s", i+1, d.Task.Title)))
-		meta := fmt.Sprintf("领域：%s ｜ 模型：%s ｜ 耗时：%.1f 分钟 ｜ 自评：%d/10", d.Task.Domain, d.Task.Model, float64(d.Task.ElapsedMs)/60000, qualityOf(d.Task))
+		meta := fmt.Sprintf("领域：%s ｜ 模型：%s ｜ 耗时：%.1f 分钟 ｜ 自评：%d/10", domainLabel(d.Task.Domain), d.Task.Model, float64(d.Task.ElapsedMs)/60000, qualityOf(d.Task))
 		doc.WriteString(docxPara("Normal", meta))
 		doc.WriteString(markdownToParas(d.Content))
 	}
