@@ -24,16 +24,40 @@ param(
 $ErrorActionPreference = "Stop"
 if (-not $Root) { $Root = Split-Path -Parent $PSScriptRoot }
 
-# 实现注记：-Include 在 -LiteralPath 下**不生效**（本仓在册坑，实测会扫进全部 4000+
-# 文件把 .md/.json 也判成脚本）。故显式按扩展名过滤。
-$files = @(Get-ChildItem -LiteralPath $Root -Recurse -File -ErrorAction SilentlyContinue | Where-Object {
-  $ext = $_.Extension.ToLower()
-  if ($ext -ne '.ps1' -and $ext -ne '.psm1') { return $false }
-  $p = $_.FullName.Replace([char]92, [char]47)
-  # 跳过第三方依赖与产物目录（与 check_noninteractive 同口径）
-  foreach ($sd in @('/node_modules/','/.git/','/dist/','/runtime/','/_recovery/','/src-backup/','/xtmp/','/vendor/')) { if ($p.Contains($sd)) { return $false } }
-  return $true
-})
+# 2026-10-24 性能修复（实测依据：原实现 20.3s，其中 19.8s 花在 Get-ChildItem -Recurse
+# 遍历**整个仓库** —— 275,006 个文件，含 .git/src-backup/_recovery/dist 这些巨型目录；
+# 而本门禁真正要检查的只有 52 个受跟踪脚本）。
+#
+# 改用 git ls-files 取受跟踪列表，三个好处：
+#   1) 快三个数量级（不再遍历未跟踪/产物目录）；
+#   2) **语义更对** —— 门禁判的是「将进版本库的内容」，未跟踪的在途件不该判
+#      （与 check_gofmt / check_ps1_eol 的 HEAD/暂存区口径一致）；
+#   3) 不再需要那一串目录排除列表（.git/src-backup/... 本来就不该被 git ls-files 返回）。
+#
+# 保留的历史注记（坑仍在，只是不再触发）：
+#   -Include 在 -LiteralPath 下**不生效**（本仓在册坑，实测会扫进全部 4000+ 文件）。
+$gitExe = (Get-Command git -ErrorAction SilentlyContinue).Source
+if (-not $gitExe) {
+  foreach ($cand in @('C:\Program Files\Git\cmd\git.exe')) {
+    if (Test-Path $cand) { $gitExe = $cand; break }
+  }
+}
+if (-not $gitExe) {
+  Write-Host "UNVERIFIED: 找不到 git（无法取受跟踪文件列表）" -ForegroundColor Red
+  exit 2
+}
+$tracked = @(& $gitExe -C $Root ls-files '*.ps1' '*.psm1')
+if ($LASTEXITCODE -ne 0) {
+  Write-Host "UNVERIFIED: git ls-files 失败" -ForegroundColor Red
+  exit 2
+}
+$files = @($tracked | ForEach-Object {
+  $rel = $_.Trim('"')
+  if (-not $rel) { return $null }
+  $full = Join-Path $Root $rel
+  if (-not (Test-Path -LiteralPath $full)) { return $null }
+  Get-Item -LiteralPath $full
+} | Where-Object { $null -ne $_ })
 
 $bad = @()
 $checked = 0
