@@ -5,27 +5,30 @@ param(
   [switch]$SkipTests,
   [switch]$SkipCoverGate,
   [double]$CoverThreshold = 55,
-  # PerPackageCover：按"包:阈值"覆盖个别包的基线（新抽出的纯逻辑包更高，
-  # 与子进程强耦合的 engine 包先按当前基线守护、逐步抬升）。
-  # 分档基线依据：engine/web/executor 与大块子进程/HTTP 耦合，先按当前水平守护、
-  # 每次改造只许抬不许降；logging/retry/queue/model 等纯逻辑包走全局 55% 阈值。
+  # PerPackageCover：按"包:阈值"覆盖个别包的基线。
   #
-  # tray 阈值说明（2026-10-21 复核对账）：托盘包的 5 个守护测试全部是「常量/契约」型断言
+  # **2026-10-23 全量复核（阈值与实测脱节过大会让护栏失效，故整表重校）**：
+  # 复核方法：go test ./... -count=1 -cover 连跑两次，读数完全一致（覆盖率稳定，可直接作依据）；
+  # 新阈值 = 实测值 - 3pp 余量（留出正常波动与小幅重构空间，同时仍能抓住 3pp 以上的真实退化）。
+  # 复核前的问题：14 个阈值里 **9 个比实测低 15pp 以上**（最离谱 single 16 vs 实测 89.2、
+  # dshprofile 2.5 vs 79.5）—— 意味着这些包损失 20%+ 覆盖门禁都不会报，护栏形同虚设。
+  # 复核后的对照（实测 -> 新阈值）：
+  #   engine 75.9->72 / web 57.4->54 / executor 54.3->51 / modelpool 70.2->67 / supervisor 68.0->65
+  #   cmd/workbench 10.5->7 / evaluate 73.7->70 / modelroute 54.4->51 / shortcut 37.9->34
+  #   chain 88.6->85 / judge 78.6->75 / single 89.2->86 / tray 21.3->18 / dshprofile 79.5->76
+  #
+  # tray 阈值说明（2026-10-21 立、2026-10-23 复核更新）：托盘包的守护测试全部是「常量/契约」型断言
   # （WS_EX_TOOLWINDOW 必须是 0x80、类名不得漂移、标题必须自述内部窗、结构体尺寸、
-  # 完整性级别判定），它们守的是「消息窗不得进任务视图」这条 2026-10-20 现场缺陷的根因。
-  # 这些测试刻意**不**随覆盖率数字浮动：真正创建窗口的 Run() 只能在有 Explorer 的真机上跑，
-  # 单测环境断言它只会得到假绿。因此 tray 的实际覆盖率长期停在 16.x%，
-  # 阈值按实测基线设为 16（不许降到 16 以下，也不虚设到够不着的高位）。
-  [string[]]$PerPackageCover = @("workbench/internal/engine=20", "workbench/internal/web=15", "workbench/internal/executor=26", "workbench/internal/modelpool=49", "workbench/internal/supervisor=46", "workbench/cmd/workbench=3", "workbench/internal/evaluate=50", "workbench/internal/modelroute=50", "workbench/internal/shortcut=23", "workbench/internal/chain=80", "workbench/internal/judge=55", "workbench/internal/single=16", "workbench/internal/tray=16", "workbench/internal/dshprofile=2.5")
+  # 完整性级别判定），守的是「消息窗不得进任务视图」这条 2026-10-20 现场缺陷的根因。
+  # 真正创建窗口的 Run() 只能在有 Explorer 的真机上跑，单测环境断言它只会得到假绿，
+  # 故该包上限本就不高。2026-10-23 实测 21.3%（比 10-21 的 16.x% 高约 5pp），阈值按「实测-3pp」设为 18。
+  [string[]]$PerPackageCover = @("workbench/internal/engine=72", "workbench/internal/web=54", "workbench/internal/executor=51", "workbench/internal/modelpool=67", "workbench/internal/supervisor=65", "workbench/cmd/workbench=7", "workbench/internal/evaluate=70", "workbench/internal/modelroute=51", "workbench/internal/shortcut=34", "workbench/internal/chain=85", "workbench/internal/judge=75", "workbench/internal/single=86", "workbench/internal/tray=18", "workbench/internal/dshprofile=76")
 
-# dshprofile 阈值说明（2026-10-21 复核对账，与 tray/single 同型）：
-# 该包 18 个函数里只有 profilePatch 是纯函数（已 100% 覆盖），
-# 其余全是 IO 型：真实 DSH 安装目录探测（LocateDSH/resolveFromShim）、
-# 文件复制（copyDir/linkOFM/ensureProfile/ensureOFMData）、
-# 进程属性（hiddenProcAttr）—— 这些在单测环境里要么依赖真实安装态、
-# 要么只能在有 Explorer 的真机跑，硬凑覆盖率只会造假绿。
-# 实测基线 2.6%（纯函数那一个），阈值按实测设为 2.5（略低于实测，
-# 也不虚设到够不着的高位）；将来补真实 IO 测试时只许抬不许降。
+# dshprofile 阈值说明（2026-10-21 立、2026-10-23 复核更新）：该包原被判「只能真机跑」
+# （LocateDSH/resolveFromShim 探测、copyDir/linkOFM 复制、hiddenProcAttr 进程属性全是 IO 型）。
+# **该判断已过时**：后来补了真实测试（env override + 临时目录），实测 79.5% ——
+# 13 个测试、0 个 t.Skip。阈值按「实测-3pp」设为 76。
+# 教训：包的能力描述会随测试补齐而失效，阈值必须定期按实测重校，不能一次设定管到底。
 )
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
