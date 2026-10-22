@@ -1,5 +1,5 @@
-# 前端门禁回执 2026-10-22T10:48:40.132Z
+# 前端门禁回执 2026-10-22T11:07:52.267Z
 
 - 目标: http://127.0.0.1:17931
 - 判定: **PASS** ｜ ok=23 fail=0 unverified=0 ｜ 用例数=23/23 ｜ 退出码=0
-- 证据: D:\workdesktop\dist\ui-shots\gate-2026-10-22T10-46-35\cdp-report.json
+- 证据: D:\workdesktop\dist\ui-shots\gate-2026-10-22T11-05-47\cdp-report.json

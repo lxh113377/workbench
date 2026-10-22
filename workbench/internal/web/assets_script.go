@@ -909,13 +909,55 @@ const appJS = `(() => {
     activateTab(name, { hash: false });
   });
 
+  // SSE 每秒约 10 条事件，onmessage 对 overview/queue 直接重渲染（全量 innerHTML 替换）。
+  // 实测事故（2026-10-23 并发时序走查）：用户把「任务」页表格滚到 100px 后，
+  // 重渲染把整个 .table-scroll 元素换掉（elemStillInDom=false），新节点 scrollTop 归 0 ——
+  // 列表每秒被弹回顶部十次，根本没法看。焦点同理（注入输入框实测 nodeReplaced=true、
+  // caret/value/focus 全丢）。修：重渲染前快照滚动位置与焦点，渲染后按「同一位置」
+  // （tabpane 选择器 + 索引）恢复；找不到对应节点就跳过，绝不猜测。
+  const snapshotScroll = () => {
+    const list = [];
+    document.querySelectorAll('.tabpane.active .table-scroll, .tabpane.active .doc, .tabpane.active pre').forEach(function (el, i) {
+      if (el.scrollTop > 0 || el.scrollLeft > 0) {
+        list.push({ key: el.className + ':' + i, top: el.scrollTop, left: el.scrollLeft });
+      }
+    });
+    return list;
+  };
+  const restoreScroll = (snap) => {
+    if (!snap || !snap.length) { return; }
+    // 关键（2026-10-23 实测踩坑）：**不要**手动按 scrollHeight 夹紧。
+    // 刚换完 innerHTML 的那一刻布局还没完成，scrollHeight 读出来偏小，
+    // maxTop 会被算成 0，Math.min(top, 0) 直接把滚动位置夹成 0 —— 第一版修复
+    // 就是这个原因完全无效（30 次采样全是 top:0）。浏览器自己会把越界值 clamp 到合法范围。
+    // 另外必须等布局完成：用双 rAF（第一帧布局，第二帧生效），否则赋值同样被丢弃。
+    const apply = () => {
+      document.querySelectorAll('.tabpane.active .table-scroll, .tabpane.active .doc, .tabpane.active pre').forEach(function (el, i) {
+        const key = el.className + ':' + i;
+        for (let k = 0; k < snap.length; k++) {
+          if (snap[k].key === key) {
+            el.scrollTop = snap[k].top;
+            el.scrollLeft = snap[k].left;
+            break;
+          }
+        }
+      });
+    };
+    if (typeof requestAnimationFrame === 'function') {
+      requestAnimationFrame(function () { requestAnimationFrame(apply); });
+    } else {
+      apply();
+    }
+  };
   async function render(name) {
+    const scrollSnap = snapshotScroll();
     try {
       if (name === 'overview') { await renderOverview(); }
       else if (name === 'queue') { await renderQueue(); }
       else if (name === 'outputs') { await renderOutputs(); }
       else if (name === 'templates') { await renderTemplates(); }
       else if (name === 'settings') { await renderSettings(); }
+      restoreScroll(scrollSnap);
     } catch (e) {
       // 占位不得永驻：失败时**替换**成失败态，否则「读失败」会被显示成「一直在读」。
       failPane(name, '加载失败：' + e.message);
@@ -1006,11 +1048,25 @@ const appJS = `(() => {
 
   try {
     const es = new EventSource('/events?token=' + encodeURIComponent(TOKEN));
+    // 节流（2026-10-23 并发时序走查）：实测 SSE 峰值约 10 条/秒，原实现每条都对
+    // overview/queue 做全量 innerHTML 重渲染。虽然当前长任务为 0（内容量小），但
+    // 这是「事件频率 × 全量重建」的平方级浪费，内容一多就会掉帧。合并到 400ms 窗口：
+    // 窗口内多条事件只渲染最后一帧（数据本来就是全量拉取，丢中间帧不丢信息）。
+    let renderTimer = null;
+    let renderPending = false;
     es.onmessage = function () {
       refreshTop();
       const active = document.querySelector('.tab.active');
       const name = active && active.getAttribute('data-tab');
-      if (name === 'overview' || name === 'queue') { render(name); }
+      if (name !== 'overview' && name !== 'queue') { return; }
+      renderPending = true;
+      if (renderTimer) { return; }
+      renderTimer = setTimeout(function () {
+        renderTimer = null;
+        if (!renderPending) { return; }
+        renderPending = false;
+        render(name);
+      }, 400);
     };
   } catch (e) { /* ignore */ }
 
