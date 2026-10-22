@@ -16,6 +16,26 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **覆盖率读数序列化到 gate-readings.jsonl（2026-10-24）**：
+  动机来自 round 22 的实测发现：14 个阈值里 9 个已低于实测 15pp 以上（护栏失效），
+  而**没人发现**——因为覆盖率从来只有单次读数，没有序列、没有趋势。
+  改动：`setup/build.ps1` 的覆盖率门禁通过后，把当次读数追加到
+  `.workbuddy\memory\gate-readings.jsonl`（与 `check_untracked_go` 同一文件、同 schema 风格，
+  用 `gate` 字段区分来源）。字段：`env`(ci/local) / `pkgCount` / `avgPct` / `minPkg` / `minPct` / `head`。
+  两个设计点：① **带 `env`** —— round 22 实测本机与 CI 覆盖率系统性差 10~20pp
+  （且 tray 本机反而更低），不带环境标记的序列会把两种口径混成一锅粥；
+  ② **带 `minPkg`/`minPct`** —— 最低包比均值更早暴露退化（均值会被高覆盖包稀释）。
+  **验证状态（如实记账）**：逻辑已用隔离输入单元验证通过（解析 3 包 ⇒ avg 68.57%、
+  正确识别最低包 tray=26.3%、env/head 均正确带上）；
+  **但端到端未验证** —— 完整构建在 `go vet` 段就失败（并行会话在途文件
+  `headless_testcmd_windows_test.go` 的 `hiddenTestCmd redeclared`，未跟踪、非我改动），
+  构建根本没到覆盖率段。已把该状态记在此，待下轮构建可通过时补端到端证据。
+  顺带确认 round 22 的另一条待办**已闭环**：长驻内存判据的「多轮取中位」在
+  `check_resident_longrun.ps1` 里已实现（等内存稳定后取稳定段中位，最多等 40s）；
+  「记录数上限」由 `check_queue_size.ps1` 守 —— 双口径都到位。
+  另确认 round 19 记的 `lanes.go` 三个零引用导出符号**已自然消解**：
+  并行会话补了 `SetPoolEnabled` 使用 `PoolToggle`，`PurgeResult` 由 `PurgeGatewayLanes` 使用，
+  `LaneGroupLabel` 已不在文件中（重构掉）—— 死代码门禁 PASS。
 - **`.ps1` 的 CRLF 混入索引把 8 行改动放大成 177 增 / 169 删（round 25 真实事故，已上门禁）**：
   round 25 我改 `tests/check_all.ps1` 后，diff 显示 **177 insertions / 169 deletions** ——
   一个 8 行的新增被放大成「几乎整个文件重写」，评审者根本看不出真实改动。

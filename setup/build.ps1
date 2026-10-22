@@ -135,6 +135,40 @@ if (-not $SkipTests) {
       throw ("覆盖率门禁未通过（阈值 " + $CoverThreshold + "%）：" + ($gateFailed -join ", "))
     }
     Write-Host ("    覆盖率门禁通过：" + $testedCount + " 个有测试的包均达标") -ForegroundColor Green
+
+    # ---------- 覆盖率读数序列化（2026-10-24 新增）----------
+    # 为什么：覆盖率是**最容易静默漂移**的指标 —— round 22 实测发现 14 个阈值里 9 个
+    # 已低于实测 15pp 以上（护栏失效），而那是因为没人持续记录读数、没人发现趋势。
+    # 单次读数不够（本轮教训：本机与 CI 覆盖率系统性差 10~20pp，且 tray 本机反而更低），
+    # 序列读数才能看出「在涨还是在跌」。落盘到 .workbuddy/memory/gate-readings.jsonl，
+    # 与 check_untracked_go.ps1 的读数同一文件、同一 schema 风格（gate 字段区分来源）。
+    $readingsDir = Join-Path $root '.workbuddy\memory'
+    if (Test-Path -LiteralPath $readingsDir) {
+      $per = @{}
+      foreach ($line in ($coverOut -split "`n")) {
+        $mm = [regex]::Match($line, '^ok\s+(\S+)\s+[0-9.]+s\s+coverage:\s+([0-9.]+)%')
+        if ($mm.Success) { $per[$mm.Groups[1].Value] = [double]$mm.Groups[2].Value }
+      }
+      if ($per.Count -gt 0) {
+        $sum = 0.0; $minPkg = ''; $minVal = 101.0
+        foreach ($k in $per.Keys) {
+          $sum += $per[$k]
+          if ($per[$k] -lt $minVal) { $minVal = $per[$k]; $minPkg = $k }
+        }
+        $rec = [ordered]@{
+          at = (Get-Date).ToString('o')
+          gate = 'coverage'
+          env = if ($env:CI -eq 'true') { 'ci' } else { 'local' }
+          pkgCount = $per.Count
+          avgPct = [math]::Round($sum / $per.Count, 2)
+          minPkg = $minPkg
+          minPct = $minVal
+          head = (& git rev-parse --short HEAD 2>$null)
+        }
+        Add-Content -LiteralPath (Join-Path $readingsDir 'gate-readings.jsonl') -Value ($rec | ConvertTo-Json -Compress) -Encoding UTF8
+        Write-Host ("    覆盖率读数已落盘：avg=" + $rec.avgPct + "% min=" + $rec.minPkg + "=" + $rec.minPct + "% (" + $rec.env + ")") -ForegroundColor DarkGray
+      }
+    }
   } else {
     Write-Host "    覆盖率门禁已跳过（-SkipCoverGate）" -ForegroundColor Yellow
   }
