@@ -35,6 +35,17 @@ goal 继续轮。开工前先做现状核验（R-CURRENT）：三轮对标报告
 这就是门禁读数里「差额 79 个测试只在本地跑」的具体形态：
 本地红而 CI 绿，反过来也一样（CI 看不到这 79 个）。**本轮未代改（非我所有权）**，已落到交接记录。
 
+## CI 双绿（推送后实测，2026-10-23 01:2x）
+
+推送 `289a618` → `origin/master`（201eee7..289a618），两个 workflow 均 success：
+
+```
+CI                    run 39822892371  4m26s  success（3 job 全绿：repo gates / vet+test(race) / build+coverage gate）
+Autonomy Container E2E run 39822892528  50s    success
+```
+
+意义：本轮所改（lanes.go 等 30 文件 + 两处门禁允许清零）在干净检出环境通过了全部判据。
+
 ## 待功
 | 项 | 阻塞条件（可验证） | 下一步 |
 |---|---|---|
