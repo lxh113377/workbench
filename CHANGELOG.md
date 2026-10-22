@@ -16,6 +16,22 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **托盘完整性错误类型 0% 覆盖：`labelError` 是「静默没图标」的唯一诊断通道（2026-10-23 补）**：
+  逐函数扫 `internal/tray` 发现 `labelError.Error()` / `Unwrap()` **全 0% 覆盖**，
+  `raiseToMedium` 的空目录分支、`integrityName` 的未知 RID 分支也未测。
+  而 `labelError` 承载的是现场最难排查的形态：安装目录被打上 Low 完整性标签后，
+  Explorer 拒收 `NIM_ADD` ⇒ **托盘图标不出现且没有任何报错**（2026-10-20 沙箱残留事故）。
+  若 `Error()` 丢了目录或 icacls 输出，或 `Unwrap()` 断了，现场就只能猜。
+  新增 `integrity_error_contract_test.go` 六条判据（覆盖 17.6% → **21.3%**）：
+  `Error()` 必须同时含目录 + icacls 原始输出 + 「icacls」字样；无输出时**不得渲染空括号 `()`**
+  （会被误读为「输出被吞」）；`Unwrap` 必须可 `errors.Is` 穿透（按类型分流而不是字符串匹配）；
+  `raiseToMedium` 空/纯空白目录直接 `os.ErrInvalid` **不得起子进程**（无意义的 icacls 调用会被安全软件盯上）；
+  `integrityName` 五个已知级别精确映射 + 未知 RID 必须落 `Other`（冒充已知级别会把排查引向错误方向）；
+  `isLowIntegrity` 只认 Low（误判会触发无谓的特权 SACL 修改，漏判则自愈永不触发）。
+  变异验证三条全部 CAUGHT：MUT-A `Error()` 丢弃 icacls 输出 → 判红；
+  MUT-B `isLowIntegrity` 恒 true → 判红；MUT-C `Unwrap` 返回 nil → 判红。
+  取舍说明：`Run` / `wndProc` / `showMenu` 等仍为 0% —— 它们依赖真实桌面会话（需要 Explorer 与
+  HWND），单测只能得到假绿。这与本仓对 `tray` 包阈值的既有说明一致（长期 16%），非本轮遗留缺陷。
 - **执行钩子（P1-2 公开扩展点）零测试：三条契约无判据守着（2026-10-22 补）**：
   逐函数覆盖率扫描发现 `internal/executor/hooks.go` **全部函数 0% 覆盖** ——
   `NewHooks` / `AddBefore` / `AddAfter` / `RunBefore` / `RunAfter` / `AttachHooks` 无一有判据。
