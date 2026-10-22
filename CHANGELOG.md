@@ -16,6 +16,23 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **跨页一致性审计：同一产品两种卡片语言 / 两种内容顶距（2026-10-22 机器化审计）**：
+  以 CDP 逐页读 computedStyle 对四页做机器化比对（13 项度量，差异 11 项里多数是内容长度
+  的必然结果，真不一致 2 项）：
+  ① **卡片语言分裂**：治理台的 `.gov-card` 用圆角（`--radius` 12px）+ margin 14px + 实边框，
+  而管理/池的 `.card` 用 HUD **切角**（`clip-path` + radius 0）+ margin 18px + inset 描边。
+  设计体系头注释写明「HUD 面板的角不是圆的，是斜切的」（`clip-path` 9 处、`--cut` 为主语言），
+  故 `.gov-card` 是异类 ⇒ 对齐 `.card`（切角/radius 0/18px 节奏/inset 描边）；
+  悬停改用内描边换色（切角卡没有可描边的 border，会被 clip-path 切掉）。
+  ② **内容区顶距 26px vs 14px**：管理面板 DOM 是 `topbar-shell → tabs → content`，
+  而 `.topbar-shell + .content` 是**相邻**兄弟选择器、匹配不到（中间隔着 `.tabs`），
+  于是有页签的页回落 26px、无页签的页 14px。补 `.tabs + .content` + `.topbar-shell ~ .content`
+  双保险。
+  复测：三页 `paddingTop` 全部 **14px**（改前 admin 26px）；三页 `borderRadius=0px`、
+  `marginBottom=18px`、`borderTopColor=transparent` **完全一致**。
+  新增 `cross_page_consistency_test.go` 两条判据（两卡基座度量同源 / 内容顶距选择器齐备）；
+  变异 C1 gov-card 退回圆角 → CAUGHT、C2 删 `.tabs + .content` → CAUGHT。
+### Fixed
 - **PowerShell 脚本编码：25 个含中文脚本缺 UTF-8 BOM，CI 的 PS5.1 会 ParserError（2026-10-22 两轮实测）**：
   本轮把 8 个门禁挂上 CI 后，repo-gates job 判红，报的是
   `Unexpected token` / `Missing closing ')'`，行号指向 `check_snapshot_build.ps1:42`

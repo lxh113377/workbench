@@ -482,7 +482,16 @@ body.admin{
   font-family:var(--font-mono);font-size:11px;letter-spacing:.16em;
   text-transform:uppercase;color:var(--accent);opacity:.85;
 }
-.pagebar + .content, .topbar-shell + .content{padding-top:14px}
+/* 顶栏之后的内容区上边距：无页签的页面（模型池/治理台）topbar-shell 与 .content 相邻，
+   14px 即可；管理面板中间隔了 .tabs，「topbar-shell + content」是相邻兄弟选择器、
+   匹配不到，会回落到 26px —— 于是同一产品里「有页签的页比无页签的页多 12px 顶距」。
+   2026-10-22 跨页一致性审计实测：admin content.top=183 / 另两页 137。
+   补一条「topbar-shell 后面隔着 tabs 也要收紧」的规则，让三页顶距同值。 */
+.pagebar + .content, .topbar-shell + .content,
+.tabs + .content,               /* 管理面板：content 紧跟页签条 */
+.topbar-shell ~ .content{       /* 兜底：只要 content 在 shell 之后同层，都是 14px */
+  padding-top:14px;
+}
 .brand{
   display:flex;align-items:center;gap:10px;
   min-height:36px;padding:0 2px;
@@ -642,17 +651,24 @@ body.admin{
    治理台的结论卡与明细卡共用。此前它只有 ::after 反光、没有盒体，
    卡片呈「裸文字漂浮」——走查实测缺陷。 */
 .gov-card{
+  /* 与 .card 同一套 HUD 卡片语言（2026-10-22 跨页一致性审计）：
+     设计体系头注释写明「HUD 面板的角不是圆的，是斜切的」（--cut 为主语言，9 处 clip-path），
+     而本卡此前用圆角（--radius）+ margin 14px，与 .card 的切角 + margin 18px 冲突 ——
+     同一产品里两种卡片语言。此处对齐 .card：切角、inset 描边、同 margin 节奏。 */
   position:relative;
   background:
-    linear-gradient(180deg,rgba(var(--accent-rgb),.02),transparent 40%),
-    repeating-linear-gradient(180deg,rgba(var(--accent-rgb),.018) 0 1px,transparent 1px 7px),
+    linear-gradient(180deg,rgba(var(--accent-rgb),.028),transparent 38%),
+    repeating-linear-gradient(180deg,rgba(var(--accent-rgb),.022) 0 1px,transparent 1px 7px),
     var(--panel);
-  border:1px solid var(--line);border-radius:var(--radius);
-  padding:20px 22px;margin:0 0 14px;
-  box-shadow:inset 0 0 0 1px rgba(0,0,0,.25),0 18px 40px -34px rgba(0,0,0,.9);
-  transition:border-color .22s var(--ease),box-shadow .22s var(--ease);
+  border:1px solid transparent;border-radius:0;
+  padding:20px 22px;margin:0 0 18px;
+  box-shadow:inset 0 0 0 1px var(--line-2);
+  clip-path:polygon(0 0,calc(100% - var(--cut)) 0,100% var(--cut),100% 100%,var(--cut) 100%,0 calc(100% - var(--cut)));
+  transition:border-color .22s var(--ease),background .22s var(--ease),box-shadow .22s var(--ease);
 }
-.gov-card:hover{border-color:var(--line-2);box-shadow:inset 0 0 0 1px rgba(0,0,0,.25),var(--glow-cyan-soft)}
+/* 悬停只提亮内描边：切角卡没有可描边的 border（会被 clip-path 切掉），
+   提 borderColor 无视觉变化，所以用 inset 阴影换色表达「激活」。 */
+.gov-card:hover{box-shadow:inset 0 0 0 1px var(--line-3)}
 /* gov-card 沿用旧的反光（它没有切角结构） */
 .gov-card::after{
   content:'';position:absolute;left:20px;right:20px;top:0;height:1px;pointer-events:none;
