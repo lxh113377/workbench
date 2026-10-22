@@ -16,6 +16,30 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **数据规模触发：产出页显示 0 份产出 / 队列页今日产出恒 0（2026-10-22 真实规模实测）**：
+  当前真实库存 **33,728 个任务**（其中 done 86 / degraded 6 / rejected 33,187），
+  两个只在数据量长大后才会出现的功能性缺陷：
+  ① **产出页空白**：原写法 `/api/tasks?limit=3000` 取最新 3000 条再前端 `filter(state==='done')`。
+  最新窗口被 2,919 条 rejected 挤满 ⇒ 窗口内 done=0 ⇒ 页面显示「还没有产出」，
+  而库存实际有 86 份完成品（81 份通过验收）。用户会以为系统坏了。
+  修：改用后端本就支持的 `?state=` 过滤（实测 done 86 条 54ms，比拉 3000 条 15ms 更准更快）。
+  **实测复验：产出页 0 → 86 份产出 / 81 份通过验收。**
+  ② **队列页「今日产出」恒 0**：该值读 `cache.status.stats.todayDone`，而 `cache.status` 只在
+  `renderOverview()` 里赋值 —— 用户直接从 `#queue` 进页面时 overview 从未渲染，
+  `cache.status` 永远 undefined。CDP 实测进队列页后 1.2/2.5/4.0/6.0s 四次采样
+  `cacheStatus` 均为 false，而 API 实际 `todayDone=8`。修：队列页自己取 `/api/status` 并写入
+  cache。**实测复验：今日产出 0 → 8。**
+  新增 `scale_contract_test.go` 两条判据（产出页必须按 state 取数且不得退回裸 limit 写法 /
+  队列页必须自己取 status 且写进 cache）；变异 S1 退回裸 limit → CAUGHT、
+  S2 不取 status → CAUGHT、S3 取了但不写 cache → CAUGHT。
+  同类修复：队列页 active 列表同型缺陷（原拉 limit=600 再前端过滤），一并改为按状态取。
+
+> ⚠️ **本轮未发布**：官方链 3/6 步 gofmt 门禁判红，点名 6 个文件
+>（`assets_gov.go` / `export.go` / `pool_page.go` / `autostart_windows.go` /
+> `tray_window_style_test.go` / `deadlock_test.go`）—— 均非本轮改动，其 **HEAD blob 本身就 gofmt 脏**，
+> 是并行会话正在推进的 gofmt 治理在途件。按「不碰他人在途件」纪律不代跑 gofmt（会覆盖其并发写入），
+> 故本轮只入库不发布；待其落定后由下轮走官方链补发。
+### Fixed
 - **文案与交互语义跨页一致性（2026-10-22 机器化审计，164 条用户可见文案）**：
   从源码提取全部按钮/提示/空态文案做规范检查，发现两类真问题：
   ① **同一动作两种措辞**：保存开机自启的按钮写作「应用」，而同页其它保存动作一律「保存」——

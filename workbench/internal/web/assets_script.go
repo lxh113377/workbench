@@ -260,12 +260,25 @@ const appJS = `(() => {
   // 新结构：一行状态摘要 + 只有真有事才出现的表 + 一个明确的行动入口。
   // 全空时不再摆两张空卡，而是把「自己加一个任务」的表单直接摊开 —— 那是此刻唯一能做的事。
   async function renderQueue() {
-    const queueRes = await api('/api/queue');
-    const tasksRes = await api('/api/tasks?limit=600');
-    cache.tasks = tasksRes.tasks || [];
+    // 与产出页同型（2026-10-22 规模实测）：原来拉 limit=600 再前端过滤 queued/running/approved。
+    // 当前窗口还能捞到 12 条 queued 属侥幸；总量再涨或短时大量 rejected 时同样会被挤出，
+    // 界面会显示「没有任务」而库存里明明有。改按状态分别取（后端 handleTasks 本就支持）。
+    // 同时取一份 status（2026-10-22 现场缺陷）：本页「今日产出」读的是 cache.status.stats.todayDone，
+    // 而 cache.status 只在 renderOverview() 里赋值 —— 直接从 #queue 进页面时 overview 从未渲染，
+    // cache.status 永远 undefined，于是「今日产出」恒显示 0（实测实际 8）。本页自己取，不依赖别的页。
+    const [queueRes, statusRes, queuedRes, runningRes, approvedRes] = await Promise.all([
+      api('/api/queue'),
+      api('/api/status').catch(function () { return null; }),
+      api('/api/tasks?state=queued&limit=600').catch(function () { return { tasks: [] }; }),
+      api('/api/tasks?state=running&limit=600').catch(function () { return { tasks: [] }; }),
+      api('/api/tasks?state=approved&limit=600').catch(function () { return { tasks: [] }; }),
+    ]);
+    if (statusRes) { cache.status = statusRes; }
+
+    const active = (queuedRes.tasks || []).concat(runningRes.tasks || [], approvedRes.tasks || []);
+    cache.tasks = active;
     const q = queueRes.tasks || [];
-    const active = cache.tasks.filter(function (t) { return ['queued', 'running', 'approved'].indexOf(t.state) >= 0; });
-    const running = cache.tasks.filter(function (t) { return t.state === 'running'; });
+    const running = runningRes.tasks || [];
     const nothing = q.length === 0 && active.length === 0;
 
     const rows = q.map(function (t) {
@@ -321,10 +334,17 @@ const appJS = `(() => {
   };
 
   async function renderOutputs() {
-    const res = await api('/api/tasks?limit=3000');
-    cache.tasks = res.tasks || [];
-    const done = cache.tasks.filter(function (t) { return t.state === 'done'; });
-    const degraded = cache.tasks.filter(function (t) { return t.state === 'degraded'; });
+    // 按状态分别取（2026-10-22 数据规模实测缺陷）：原来拉 /api/tasks?limit=3000 再在前端
+    // filter(state==='done')。任务总量 33728 时，最新 3000 条被 2919 条 rejected 挤满，
+    // 窗口内 done=0 —— 产出页显示「还没有产出」，而库存实际有 86 份完成品，用户会以为系统坏了。
+    // 后端本来就支持 ?state= 过滤（handleTasks），按状态取既准确又快（86 条 54ms vs 3000 条 15ms）。
+    const [doneRes, degRes] = await Promise.all([
+      api('/api/tasks?state=done&limit=3000').catch(function () { return { tasks: [] }; }),
+      api('/api/tasks?state=degraded&limit=3000').catch(function () { return { tasks: [] }; }),
+    ]);
+    const done = doneRes.tasks || [];
+    const degraded = degRes.tasks || [];
+    cache.tasks = done.concat(degraded);
     const verifiedN = done.filter(function (t) { return t.verified; }).length;
     const rowOf = function (t) {
       const q = t.critique ? t.critique.quality + '/10' : '—';
