@@ -225,8 +225,14 @@ body.home::after{
   --ring-3:rgba(255,255,255,.3);
   --glow:rgba(var(--accent-rgb),.34);
   position:relative;isolation:isolate;
-  width:min(320px,78vw);min-width:min(260px,72vw);
-  min-height:120px;padding:0 30px;
+  /* 主体尺度随画布呼吸（2026-10-22 超宽屏走查实测）：原固定 320px 在 3440 宽下
+     主体占比塌到 9%，取景框与雷达环都在放大、唯独主体不变 ⇒ 「仪器里的小按钮」。
+     26vw / 上限 460 / 下限 320 的实测阶梯（CDP 逐档读 getBoundingClientRect）：
+       390→320(82%)  1024→320(31%)  1440→374(26%)  1920→460(24%)  2560→460(18%)
+     系数取 26 而非 16：16vw 在 1440 只有 230px，被 320 下限兜住 ⇒ 1440-1920 整段
+     是「死区」（占比从 22% 掉到 17% 却一点没放大）。窄屏由下限 + 78vw 兜，零影响。 */
+  width:clamp(320px,26vw,460px);min-width:min(260px,72vw);
+  min-height:clamp(120px,11vw,164px);padding:0 clamp(30px,2.4vw,42px);
   display:flex;align-items:center;justify-content:center;gap:14px;
   border:1px solid transparent;border-radius:0;
   /* 切角「能量核心」：clip-path 切四角 + 双层背景（内芯渐变 + 巡游边框） */
@@ -364,7 +370,8 @@ body.home::after{
   animation:homeStageEntries .6s var(--ease) .62s both;
   /* 入口带：与主按钮同宽，形成一条稳定的纵向中轴（原先是三个孤立胶囊，重心散）。
      视觉重量刻意压到主按钮的 1/8：发丝线分隔 + 微型字距 + 无背景块。 */
-  width:min(320px,78vw);min-width:min(260px,72vw);
+  /* 与主按钮同宽：中轴对齐是这条入口带的存在理由（宽屏下一起放大） */
+  width:clamp(320px,26vw,460px);min-width:min(260px,72vw);
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
   gap:0;z-index:4;
   border:1px solid var(--line);
@@ -377,8 +384,8 @@ body.home::after{
 .home-entry{
   position:relative;overflow:hidden;
   display:flex;align-items:center;justify-content:center;gap:6px;
-  min-height:46px;padding:0 8px;
-  font-family:var(--font-display);font-size:12.5px;font-weight:500;
+  min-height:clamp(46px,3.6vw,58px);padding:0 8px;
+  font-family:var(--font-display);font-size:clamp(12.5px,1vw,14px);font-weight:500;
   letter-spacing:.14em;color:var(--dim);text-decoration:none;
   border-left:1px solid var(--line);
   transition:color .22s var(--ease),background .22s var(--ease),letter-spacing .22s var(--ease);
@@ -399,7 +406,7 @@ body.home::after{
 /* 窄屏：一行三格在 390px 下每格仅 ~110px，字距一放就挤。
    改为整宽三行（触屏 46px 高基线不变），顺序与原入口一致。 */
 @media (max-width:480px){
-  .home-entries{width:min(320px,86vw);grid-template-columns:1fr}
+  .home-entries{width:clamp(320px,26vw,460px);grid-template-columns:1fr}
   .home-entry{min-height:48px;border-left:0;border-top:1px solid var(--line);font-size:13px}
   .home-entry:first-child{border-top:0}
   .home-entry::before{left:0;top:0;translate:0 0;width:0;height:2px;transition:width .26s var(--ease)}
