@@ -58,7 +58,10 @@ jobs:
           # 静默少渲染该字段（页面看着正常，实际问不到关键信息）。已用变异测试验证新判据。
           ./tests/check_issue_forms.ps1
           if ($LASTEXITCODE -ne 0) { throw "Issue Forms 结构门禁未通过" }
-
+      - name: go vet
+        run: go vet ./...
+      - name: go test -race
+        run: go test -race -count=1 ./...
 
   repo-gates:
     name: repo gates (script-level)
@@ -116,13 +119,6 @@ jobs:
           }
           Write-Host ("")
           Write-Host ("全部仓库门禁通过（" + $gates.Count + " 项）") -ForegroundColor Green
-
-      - name: go vet
-        run: go vet ./...
-
-      - name: go test -race
-        run: go test -race -count=1 ./...
-
   build:
     name: build + coverage gate
     runs-on: windows-latest
