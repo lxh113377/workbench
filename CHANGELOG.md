@@ -34,11 +34,12 @@
   S2 不取 status → CAUGHT、S3 取了但不写 cache → CAUGHT。
   同类修复：队列页 active 列表同型缺陷（原拉 limit=600 再前端过滤），一并改为按状态取。
 
-> ⚠️ **本轮未发布**：官方链 3/6 步 gofmt 门禁判红，点名 6 个文件
+> ✅ **已发布 1.6.4**（SHA256 `D86C98AC…4675`，官方链 7/7，frontend-gate 23/23）。
+> 过程记录：首次发布尝试被 3/6 步 gofmt 门禁阻断，点名 6 个**非本轮改动**的文件
 >（`assets_gov.go` / `export.go` / `pool_page.go` / `autostart_windows.go` /
-> `tray_window_style_test.go` / `deadlock_test.go`）—— 均非本轮改动，其 **HEAD blob 本身就 gofmt 脏**，
-> 是并行会话正在推进的 gofmt 治理在途件。按「不碰他人在途件」纪律不代跑 gofmt（会覆盖其并发写入），
-> 故本轮只入库不发布；待其落定后由下轮走官方链补发。
+> `tray_window_style_test.go` / `deadlock_test.go`）—— 已用 `git cat-file blob HEAD:<path>`
+> 证明其 HEAD blob 本身就 gofmt 脏，属并行会话在途件；按「不碰他人在途件」纪律不代跑 gofmt，
+> 等其落定（实测约 20 分钟后门禁自清 PASS）再发布。教训：**发布被阻断时先证明归属再等，不要代改**。
 ### Fixed
 - **文案与交互语义跨页一致性（2026-10-22 机器化审计，164 条用户可见文案）**：
   从源码提取全部按钮/提示/空态文案做规范检查，发现两类真问题：
