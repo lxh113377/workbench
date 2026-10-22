@@ -227,8 +227,11 @@ func Evaluate(s Sample, b Budget) []Eval {
 		if lvl == LevelUnknown {
 			ratio = 0
 		}
+		// Value 与 Warn/Red 必须同精度：阈值由 max*0.8 一类算式得出，
+		// 不 round 会把 IEEE754 噪声原样带上面板（实测 6*0.8 → 4.800000000000001、
+		// 0.1*0.7 → 0.06999999999999999，20 位裸浮点不可读）。2026-10-22 走查实测。
 		return Eval{Key: key, Name: name, Unit: unit, Domain: dom, Direction: dir,
-			Value: round2(v), Warn: warn, Red: red, Level: lvl, Ratio: ratio}
+			Value: round2(v), Warn: round2(warn), Red: round2(red), Level: lvl, Ratio: ratio}
 	}
 	return []Eval{
 		mk("tasksDaily", "日产出任务数", "个/日", DomainBusiness, DirHigh,

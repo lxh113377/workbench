@@ -81,9 +81,20 @@ const govJS = `(() => {
     parts.push(foldCard('体量治理三域', domainRows || '<p class="gov-dim">暂无采样数据（未验证）</p>'));
 
     // 3) 指标明细
+    // 读数必须可扫（2026-10-22 走查实测）：原样拼接会把「比例 0.51」与「4000000 元」
+    // 这类不可读形态直接铺到面板上。govNum 按单位语义换算：
+    //   · 比例 → 百分数（0.51 → 51%），阈值同步换算（红线 0.1 → 10%）；
+    //   · 元 / MiB 且 ≥1000 → 千分位分组（4000000 → 4,000,000）；
+    //   · 其余保持原精度。
+    const govNum = (v, unit) => {
+      if (typeof v !== 'number' || !isFinite(v)) { return esc(String(v)); }
+      if (unit === '比例') { return (v * 100).toFixed(Math.abs(v * 100) < 10 ? 1 : 0) + '%'; }
+      if (Math.abs(v) >= 1000) { return v.toLocaleString('zh-CN', { maximumFractionDigits: 1 }); }
+      return String(v);
+    };
     const evalRows = (sum.evals || []).map((e) => '<div class="gov-row ' + levelClass(e.level) + '">' +
-      '<b>' + esc(e.name) + '</b><span>' + e.value + esc(e.unit) + '</span>' +
-      '<span>警示 ' + e.warn + ' / 红线 ' + e.red + '</span><span>' + levelName(e.level) + '</span></div>').join('');
+      '<b>' + esc(e.name) + '</b><span>' + govNum(e.value, e.unit) + (e.unit === '比例' ? '' : esc(e.unit)) + '</span>' +
+      '<span>警示 ' + govNum(e.warn, e.unit) + ' / 红线 ' + govNum(e.red, e.unit) + '</span><span>' + levelName(e.level) + '</span></div>').join('');
     parts.push(foldCard('量化指标（阈值与红线）', evalRows || '<p class="gov-dim">暂无采样数据（未验证）</p>'));
 
     // 4) 预警

@@ -24,10 +24,11 @@ type artifactSource interface {
 // 导出静默跳过。实测样本：outputBytes=5935 的任务，面板 .doc 只有 6 个字符。
 //
 // 三级回落顺序（前两级是精确路径，第三级是目录内兜底）：
-//  ① task.OutputFile —— 引擎落盘时写的绝对路径，最可信；
-//  ② 任务目录 final.md —— 历史任务或无 OutputFile 的旧数据；
-//  ③ 任务目录里最大的 .md —— OutputFile 指向的文件被改名/清理时仍可读到产出。
-//     只扫任务目录本身（不递归），因此不存在越界读别任务文件的风险。
+//
+//	① task.OutputFile —— 引擎落盘时写的绝对路径，最可信；
+//	② 任务目录 final.md —— 历史任务或无 OutputFile 的旧数据；
+//	③ 任务目录里最大的 .md —— OutputFile 指向的文件被改名/清理时仍可读到产出。
+//	   只扫任务目录本身（不递归），因此不存在越界读别任务文件的风险。
 func readTaskArtifact(src artifactSource, t *model.Task) (string, string, bool) {
 	if t == nil || src == nil {
 		return "", "", false
