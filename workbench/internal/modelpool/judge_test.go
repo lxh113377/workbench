@@ -9,7 +9,9 @@ import (
 // TestJudgePrefersStructuredErrorKind 是本轮最深层缺陷的回归测试。
 //
 // 现场形态（2026-10-19 08:23）：429 时 executor 返回
-//   res.ErrorKind = "rate_limited", res.FinalText = "", err = nil
+//
+//	res.ErrorKind = "rate_limited", res.FinalText = "", err = nil
+//
 // 旧 judge() 先判 "FinalText 为空 -> KindExit"，把 rate_limited 覆盖成 bad_exit，
 // 于是 FailoverRunner 认为只是"这个模型没出话"，继续换下一个 —— 连换 8 个打空整池。
 func TestJudgePrefersStructuredErrorKind(t *testing.T) {

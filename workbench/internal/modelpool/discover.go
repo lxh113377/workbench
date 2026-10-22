@@ -90,7 +90,10 @@ type Discovery struct {
 	Warnings     []string          `json:"warnings"`
 	// GatewayBase 是 OFM 本机渠道网关的 OpenAI 兼容地址（如 http://127.0.0.1:8326/v1）。
 	GatewayBase string `json:"gatewayBase"`
-	GatewayKey  string `json:"gatewayKey"`
+	GatewayKey  string `json:"-"` // 内存中间态，只用于构造候选 Spec 的 APIKey。
+	// 原 json:"gatewayKey" 是明文标签：Discovery 若被整体序列化就外流密钥
+	// （且它嵌套 Candidates[].Spec，Marshal 也会从嵌套层漏）。
+	// 由 secret_serialize_test.go 的反射守卫钉住。
 }
 
 // Discover 只读扫描 OFM 数据面，产出候选模型（不落盘、不改插件文件）。

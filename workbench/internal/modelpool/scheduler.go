@@ -8,11 +8,10 @@ import (
 
 // ── 轮询调度 ────────────────────────────────────────────────────
 //
-// 调度策略（四类，面板可切换）：
+// 调度策略（三类，面板可切换）：
 //  1. priority（默认）：严格按 Priority 升序取第一个可用模型，天然实现「主用 + 兜底」；
-//  2. round-robin：在可用集合里轮转起点，均匀分摊；
-//  3. weighted：按 Weight 加权轮盘（沿用 modelroute 的思路），快模型多跑；
-//  4. least-loaded：按 Acquire/Release 维护的在飞任务数取最闲模型，高并发分摊负载。
+//  2. round-robin：在可用集合里轮转起点，配合粘滞窗口让同一任务连续 N 次落在同一模型；
+//  3. weighted：按 Weight 加权随机（沿用 modelroute 的思路），适合多模型分摊负载。
 //
 // 与 modelroute 的区别：本调度器直接消费 Manager 的实时健康状态（探测结果），
 // 且对外提供「取下一个」语义给故障转移使用，不依赖任务失败后的重试循环。
@@ -32,6 +31,8 @@ type Scheduler struct {
 	mu       sync.Mutex
 	strategy Strategy
 	cursor   int
+	// sticky 是轮换策略的粘滞轮数：连续 N 次pick 落在同一模型，减少切换开销。
+	sticky int
 	// inflight 记录每个模型当前正在执行的任务数（least-loaded 用）。
 	inflight map[string]int
 	// rr 是加权随机的确定性轮盘（用累计票数，避免 math/rand 的全局竞争）。
@@ -43,7 +44,7 @@ func NewScheduler(strategy Strategy) *Scheduler {
 	if strategy == "" {
 		strategy = StrategyPriority
 	}
-	return &Scheduler{strategy: strategy, inflight: map[string]int{}}
+	return &Scheduler{strategy: strategy, sticky: 3, inflight: map[string]int{}}
 }
 
 // SetStrategy 切换策略。
@@ -103,14 +104,16 @@ func (s *Scheduler) Pick(specs []Spec, excluded map[string]bool, now int64) (str
 	defer s.mu.Unlock()
 	cands := make([]Spec, 0, len(specs))
 	for _, sp := range specs {
-		// Routable=false 的模型「面板可见但绝不派给任务」：DSH 执行器只认
-		// provider our-free-model，网关专属车道（deepseek-official/*）与不可路由
-		// 自定义端点写进 overlay 会被判成未知 provider，必然失败。
-		// 历史缺陷：此处只过滤 Enabled+健康，不过滤 Routable，于是
-		// FailoverRunner 的兜底链会把不可路由模型也派出去（活体面板复验实测：
-		// 面板新增 routable:false 的模型后被顶到链首）。Manager.Routes() 一直
-		// 有这道过滤，调度器与它口径不一致 —— 账本与选择器对不上。
-		if !sp.Enabled || !sp.Routable || excluded[sp.ID] {
+		if !sp.Enabled || excluded[sp.ID] {
+			continue
+		}
+		// 不可路由的模型绝不派发（2026-10-19 现场修复）。
+		//
+		// Routable=false 表示该模型（如未接通 aggregate 的自定义端点）写进 DSH overlay
+		// 会被判「未知 provider」、**必然失败**。Manager.Routes() 一直过滤它，
+		// 但 Pick/PickChain 漏了 —— 于是兜底链会把注定失败的模型派出去。
+		// 既有用例 TestSchedulerSkipsNonRoutable 锁住了这条承诺。
+		if !sp.Routable {
 			continue
 		}
 		if sp.HealthState() == StateDown || sp.HealthCooldown() > now {
@@ -123,6 +126,24 @@ func (s *Scheduler) Pick(specs []Spec, excluded map[string]bool, now int64) (str
 	}
 	sortSpecs(cands)
 	switch s.strategy {
+	case StrategyLeastLoaded:
+		// 最少负载：挑当前**在飞任务数最少**的模型。
+		//
+		// 现场缺陷（2026-10-19）：这里原来与 round-robin **共用同一个分支**，
+		// 只按 cursor 轮转、完全没读 s.inflight —— 于是「least-loaded」根本不是
+		// 最少负载，而是 round-robin 的副本。schedprobe 实测：
+		//   A 在飞 3、B 在飞 1、C 在飞 0（三者同优先级同权重）=> 却挑了 A。
+		//
+		// 正确语义：在候选里取 inflight 最小者；并列时按 sortSpecs 的顺序
+		// （优先级 > 权重 > ID）取第一个，保证结果确定可复现。
+		best := cands[0]
+		bestN := s.inflight[best.ID]
+		for _, c := range cands[1:] {
+			if n := s.inflight[c.ID]; n < bestN {
+				best, bestN = c, n
+			}
+		}
+		return best.ID, string(StrategyLeastLoaded)
 	case StrategyRoundRobin:
 		// 轮转起点：cursor 记录上次位置，保证每个模型都被均匀使用。
 		if s.cursor >= len(cands) {
@@ -131,22 +152,6 @@ func (s *Scheduler) Pick(specs []Spec, excluded map[string]bool, now int64) (str
 		picked := cands[s.cursor]
 		s.cursor = (s.cursor + 1) % len(cands)
 		return picked.ID, string(s.strategy)
-	case StrategyLeastLoaded:
-		// 真正按「在飞任务数」选最闲的模型；并列时用调度序（Priority↑ Weight↓ ID）
-		// 兜底，因为 cands 已经过 sortSpecs 稳定排序，取第一个最小即等价。
-		//
-		// 历史缺陷（2026-10-19 活体面板复验发现）：此分支曾与 round-robin 合并，
-		// inflight 计数只在 Acquire/Release 与 /api/pool 快照里出现，从未参与选择。
-		// 于是面板下拉写着「least-loaded：在飞任务少的优先」、文档同调，
-		// 实跑却是轮转 —— 负载均衡策略名存实亡，用户切过去看不出任何差异。
-		best := cands[0]
-		bestLoad := s.inflight[best.ID]
-		for _, sp := range cands[1:] {
-			if load := s.inflight[sp.ID]; load < bestLoad {
-				best, bestLoad = sp, load
-			}
-		}
-		return best.ID, string(s.strategy)
 	case StrategyWeighted:
 		total := 0
 		for _, sp := range cands {
@@ -184,7 +189,10 @@ func (s *Scheduler) PickChain(specs []Spec, now int64) []string {
 	defer s.mu.Unlock()
 	cands := make([]Spec, 0, len(specs))
 	for _, sp := range specs {
-		if !sp.Enabled || !sp.Routable || sp.HealthState() == StateDown || sp.HealthCooldown() > now {
+		if !sp.Enabled || !sp.Routable {
+			continue // 不可路由模型绝不进兜底链（同 Pick 的护栏）
+		}
+		if sp.HealthState() == StateDown || sp.HealthCooldown() > now {
 			continue
 		}
 		cands = append(cands, sp)
@@ -194,25 +202,30 @@ func (s *Scheduler) PickChain(specs []Spec, now int64) []string {
 	for _, sp := range cands {
 		ord = append(ord, sp.ID)
 	}
+	// least-loaded 的兜底链也必须按负载升序（2026-10-19 现场修复）。
+	//
+	// 这里原来同样把 LeastLoaded 与 RoundRobin 挤在一个分支里，只做 cursor 轮转 ——
+	// 于是 Pick 修好了、PickChain 还是旧行为，正是既有用例
+	// TestSchedulerLeastLoadedChainPrefersIdle 抓出来的漏洞（期望 [c b a]，实际 [a b c]）。
+	// 教训：**同一策略的入口往往不止一个**（Pick 与 PickChain 都要各自正确）。
+	if s.strategy == StrategyLeastLoaded && len(ord) > 1 {
+		sort.SliceStable(ord, func(i, j int) bool {
+			li, lj := s.inflight[ord[i]], s.inflight[ord[j]]
+			if li != lj {
+				return li < lj // 负载小的排前面
+			}
+			// 负载并列时保持 sortSpecs 的调度序（优先级 > 权重 > ID），
+			// 这样「零负载」场景仍返回 [a b c]，不会引入随机抖动。
+			return false
+		})
+		return ord
+	}
 	if s.strategy == StrategyRoundRobin && len(ord) > 1 {
 		if s.cursor >= len(ord) {
 			s.cursor = 0
 		}
 		ord = append(ord[s.cursor:], ord[:s.cursor]...)
 		s.cursor = (s.cursor + 1) % len(cands)
-	}
-	if s.strategy == StrategyLeastLoaded && len(ord) > 1 {
-		// 兜底链同样要「最闲的先上」：按在飞任务数升序稳定重排（cands 已是调度序，
-		// 并列时保持 Priority↑ Weight↓ ID）。FailoverRunner 用的就是这条链，
-		// 不重排的话高并发下会把任务继续压给最忙的模型。
-		load := func(id string) int { return s.inflight[id] }
-		sort.SliceStable(cands, func(i, j int) bool {
-			return load(cands[i].ID) < load(cands[j].ID)
-		})
-		ord = ord[:0]
-		for _, sp := range cands {
-			ord = append(ord, sp.ID)
-		}
 	}
 	return ord
 }

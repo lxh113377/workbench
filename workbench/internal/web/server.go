@@ -240,6 +240,8 @@ func (s *Server) routes(mux *http.ServeMux) {
 	mux.HandleFunc("/api/pool/probe", s.guard(s.handlePoolProbe))
 	mux.HandleFunc("/api/pool/models", s.guard(s.handlePoolModels))
 	mux.HandleFunc("/api/pool/models/", s.guard(s.handlePoolModelItem))
+	mux.HandleFunc("/api/pool/lane", s.guard(s.handlePoolLane))
+	mux.HandleFunc("/api/pool/purge", s.guard(s.handlePoolPurge))
 	mux.HandleFunc("/api/pool/reorder", s.guard(s.handlePoolReorder))
 	mux.HandleFunc("/api/pool/strategy", s.guard(s.handlePoolStrategy))
 	mux.HandleFunc("/api/pool/log", s.guard(s.handlePoolLog))

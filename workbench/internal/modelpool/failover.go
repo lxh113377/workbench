@@ -2,6 +2,7 @@ package modelpool
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -20,13 +21,7 @@ import (
 //  2. 依次调用真实执行器，失败立刻换下一个（不睡退避）；
 //  3. 第一个成功的结果原样返回给引擎 —— 引擎只看到「成功」，用户只看到产出。
 //
-// 整条链都失败时，把最后一次的「失败事实」交回引擎，由既有重试策略处理。
-// 注意契约是**结果必须携带失败事实**，不是「error 必须非空」：
-// 执行器的超时路径本就是「返回 Result{TimedOut:true}、error 为 nil」
-// （见 executor.FinalizeResult 的判定顺序），所以这里原样透传 res 即可，
-// 引擎在 runOne 里用 res.TimedOut 分支判失败并 RecordFailure —— 不会误判成功。
-// 曾经这里的措辞是「把最后一个错误抛回引擎」，读起来像超时也会变成 error，
-// 属于注释与实现不符（2026-10-19 补正），行为本身一直是对的。
+// 只有整条链都失败才把最后一个错误抛回引擎，交给既有的重试策略处理。
 // 每次切换都写 model-status.jsonl（kind=switch），保证过程可追溯。
 
 // FailoverRunner 是带模型故障转移的执行器装饰器。
@@ -63,7 +58,7 @@ func (f *FailoverRunner) Inner() executor.RunnerContract { return f.inner }
 //
 // 没有它时的形态：引擎沿 Inner() 链找 AttachHooks 会在装饰器这层停下（装饰器自己
 // 不实现），于是「尝试开始/尝试结束」的结构化日志对模型池路径静默失效 ——
-// 属运行期发现不了的缺陷（功能正常，只是没日志）。
+// 属于运行期发现不了的缺陷（功能正常，只是没日志）。
 func (f *FailoverRunner) AttachHooks(h *executor.Hooks) {
 	if f.inner != nil {
 		if x, ok := f.inner.(interface{ AttachHooks(*executor.Hooks) }); ok {
@@ -139,6 +134,26 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 			f.mgr.log(logRecord{Kind: "skip", Model: id, State: kind,
 				Reason: "任务级失败，不计入模型健康度: " + trim(detail, 160)})
 		}
+		// 把本轮判定的 kind **写回** res.ErrorKind（2026-10-19 现场缺陷修复）。
+		//
+		// 现场：judge() 已经正确判出 kind（含 bad_exit「无最终答案」），
+		// 但这里只把 lastRes/lastErr 原样上抛；engine 拿不到 ErrorKind，
+		// 落进它的兜底分支后一律记成 boot_failed（启动失败）。
+		//
+		// 危害（实测 34 条 boot_failed，其中 elapsedMs 有 378478ms 即 6 分钟的）：
+		//   ① UI 显示「启动失败」，实际是「模型产不出终稿」—— 排查方向完全错误；
+		//   ② 6 分钟的「启动失败」自相矛盾，日志可信度受损；
+		//   ③ 与「429 曾被误判 boot_failed」是同一个兜底分支的两次事故。
+		//
+		// 修法：失败时保证 res.ErrorKind 带上本轮 kind。
+		// bad_exit 不属于 modelAttributable（上面已判定），
+		// 所以写回 kind 只修「留痕语义」，不会让本可用的模型被误记故障。
+		if res == nil {
+			res = &executor.Result{}
+		}
+		if strings.TrimSpace(res.ErrorKind) == "" {
+			res.ErrorKind = kind
+		}
 		lastRes, lastErr = res, err
 		// 推进 from：下一次切换是「从当前这个失败模型」换走，
 		// 而不是从首发模型换走（多跳时这一点决定日志是否可信）。
@@ -159,6 +174,15 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 				Reason: "上游限流，停止换模型（车道级，非模型故障）"})
 			return lastRes, lastErr
 		}
+	}
+	// 整链失败后返回：必须保证「失败信号」与「失败类别」同时可见（2026-10-19 现场）。
+	//
+	// 现场：judge() 对「空产出且 inner 未返回 error」判为 bad_exit，
+	// 但循环只在 res.ErrorKind 上留痕，**返回值仍是 (res, nil)** ——
+	// 缺少 error 时上游若只看 err 会误判成功。
+	// 这里在整链失败时补一个 error，让「有失败」这件事不依赖调用方的额外判断。
+	if lastErr == nil && lastRes != nil && strings.TrimSpace(lastRes.ErrorKind) != "" {
+		lastErr = errors.New(firstNonEmpty(lastRes.LastError, "执行失败: "+lastRes.ErrorKind))
 	}
 	return lastRes, lastErr
 }
@@ -201,6 +225,13 @@ func modelAttributable(kind string) bool {
 	case string(executor.KindModelDead), string(executor.KindMissingKey),
 		string(executor.KindUpstream), string(executor.KindTimeout),
 		string(executor.KindStalled):
+		return true
+	// 网络/传输与流中断**可以归因到模型端点**（2026-10-19 现场补齐）。
+	//
+	// 理由：这两个类别正是「这个端点此刻连不上/流断了」——换一个模型
+	// 恰恰是正确处置（同池其他车道的网络路径不同）。
+	// 与 bad_exit 相反：bad_exit 是任务/提示词层面的问题，不该记模型头上。
+	case string(executor.KindTransport), string(executor.KindStreamCut):
 		return true
 	}
 	// unreachable / bad_endpoint 是探测层的分类，同样归因到模型端点。

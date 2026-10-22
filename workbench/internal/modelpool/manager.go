@@ -696,7 +696,9 @@ func (m *Manager) AppendSwitch(rec transitionRecord) {
 	if rec.At == 0 {
 		rec.At = nowMs()
 	}
-	m.log(logRecord{Kind: "switch", Model: rec.To, From: rec.From, To: rec.To, Reason: rec.Reason})
+	// TaskID 必须转发（2026-10-19 现场缺陷）：调用方已提供，但这里曾漏传，
+	// 于是 switch 日志无法归属到任务，排查时重建不出切换链。
+	m.log(logRecord{Kind: "switch", TaskID: rec.TaskID, Model: rec.To, From: rec.From, To: rec.To, Reason: rec.Reason})
 }
 
 // LastProbe 返回最近一次探测摘要。

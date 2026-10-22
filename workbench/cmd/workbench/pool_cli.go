@@ -122,6 +122,46 @@ func runModelPoolCLI(args []string) int {
 		}
 		fmt.Println("调度策略已切换为 " + args[1])
 		return 0
+	case "lane":
+		// 一键启用/一键停用某个免费池（老大 2026-10-22 令）。
+		// 用法: --model-pool lane <free|kilo|eac|aggregate|custom> <enable|disable>
+		// 按分组名: --model-pool lane group OFM免费... <enable|disable>（需精确分组名时用 HTTP API）
+		if len(args) < 3 {
+			fmt.Fprintln(os.Stderr, "用法: --model-pool lane <free|kilo|eac|aggregate|custom> <enable|disable>")
+			return 1
+		}
+		laneArg := args[1]
+		action := args[2]
+		enabled := true
+		switch action {
+		case "enable":
+		case "disable":
+			enabled = false
+		default:
+			fmt.Fprintln(os.Stderr, "动作只能是 enable|disable，实际 "+action)
+			return 1
+		}
+		res, e := svc.Manager().SetPoolEnabled(laneArg, "", enabled, "cli")
+		if e != nil {
+			fmt.Fprintln(os.Stderr, e.Error())
+			return 1
+		}
+		svc.Manager().NotifyRoutes()
+		toggleAction := "启用"
+		if !enabled {
+			toggleAction = "停用"
+		}
+		fmt.Printf("已一键%s「%s」：改动 %d 个模型（%d 个已是目标状态）\n", toggleAction, laneArg, len(res.Affected), res.Skipped)
+		return 0
+	case "purge-gateway":
+		// 清理网关专属/网关其它车道存量（同步时会自动做，这里供人工/脚本立即执行）。
+		res := svc.Manager().PurgeGatewayLanes("cli")
+		if len(res.Removed) == 0 {
+			fmt.Println("网关专属/其它车道已无存量条目")
+			return 0
+		}
+		fmt.Printf("已清理 %d 条：%s\n", len(res.Removed), strings.Join(res.Removed, ", "))
+		return 0
 	case "aggregate":
 		// 聚合车道对账：自填兼容端点能否真被 DSH 调用（providerId 是否在插件清单里、
 		// 密钥是否齐、线协议是否匹配），以及将要写进 settings.json 的 aggregate 段。
@@ -156,6 +196,9 @@ const modelPoolUsage = `模型池 CLI（多接口统一纳管 + 自动探测 + �
   --model-pool reset <id>        解除冷却并重置计数
   --model-pool enable|disable <id>
   --model-pool strategy <name>   priority | round-robin | weighted | least-loaded
+  --model-pool lane <lane> <enable|disable>
+                             一键启用/停用整个池（free|kilo|eac|aggregate|custom）
+  --model-pool purge-gateway   清理网关专属/其它车道存量（只留 eac/kilo/ofm 等免费车道）
   --model-pool aggregate         自填端点的聚合车道对账（无可用退出码 2）`
 
 var _ = time.Now

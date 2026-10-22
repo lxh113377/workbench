@@ -25,8 +25,12 @@ import (
 
 // Gateway 描述的是一次成功的网关发现。
 type Gateway struct {
-	BaseURL string   `json:"baseUrl"`
-	Key     string   `json:"key"`     // 只在本进程内存中使用，API 只回显指纹
+	BaseURL string `json:"baseUrl"`
+	Key     string `json:"-"` // 只在本进程内存中使用，API 只回显指纹。
+	// json:"-" 是 2026-10-19 补的结构化防线：原先这里带明文 json:"key" 标签，
+	// 注释承诺「API 只回显指纹」但类型本身不设防 —— 任何人把整个 Gateway
+	// 塞进 map/debug 输出就会静默外流密钥，且没有任何测试会翻红。
+	// 现由 secret_serialize_test.go 双向钉住（Marshal 不含密钥 + 反射守卫 tag）。
 	KeyFrom string   `json:"keyFrom"` // 密钥来源（便于排查「为什么 401」）
 	Models  []string `json:"models"`
 	At      int64    `json:"at"`

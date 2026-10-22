@@ -219,6 +219,8 @@ func ProjectAggregate(specs []Spec, registry map[string]ProviderInfo) AggregateP
 //     网关专属车道 deepseek-official/* 同步进来时也落在 aggregate 车道，
 //     但它是 source=gateway-sync 的机器清单产物，不是用户配置的端点；
 //     把它当候选会在每次面板刷新时刷出「providerId 不在 registry」的噪声拒绝。
+//     （2026-10-22 起该形态已不入池 —— 见 sync.go 的 default 分支与 lanes.go 的
+//     PurgeGatewayLanes；本判据作为存量与旧账本的防线继续保留。）
 func aggregateCandidate(sp Spec) bool {
 	if !sp.Enabled || strings.TrimSpace(sp.BaseURL) == "" {
 		return false

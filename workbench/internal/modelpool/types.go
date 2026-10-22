@@ -49,29 +49,30 @@ const (
 
 // Spec 是池子里一个模型的静态定义（可被面板增删改）。
 type Spec struct {
-	ID            string `json:"id"`            // 全局唯一：车道内模型 id（自定义端点用 <provider>/<model>）
-	Label         string `json:"label"`         // 面板显示名
-	Provider      string `json:"provider"`      // 供应商标识（our-free-model / kilo / 自定义）
+	ID            string `json:"id"`       // 全局唯一：车道内模型 id（自定义端点用 <provider>/<model>）
+	Label         string `json:"label"`    // 面板显示名
+	Provider      string `json:"provider"` // 供应商标识（our-free-model / kilo / 自定义）
 	Lane          Lane   `json:"lane"`
-	BaseURL       string `json:"baseUrl"`       // 可空：空表示走 OFM 内置网关（127.0.0.1:8326）
-	APIKey        string `json:"apiKey"`        // 只写本机 settings；API 响应只回显指纹
-	Model         string `json:"model"`         // 上游模型 id（可能与 ID 不同，如 provider/model）
+	BaseURL       string `json:"baseUrl"` // 可空：空表示走 OFM 内置网关（127.0.0.1:8326）
+	APIKey        string `json:"apiKey"`  // 只写本机 settings；API 响应只回显指纹
+	Model         string `json:"model"`   // 上游模型 id（可能与 ID 不同，如 provider/model）
 	Format        Format `json:"format"`
-	Tier          string `json:"tier"`          // quality / balanced / fast（透传给 modelroute）
-	Group         string `json:"group"`         // 面板分组（OFM / Kilo / EAC / 聚合 / 自定义）
-	Priority      int    `json:"priority"`      // 越小越先用（1 = 最高优先级）
-	Weight        int    `json:"weight"`        // 同优先级内的调度权重
+	Tier          string `json:"tier"`     // quality / balanced / fast（透传给 modelroute）
+	Group         string `json:"group"`    // 面板分组（OFM / Kilo / EAC / 聚合 / 自定义）
+	Priority      int    `json:"priority"` // 越小越先用（1 = 最高优先级）
+	Weight        int    `json:"weight"`   // 同优先级内的调度权重
 	Enabled       bool   `json:"enabled"`
 	Vision        bool   `json:"vision"`
 	ContextWindow int    `json:"contextWindow"`
 	MaxOutput     int    `json:"maxOutput"`
-	MaxFail       int    `json:"maxFail"`       // 连续失败阈值（达到即冷却）
-	CooldownSec   int    `json:"cooldownSec"`   // 基础冷却时长（秒，失败后指数退避）
-	Source        string `json:"source"`        // ofm-catalog / ofm-settings / gateway-sync / builtin / user
+	MaxFail       int    `json:"maxFail"`     // 连续失败阈值（达到即冷却）
+	CooldownSec   int    `json:"cooldownSec"` // 基础冷却时长（秒，失败后指数退避）
+	Source        string `json:"source"`      // ofm-catalog / ofm-settings / gateway-sync / builtin / user
 	Note          string `json:"note"`
 	UpdatedAt     int64  `json:"updatedAt"`
 	// Routable 表示该模型能被 DSH 的 our-free-model provider 直接调度
-	// （网关专属车道只能经 OpenAI 网关调用，不能写进 overlay 的 model 字段）。
+	// （未接通 aggregate 的自定义端点只能经 OpenAI 网关调用，不能写进 overlay 的 model 字段。
+	// 注：历史形态「网关专属车道 deepseek-official/*」自 2026-10-22 起已不入池，见 sync.go）。
 	Routable bool `json:"routable"`
 	// AutoDisabled 标记「因上游判定不可用而被自动停用」。
 	// 与用户手动停用区分开：网关重新广播该模型时应自动恢复启用。
@@ -84,12 +85,12 @@ type Spec struct {
 
 // Health 是一个模型的运行期可用性。
 type Health struct {
-	ID        string `json:"id"`
-	State     State  `json:"state"`
-	Success   int    `json:"success"`
-	Failure   int    `json:"failure"`
-	ConsecFail int   `json:"consecFail"`
-	LatencyMs int64  `json:"latencyMs"` // 最近一次探测/调用的耗时（EWMA 由 Prober 维护）
+	ID          string `json:"id"`
+	State       State  `json:"state"`
+	Success     int    `json:"success"`
+	Failure     int    `json:"failure"`
+	ConsecFail  int    `json:"consecFail"`
+	LatencyMs   int64  `json:"latencyMs"` // 最近一次探测/调用的耗时（EWMA 由 Prober 维护）
 	LastErr     string `json:"lastErr"`
 	LastErrKind string `json:"lastErrKind"`
 	CheckedAt   int64  `json:"checkedAt"`
@@ -123,8 +124,14 @@ type file struct {
 
 // logRecord 是一条模型状态日志（JSONL 追加）。
 type logRecord struct {
-	At        int64  `json:"at"`
-	Kind      string `json:"kind"` // probe / switch / success / failure / skip / recover / crud / probe-cycle
+	At   int64  `json:"at"`
+	Kind string `json:"kind"` // probe / switch / success / failure / skip / recover / crud / probe-cycle
+	// TaskID 让「切换/失败」这类运行期事件能**归属到具体任务**（2026-10-19 现场）。
+	//
+	// 现场缺陷：FailoverRunner 已经传了 TaskID，但 AppendSwitch 没转发、
+	// logRecord 又没这个字段 —— 于是 57 条 switch 记录全部无 taskId，
+	// 无法重建「某个任务经历了哪条切换链」，违背需求5「便于后续问题排查」。
+	TaskID    string `json:"taskId,omitempty"`
 	Model     string `json:"model,omitempty"`
 	From      string `json:"from,omitempty"`
 	To        string `json:"to,omitempty"`

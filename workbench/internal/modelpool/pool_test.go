@@ -76,110 +76,6 @@ func TestSchedulerRoundRobinRotates(t *testing.T) {
 	}
 }
 
-// TestSchedulerLeastLoadedPicksIdlest 锁住「least-loaded 必须看 in-flight 负载」这一契约。
-//
-// 回归动因（2026-10-19 活体面板复验）：该策略此前与 round-robin 共用一个分支，
-// Acquire/Release 维护的 inflight 计数从未参与选择 —— 用户切到 least-loaded 后，
-// 实跑行为与 round-robin 完全相同，负载均衡名存实亡。
-func TestSchedulerLeastLoadedPicksIdlest(t *testing.T) {
-	sch := NewScheduler(StrategyLeastLoaded)
-	specs := []Spec{
-		spec("a", 10, 10, StateHealthy), // 优先级最高，但最忙
-		spec("b", 20, 10, StateHealthy),
-		spec("c", 30, 10, StateHealthy), // 优先级最低，但最闲
-	}
-	sch.Acquire("a")
-	sch.Acquire("a")
-	sch.Acquire("b")
-
-	if got, st := sch.Pick(specs, nil, nowMs()); got != "c" {
-		t.Fatalf("least-loaded 应选最闲的 c，实际 %q（%s）", got, st)
-	}
-	// c 变忙后应退而选 b（负载 1 < a 的 2）
-	sch.Acquire("c")
-	if got, _ := sch.Pick(specs, nil, nowMs()); got != "b" {
-		t.Fatalf("负载 b=1 < a=2，应选 b，实际 %q", got)
-	}
-	// 负载并列时按调度序（Priority↑）取先者，保证确定性
-	sch.Acquire("b") // a=2 b=2 c=1 → 仍 c
-	if got, _ := sch.Pick(specs, nil, nowMs()); got != "c" {
-		t.Fatalf("c 仍最闲，应选 c，实际 %q", got)
-	}
-	sch.Release("c")
-	sch.Release("c") // a=2 b=2 c=0 → c
-	if got, _ := sch.Pick(specs, nil, nowMs()); got != "c" {
-		t.Fatalf("Release 后 c 应为 0 负载，实际选 %q", got)
-	}
-}
-
-// TestSchedulerLeastLoadedTieBreaksByPriority 验证负载相同时的确定性并列规则。
-func TestSchedulerLeastLoadedTieBreaksByPriority(t *testing.T) {
-	sch := NewScheduler(StrategyLeastLoaded)
-	specs := []Spec{
-		spec("busy2", 20, 10, StateHealthy),
-		spec("busy1", 10, 10, StateHealthy),
-	}
-	sch.Acquire("busy1")
-	sch.Acquire("busy2") // 两边各 1，并列
-	if got, _ := sch.Pick(specs, nil, nowMs()); got != "busy1" {
-		t.Fatalf("并列时应按优先级取 busy1，实际 %q", got)
-	}
-}
-
-// TestSchedulerLeastLoadedChainPrefersIdle 锁住兜底链顺序：故障转移也必须先给最闲的模型。
-func TestSchedulerLeastLoadedChainPrefersIdle(t *testing.T) {
-	sch := NewScheduler(StrategyLeastLoaded)
-	specs := []Spec{
-		spec("a", 10, 10, StateHealthy),
-		spec("b", 20, 10, StateHealthy),
-		spec("c", 30, 10, StateHealthy),
-	}
-	sch.Acquire("a")
-	sch.Acquire("a")
-	sch.Acquire("b")
-	chain := sch.PickChain(specs, nowMs())
-	if len(chain) != 3 || chain[0] != "c" || chain[1] != "b" || chain[2] != "a" {
-		t.Fatalf("兜底链应按负载升序 [c b a]，实际 %v（inflight=%v）", chain, sch.Inflight())
-	}
-	// 全空闲时回到调度序（优先级优先），避免无负载时的随机抖动
-	s2 := NewScheduler(StrategyLeastLoaded)
-	if ch2 := s2.PickChain(specs, nowMs()); ch2[0] != "a" || ch2[2] != "c" {
-		t.Fatalf("零负载时兜底链应保持调度序 [a b c]，实际 %v", ch2)
-	}
-}
-
-// TestSchedulerSkipsNonRoutable 锁住「面板可见但绝不派给任务」这条承诺。
-//
-// 回归动因：Manager.Routes() 一直过滤 !Routable（网关专属车道 deepseek-official/*
-// 写进 DSH overlay 会被判未知 provider，必然失败），但 Pick/PickChain 只过滤
-// Enabled+健康。于是 FailoverRunner 的兜底链会把不可路由模型也派出去 ——
-// 活体面板复验实测：面板新增 routable:false 的模型后被顶到链首。账本与选择器口径不一致。
-func TestSchedulerSkipsNonRoutable(t *testing.T) {
-	gateOnly := Spec{ID: "deepseek-official/deepseek-v3", Label: "网关专属", Provider: "our-free-model",
-		Lane: LaneFree, Tier: "balanced", Priority: 1, Weight: 100, Enabled: true, Routable: false,
-		Format: FormatChat, Runtime: &specRuntime{State: StateHealthy}}
-	normal := spec("ok", 50, 10, StateHealthy)
-
-	for _, st := range []Strategy{StrategyPriority, StrategyRoundRobin, StrategyWeighted, StrategyLeastLoaded} {
-		sch := NewScheduler(st)
-		if got, _ := sch.Pick([]Spec{gateOnly, normal}, nil, nowMs()); got != "ok" {
-			t.Fatalf("%s 策略不得派不可路由模型，实际 %q", st, got)
-		}
-		if chain := sch.PickChain([]Spec{gateOnly, normal}, nowMs()); len(chain) != 1 || chain[0] != "ok" {
-			t.Fatalf("%s 策略兜底链应只含可路由模型，实际 %v", st, chain)
-		}
-	}
-
-	// 全池都不可路由时应返回空（调用方走等待逻辑），而不是硬派一个必挂的
-	empty, strategy := NewScheduler(StrategyPriority).Pick([]Spec{gateOnly}, nil, nowMs())
-	if empty != "" {
-		t.Fatalf("无可用可路由模型时应返回空，实际 %q（%s）", empty, strategy)
-	}
-	if c := NewScheduler(StrategyPriority).PickChain([]Spec{gateOnly}, nowMs()); len(c) != 0 {
-		t.Fatalf("无可用可路由模型时兜底链应为空，实际 %v", c)
-	}
-}
-
 func TestSchedulerWeightedProportional(t *testing.T) {
 	sch := NewScheduler(StrategyWeighted)
 	specs := []Spec{
@@ -206,6 +102,68 @@ func TestSchedulerPickChainOrder(t *testing.T) {
 	chain := sch.PickChain(specs, nowMs())
 	if len(chain) != 2 || chain[0] != "a" || chain[1] != "b" {
 		t.Fatalf("兜底链应为 [a b]（dead 跳过），实际 %v", chain)
+	}
+}
+
+// TestSchedulerLeastLoadedPrefersIdle 锁住 least-loaded 的**真实语义**（2026-10-19 现场）。
+//
+// 现场缺陷：StrategyLeastLoaded 与 StrategyRoundRobin 曾共用同一分支、从不读 inflight，
+// 于是「最少负载」退化成轮询副本。实测同优先级同权重下 A 在飞 3、C 在飞 0，却挑了 A。
+// 注意：Pick 与 PickChain 是**两个入口**，必须各自正确（PickChain 曾再次漏修）。
+func TestSchedulerLeastLoadedPrefersIdle(t *testing.T) {
+	sch := NewScheduler(StrategyLeastLoaded)
+	specs := []Spec{
+		spec("a", 10, 10, StateHealthy),
+		spec("b", 20, 10, StateHealthy),
+		spec("c", 30, 10, StateHealthy),
+	}
+	sch.Acquire("a")
+	sch.Acquire("a")
+	sch.Acquire("b")
+	// Pick：在飞最少的 c 必须被选中
+	if got, _ := sch.Pick(specs, nil, nowMs()); got != "c" {
+		t.Fatalf("least-loaded 的 Pick 应挑最空闲的 c，实际 %q（inflight=%v）", got, sch.Inflight())
+	}
+	// PickChain：兜底链按负载升序 [c b a]
+	chain := sch.PickChain(specs, nowMs())
+	if len(chain) != 3 || chain[0] != "c" || chain[1] != "b" || chain[2] != "a" {
+		t.Fatalf("兜底链应按负载升序 [c b a]，实际 %v（inflight=%v）", chain, sch.Inflight())
+	}
+	// 全空闲时回到调度序（优先级优先），避免无负载时的抖动
+	s2 := NewScheduler(StrategyLeastLoaded)
+	if ch2 := s2.PickChain(specs, nowMs()); ch2[0] != "a" || ch2[2] != "c" {
+		t.Fatalf("零负载时兜底链应保持调度序 [a b c]，实际 %v", ch2)
+	}
+}
+
+// TestSchedulerSkipsNonRoutable 锁住「面板可见但绝不派给任务」这条承诺（2026-10-19）。
+//
+// 回归动因：Manager.Routes() 一直过滤 !Routable（网关专属车道 deepseek-official/* 写进
+// DSH overlay 会被判未知 provider，必然失败），但 Pick/PickChain 只过滤 Enabled+健康。
+// 于是 FailoverRunner 的兜底链会把不可路由模型也派出去 —— 每次都是注定失败的调用。
+func TestSchedulerSkipsNonRoutable(t *testing.T) {
+	gateOnly := Spec{ID: "deepseek-official/deepseek-v3", Label: "网关专属", Provider: "our-free-model",
+		Lane: LaneFree, Tier: "balanced", Priority: 1, Weight: 100, Enabled: true, Routable: false,
+		Format: FormatChat, Runtime: &specRuntime{State: StateHealthy}}
+	normal := spec("ok", 50, 10, StateHealthy)
+
+	for _, st := range []Strategy{StrategyPriority, StrategyRoundRobin, StrategyWeighted, StrategyLeastLoaded} {
+		sch := NewScheduler(st)
+		if got, _ := sch.Pick([]Spec{gateOnly, normal}, nil, nowMs()); got != "ok" {
+			t.Fatalf("%s 策略不得派不可路由模型，实际 %q", st, got)
+		}
+		if chain := sch.PickChain([]Spec{gateOnly, normal}, nowMs()); len(chain) != 1 || chain[0] != "ok" {
+			t.Fatalf("%s 策略兜底链应只含可路由模型，实际 %v", st, chain)
+		}
+	}
+
+	// 全池都不可路由时应返回空（调用方走等待逻辑），而不是硬派一个必挂的
+	empty, strategy := NewScheduler(StrategyPriority).Pick([]Spec{gateOnly}, nil, nowMs())
+	if empty != "" {
+		t.Fatalf("无可用可路由模型时应返回空，实际 %q（%s）", empty, strategy)
+	}
+	if c := NewScheduler(StrategyPriority).PickChain([]Spec{gateOnly}, nowMs()); len(c) != 0 {
+		t.Fatalf("无可用可路由模型时兜底链应为空，实际 %v", c)
 	}
 }
 
@@ -487,7 +445,6 @@ func TestSpecFromGatewayModelClassification(t *testing.T) {
 	}{
 		{"our-free-model/z-ai/glm-5.3", "z-ai/glm-5.3", true, true},
 		{"our-free-model-region/beam-free", "beam-free", true, false},
-		{"deepseek-official/deepseek-flash", "deepseek-official/deepseek-flash", false, false},
 	}
 	for _, c := range cases {
 		s, ok := SpecFromGatewayModel(gw, c.in)
@@ -500,6 +457,185 @@ func TestSpecFromGatewayModelClassification(t *testing.T) {
 		if s.BaseURL != gw.BaseURL || s.APIKey != "k" {
 			t.Fatalf("应继承网关地址与密钥: %+v", s)
 		}
+	}
+}
+
+// TestSpecFromGatewayModelRejectsGatewayOwnLanes 钉住老大 2026-10-22 令：
+// 模型池只留 eac/kilo/ofm 等免费车道。渠道网关自有广播形态（deepseek-official/*
+// 网关专属车道、deepseek-account/* codearts/* buddy/* 网关其它车道）一律不纳管，
+// SpecFromGatewayModel 必须返回 ok=false，SyncFromGateway 据此计 skipped。
+func TestSpecFromGatewayModelRejectsGatewayOwnLanes(t *testing.T) {
+	gw := Gateway{BaseURL: "http://127.0.0.1:8326/v1", Key: "k"}
+	rejected := []string{
+		"deepseek-official/deepseek-flash",
+		"deepseek-official/deepseek-v4-pro",
+		"deepseek-account/deepseek-flash",
+		"codearts/glm-5.3",
+		"buddy/deepseek-v4.1-flash",
+		"some-random-id",
+	}
+	for _, id := range rejected {
+		s, ok := SpecFromGatewayModel(gw, id)
+		if ok {
+			t.Fatalf("%s 属网关自有车道，不得纳管，实际 %+v", id, s)
+		}
+	}
+	// 反证判据非恒真：免费车道 id 必须仍能转换（否则上面的「拒绝」毫无意义）。
+	if _, ok := SpecFromGatewayModel(gw, "our-free-model/z-ai/glm-5.3"); !ok {
+		t.Fatal("正例失败：our-free-model/* 应可转换，测试的拒绝断言不成立")
+	}
+}
+
+// TestSyncFromGatewaySkipsGatewayOwnLanes 端到端：混入网关自有 id 时只入免费车道，
+// 自有车道计入 Skipped，绝不进池（既不入 aggregate 车道也不留任何分组）。
+func TestSyncFromGatewaySkipsGatewayOwnLanes(t *testing.T) {
+	m, _ := newTestManager(t)
+	gw := Gateway{BaseURL: "http://127.0.0.1:8326/v1", Key: "k", Models: []string{
+		"our-free-model/kilo-auto/free",
+		"deepseek-official/deepseek-flash",
+		"codearts/glm-5.3",
+	}}
+	res := SyncFromGateway(m, gw, "probe")
+	for _, id := range []string{"deepseek-official/deepseek-flash", "codearts/glm-5.3"} {
+		if _, _, found := m.Get(id); found {
+			t.Fatalf("网关自有车道 %s 不应入池", id)
+		}
+	}
+	if res.Added != 1 {
+		t.Fatalf("只应新增 1 个免费车道模型，实际 %+v", res)
+	}
+	if res.Skipped != 2 {
+		t.Fatalf("两条网关自有 id 应计入 Skipped，实际 %+v", res)
+	}
+}
+
+// TestPurgeGatewayLanesRemovesLegacy 存量清理：历史账本里的网关专属/其它车道条目
+// 必须被摘掉，用户自填端点（provider 非 gateway）与免费车道一个都不能误删。
+func TestPurgeGatewayLanesRemovesLegacy(t *testing.T) {
+	m, _ := newTestManager(t)
+	add := func(sp Spec) {
+		if _, err := m.Upsert(sp, "test"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	add(Spec{ID: "deepseek-official/deepseek-flash", Model: "x", Provider: "gateway",
+		Lane: LaneAggregate, Group: "网关专属车道", Format: FormatChat, Tier: "fast"})
+	add(Spec{ID: "codearts/glm-5.3", Model: "y", Provider: "gateway",
+		Lane: LaneAggregate, Group: "网关其他车道", Format: FormatChat, Tier: "fast"})
+	add(Spec{ID: "open_router/free", Model: "z", Provider: "open_router",
+		Lane: LaneAggregate, Group: "聚合渠道", Format: FormatChat, Tier: "fast", Source: "user"})
+	add(Spec{ID: "kilo-auto/free", Model: "k", Provider: "our-free-model",
+		Lane: LaneKilo, Group: "Kilo 免费池", Format: FormatChat, Tier: "fast"})
+	res := m.PurgeGatewayLanes("test")
+	if len(res.Removed) != 2 {
+		t.Fatalf("应清理 2 条（两条网关自有车道），实际 %v", res.Removed)
+	}
+	for _, keep := range []string{"open_router/free", "kilo-auto/free"} {
+		if _, _, found := m.Get(keep); !found {
+			t.Fatalf("%s 不该被清理（用户端点/免费车道），误删了", keep)
+		}
+	}
+	for _, gone := range res.Removed {
+		if _, _, found := m.Get(gone); found {
+			t.Fatalf("%s 应已被清理", gone)
+		}
+	}
+	// 幂等：再清一次不应改动、不应重复写日志。
+	res2 := m.PurgeGatewayLanes("test")
+	if len(res2.Removed) != 0 {
+		t.Fatalf("第二次清理应为空，实际 %v", res2.Removed)
+	}
+}
+
+// TestSetPoolEnabledBatchToggle 一键启用/一键停用整池：
+//  1. 停用使该组全部模型 enabled=false 且退出路由表；
+//  2. 启用使它们回到 true；
+//  3. 手动开关必须清掉 AutoDisabled，否则下一轮网关同步会把「一键停用」又自动恢复；
+//  4. 按 lane 与按 group 两种入口都能命中。
+func TestSetPoolEnabledBatchToggle(t *testing.T) {
+	m, _ := newTestManager(t)
+	mk := func(id string, lane Lane, group string, enabled, auto bool) {
+		if _, err := m.Upsert(Spec{ID: id, Model: id, Provider: "our-free-model", Lane: lane,
+			Group: group, Format: FormatChat, Tier: "fast", Priority: 5, Weight: 10,
+			Enabled: enabled, Routable: true, AutoDisabled: auto}, "test"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	mk("k1", LaneKilo, "Kilo 免费池", true, false)
+	mk("k2", LaneKilo, "Kilo 免费池", true, true)
+	mk("f1", LaneFree, "OFM 免费", true, false)
+
+	// 停用 Kilo（按 lane）
+	res, err := m.SetPoolEnabled(string(LaneKilo), "", false, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res.Affected) != 2 {
+		t.Fatalf("停用 Kilo 应改动 2 个模型，实际 %v", res.Affected)
+	}
+	for _, id := range []string{"k1", "k2"} {
+		sp, _, _ := m.Get(id)
+		if sp.Enabled {
+			t.Fatalf("%s 停用后 enabled 应为 false", id)
+		}
+		if sp.AutoDisabled {
+			t.Fatalf("%s 手动停用后必须清掉 AutoDisabled（否则同步会自动恢复）", id)
+		}
+	}
+	// f1 不受影响
+	if sp, _, _ := m.Get("f1"); !sp.Enabled {
+		t.Fatal("停用 Kilo 不应波及 OFM 免费")
+	}
+	// Kilo 全部退出路由表
+	for _, rt := range m.Routes() {
+		if rt.Model == "k1" || rt.Model == "k2" {
+			t.Fatalf("停用的模型不应进路由表：%s", rt.Model)
+		}
+	}
+	// 启用 Kilo（按 group），且此时两者已是 true ⇒ Skipped=2、Affected=0
+	res2, err := m.SetPoolEnabled("", "Kilo 免费池", true, "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(res2.Affected) != 2 {
+		t.Fatalf("启用 Kilo 应改动 2 个模型（上一步是停用），实际 %v", res2.Affected)
+	}
+	for _, id := range []string{"k1", "k2"} {
+		if sp, _, _ := m.Get(id); !sp.Enabled {
+			t.Fatalf("%s 启用后 enabled 应为 true", id)
+		}
+	}
+	res3, _ := m.SetPoolEnabled("", "Kilo 免费池", true, "test")
+	if len(res3.Affected) != 0 || res3.Skipped != 2 {
+		t.Fatalf("已是目标状态时应 Skipped=2/Affected=0，实际 %+v", res3)
+	}
+	// 面板分组卡同时带 lane+group：group 优先（自填端点常是 lane=aggregate 但 Group=「自定义」，
+	// 取交集会把真实存在的池判成空池 ⇒ 按钮点了报错，2026-10-22 自查抓到）。
+	addMix := Spec{ID: "open_router/mix", Model: "open_router/mix", Provider: "open_router",
+		Lane: LaneAggregate, Group: "自定义", Format: FormatChat, Tier: "fast",
+		Priority: 7, Weight: 10, Enabled: true, Routable: true, Source: "user"}
+	if _, err := m.Upsert(addMix, "test"); err != nil {
+		t.Fatal(err)
+	}
+	resMix, err := m.SetPoolEnabled(string(LaneAggregate), "自定义", false, "test")
+	if err != nil {
+		t.Fatalf("lane 与 group 不一致时应按 group 命中，实际 err=%v", err)
+	}
+	if len(resMix.Affected) != 1 || resMix.Affected[0] != "open_router/mix" {
+		t.Fatalf("应只停用「自定义」组的那一个模型，实际 %+v", resMix)
+	}
+	if sp, _, _ := m.Get("open_router/mix"); sp.Enabled {
+		t.Fatal("自定义池一键停用未生效")
+	}
+	// 空池 / 未知车道必须报错，绝不静默成功
+	if _, err := m.SetPoolEnabled("bogus", "", true, "test"); err == nil {
+		t.Fatal("未知车道应报错")
+	}
+	if _, err := m.SetPoolEnabled("", "", true, "test"); err == nil {
+		t.Fatal("车道与分组都为空应报错")
+	}
+	if _, err := m.SetPoolEnabled("custom", "", true, "test"); err == nil {
+		t.Fatal("该池无模型时应报错（custom 组为空）")
 	}
 }
 
@@ -593,9 +729,6 @@ func (f *taskFailRunner) Run(ctx context.Context, task *model.Task, modelID stri
 	return &executor.Result{ErrorKind: string(executor.KindExit)}, nil
 }
 
-
-
-
 // taskFailRunner 模拟「模型能跑但任务本身没产出」的执行器。
 
 func TestSyncAutoRevivesAutoDisabledModel(t *testing.T) {
@@ -670,10 +803,9 @@ func TestDiscoverCandidatesAreRoutable(t *testing.T) {
 	}
 }
 
-
-
-
-func contains(s, sub string) bool { return len(sub) == 0 || (len(s) >= len(sub) && indexOf(s, sub) >= 0) }
+func contains(s, sub string) bool {
+	return len(sub) == 0 || (len(s) >= len(sub) && indexOf(s, sub) >= 0)
+}
 
 func indexOf(s, sub string) int {
 	for i := 0; i+len(sub) <= len(s); i++ {

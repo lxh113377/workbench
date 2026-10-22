@@ -12,8 +12,12 @@ import (
 //
 //	our-free-model/<ofm-id>          DSH 的 our-free-model provider 直接认得，可调度
 //	our-free-model-region/<ofm-id>   上游按地区拦截，保留可见但默认停用
-//	deepseek-official/<model>        渠道网关自有车道，只能经网关 OpenAI 接口调用，
-//	                                 不能喂给 DSH overlay（provider 不认），默认不可路由
+//	其余前缀（deepseek-official/* 等）  渠道网关自有车道，只能经网关 OpenAI 接口调用，
+//	                                 不能喂给 DSH overlay（provider 不认）
+//
+// 2026-10-22 老大令：模型池只留 eac/kilo/ofm 等免费车道，网关专属车道与网关其它
+// 车道**不再纳管** —— 非 our-free-model* 形态的广播 id 直接跳过（返回 false），
+// 既不入新池，存量条目也由 PurgeNonFreeLanes 清理。
 //
 // 同步策略：以网关清单为「有哪些」的权威，以池子已有条目为「怎么用」的权威 ——
 // 用户改过的优先级/权重/启停/密钥一律保留，只补新增、只更新上游元信息。
@@ -27,6 +31,20 @@ type SyncResult struct {
 	// Revived 记录「原先自动停用、因网关重新广播而恢复」的模型。
 	Revived []string `json:"revived"`
 	At      int64    `json:"at"`
+}
+
+// broadcastRoutable 判断网关是否以「可路由车道」形态广播了该模型。
+//
+// 只有裸 our-free-model/<id> 算可路由；our-free-model-region/<id> 是地区受限、
+// deepseek-official/<m> 是网关专属车道，两者都不能作为"上游判定已过期"的证据。
+func broadcastRoutable(gw Gateway, id string) bool {
+	want := "our-free-model/" + id
+	for _, m := range gw.Models {
+		if m == want {
+			return true
+		}
+	}
+	return false
 }
 
 // SpecFromGatewayModel 把一个网关模型 id 翻译成池内 Spec。
@@ -69,31 +87,11 @@ func SpecFromGatewayModel(gw Gateway, modelID string) (Spec, bool) {
 		s.Weight = 50
 		s.Routable = true
 		s.Note = "经 OFM 渠道网关广播（DSH 原生车道）"
-	case strings.HasPrefix(id, "deepseek-official/"):
-		s.ID = id
-		s.Model = id
-		s.Label = "网关 " + strings.TrimPrefix(id, "deepseek-official/")
-		s.Provider = "gateway"
-		s.Lane = LaneAggregate
-		s.Group = "网关专属车道"
-		s.Tier = "quality"
-		s.Priority = 800
-		s.Weight = 10
-		s.Enabled = false
-		s.Routable = false
-		s.Note = "只能经渠道网关 OpenAI 接口调用，DSH provider 不认，默认不参与任务调度"
 	default:
-		s.ID = id
-		s.Model = id
-		s.Label = id
-		s.Provider = "gateway"
-		s.Lane = LaneAggregate
-		s.Group = "网关其他车道"
-		s.Tier = "balanced"
-		s.Priority = 500
-		s.Weight = 20
-		s.Routable = strings.Contains(id, "/")
-		s.Note = "网关发现的未分类模型"
+		// 非免费车道（deepseek-official/*、deepseek-account/*、codearts/*、buddy/* 等
+		// 网关自有广播形态）一律不纳管（老大 2026-10-22 令：只留 eac/kilo/ofm 免费车道）。
+		// 返回 false 让 SyncFromGateway 计 skipped，绝不入池。
+		return Spec{}, false
 	}
 	if s.Priority <= 0 {
 		s.Priority = 100
@@ -177,22 +175,18 @@ func SyncFromGateway(m *Manager, gw Gateway, actor string) SyncResult {
 		if existing.Note == "" {
 			existing.Note = spec.Note
 		}
-		// 自动恢复：网关此刻仍在广播该模型，说明上游判定已过期（availability.json
-		// 是插件按探测周期写的旧快照）。只恢复「当初是我们自动停用的」那些，
-		// 用户手动停用的绝不擅自打开。
-		if !existing.Enabled && existing.AutoDisabled {
-			existing.Enabled = true
-			existing.AutoDisabled = false
-			existing.Note = "网关重新广播，已自动恢复启用"
-			res.Revived = append(res.Revived, existing.ID)
-		}
-		// 自动恢复：网关此刻仍在广播该模型，说明上游判定已过期（availability.json
-		// 是插件按探测周期写的旧快照）。只恢复「当初是我们自动停用的」那些，
-		// 用户手动停用的绝不擅自打开。
+		// 自动恢复：网关此刻仍在**可路由车道**广播该模型，说明上游判定已过期
+		// （availability.json 是插件按探测周期写的旧快照）。只恢复「当初是我们
+		// 自动停用的」那些，用户手动停用的绝不擅自打开。
+		//
+		// 必须看广播形态：地区受限模型被网关广播成 our-free-model-region/<id>，
+		// 对这类模型「仍在广播」是恒真信号 —— 拿它当恢复依据会把地区受限
+		// 模型每轮重新启用，"默认停用"形同虚设（容器 e2e 实测断言翻红，
+		// 回归测试 TestSyncDoesNotReviveRegionLimited）。
 		//
 		// 顺序很重要：UpsertPreserve 会以「磁盘上的当前值」为准保留 Enabled，
 		// 所以必须在写入之后再调 SetEnabled(true)，否则恢复动作会被自己覆盖掉。
-		revive := !existing.Enabled && existing.AutoDisabled
+		revive := !existing.Enabled && existing.AutoDisabled && broadcastRoutable(gw, existing.ID)
 		if revive {
 			existing.AutoDisabled = false
 			existing.Note = "网关重新广播，已自动恢复启用"

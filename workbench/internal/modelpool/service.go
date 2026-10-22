@@ -203,6 +203,10 @@ func (s *Service) Stop() {
 
 // SyncNow 发现渠道网关并把清单同步进池子。
 func (s *Service) SyncNow(actor string) SyncResult {
+	// 老大 2026-10-22 令：模型池只留 eac/kilo/ofm 等免费车道。每轮同步先清掉
+	// 历史账本里的网关专属/网关其它车道存量条目（同步入口本身已不再纳管它们）。
+	// 幂等：没有存量时不落盘、不写日志，零成本。
+	s.mgr.PurgeGatewayLanes("sync:" + actor)
 	// 严格版：只有 HTTP 层能列出模型才算网关可用（TCP 通但 401 不算）。
 	gw, health := DiscoverGatewayVerified(s.cfg.DSHHome, 10*time.Second)
 	s.mu.Lock()

@@ -17,9 +17,9 @@ import (
 
 // gatewayHealth 是一次网关健康检查的结果。
 type gatewayHealth struct {
-	Reachable bool   `json:"reachable"` // 端口有监听
-	Authorized bool  `json:"authorized"` // 带密钥能列模型
-	StatusCode int   `json:"statusCode"`
+	Reachable  bool   `json:"reachable"`  // 端口有监听
+	Authorized bool   `json:"authorized"` // 带密钥能列模型
+	StatusCode int    `json:"statusCode"`
 	Detail     string `json:"detail"`
 }
 
@@ -41,7 +41,16 @@ func checkGateway(base, key string, timeout time.Duration) gatewayHealth {
 	}
 	conn, derr := net.DialTimeout("tcp", host, timeout)
 	if derr != nil {
-		out.Detail = "端口未监听: " + trim(derr.Error(), 160)
+		// 本机网关「没在监听」是最高频的环境态（DSH 桌面端起停、任务隔离 HOME 轮换），
+		// 且已被 SyncNow 的 catalog 回退兜住 —— 不是缺陷。
+		// 把 Go 的裸 dial 错误原样抛给用户，只会得到
+		// 「网关错误：端口未监听: dial tcp 127.0.0.1:8326: connectex: ...」这种
+		// 看不懂也没法行动的读数（2026-10-20 老大实报）。这里换成可行动的中文原因。
+		if isLocalGateway(base) {
+			out.Detail = "本机 OFM 网关（" + host + "）未启动；已退回本地清单纳管，模型照常可调度"
+		} else {
+			out.Detail = "端口未监听: " + trim(derr.Error(), 160)
+		}
 		return out
 	}
 	_ = conn.Close()
@@ -106,13 +115,41 @@ func DiscoverGatewayVerified(dshHome string, budget time.Duration) (Gateway, gat
 	if budget <= 0 {
 		budget = 8 * time.Second
 	}
-	cands := GatewayCandidates(dshHome)
+	return discoverVerifiedWith(GatewayCandidates(dshHome), budget, func(base, key string) gatewayHealth {
+		return checkGateway(base, key, 3*time.Second)
+	})
+}
+
+// discoverVerifiedWith 是 DiscoverGatewayVerified 的可注入内核（check 可替换，便于计数验证）。
+//
+// 两个现场缺陷在这里被钉死（2026-10-20）：
+//  1. 预算比较写成了 time.Now().After(time.Now().Add(budget)) —— 右边恒 > 左边，
+//     循环条件恒假，budget 形同虚设（整个函数只剩「候选全试一遍」一条路）。
+//  2. 候选是 base × key 的笛卡尔积，而本机网关只有一个 base；任务隔离 HOME 会积累
+//     200+ 份 api-key。旧逻辑在「端口没开」时仍逐个 key 重复拨同一个端口，
+//     把一次环境态放大成成片的 gateway-fail 噪音。同一个 base 一旦证明端口没监听，
+//     后面的候选只换 key 不换端口 —— 直接跳过。
+func discoverVerifiedWith(cands []gatewayCandidate, budget time.Duration, check func(base, key string) gatewayHealth) (Gateway, gatewayHealth) {
+	if budget <= 0 {
+		budget = 8 * time.Second
+	}
+	deadline := time.Now().Add(budget)
 	var last gatewayHealth
+	deadBases := map[string]bool{}
 	for _, c := range cands {
-		if time.Now().After(time.Now().Add(budget)) {
+		if time.Now().After(deadline) {
 			break
 		}
-		health := checkGateway(c.base, c.key, 3*time.Second)
+		if deadBases[c.base] {
+			continue
+		}
+		health := check(c.base, c.key)
+		if !health.Reachable {
+			// 端口未监听：记一次读数，后续同 base 的候选不再拨号。
+			deadBases[c.base] = true
+			last = health
+			continue
+		}
 		if !health.Authorized {
 			last = health
 			continue

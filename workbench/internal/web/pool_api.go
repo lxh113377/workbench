@@ -204,6 +204,58 @@ func (s *Server) handlePoolModelItem(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// handlePoolLane 免费池的一键启用/一键停用。
+// body {"lane":"free|kilo|eac|aggregate|custom","group":"OFM 免费","enabled":true}
+// lane 与 group 至少给一个（面板按分组卡发 group，CLI/脚本可发 lane）。
+func (s *Server) handlePoolLane(w http.ResponseWriter, r *http.Request) {
+	if !s.ensurePool(w) {
+		return
+	}
+	if r.Method != http.MethodPost {
+		bad(w, "仅支持 POST")
+		return
+	}
+	var body struct {
+		Lane    string `json:"lane"`
+		Group   string `json:"group"`
+		Enabled *bool  `json:"enabled"`
+	}
+	if err := readBody(r, &body); err != nil {
+		bad(w, err.Error())
+		return
+	}
+	if body.Enabled == nil {
+		bad(w, "缺少 enabled（true=一键启用 / false=一键停用）")
+		return
+	}
+	if strings.TrimSpace(body.Lane) == "" && strings.TrimSpace(body.Group) == "" {
+		bad(w, "缺少 lane 或 group（要操作哪个池）")
+		return
+	}
+	res, err := s.pool.Manager().SetPoolEnabled(body.Lane, body.Group, *body.Enabled, "panel")
+	if err != nil {
+		bad(w, err.Error())
+		return
+	}
+	s.pool.Manager().NotifyRoutes()
+	ok(w, map[string]any{"toggle": res})
+}
+
+// handlePoolPurge 清理网关专属/网关其它车道的存量条目（老大 2026-10-22 令：
+// 模型池只留 eac/kilo/ofm 等免费车道）。同步时会自动做，这里给人工/脚本兜底。
+func (s *Server) handlePoolPurge(w http.ResponseWriter, r *http.Request) {
+	if !s.ensurePool(w) {
+		return
+	}
+	if r.Method != http.MethodPost {
+		bad(w, "仅支持 POST")
+		return
+	}
+	res := s.pool.Manager().PurgeGatewayLanes("panel")
+	s.pool.Manager().NotifyRoutes()
+	ok(w, map[string]any{"purged": res})
+}
+
 // handlePoolReorder 调整优先级：body {"ids":["a","b",...]}（最高优先级在前）。
 func (s *Server) handlePoolReorder(w http.ResponseWriter, r *http.Request) {
 	if !s.ensurePool(w) {
