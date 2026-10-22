@@ -34,6 +34,19 @@
   ⇒ 改用 `runtime.Caller(0)` 定位本文件再上溯 3 层；② 首版误把 Edge 安装路径判成缺陷
   ⇒ 加排除。变异 M1 恢复硬编码 ROOT → CAUGHT、M2 改用 `process.cwd()` → CAUGHT。
 ### Changed
+- **裁剪后基线重取（性能基线口径.md 新增 §8，2026-10-23）+ 上轮结论再精确化**：
+  兑现口径文档 §6 的「裁剪后基线重取」待办：按 §2 同一取证方式（`--ui-probe --expect-idle`、
+  预热 5 + 60 样本 × 3 轮），唯一差别是**数据根拷入线上裁剪后的 queue.json（5,006 条 / 9.8MB）**。
+  读数：P95 = 10.72 / 10.60 / 10.79 ms；**常驻 = 52.93 / 52.81 / 53.02 MB（±0.1，极稳）**；
+  句柄 180/185/197。
+  由此对上轮结论做一处**必要的精确化**（不改变「基线不该改」的结论）：
+  上轮说「探针 13.3MB 与基线 12.41MB 吻合」——那吻合的是**空数据根**形态
+  （`check_perf` 用全新 temp，没有任何任务记录）；带当前记录数（5,006 条）后
+  探针常驻是 **~53MB**，记录贡献约 40MB。两个数都合法，但含义不同，此前未区分。
+  结论仍不变：`residentMBMax=64` 对它实际所测的形态（空载探针）保有 ~5× 余量，**不改**；
+  把它换成 53 反而会让 CI 上跑空载探针的判据变成 1.2× 紧箍（一次正常抖动就误判）。
+  顺带沉淀一条判据纪律：**脱离记录数谈常驻上界没有意义** —— 任何内存判据必须先声明
+  数据规模形态（§4 三形态表已按此拆分：空载探针 / 带载探针 / 长驻空闲 / 长驻执行期）。
 - **验收总账（2026-10-23 r35）：八维 + Awwwards 四维 + 规模/异常/性能全部有机器化证据**：
   八维：排版（溢出 0 / 顶距统一 / 卡片语言统一）、留白（三页 padding 同值）、视觉层级（h1 语义已修）、
   色彩（蓝青 66% 主导 + 语义色）、动效（6 场景 60fps / jankFrames=0 / 含 SSE 活跃态）、
@@ -113,6 +126,17 @@
   新增 `content_semantics_contract_test.go` 两条判据（每个 `<table>` 必须有可访问名称 /
   装饰元素必须 aria-hidden）；变异 C1 去掉表格 aria-label → CAUGHT、C2 去掉 sep aria-hidden → CAUGHT、
   C3 去掉 stall-icon aria-hidden → CAUGHT。
+- **前端门禁的依赖文件不在版本库里（2026-10-23 受理面完整性审计）**：
+  上一轮把 4 个入口脚本（frontend-gate / cdp_probe / design-audit / design-shots）
+  `git add` 时以 `create mode` 入索引 —— 说明它们**此前未被跟踪**。顺藤摸出更大的洞：
+  `tests/ui/assertions.mjs`（探针读数→判据的**唯一判定层**）、`assertions_selftest.mjs`
+  以及 `tests/ui/probes/` 下 **14 个探针**（cdp_probe 按文件名加载）全部是 `??` 未跟踪。
+  后果不是本机跑不了，而是**换一个 clone / CI 上根本不存在**：`node tests/ui/frontend-gate.mjs`
+  会报 `Cannot find module ./assertions.mjs`，而本地一切正常 —— 这是本仓在册失效形态
+  「判据存在但没挂受理面」的升级变体：**受理面的依赖文件不在版本库里**。
+  修：16 个门禁必需文件全部入跟踪；`assertions_selftest.mjs` 跑通（判据层可证伪且不误报）。
+  新增 `gate_files_tracked_test.go` 判据（git ls-files 校验 4 个关键文件 + probes ≥10 个）；
+  变异 V1 把 assertions.mjs 从索引移除 → CAUGHT。
 
 > 过程记录：判据第一版按 `>` 截断取标签，被拼装式 HTML 里的三元运算符 `> 0` 提前截断，
 > 导致「明明加了 aria-hidden 也判成缺」的假阳性（本轮实测踩到）。改为固定窗口内直接查找后正常。
