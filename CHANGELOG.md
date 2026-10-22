@@ -53,6 +53,40 @@
   干净 clone（`git worktree add --detach HEAD`）`go build` rc=0、`go vet` rc=0、`go test ./...` 29 包全 ok。
 
 ### Changed
+- **给「改完 .go 忘跑 gofmt」加了提交前闸（round 23 立下的机制债，本轮还掉）**：
+  上一轮第三次因忘跑 gofmt 被 CI 判红后，我在提交信息里写「记下来不够，得有机制」。本轮还债。
+  两层落地：
+  ① **受版本控制的判据** `tests/check_staged_gofmt.ps1`：只查**已暂存**的 .go
+  （那正是即将被提交、也正是 CI 将要判定的内容），LF 归一化后跑 gofmt；
+  与 `check_gofmt.ps1` 分工明确 —— 后者判 **HEAD 全树 + 债务过期**（CI repo-gates 用），
+  前者判**暂存区**（本地秒级反馈，把 CI 的 5 分钟等待前移到提交前）。
+  ② **本地 hook** `.githooks/pre-commit`（**本身也受版本控制**）：bash shebang，转调上面那个判据。
+  启用方式一次性生效：`git config core.hooksPath .githooks`（已配好）。
+
+  **实现过程中踩到六个真实的坑，全部实测定位（不是猜的），全部写进代码注释**：
+  1. hook 里也要自己找 git —— 本 hook 由 git spawn，其 PATH 里没有 git 可执行文件；
+  2. **必须 cd 到仓库根再转调 PowerShell** —— git 传给 hook 的 `GIT_INDEX_FILE` 是**相对路径**
+     `.git/index`，而 PowerShell 进程的 cwd 是 system32；不 cd 则 gate 读到**空暂存区**，
+     判据恒「通过」—— 这是最危险的假绿（用环境 dump 实测确认，不是推理）；
+  3. hook 名必须无扩展名（只有 `pre-commit.cmd` 时 git 找不到入口）；
+  4. `git diff --cached` 必须用**显式进程**调用：`& git ... 2>&1` 会把 stderr 并进输出流，
+     PowerShell 记 NativeCommandError、`$LASTEXITCODE` 变空、stdout/stderr 皆空（静默失败）；
+  5. hook 环境里 **go/gofmt 也不在 PATH**（与坑 1 同源），且首版凭印象写的
+     `D:\app-cache\go\bin` 是 **GOPATH 不是 GOROOT**（实际在 `C:\Program Files\Go`）——
+     路径猜错时 stderr 为空、ExitCode 非 0，于是「已 gofmt 的文件」也被误判；
+  6. gofmt 同坑 4：也必须用显式进程（症状是「文件已 gofmt 却报 gofmt 报错、错误信息为空」）。
+
+  另有两个设计决定：
+  - 用 `.githooks/` 而非 `.git/hooks/`：后者不受版本控制（本仓在册教训「非跟踪、git 还原不了」），
+    且首版 `#!/bin/sh` 在这台 Windows 机上**静默失效**（PATH 无 sh，git 报 cannot spawn 却放过提交 ——
+    用标记文件探针证明 git 根本没调到 hook）。改用 `#!/usr/bin/env bash`（git 自带 bash 可用）；
+  - 判据只查暂存区而非全树：那正是 CI 将要判定的内容；未暂存的工作区改动不判（可能还在编辑）。
+
+  验证（全部端到端，三个场景）：
+  - 场景 A：暂存一个合法但未 gofmt 的 .go ⇒ `git commit` **rc=1 被拦**，HEAD 未被污染；
+  - 场景 B：gofmt 后再提交 ⇒ **rc=0 通过**；
+  - 场景 C：暂存一个语法错误的 .go ⇒ 判红并报告 gofmt 报错（坑 6 的修复验证）。
+  - 已接入 `check_all`（rc=2 记 UNVERIFIED，不计 PASS）；`check_gate_links` PASS（47 个脚本）。
 - **覆盖率阈值按 CI 重设（承接上一条：上一条按本机定阈值被 CI 判红，2026-10-23）**：
   上一条按**本机**读数把 14 个阈值抬到「实测-3pp」，CI 直接判红。本轮取 CI 实际读数重设。
   **根因是本机与 CI 的覆盖率系统性不同**（同一份代码、同一条命令、都不带 -race）：

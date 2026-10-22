@@ -139,6 +139,14 @@ Section '未跟踪 Go 文件（本地判据：CI 干净检出恒 PASS，不接 r
   if ($LASTEXITCODE -eq 0) { Write-Host '    （差额见上方三行读数）' }
 }
 
+Section '暂存区 gofmt（提交前闸，防「改完忘 gofmt」进提交）' {
+  $g = Join-Path $Root 'tests\check_staged_gofmt.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  # 三态：rc=2（不在 git 仓库/找不到 gofmt）按 UNVERIFIED 处理，不计 PASS 也不判红
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section '死代码（未导出函数全树零引用）' {
   $g = Join-Path $Root 'tests\check_deadcode.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
