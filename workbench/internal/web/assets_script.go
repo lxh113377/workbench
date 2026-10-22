@@ -216,7 +216,7 @@ const appJS = `(() => {
     const kindText = { timeout: '超时', upstream_failed: '上游失败', bad_exit: '异常退出', stalled: '卡死', unknown: '未知', missing_credential: '缺凭据', model_unavailable: '模型下线', boot_failed: '启动失败', cancelled: '已取消', done: '成功' };
     const failRes = await api('/api/failures').catch(function () { return { buckets: [], total: 0, empty: true }; });
     const failBody = failRes.empty
-      ? emptyHint('最近没有失败任务。')
+      ? emptyHint('没有失败任务 —— 保持这样最好。')
       : '<table><thead><tr><th>原因</th><th>次数</th><th>占比</th></tr></thead><tbody>' +
         (failRes.buckets || []).map(function (b) {
           const pct = Math.round(100 * b.count / Math.max(1, failRes.total));
@@ -434,7 +434,7 @@ const appJS = `(() => {
       '</tbody></table>' +
       '<div class="row" style="margin-top:12px">' +
       '<label style="flex:0 0 auto;margin:0"><input id="autostart" type="checkbox" style="width:auto;margin-right:8px" ' + (autoRes.enabled ? 'checked' : '') + '>随 Windows 启动（后台静默，恢复上次运行状态）</label>' +
-      '<button class="btn" style="flex:0 0 auto" onclick="WB.saveAutostart()">应用</button></div>' +
+      '<button class="btn" style="flex:0 0 auto" onclick="WB.saveAutostart()">保存</button></div>' +
       '<div class="toolbar" style="margin-top:14px"><button class="btn" onclick="WB.diagnose()">打印自检报告</button>' +
       '<button class="btn danger" onclick="WB.stopEngine()">停止引擎</button></div><pre id="diagOut" style="margin-top:12px;display:none"></pre></div>' +
       '<div class="card"><h3>审计日志</h3><div id="logRoot"><div class="muted">读取中…</div></div></div>';
@@ -698,7 +698,7 @@ const appJS = `(() => {
     },
     async deleteTemplate(id, btn) {
       armConfirm(btn, '再点一次确认删除', async () => {
-        try { await api('/api/templates/' + id, { method: 'DELETE' }); toast('已处理'); renderTemplates(); } catch (e) { toast(e.message); }
+        try { await api('/api/templates/' + id, { method: 'DELETE' }); toast('已删除该模板'); renderTemplates(); } catch (e) { toast(e.message); }
       });
     },
     async resetTemplates(btn) {
