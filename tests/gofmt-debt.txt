@@ -38,15 +38,10 @@ workbench/internal/engine/stall_reason.go
 workbench/internal/executor/ratelimit_test.go
 workbench/internal/gov/engine.go
 workbench/internal/gov/lifecycle.go
-workbench/internal/modelpool/gateway_check.go
-workbench/internal/modelpool/judge_test.go
-workbench/internal/modelpool/pool_test.go
-workbench/internal/modelpool/types.go
 workbench/internal/retention/danger.go
 workbench/internal/single/instance.go
 workbench/internal/supervisor/metrics_csv_test.go
 workbench/internal/tray/tray_window_style_test.go
-workbench/internal/web/autostart_windows.go
 workbench/internal/web/export.go
 workbench/internal/workspace/deadlock_test.go
 workbench/internal/shortcut/shortcut_windows.go

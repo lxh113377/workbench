@@ -24,8 +24,9 @@ $files = Get-ChildItem $Root -Recurse -Filter "*.go" -ErrorAction SilentlyContin
 # 而 reg.exe 是 CONSOLE 子系统程序，用户点「开机自启」会闪黑窗。该修复已在工作区
 # 由并行会话完成但尚未入库；HEAD 上仍是缺陷版。不带豁免直接上 CI 会长期固定判红，
 # 反而掩盖后续**新增**违规（本门禁的变异测试正是靠「新增一处」判红的）。
+# 2026-10-23 清零：该修复随依赖组提交入库（6ac0dac），HEAD 已无违规
+# ⇒ 允许必须清零（否则该条目会把将来的新违规静默放过）。
 $known = @{
-  'internal/web/autostart_windows.go' = $true
 }
 $violations = @()
 $checked = 0
