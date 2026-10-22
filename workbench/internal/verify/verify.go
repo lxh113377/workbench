@@ -247,7 +247,33 @@ func splitCommand(s string) ([]string, error) {
 	var cur strings.Builder
 	var quote rune
 	inToken := false
+	// escaped：上一个字符是反斜杠（转义前缀）。
+	//
+	// 为什么需要（2026-10-19 缺陷，docs/缺陷-验收命令反斜杠污染-2026-10-19.md）：
+	// 模型的 manifest cmd 按 JSON 规则本应写 \"，若写成 \\"（过度转义），反转义后就剩下
+	// 一个字面 \ 紧跟引号。旧实现不识别 \"，于是 \ 残留进 argv，pwsh 收到 `\if ...`
+	// 报「术语不识别」—— 该任务的真实验收**永远不可能通过**，反复返工直到 repairRounds 耗尽，
+	// 并把「模型转义问题」误报成「产物不可运行」。
+	var escaped bool
 	for _, r := range s {
+		if escaped {
+			// 转义语义：反斜杠后的字符按字面写入（含引号自身、反斜杠自身）。
+			// 关键：这一分支必须在 switch **之前**，否则引号内的 \ 会先被
+			// `case quote != 0` 当普通字符吃掉，转义永远不生效（2026-10-23 实测：
+			// 首版把 escaped 检查放前面但把 `case r == '\\'` 留在 switch 里，
+			// 结果引号内的 \" 仍被切碎）。
+			cur.WriteRune(r)
+			inToken = true
+			escaped = false
+			continue
+		}
+		if r == '\\' && quote != '\'' {
+			// Windows/POSIX 通用：反斜杠转义下一个字符。单引号内不转义（POSIX 语义，
+			// 与 shell 一致：'...' 里的反斜杠是字面量）。
+			// 放在 switch 之前：引号内、引号外都要能转义。
+			escaped = true
+			continue
+		}
 		switch {
 		case quote != 0:
 			if r == quote {
@@ -268,6 +294,11 @@ func splitCommand(s string) ([]string, error) {
 			cur.WriteRune(r)
 			inToken = true
 		}
+	}
+	if escaped {
+		// 行尾单个反斜杠：按字面保留（不报错 —— 命令可能是被截断的，但那不是本函数的职责）。
+		cur.WriteRune('\\')
+		inToken = true
 	}
 	if quote != 0 {
 		return nil, fmt.Errorf("引号未闭合")
