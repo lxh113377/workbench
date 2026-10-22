@@ -780,6 +780,17 @@ label:has(> input[type=checkbox]){min-height:36px;align-items:center;display:inl
 .status-line .dot.off{background:var(--dim-2)}
 .status-line code{font-family:var(--font-mono);font-size:12px;color:var(--fg-2);background:rgba(255,255,255,.05);padding:1px 7px;border-radius:5px}
 
+/* 读取骨架：慢后端时占位不是空白，而是「正在读」的形状（判据卷：Loading 兜底不得永驻）。
+   只做背景位移（合成层友好），与全站动效纪律一致；reduce 态由全局规则压成静态。 */
+.skeleton{
+  height:11px;border-radius:6px;margin:10px 0;max-width:520px;
+  background:linear-gradient(90deg,rgba(120,190,255,.11),rgba(120,190,255,.045) 45%,rgba(120,190,255,.11));
+  background-size:220% 100%;
+  animation:skeletonSweep 1.6s linear infinite;
+}
+.skeleton.short{width:58%}
+@keyframes skeletonSweep{from{background-position:120% 0}to{background-position:-120% 0}}
+
 /* 空态：一句话说清「这里现在没东西 / 去哪里弄」，不再是整块空白 */
 .empty-hint{
   padding:26px 20px;text-align:center;

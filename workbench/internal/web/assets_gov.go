@@ -174,12 +174,24 @@ const govJS = `(() => {
   }
 
   document.getElementById('govRefresh').addEventListener('click', load);
-  document.getElementById('govSample').addEventListener('click', async () => {
+  // 采样按钮必须有 busy 反馈（2026-10-22 慢后端实测）：采样要跑一次真实量测，可能耗时数秒，
+  // 此前按钮文案与 disabled 全程不变（实测 +0/+700/+3700ms 三帧读数完全一致）—— 用户点了
+  // 没有任何变化，只会当成「没反应」再点一次。同时把 alert 换成 toast：
+  // 原生 alert 阻塞界面且不属于本设计体系（面板其余反馈一律走 toast）。
+  const govSampleBtn = document.getElementById('govSample');
+  govSampleBtn.addEventListener('click', async () => {
+    const label0 = govSampleBtn.textContent;
+    govSampleBtn.disabled = true;
+    govSampleBtn.textContent = '采样中…';
     try {
       const sum = await api('/api/gov/sample', { method: 'POST', body: JSON.stringify({}) });
       render(sum);
+      toast('采样完成');
     } catch (e) {
-      alert('采样失败：' + e.message);
+      toast('采样失败：' + e.message);
+    } finally {
+      govSampleBtn.disabled = false;
+      govSampleBtn.textContent = label0;
     }
   });
   load();

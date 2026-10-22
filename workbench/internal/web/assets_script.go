@@ -816,6 +816,22 @@ const appJS = `(() => {
   const tabs = document.querySelectorAll('.tab');
   const TAB_NAMES = Array.prototype.map.call(tabs, function (t) { return t.getAttribute('data-tab'); });
   let pendingHash = null;
+  // 首次加载占位（2026-10-22 慢后端实测缺陷）：切页签时目标面板若还空着，先给一张骨架再取数。
+  // 实测（CDP 限速 1.2s）：模板页首帧 pane.innerHTML 长度 = 0 —— 整片空白，用户无从判断
+  // 「正在读」还是「已经坏了」。判据卷「慢网/资源失败态：Loading 兜底不得永驻」的另一半是
+  // **失败必须替换占位**：否则读失败会显示成「一直在读」（见 render 的 catch）。
+  const loadingPane = (name) => {
+    const el = panes[name] || document.getElementById('tab-' + name);
+    if (!el || el.innerHTML) { return; }
+    el.innerHTML = '<div class="card"><h3>读取中</h3>' +
+      '<div class="skeleton"></div><div class="skeleton short"></div><div class="skeleton"></div></div>';
+  };
+  const failPane = (name, msg) => {
+    const el = panes[name] || document.getElementById('tab-' + name);
+    if (!el) { return; }
+    el.innerHTML = '<div class="card"><h3>读取失败</h3>' +
+      '<div class="empty-hint">' + esc(msg || '接口不可用') + '<br>点上方页签可重试。</div></div>';
+  };
   function activateTab(name, opts) {
     if (TAB_NAMES.indexOf(name) < 0) { name = LEGACY_TABS[name] || 'overview'; }
     const allTabs = document.querySelectorAll('.tab');
@@ -826,6 +842,7 @@ const appJS = `(() => {
     if (tab) { tab.classList.add('active'); }
     const pane = document.getElementById('tab-' + name);
     if (pane) { pane.classList.add('active'); }
+    loadingPane(name); // 空面板先给骨架，避免慢后端下的整片空白
     if (!opts || opts.hash !== false) {
       if (location.hash !== '#' + name) { pendingHash = name; location.hash = name; }
     }
@@ -853,7 +870,11 @@ const appJS = `(() => {
       else if (name === 'outputs') { await renderOutputs(); }
       else if (name === 'templates') { await renderTemplates(); }
       else if (name === 'settings') { await renderSettings(); }
-    } catch (e) { toast('加载失败：' + e.message); }
+    } catch (e) {
+      // 占位不得永驻：失败时**替换**成失败态，否则「读失败」会被显示成「一直在读」。
+      failPane(name, '加载失败：' + e.message);
+      toast('加载失败：' + e.message);
+    }
   }
 
   async function refreshTop() {
