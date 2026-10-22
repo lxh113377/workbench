@@ -1,4 +1,4 @@
-﻿# check_noninteractive.ps1 -- 无人值守静态门禁：仓库内任何脚本都不得留下会等人工按键的构造。
+# check_noninteractive.ps1 -- 无人值守静态门禁：仓库内任何脚本都不得留下会等人工按键的构造。
 #
 # 起因（2026-10-19 实测）：tests/keepalive.ps1 由计划任务每分钟拉起一次，其中一条
 # Invoke-WebRequest 没带 -UseBasicParsing。PowerShell 5.1 在该情况下会调用 IE 引擎
@@ -25,8 +25,11 @@ $ErrorActionPreference = "Stop"
 if (-not $Root) { $Root = Split-Path -Parent $PSScriptRoot }
 if (-not (Test-Path -LiteralPath $Root)) { Write-Error ("根目录不存在: " + $Root); exit 2 }
 
-# 跳过依赖与产物目录（第三方脚本不归本仓判据管）
-$skipDirs = @(".git", "node_modules", "dist", "runtime", "_recovery", "src-backup", "gocache", "lead-backup", "vendor", "bin", "obj")
+# 跳过依赖与产物目录（第三方脚本不归本仓判据管）。
+# xtmp（2026-10-22 补）：对标 clone 的 scratch 区（xtmp/oss/* 是 river/asynq/wails 等
+# 上游仓），.gitignore 已整目录忽略、CI checkout 里根本不存在 —— 拿上游脚本的
+# 交互习惯判本仓门禁，是「把别人的工具链当自己的缺陷」。gocache 同型先例在册。
+$skipDirs = @(".git", "node_modules", "dist", "runtime", "_recovery", "src-backup", "gocache", "lead-backup", "vendor", "bin", "obj", "xtmp")
 $extOk = @(".ps1", ".psm1", ".cmd", ".bat")
 $thisFile = $MyInvocation.MyCommand.Path
 $files = @(Get-ChildItem -LiteralPath $Root -Recurse -File -Force -ErrorAction SilentlyContinue | Where-Object {

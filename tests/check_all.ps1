@@ -6,7 +6,8 @@
       1) check_subsystem.ps1      —— 产物本身不要弹控制台（PE 子系统 = GUI）
       2) check_spawn_silent.ps1   —— spawn 的子进程不要弹控制台（隐藏窗口属性）
       3) check_no_shrink.ps1      —— 合并前禁止整文件覆盖丢掉他会话的改动
-   但它们散在三处，靠人记得跑。本脚本把「记得跑三个」收敛成「跑一个」。
+       4) check_gate_links.ps1     —— 受跟踪脚本的引用不得断链（2026-10-22 补：实发 check_all 自己引用的 4 个门禁从未入库，干净 clone 里总门禁静默降级）
+   但它们散在三处，靠人记得跑。本脚本把「记得跑几个」收敛成「跑一个」。
 
   设计原则（反掩盖，对标 audit-runner-safe-aggregate）：
     - 每一段独立执行、独立记失败，**不允许**用聚合把单个失败洗绿；
@@ -81,6 +82,12 @@ Section '纯净检出编译（防提交编译不过的快照）' {
   $g = Join-Path $Root 'tests\check_snapshot_build.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Repo $Root
+}
+
+Section '门禁引用完整性（受跟踪脚本的引用不得断链）' {
+  $g = Join-Path $Root 'tests\check_gate_links.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
 }
 
 if ($Source -ne '' -or $Target -ne '') {
