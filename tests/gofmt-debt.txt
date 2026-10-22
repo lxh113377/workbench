@@ -48,6 +48,5 @@ workbench/internal/supervisor/metrics_csv_test.go
 workbench/internal/tray/tray_window_style_test.go
 workbench/internal/web/autostart_windows.go
 workbench/internal/web/export.go
-workbench/internal/web/pool_page.go
 workbench/internal/workspace/deadlock_test.go
 workbench/internal/shortcut/shortcut_windows.go
