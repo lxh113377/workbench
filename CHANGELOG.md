@@ -16,6 +16,31 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **第 30 轮盘点发现覆盖缺口：没有任何门禁检查 `.ps1` 语法可解析性（已补，CI 门禁数 12→13）**：
+  盘全仓 23 个门禁的职责面时发现：BOM 有门禁、换行有门禁、引用有门禁，
+  但**「能否被 PowerShell 解析」这一层是空的**。
+  **实测确认缺口（不是推理）**：造一个「字符串未闭合」的 `.ps1` 并暂存，
+  现有 3 个最相关的门禁**全部 rc=0 放过** ——
+  `check_ps1_encoding`（管 BOM）rc=0、`check_ps1_eol`（管换行）rc=0、
+  `check_gate_links`（管引用）rc=0；而 PowerShell 解析器明确报
+  `The string is missing the terminator: '`。
+  后果：**语法错误的脚本能顺利进库，直到有人运行才炸**。
+  本仓已有同族事故多次（BOM 缺失 / 双重 BOM / 未闭合字符串，均靠跑起来才暴露）——
+  都属于「本可静态发现、却要等运行时」。
+  新增 `tests/check_ps1_syntax.ps1`，接入 **repo-gates（第 13 个）** 与 `check_all`。
+  用 `[System.Management.Automation.Language.Parser]::ParseFile` —— **只解析不执行**
+  （纯静态、无副作用、不需要权限、不会真跑脚本）。
+  至此 `.ps1` 的防护形成**三层**，各自管一个面：
+  | 层 | 门禁 | 判什么 |
+  |---|---|---|
+  | 字节层 | `check_ps1_encoding` | BOM 有无/重复 |
+  | 字节层 | `check_ps1_eol` | CRLF 混入 |
+  | **语法层** | **`check_ps1_syntax`** | **能否被解析** |
+  验证（三个变异全捕获，错误信息带 `file:line` + 具体原因）：
+  - MUT-A：字符串未闭合 ⇒ 判红（`:2 The string is missing the terminator`）；
+  - MUT-B：合法语法 ⇒ PASS；
+  - MUT-C：`if` 缺闭合括号 ⇒ 判红（`:2 Missing closing '}'`）。
+  基线：53 个受跟踪脚本全部可解析。
 - **`check_noninteractive` 从 22.0s 优化到 0.4s（快 55 倍），判据能力零退化（2026-10-24）**：
   承接 round 28 的同型优化（那次改了 `check_ps1_encoding`，并记下「还有 4 处同型问题」）。
   **动手前先复测，推翻了部分印象**：那 4 处里 3 处其实不慢 ——
