@@ -73,7 +73,7 @@ const poolJS = `(() => {
       '<td data-label="停用">' + esc(l.disabled) + '</td>' +
       '</tr>'
     ).join('');
-    const laneBody = '<div class="pool-table-wrap"><table class="pool-table"><thead><tr><th>车道</th><th>总数</th><th>可用</th><th>下线</th><th>停用</th></tr></thead><tbody>' +
+    const laneBody = '<div class="pool-table-wrap"><table class="pool-table" aria-label="车道汇总（按运行环境）"><thead><tr><th>车道</th><th>总数</th><th>可用</th><th>下线</th><th>停用</th></tr></thead><tbody>' +
       (laneRows || '<tr><td colspan="5" class="empty">暂无模型</td></tr>') + '</tbody></table></div>';
     const strategies = ['priority','round-robin','weighted','least-loaded'];
     const stratSel = '<select id="strategySel" aria-label="模型调度策略" style="max-width:220px">' + strategies.map(s => '<option value="' + s + '"' + (d.strategy===s?' selected':'') + '>' + stratName(s) + '</option>').join('') + '</select>';
@@ -81,11 +81,11 @@ const poolJS = `(() => {
     const gw = g.base ? (g.hasKey ? '已连接' : '缺密钥') : '未发现';
     document.getElementById('poolOverview').innerHTML =
       '<div class="card"><h3>总览</h3>' +
-      '<div class="status-line"><span class="dot ' + ((d.available||0) > 0 ? 'on' : 'off') + '"></span>' +
+      '<div class="status-line"><span class="dot ' + ((d.available||0) > 0 ? 'on' : 'off') + '" aria-hidden="true"></span>' +
         '可用 <b>' + esc(d.available||0) + ' / ' + esc(d.total||0) + '</b> 个模型' +
-        '<span class="sep">·</span>网关 <b>' + esc(gw) + '</b>' +
-        '<span class="sep">·</span>策略 <b>' + esc(stratName(d.strategy)) + '</b>' +
-        (lp.at ? '<span class="sep">·</span>上次探测 <b>' + esc(fmtTime(lp.at)) + '</b>' : '') +
+        '<span class="sep" aria-hidden="true">·</span>网关 <b>' + esc(gw) + '</b>' +
+        '<span class="sep" aria-hidden="true">·</span>策略 <b>' + esc(stratName(d.strategy)) + '</b>' +
+        (lp.at ? '<span class="sep" aria-hidden="true">·</span>上次探测 <b>' + esc(fmtTime(lp.at)) + '</b>' : '') +
       '</div>' +
       // 网关读数分三级用词（2026-10-20 老大实报「网关错误：端口未监听...」）：
       //   · 端口没监听 = DSH 桌面端起停/任务 HOME 轮换的正常环境态，非缺陷 ⇒ 中性提示；
@@ -117,7 +117,7 @@ const poolJS = `(() => {
       '<td data-label="停用">' + esc(l.disabled) + '</td>' +
       '</tr>'
     ).join('');
-    return '<div class="pool-table-wrap"><table class="pool-table"><thead><tr><th>车道</th><th>总数</th><th>可用</th><th>下线</th><th>停用</th></tr></thead><tbody>' +
+    return '<div class="pool-table-wrap"><table class="pool-table" aria-label="车道汇总（按运行环境）"><thead><tr><th>车道</th><th>总数</th><th>可用</th><th>下线</th><th>停用</th></tr></thead><tbody>' +
       (rows || '<tr><td colspan="5" class="empty">暂无模型</td></tr>') + '</tbody></table></div>';
   };
 
@@ -207,7 +207,7 @@ const poolJS = `(() => {
       const tone = groupTone(stats);
       const avgLat = stats.latN ? fmtMs(Math.round(stats.latSum / stats.latN)) : '—';
       const THEAD = '<thead><tr><th>#</th><th>模型</th><th>优先级/权重</th><th>状态</th><th>成功/失败</th><th>操作</th></tr></thead>';
-      const tableOf = rows => '<div class="pool-table-wrap"><table class="pool-table">' + THEAD + '<tbody>' + rows + '</tbody></table></div>';
+      const tableOf = rows => '<div class="pool-table-wrap"><table class="pool-table" aria-label="模型明细（按分组）">' + THEAD + '<tbody>' + rows + '</tbody></table></div>';
       // 组内再分两层：能用的（可用/降级/未探测）直接展开；停用/下线的折在下面。
       // OFM 组 13 个里有 10 个是「上游判定不可用」的自动停用项，混在一起会把
       // 真正能用的 3 个埋掉——这正是「乱七八糟」的具体来源。

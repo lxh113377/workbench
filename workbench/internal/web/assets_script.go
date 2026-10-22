@@ -204,7 +204,7 @@ const appJS = `(() => {
       '</div>';
 
     const modelBody = models.length
-      ? '<table><thead><tr><th>模型</th><th>层级</th><th>成功/失败</th><th>状态</th></tr></thead><tbody>' +
+      ? '<table aria-label="模型健康度明细"><thead><tr><th>模型</th><th>层级</th><th>成功/失败</th><th>状态</th></tr></thead><tbody>' +
         models.map(function (m) {
           const cd = m.cooldownTo && m.cooldownTo > Date.now();
           const badge = cd ? '<span class="tag">冷却中</span>' : '<span class="state-done">可用</span>';
@@ -217,7 +217,7 @@ const appJS = `(() => {
     const failRes = await api('/api/failures').catch(function () { return { buckets: [], total: 0, empty: true }; });
     const failBody = failRes.empty
       ? emptyHint('没有失败任务 —— 保持这样最好。')
-      : '<table><thead><tr><th>原因</th><th>次数</th><th>占比</th></tr></thead><tbody>' +
+      : '<table aria-label="失败原因分布"><thead><tr><th>原因</th><th>次数</th><th>占比</th></tr></thead><tbody>' +
         (failRes.buckets || []).map(function (b) {
           const pct = Math.round(100 * b.count / Math.max(1, failRes.total));
           return '<tr><td data-label="原因">' + esc(kindText[b.kind] || b.kind) + '</td><td data-label="次数">' + b.count + '</td><td data-label="占比" class="num">' + pct + '%</td></tr>';
@@ -232,17 +232,17 @@ const appJS = `(() => {
       '<div class="item"><div class="v">' + (m.numGC || 0) + '</div><div class="l">GC 次数</div></div>' +
       '</div>';
 
-    const statusLine = '<div class="status-line"><span class="dot ' + (st.phase === 'running' ? 'on' : 'off') + '"></span>' +
-      '引擎 <b>' + esc(phaseText) + '</b><span class="sep">·</span>正在执行 <b>' + (s.runningTasks || 0) + '</b>' +
-      '<span class="sep">·</span>平均耗时 <b>' + (s.avgSeconds || 0).toFixed(0) + ' 秒</b>' +
-      '<span class="sep">·</span>验收率 <b>' + (s.doneTasks ? (100 * (s.verifiedTasks || 0) / s.doneTasks).toFixed(1) : '0.0') + '%</b></div>';
+    const statusLine = '<div class="status-line"><span class="dot ' + (st.phase === 'running' ? 'on' : 'off') + '" aria-hidden="true"></span>' +
+      '引擎 <b>' + esc(phaseText) + '</b><span class="sep" aria-hidden="true">·</span>正在执行 <b>' + (s.runningTasks || 0) + '</b>' +
+      '<span class="sep" aria-hidden="true">·</span>平均耗时 <b>' + (s.avgSeconds || 0).toFixed(0) + ' 秒</b>' +
+      '<span class="sep" aria-hidden="true">·</span>验收率 <b>' + (s.doneTasks ? (100 * (s.verifiedTasks || 0) / s.doneTasks).toFixed(1) : '0.0') + '%</b></div>';
 
     // 停摆自证（2026-10-21 现场）：用户看到的是「引擎运行中 / 今日产出 0 / 排队 0」，
     // 三个读数互相矛盾却说不出原因。服务端已把原因归纳成稳定原因码（stallReason），
     // 这里把它顶到状态行上方 —— 有产出时这一行不出现，不制造噪音。
     const stall = st.stallReason || {};
     const stallBanner = stall.code
-      ? '<div class="stall-banner"><span class="stall-icon">!</span><div><b>' + esc(stall.text || '当前没有产出') + '</b>' +
+      ? '<div class="stall-banner"><span class="stall-icon" aria-hidden="true">!</span><div><b>' + esc(stall.text || '当前没有产出') + '</b>' +
         (stall.detail ? '<div class="muted">' + esc(stall.detail) + '</div>' : '') + '</div></div>'
       : '';
 
@@ -300,9 +300,9 @@ const appJS = `(() => {
       '<div class="toolbar" style="margin-top:12px"><button class="btn primary" onclick="WB.manual()">评估并加入队列</button></div>';
 
     // 状态摘要：一行看完「现在有没有活、干到哪」
-    const head = '<div class="status-line"><span class="dot ' + (running.length ? 'on' : 'off') + '"></span>' +
-      '排队 <b>' + q.length + '</b><span class="sep">·</span>执行中 <b>' + running.length + '</b>' +
-      '<span class="sep">·</span>今日产出 <b>' + ((cache.status && cache.status.stats && cache.status.stats.todayDone) || 0) + '</b></div>';
+    const head = '<div class="status-line"><span class="dot ' + (running.length ? 'on' : 'off') + '" aria-hidden="true"></span>' +
+      '排队 <b>' + q.length + '</b><span class="sep" aria-hidden="true">·</span>执行中 <b>' + running.length + '</b>' +
+      '<span class="sep" aria-hidden="true">·</span>今日产出 <b>' + ((cache.status && cache.status.stats && cache.status.stats.todayDone) || 0) + '</b></div>';
 
     let body;
     if (nothing) {
@@ -312,9 +312,9 @@ const appJS = `(() => {
         '如果你想马上让它做一件具体的事，在下面写清楚要什么，点一下就入队。</div>' + addBody + '</div>';
     } else {
       body = '<div class="card"><h3>任务</h3>' + head +
-        (rows ? '<div class="table-scroll" style="margin-top:14px"><table><thead><tr><th>标题</th><th>领域</th><th>优先级</th><th>状态</th><th>操作</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+        (rows ? '<div class="table-scroll" style="margin-top:14px"><table aria-label="排队任务列表"><thead><tr><th>标题</th><th>领域</th><th>优先级</th><th>状态</th><th>操作</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
           : '<div class="muted" style="margin-top:12px">排队为空 —— 引擎会继续从模板生成。</div>') +
-        (activeRows ? '<h4 style="margin-top:20px">执行中 / 待执行</h4><div class="table-scroll"><table><thead><tr><th>标题</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>' + activeRows + '</tbody></table></div>' : '') +
+        (activeRows ? '<h4 style="margin-top:20px">执行中 / 待执行</h4><div class="table-scroll"><table aria-label="执行中与待执行任务"><thead><tr><th>标题</th><th>状态</th><th>更新时间</th><th>操作</th></tr></thead><tbody>' + activeRows + '</tbody></table></div>' : '') +
         '<div style="margin-top:16px">' + fold('自己加一个任务', addBody) + '</div></div>';
     }
     // 详情容器（2026-10-23 全链路走查缺陷）：openTask 里「拿到 box 为空就 return」是静默返回，
@@ -359,7 +359,7 @@ const appJS = `(() => {
         '<td class="ops" data-label="操作"><button class="btn sm" onclick="WB.openTask(&apos;' + t.id + '&apos;)">查看</button>' +
         (t.state === 'done' ? '<button class="btn sm" onclick="WB.rate(&apos;' + t.id + '&apos;,5)">★5</button>' : '') + '</td></tr>';
     };
-    const head = '<table><thead><tr><th>标题</th><th>领域</th><th>耗时</th><th>自评</th><th>验收</th><th>返工</th><th>大小</th><th>操作</th></tr></thead><tbody>';
+    const head = '<table aria-label="已完成产出"><thead><tr><th>标题</th><th>领域</th><th>耗时</th><th>自评</th><th>验收</th><th>返工</th><th>大小</th><th>操作</th></tr></thead><tbody>';
     const exportBody = '<div class="toolbar">' +
       '<button class="btn" onclick="WB.exportAll(&apos;md&apos;)">导出全部 Markdown</button>' +
       '<button class="btn" onclick="WB.exportAll(&apos;txt&apos;)">导出全部 TXT</button>' +
@@ -367,7 +367,7 @@ const appJS = `(() => {
     const doneTable = done.length ? head + done.map(rowOf).join('') + '</tbody></table>' : emptyHint('还没有产出。引擎跑起来后，成果会出现在这里。');
     panes.outputs.innerHTML =
       '<div class="card"><h3>已完成产出</h3>' +
-      '<div class="status-line">共 <b>' + done.length + '</b> 份产出<span class="sep">·</span>其中 <b>' + verifiedN + '</b> 份通过验收</div>' +
+      '<div class="status-line">共 <b>' + done.length + '</b> 份产出<span class="sep" aria-hidden="true">·</span>其中 <b>' + verifiedN + '</b> 份通过验收</div>' +
       '<div class="table-scroll" style="margin-top:12px">' + doneTable + '</div>' +
       '<div style="margin-top:14px">' + fold('导出这些产出', exportBody) + '</div>' +
       '</div>' +
@@ -398,9 +398,9 @@ const appJS = `(() => {
       : '';
     panes.templates.innerHTML =
       '<div class="card"><h3>任务模板库</h3>' +
-      '<div class="status-line">共 <b>' + cache.templates.length + '</b> 个模板<span class="sep">·</span>引擎按它们的权重轮换生成任务<span class="sep">·</span>按价值先验从高到低排</div>' +
+      '<div class="status-line">共 <b>' + cache.templates.length + '</b> 个模板<span class="sep" aria-hidden="true">·</span>引擎按它们的权重轮换生成任务<span class="sep" aria-hidden="true">·</span>按价值先验从高到低排</div>' +
       '<div class="toolbar" style="margin-top:12px"><input id="tplSearch" placeholder="搜模板名或领域…" value="' + esc(tplQuery) + '" style="max-width:320px"></div>' +
-      '<div class="table-scroll" style="margin-top:12px"><table><thead><tr><th>名称</th><th>领域</th><th>优先级</th><th>价值先验</th><th>状态</th><th>操作</th></tr></thead><tbody>' +
+      '<div class="table-scroll" style="margin-top:12px"><table aria-label="任务模板库"><thead><tr><th>名称</th><th>领域</th><th>优先级</th><th>价值先验</th><th>状态</th><th>操作</th></tr></thead><tbody>' +
       (rows || '<tr><td colspan="6" class="empty">' + (q ? '没有匹配「' + esc(tplQuery) + '」的模板' : '还没有模板') + '</td></tr>') + '</tbody></table></div>' +
       more +
       '<div class="toolbar" style="margin-top:14px"><button class="btn primary" onclick="WB.newTemplate()">新建模板</button>' +
@@ -453,7 +453,7 @@ const appJS = `(() => {
       '<div class="card"><h3>评估与自动批准</h3><div class="muted">决定「哪些任务值得做」的打分规则。默认值经过实测调优，不确定就别改。</div>' +
       '<div style="margin-top:10px">' + fold('展开调整权重与阈值', evalBody) + '</div></div>' +
       '<div class="card"><h3>工作目录</h3><div id="wsRoot" data-ws="workspace"><div class="muted">读取中…</div></div></div>' +
-      '<div class="card"><h3>运行信息</h3><table><tbody>' +
+      '<div class="card"><h3>运行信息</h3><table aria-label="运行信息"><tbody>' +
       '<tr><td style="width:150px">面板端口</td><td>' + esc(cfgRes.port) + '</td></tr>' +
       '<tr><td>运行配置</td><td>' + esc(ex.profileName || 'web-desktop') + '（一般不用改）</td></tr>' +
       '<tr><td>开机自启</td><td>' + (autoRes.enabled ? '已开启' : '未开启') + (autoRes.error ? '（' + esc(autoRes.error) + '）' : '') + '</td></tr>' +
@@ -502,7 +502,7 @@ const appJS = `(() => {
       (audit.lastDeny ? '，最近拒绝：' + esc(audit.lastDeny) : '') + '</div>' +
       '<div class="toolbar" style="margin-top:10px"><button class="btn ghost" onclick="WB.wsAudit()">查看审计明细</button></div>' +
       '<pre id="wsAuditOut" style="display:none;margin-top:10px;max-height:260px;overflow:auto"></pre>';
-    root.innerHTML = '<div class="status-line">当前：<code>' + esc(view.root || '-') + '</code><span class="sep">·</span>' + modeBadge + '</div>' +
+    root.innerHTML = '<div class="status-line">当前：<code>' + esc(view.root || '-') + '</code><span class="sep" aria-hidden="true">·</span>' + modeBadge + '</div>' +
       (external ? '<div class="toolbar" style="margin-top:10px"><button class="btn ghost" onclick="WB.wsReset(this)">切回项目模式</button></div>' : '') +
       '<div style="margin-top:12px">' + fold('换个工作目录', pickBody) + '</div>' +
       '<div style="margin-top:10px">' + fold('访问审计（允许 ' + (audit.allowed || 0) + ' / 拒绝 ' + (audit.denied || 0) + '）', auditBody) + '</div>';
@@ -527,10 +527,10 @@ const appJS = `(() => {
         '<td><button class="btn sm" onclick="WB.retry(&apos;' + t.id + '&apos;)">重试</button></td></tr>';
     }).join('');
     root.innerHTML = fold('最近 200 条操作流水', rows
-      ? '<div class="table-scroll"><table><thead><tr><th>时间</th><th>操作者</th><th>事件</th><th>说明</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
+      ? '<div class="table-scroll"><table aria-label="操作审计流水"><thead><tr><th>时间</th><th>操作者</th><th>事件</th><th>说明</th></tr></thead><tbody>' + rows + '</tbody></table></div>'
       : emptyHint('还没有审计记录。引擎跑起来后，每一次审批、执行、验收都会留痕在这里。')) +
       fold('失败任务（' + (failed ? (tasksRes.tasks || []).filter(function (t) { return t.state === 'failed' || t.state === 'timeout'; }).length : 0) + '）',
-        failed ? '<div class="table-scroll"><table><thead><tr><th>标题</th><th>状态</th><th>错误</th><th>操作</th></tr></thead><tbody>' + failed + '</tbody></table></div>'
+        failed ? '<div class="table-scroll"><table aria-label="失败任务列表"><thead><tr><th>标题</th><th>状态</th><th>错误</th><th>操作</th></tr></thead><tbody>' + failed + '</tbody></table></div>'
           : emptyHint('没有失败任务 —— 保持这样最好。'));
   }
 
