@@ -16,6 +16,22 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Changed
+- **门禁自身的 bug 被抓到：未跟踪件解析把 41 个在途修改误报成生产未入库（2026-10-23）**：
+  上一轮加的 `check_untracked_go.ps1` 首版有一处**解析缺陷**：用 `-like '*.go'` 直接筛
+  `git status --porcelain` 全表，会把 ` M path.go` 这类**已跟踪修改行**也匹配进来。
+  实测后果：FAIL 从真实的 **4 处**虚增到 **41 处**（把并行会话全部在途件误报成「生产代码未入库」）。
+  修法：先判 `StartsWith('?? ')` 再取 `Substring(3)`， porcelain 的 ?? 后紧跟一个空格。
+  **同一轮我还被自己的临时统计脚本骗了一次**（正则转义失效 => 报 untracked=0，与门禁报的 42 个矛盾）——
+  两次都印证同一件事：**读数必须由门禁产出，不由一次性脚本产出**。一次性脚本没有验真机制，
+  错了没人知道；门禁有 HEAD 判据、有门禁链校验、有 CI 复跑。
+  顺带把门禁输出升级：核心读数（未跟踪数/生产未跟踪数/提交与工作区测试函数数/差额/HEAD）
+  落盘到 `.workbuddy/memory/gate-readings.jsonl`，使差额趋势可见 ——
+  并行会话逐步提交时该差额应下降，若持续上升说明在途件在堆积。
+  修复后实测：4 个生产文件（`modelpool/lanes.go`、`web/hiddenproc_other.go`、
+  `web/hiddenproc_windows.go`、`cmd/schedprobe/main.go`），测试差额 100 个。
+  已验证 HEAD 侧未断裂：HEAD 的 `service.go` **没有** `PurgeGatewayLanes` 调用
+  （该符号在全树仅 1 处且是注释），故干净 clone 编译 rc=0 ——
+  当前形态是「工作区有调用+定义、HEAD 两者皆无」，属健康的在途状态，提交后会丢失该功能。
 - **「本地绿 ≠ 提交绿」被量化：98 个测试只在本机跑，CI 永远看不到（2026-10-23 实测）**：
   审计「未跟踪 .go」发现 **42 个未跟踪文件**（41 个 `_test.go` + 3 个生产文件 ——
   `modelpool/lanes.go`、`web/hiddenproc_other.go`、`web/hiddenproc_windows.go`）。
