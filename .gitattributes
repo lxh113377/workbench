@@ -21,8 +21,11 @@
 *.go text eol=lf
 
 # 脚本与配置：交给 git 按文本归一化，检出时用平台默认（Windows 侧 CRLF 可接受）
-*.ps1  text=auto
-*.psm1 text=auto
+# PowerShell 脚本：显式 eol=crlf + text（不做内容归一化，保住 UTF-8 BOM）。
+# 2026-10-22 实测事故：无 BOM 的 UTF-8 .ps1 在 CI（PS5.1）里把中文按 ANSI 解码 =>
+# ParserError，本地 PS7 却正常。check_changelog.ps1 一直带 BOM 所以从没暴露。
+*.ps1  text eol=crlf
+*.psm1 text eol=crlf
 *.cmd  text=auto
 *.bat  text=auto
 *.yml  text=auto

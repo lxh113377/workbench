@@ -1,4 +1,4 @@
-# check_gofmt.ps1 -- Go 代码格式门禁（LF 归一化后判，防 CRLF 假红淹没）
+﻿# check_gofmt.ps1 -- Go 代码格式门禁（LF 归一化后判，防 CRLF 假红淹没）
 #
 # 为什么需要（2026-10-22 实测）：本仓长期「CI 无 gofmt 门禁」，直接原因是
 # 工作副本在 core.autocrlf=true 下全是 CRLF，而 gofmt 只接受 LF —— 直接跑

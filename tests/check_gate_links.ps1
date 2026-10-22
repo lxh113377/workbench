@@ -1,4 +1,4 @@
-# check_gate_links.ps1 -- 门禁脚本引用完整性判据（断链即红）
+﻿# check_gate_links.ps1 -- 门禁脚本引用完整性判据（断链即红）
 #
 # 为什么需要（2026-10-22 盘点实测）：受跟踪的 tests/check_all.ps1 是预检总门禁，
 # 它 Join-Path 引用的 check_subsystem / check_spawn_silent / check_no_shrink /

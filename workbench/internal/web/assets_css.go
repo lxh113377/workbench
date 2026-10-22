@@ -1289,4 +1289,55 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
     transition-duration:.001ms !important;scroll-behavior:auto !important;
   }
   .start-btn[data-state=busy] .btn-load{opacity:1;border-top-color:rgba(255,255,255,.4)}
+}
+/* ============================================================ 打印 ====
+   2026-10-22 CDP 打印介质实测：全站此前**零** @media print 规则，
+   打印预览里 body 仍是 rgb(4,7,13) 深底 + 极光渐变 + 顶栏 + 按钮残骸 ——
+   纸上是满页黑块，完全不可用。而界面上有「打印自检报告」按钮，用户真的会按 Ctrl+P。
+   打印版走「白纸黑字」：去掉所有装饰层（渐变/网格/辉光/扫描线），
+   隐去导航与操作件，只留内容；卡片退化成分隔线而不是色块（省墨且清晰）。 */
+@media print{
+  /* 白纸：先关掉所有背景层与装饰伪元素 */
+  html,body{
+    background:#fff !important;color:#111 !important;
+    -webkit-print-color-adjust:economy;print-color-adjust:economy;
+  }
+  body::before,body::after,body.home::before,body.home::after,
+  .home-main::before,.home-main::after,
+  .card::before,.card::after,.gov-card::after,
+  .topbar-shell::after,.kpi::after,.kpi::before,.skeleton{display:none !important}
+  /* 隐去导航与操作面（打印不点按钮） */
+  .topbar-shell,.tabs,.topactions,.topmore,.toolbar,
+  .btn,button,select,input[type=checkbox],.toast,
+  .home-entries,.home-main::after{display:none !important}
+  /* 内容区：白底黑字，去掉限宽与内边距带来的空白 */
+  .content{max-width:none !important;padding:0 !important;animation:none !important}
+  .card,.gov-card{
+    background:#fff !important;border:0 !important;border-bottom:1px solid #bbb !important;
+    box-shadow:none !important;clip-path:none !important;border-radius:0 !important;
+    padding:10px 0 !important;margin:0 0 10px !important;break-inside:avoid;
+  }
+  .card h3,.gov-card h3,.card h4,.gov-card h4{color:#111 !important;border-bottom:1px solid #999 !important}
+  .card h3::before,.gov-card h3::before{color:#555 !important}
+  /* 文本与数据：保证可读对比 */
+  *{color:#111 !important;text-shadow:none !important}
+  .muted,.gov-dim,.dim,.status-line{color:#444 !important}
+  th{background:#f2f2f2 !important;color:#111 !important;box-shadow:none !important}
+  td,th{border-bottom:1px solid #ccc !important}
+  .kpi{background:#fff !important;border:1px solid #ccc !important;border-radius:0 !important}
+  .kpi .v{color:#111 !important}
+  /* 状态色保留语义但压深（黑白打印机也能辨亮暗） */
+  .state-done,.lv-ok{color:#0a6b2d !important}
+  .state-failed,.lv-red{color:#a30014 !important}
+  .lv-warn{color:#8a5b00 !important}
+  /* 折叠块：打印必须展开（打印稿不能靠点击） */
+  details > .fold-body,.gov-card.foldcard > .fold-body{display:block !important}
+  details:not([open]) > .fold-body{display:block !important}
+  summary{list-style:none}
+  /* 长表格不截断，跨页处允许断开 */
+  .table-scroll{max-height:none !important;overflow:visible !important;border:0 !important;background:transparent !important}
+  table{break-inside:auto}
+  tr{break-inside:avoid}
+  /* 链接打印出 URL（离线纸质件仍可追溯） */
+  a[href^="http"]::after{content:" (" attr(href) ")";font-size:10px;color:#666}
 }`

@@ -1,4 +1,4 @@
-# check_noninteractive.ps1 -- 无人值守静态门禁：仓库内任何脚本都不得留下会等人工按键的构造。
+﻿# check_noninteractive.ps1 -- 无人值守静态门禁：仓库内任何脚本都不得留下会等人工按键的构造。
 #
 # 起因（2026-10-19 实测）：tests/keepalive.ps1 由计划任务每分钟拉起一次，其中一条
 # Invoke-WebRequest 没带 -UseBasicParsing。PowerShell 5.1 在该情况下会调用 IE 引擎
