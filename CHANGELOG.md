@@ -16,6 +16,24 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **`check_noninteractive` 从 22.0s 优化到 0.4s（快 55 倍），判据能力零退化（2026-10-24）**：
+  承接 round 28 的同型优化（那次改了 `check_ps1_encoding`，并记下「还有 4 处同型问题」）。
+  **动手前先复测，推翻了部分印象**：那 4 处里 3 处其实不慢 ——
+  `check_doc_refs`/`check_report_claims` 只遍历 `docs/` 子目录（0.3s）、
+  `check_spawn_silent` 有 `-Filter` 提前过滤（0.6s）。**真正慢的只有 `check_noninteractive`（22.0s）**。
+  避免了「凭印象优化 3 个不是瓶颈的门禁」—— 无瓶颈就不动，改动面越小越安全。
+  根因与 round 28 同型：`Get-ChildItem -Recurse` 遍历整个仓库（275,006 个文件 / 约 20s），
+  而门禁真正要扫的只有 57 个脚本。改法相同：`git ls-files '*.ps1' '*.psm1' '*.cmd' '*.bat'`。
+  **语义变化已量化（非隐含）**：覆盖从 57 ⇒ 53 个受跟踪脚本。少的 3 个是未跟踪在途件
+  （`tests/safe_merge.ps1`、`tests/watch_soak.ps1`、`前端自检.cmd`），
+  **实测均无交互模式命中**且属并行会话 ownership —— 不构成漏判。
+  该缩小与 `check_gofmt`/`check_ps1_eol` 的「只判将进版本库的内容」口径一致。
+  原有的目录排除列表（.git/node_modules/xtmp/...）与 `-Include` 不生效的规避注释
+  已转为历史注记保留 —— **为什么不那么写**和**为什么这么写**同样值得留。
+  **能力零退化验证（三个变异全捕获）**：
+  - MUT-A：含 `Read-Host` 的受跟踪脚本 ⇒ 判红并精确点名 `含交互构造 Read-Host`；
+  - MUT-B：非交互脚本 ⇒ PASS；
+  - MUT-C：含 `Get-Credential` ⇒ 判红（另一种交互构造，证明不是只认一个模式）。
 - **`check_ps1_encoding` 从 20.3s 优化到 0.3s（快 50 倍+），且判据能力零退化（2026-10-24）**：
   起因是给所有门禁做了一次耗时普查，发现它异常慢——而它只是读文件头几个字节查 BOM。
   **根因（量化定位，不是猜的）**：`Get-ChildItem -LiteralPath $Root -Recurse -File`

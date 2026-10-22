@@ -25,24 +25,50 @@ $ErrorActionPreference = "Stop"
 if (-not $Root) { $Root = Split-Path -Parent $PSScriptRoot }
 if (-not (Test-Path -LiteralPath $Root)) { Write-Error ("根目录不存在: " + $Root); exit 2 }
 
-# 跳过依赖与产物目录（第三方脚本不归本仓判据管）。
-# xtmp（2026-10-22 补）：对标 clone 的 scratch 区（xtmp/oss/* 是 river/asynq/wails 等
-# 上游仓），.gitignore 已整目录忽略、CI checkout 里根本不存在 —— 拿上游脚本的
-# 交互习惯判本仓门禁，是「把别人的工具链当自己的缺陷」。gocache 同型先例在册。
-$skipDirs = @(".git", "node_modules", "dist", "runtime", "_recovery", "src-backup", "gocache", "lead-backup", "vendor", "bin", "obj", "xtmp")
-$extOk = @(".ps1", ".psm1", ".cmd", ".bat")
+# 历史注记（2026-10-22 立，2026-10-24 改 git ls-files 后不再需要，留档说明为什么）：
+# 原实现用 Get-ChildItem -Recurse 全仓遍历 + 一套目录排除列表（.git/node_modules/
+# dist/runtime/_recovery/src-backup/gocache/lead-backup/vendor/bin/obj/xtmp）。
+# 排除列表存在的理由：xtmp/oss/* 是 river/asynq/wails 等**上游仓**的 scratch 区，
+# 拿上游脚本的交互习惯判本仓门禁是「把别人的工具链当自己的缺陷」。
+# 改用 git ls-files 后，这些目录本就不会被返回（未跟踪/被 ignore），语义自动正确。
+#
+# 历史注记 2：-Include 在 -LiteralPath 下**不生效**（实测扫进 .md/.dat 产生 6160 个文件），
+# 故原实现按扩展名显式过滤 —— 文档里的示例命令不是缺陷，二进制更不是脚本。
+# git ls-files 用模式参数（*.ps1 等）天然只取脚本，无此问题。
 $thisFile = $MyInvocation.MyCommand.Path
-$files = @(Get-ChildItem -LiteralPath $Root -Recurse -File -Force -ErrorAction SilentlyContinue | Where-Object {
-  # 只扫可执行脚本：-Include 在 -LiteralPath 下不生效（实测扫进 .md/.dat 产生 6160 个文件），
-  # 故按扩展名显式过滤 —— 文档里的示例命令不是缺陷，二进制更不是脚本。
-  if ($extOk -notcontains $_.Extension.ToLower()) { return }
-  # 门禁自身含被检测的模式名（判据清单），排除之（同 eslint 对规则实现文件的做法）
-  if ($thisFile -and $_.FullName -eq $thisFile) { return }
-  foreach ($sd in $skipDirs) {
-    if ($_.FullName.Replace([char]92, "/").Contains("/" + $sd + "/")) { return }
+
+# 2026-10-24 性能修复（实测依据：原实现 22.0s，其中约 20s 花在 Get-ChildItem -Recurse
+# 遍历整个仓库 —— 275,006 个文件；而本门禁真正要扫的只有 57 个脚本）。
+# 与 check_ps1_encoding（round 28 同型优化）同一改法：改用 git ls-files。
+#
+# 语义变化（已量化，非隐含）：覆盖从 57 => 53 个受跟踪脚本。
+# 少的 3 个是未跟踪在途件（tests/safe_merge.ps1 / tests/watch_soak.ps1 / 前端自检.cmd），
+# 实测均无交互模式命中、且属并行会话 ownership —— 不构成漏判。
+# 这个缩小与 check_gofmt / check_ps1_eol 的「只判将进版本库的内容」口径一致。
+$gitExe = (Get-Command git -ErrorAction SilentlyContinue).Source
+if (-not $gitExe) {
+  foreach ($cand in @('C:\Program Files\Git\cmd\git.exe')) {
+    if (Test-Path $cand) { $gitExe = $cand; break }
   }
-  return $_.FullName.StartsWith($Root)
-})
+}
+if (-not $gitExe) {
+  Write-Error "找不到 git 可执行文件（无法取受跟踪文件列表）"
+  exit 2
+}
+$relFiles = @(& $gitExe -C $Root ls-files '*.ps1' '*.psm1' '*.cmd' '*.bat')
+if ($LASTEXITCODE -ne 0) {
+  Write-Error "git ls-files 失败"
+  exit 2
+}
+$files = @($relFiles | ForEach-Object {
+  $rel = $_.Trim('"')
+  if (-not $rel) { return $null }
+  # 门禁自身含被检测的模式名（判据清单），排除之（同 eslint 对规则实现文件的做法）
+  if ($thisFile -and (Join-Path $Root $rel) -eq $thisFile) { return $null }
+  $full = Join-Path $Root $rel
+  if (-not (Test-Path -LiteralPath $full)) { return $null }
+  Get-Item -LiteralPath $full
+} | Where-Object { $null -ne $_ })
 
 $viol = @()
 foreach ($f in $files) {
