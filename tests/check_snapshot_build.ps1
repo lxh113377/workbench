@@ -42,6 +42,7 @@ Write-Host "=== 纯净检出编译门禁 ===" -ForegroundColor White
 Write-Host ("  仓库: " + $Repo)
 
 try {
+  # 保留 archive 只为「快照大小」这一行读数（体积异常是有效信号）；解包不用它。
   $tar = Join-Path $tmp "snap.tar"
   & git --git-dir="$gitDir" archive --format=tar -o "$tar" HEAD
   if ($LASTEXITCODE -ne 0) { Write-Host "FAIL git archive 失败" -ForegroundColor Red; exit 1 }
@@ -49,8 +50,20 @@ try {
 
   $snapRoot = Join-Path $tmp "snap"
   New-Item -ItemType Directory -Force -Path $snapRoot | Out-Null
-  & tar -xf "$tar" -C "$snapRoot"
-  if ($LASTEXITCODE -ne 0) { Write-Host "FAIL tar 解包失败" -ForegroundColor Red; exit 1 }
+  #
+  # 解包方式（2026-10-22 CI 实测改）：原先用 `tar -xf` —— 在本机正常，但 CI runner 上
+  # tar.exe(bsdtar) 按系统代码页（英文 Windows = 437）解码 UTF-8 文件名，中文名落盘成乱码。
+  # 实测证据：CI 上 repoRoot() 正确返回 snap 路径，却 `open ...\snap\docs\自主运行方案.md:
+  # The system cannot find the file specified` —— 文件不是没提交，是解出来名字坏了。
+  # 该门禁的全部价值是「快照里到底有什么」，若解包本身失真则判据不可信。
+  # 改用 git 自己的 checkout 索引（按字节处理文件名，与平台代码页无关）：
+  #   git --work-tree=<dest> checkout-index -a -f
+  # 语义等价于 archive（都取 HEAD 内容），但不经 tar.exe 的编码层。
+  & git --git-dir="$gitDir" --work-tree="$snapRoot" checkout-index -a -f
+  if ($LASTEXITCODE -ne 0) {
+    Write-Host "FAIL 快照展开失败（git checkout-index）" -ForegroundColor Red
+    exit 1
+  }
 
   $modRoot = Join-Path $snapRoot $ModuleDir
   if (-not (Test-Path -LiteralPath $modRoot)) {

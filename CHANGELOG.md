@@ -46,6 +46,18 @@
   新增 `cross_page_consistency_test.go` 两条判据（两卡基座度量同源 / 内容顶距选择器齐备）；
   变异 C1 gov-card 退回圆角 → CAUGHT、C2 删 `.tabs + .content` → CAUGHT。
 ### Fixed
+- **check_snapshot_build 在 CI 上因 tar.exe 文件名编码失真而误判（2026-10-22 实测定位）**：
+  该门禁在 CI 持续判红，报 `TestRepoRootHasRequiredAnchors: repoRoot(...snap) 下读不到方案文档`。
+  逐层排掉后拿到决定性证据：`repoRoot()` **正确**返回了快照根，但 `snap\docs\自主运行方案.md`
+  在磁盘上不存在 —— 文件不是没提交，是**解包时名字坏了**。
+  根因：门禁用 `tar -xf` 展开 `git archive`，而 CI runner 的 tar.exe(bsdtar) 按**系统代码页**
+  （英文 Windows = 437）解码 tar 头里的 UTF-8 文件名，中文名落盘成乱码。本机（代码页 936）
+  恰好正确，故本机全绿 —— 典型的「环境相关、本机不可复现」。
+  这比「判据过严」严重：门禁的全部价值是「快照里到底有什么」，若解包本身失真，判据不可信。
+  修：改用 `git --git-dir --work-tree checkout-index -a -f` 展开快照 —— 语义等价（同取 HEAD），
+  但文件名由 git 按字节处理，**不经过 tar.exe 的编码层**，与平台代码页无关。
+  `git archive` 保留仅用于「快照大小」这一行体积读数。
+  验证：本机 rc=0；同时对比两种展开方式在中英文锚点上的落盘保真度。
 - **repo-gates 第二、三轮判红（2026-10-22 连续实测，红因逐个下移）**：
   门禁挂上 CI 后按预期开始工作，每轮红点都是真问题，逐个修到绿：
   ① **PS5.1 ParserError**（Unexpected token / Missing closing）：25 个含中文的 .ps1 缺 UTF-8 BOM。
