@@ -16,6 +16,25 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **自我更正：round 26 的「CRLF 会进索引」机理结论是错的（round 31 复刻实验推翻）**：
+  round 25 观察到 `check_all.ps1` 以 CRLF=173 进 HEAD、diff 放大成 177 增/169 删；
+  round 26 我据此下了结论：「`.gitattributes` 的 clean 过滤器对直接覆写不生效，CRLF 会进索引」，
+  并据此建了 `check_ps1_eol.ps1`。
+  **round 31 推翻了这个机理**：精确复刻 round 25 的**完整操作序列**
+  （读字符串 → 改 → 写回 → `git add` → `git commit`），索引与 HEAD **均为 LF**（CRLF=0）。
+  即当前配置（`*.ps1 text eol=crlf` + `core.autocrlf=true`）下，CRLF **根本进不了 HEAD**。
+  round 25 那 173 个 CRLF 的真实成因：**`.gitattributes` 规则切换的过渡期** ——
+  首版是 `*.ps1 text=auto`（不强制 eol，`git log --diff-filter=A` 实测），round 22 才改成 `eol=crlf`。
+  **影响与处置**：
+  ① `check_ps1_eol.ps1` 保留，但头注已更正为「**预防性护栏**（防配置回归），非活跃检测」——
+  当前配置下它恒 PASS（实测：造 CRLF 文件 add 后索引即 LF）。保留理由是配置回归无声无息、
+  而代价（169 行假 diff）极高，且删掉只要一行、重新发现要对全仓做字节审计；
+  ② 本轮曾据此写一个 CI 版（`check_ps1_eol_head.ps1`，查 HEAD 入库内容）——
+  验证发现它同样恒 PASS（HEAD 里不可能有 CRLF），**已删除**，没有把一个无价值判据挂进 CI；
+  ③ 教训记进两处（门禁头注 + 本条）：**「实测过一次」不等于「机理正确」**，
+  机制会随配置变化而过期；且**复现实验必须连操作序列一起复刻** ——
+  round 26 的变异之所以 MISSED（用新文件测，新文件会被归一），正是因为只复刻了
+  「写了 CRLF」这一个特征，没复刻「改的是已跟踪文件 + 当时的 attributes 状态」。
 - **第 30 轮盘点发现覆盖缺口：没有任何门禁检查 `.ps1` 语法可解析性（已补，CI 门禁数 12→13）**：
   盘全仓 23 个门禁的职责面时发现：BOM 有门禁、换行有门禁、引用有门禁，
   但**「能否被 PowerShell 解析」这一层是空的**。
@@ -107,11 +126,20 @@
 - **`.ps1` 的 CRLF 混入索引把 8 行改动放大成 177 增 / 169 删（round 25 真实事故，已上门禁）**：
   round 25 我改 `tests/check_all.ps1` 后，diff 显示 **177 insertions / 169 deletions** ——
   一个 8 行的新增被放大成「几乎整个文件重写」，评审者根本看不出真实改动。
-  根因（`git cat-file blob` 实测，不是猜的）：**用 CRLF 覆写已跟踪文件后 `git add`，
+  根因（当时记为 `git cat-file blob` 实测）：**用 CRLF 覆写已跟踪文件后 `git add`，
   CRLF 会原样进索引**（实测 CRLF=71 / LF=0；原样 add 是 CRLF=0 / LF=71）。
   即 `.gitattributes` 的 `*.ps1 text eol=crlf` 的 clean 过滤器对「直接覆写」场景**不生效**。
   附带发现：**新文件反而会被归一**（探针实测：写 CRLF ⇒ 入库 LF）——
   所以这个坑**只咬「改已有文件」**，而那正是最需要防的场景。
+  
+  > **⚠️ 2026-10-24 round 31 更正（上述机理结论是错的）**：
+  > round 31 精确复刻了 round 25 的操作序列（读字符串→改→写回→add→commit），
+  > 索引与 HEAD **均为 LF**（CRLF=0）。当前配置（`*.ps1 text eol=crlf` + `autocrlf=true`）下
+  > CRLF **进不了 HEAD**。round 25 那 173 个 CRLF 的真实成因是 **`.gitattributes` 规则切换的
+  > 过渡期**：首版是 `*.ps1 text=auto`（不强制 eol），round 22 才改成 `eol=crlf`。
+  > 故 `check_ps1_eol.ps1` 当前是**预防性护栏**（防配置回归），不是活跃检测。
+  > 教训：**「实测过一次」不等于「机理正确」—— 机制会随配置变化而过期，
+  > 而复现实验必须连操作序列一起复刻，只复刻「写了 CRLF」这一个特征会漏**。
   新增 `tests/check_ps1_eol.ps1`：查**已暂存 .ps1 的入库内容**（`git cat-file blob :<path>`）是否含 CRLF。
   与 `check_ps1_encoding.ps1` 分工：后者管 BOM，本件管换行。
   验证（用 round 25 的同款场景，**必须用已跟踪文件**才复现）：

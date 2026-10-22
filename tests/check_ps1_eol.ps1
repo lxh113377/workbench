@@ -6,11 +6,23 @@
 #   diff 显示 `-142 +150` —— 一个 8 行的新增被放大成 177 增 / 169 删，
 #   评审者根本看不出真实改动，只能靠我逐行核对才发现。
 #
-# 机理（不是猜的，cat-file blob 实测）：
-#   .gitattributes 写 `*.ps1 text eol=crlf`，本意是「检出转 CRLF、入库转 LF」。
-#   但**直接覆写工作区文件后 git add，clean 过滤器并未完全归一** ——
-#   173 个 CRLF 原样进了对象库。新文件（未跟踪）反而会被归一（探针实测：
-#   写 CRLF => 入库 LF）。所以这个坑只咬「改已有文件」的场景，最需要防。
+# 机理（2026-10-24 round 31 三轮实测后的**更正** —— round 26 的结论有错）：
+#   round 26 我当时的结论是「clean 过滤器对直接覆写不生效，CRLF 会进索引」。
+#   **该结论不成立**。round 31 精确复刻 round 25 的操作序列
+#   （读字符串 -> 改 -> 写回 -> add -> commit），索引与 HEAD **均为 LF**（CRLF=0）。
+#   当前配置（`.gitattributes` 的 `*.ps1 text eol=crlf` + `core.autocrlf=true`）下，
+#   CRLF **进不了 HEAD** —— add 时即被归一。
+#   round 25 那次的真实成因：`.gitattributes` 首版是 `*.ps1 text=auto`（不强制 eol），
+#   round 22 才改成 `eol=crlf`；173 个 CRLF 发生在**规则切换的过渡期**
+#   （`git log --diff-filter=A -- .gitattributes` 实测：首版 text=auto）。
+#
+# **故本门禁当前是预防性护栏，不是活跃检测**：
+#   它防的是「将来有人改 .gitattributes / autocrlf / 用 -c 覆盖配置，使 CRLF 又能进索引」
+#   这种**配置回归**。当前配置下它恒报 PASS（实测：造 CRLF 文件 add 后索引即 LF）。
+#   保留理由：配置回归无声无息，而它的代价（round 25 的 169 行假 diff）极高；
+#   删掉只要一行，重新发现却要对全仓做字节审计。
+#   这段更正留着，是为了下一个读到的人不再重复我 round 26 的错误推断 ——
+#   **「实测过一次」不等于「机理正确」；机制会随配置变化而过期**。
 #
 # 判据（任一命中即 rc=1）：
 #   **已暂存**（git diff --cached --name-only）的 .ps1，其**入库内容**
