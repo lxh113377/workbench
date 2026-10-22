@@ -59,7 +59,7 @@ const adminPage = `<!DOCTYPE html>
     <a href="/?token=%s">回首页</a>
   </div>
 </header>
-<div class="pagebar"><span class="pagecrumb">控制台</span><span class="pagetitle">管理面板</span></div>
+<div class="pagebar"><span class="pagecrumb">控制台</span><h1 class="pagetitle">管理面板</h1></div>
 </div>
 <nav class="tabs" aria-label="管理面板分区">
   <button class="tab active" data-tab="overview">总览</button>
@@ -110,7 +110,7 @@ const governancePage = `<!DOCTYPE html>
     <a href="/?token=%s">回首页</a>
   </div>
 </header>
-<div class="pagebar"><span class="pagecrumb">控制台</span><span class="pagetitle">治理控制台</span><span class="pagesub">契约 × 体量</span></div>
+<div class="pagebar"><span class="pagecrumb">控制台</span><h1 class="pagetitle">治理控制台</h1><span class="pagesub">契约 × 体量</span></div>
 </div>
 <main class="content" id="govRoot"></main>
 <div id="toast" class="toast" role="status" aria-live="polite"></div>

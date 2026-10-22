@@ -45,6 +45,7 @@ const modelPoolPage = `<!DOCTYPE html>
   .pool-group .fold > summary { padding: 8px 2px; font-size: 12px; }
   @media (max-width:720px) {
     .pool-group-head { gap: 6px 10px; }
+    .pool-group-actions { margin-left: 0; width: 100%; }
     .pool-group-stat { font-size: 11.5px; }
   }
   .pool-row-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
@@ -57,6 +58,27 @@ const modelPoolPage = `<!DOCTYPE html>
     transition: background .14s ease, border-color .14s ease, color .14s ease;
   }
   .pool-row-actions button:hover { background: rgba(var(--accent-rgb),.13); border-color: rgba(var(--accent-rgb),.45); color: var(--fg); }
+  /* 分组卡的一键启用/一键停用（老大 2026-10-22 令）：靠右排布，与组内读数同行。 */
+  .pool-group-actions { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+  .pool-group-actions button {
+    min-height: 30px; padding: 4px 10px; font-size: 12px; border-radius: 7px;
+    border: 1px solid var(--line-2); background: rgba(255,255,255,.04); color: var(--fg-2);
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background .14s ease, border-color .14s ease, color .14s ease;
+  }
+  .pool-group-actions button:hover { background: rgba(var(--accent-rgb),.13); border-color: rgba(var(--accent-rgb),.45); color: var(--fg); }
+  .pool-group-actions button:disabled { opacity: .4; cursor: not-allowed; background: rgba(255,255,255,.02); }
+  .pool-group-actions button[data-gact="gdisable"] { color: var(--warn); border-color: rgba(255,170,60,.35); }
+  /* 两段式确认「待确认」态的池内分支（老大 2026-10-22：armConfirm 取代原生 confirm）。
+     全局 .btn.armed 只覆盖带 .btn 的按钮；池内行操作与一键开关都是裸 <button>，
+     按契约（TestPoolRowActionButtonsMeetTouchBaseline）池专项规则必须写在页内 <style>，
+     故此处补齐同款红态；armPulse 关键帧沿用全局定义。 */
+  .pool-row-actions button.armed, .pool-group-actions button.armed {
+    color:#fff;border-color:rgba(var(--danger-rgb),.72);
+    background:linear-gradient(180deg,rgba(var(--danger-rgb),.34),rgba(var(--danger-rgb),.18));
+    box-shadow:0 0 0 1px rgba(var(--danger-rgb),.35),0 0 22px -8px rgba(var(--danger-rgb),.6);
+    animation:armPulse 1.1s ease-in-out infinite alternate;
+  }
   .logbox { max-height: 380px; }
   .pool-table-wrap { overflow-x: auto; }
   table.pool-table td, table.pool-table th { vertical-align: middle; }
@@ -81,6 +103,8 @@ const modelPoolPage = `<!DOCTYPE html>
   /* 触控/窄屏可点性：行内操作按钮（↑↓/停用/恢复/编辑/删除）是裸 <button>，
      .btn{min-height:44px} 覆盖不到它，触屏上约 20px 高基本点不中。 */
   @media (pointer:coarse), (max-width:720px){ .pool-row-actions button{min-height:44px;padding:6px 12px} }
+  /* 一键开关同样要够触屏基线；单独一条，避免动到被契约测试钉住的上一行。 */
+  @media (pointer:coarse), (max-width:720px){ .pool-group-actions button{min-height:44px;padding:6px 12px} }
 </style>
 </head>
 <body class="admin">
@@ -99,7 +123,7 @@ const modelPoolPage = `<!DOCTYPE html>
     <a href="/?token=%s">回首页</a>
   </div>
 </header>
-<div class="pagebar"><span class="pagecrumb">控制台</span><span class="pagetitle">模型池</span><span class="pagesub">多接口统一纳管</span></div>
+<div class="pagebar"><span class="pagecrumb">控制台</span><h1 class="pagetitle">模型池</h1><span class="pagesub">多接口统一纳管</span></div>
 </div>
 <main class="content">
   <section id="poolOverview"></section>

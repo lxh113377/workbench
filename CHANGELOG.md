@@ -16,6 +16,36 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **全站 h1 数为 0：后台三页主标题用 `<span>` 无任何语义层级（2026-10-23 Awwwards 内容维度验收）**：
+  三张后台页的主标题此前是 `<span class="pagetitle">管理面板</span>` 这类写法 —— 视觉上是大标题、
+  语义上**没有任何层级**。CDP 实测修复前：admin / governance / modelpool 的 `h1` 数**均为 0**，
+  DOM 里只有 h3（admin 仅 1 个 h3「系统状态」、治理台 2 个、模型池 4 个）。
+  屏幕阅读器用户因此无法用「按标题跳转」定位主标题 —— 这正是无障碍导航的核心方式。
+  修：三处 `<span class="pagetitle">` 改 `<h1 class="pagetitle">`，并在 CSS 补 `margin:0`
+  重置（`.pagebar` 是 flex 容器，h1 默认 margin 会破坏基线对齐）。
+  **实测复验**：admin / governance / modelpool 各 **1 个 h1**（文本分别为「管理面板」「治理控制台」
+  「模型池」），旧 span 全部清除，`<main>` landmark 正常。
+  **首页不加 h1 是设计决策而非缺陷**：首页契约明令禁止标题元素（第一屏必须极简，只允许
+  1 个 button + 3 个 a，div/标题/媒体/表单/表格一律禁止）；且 `<title>` 已提供页面名、
+  `<main>` 提供 landmark，屏幕阅读器可达。
+  新增 `h1_semantics_contract_test.go` 三条判据（三页必须有且仅有一个非空 h1 / `.pagetitle`
+  不得退回 span / h1 必须有 margin:0 重置）；变异 H1 admin 退回 span → CAUGHT、H2 模型池退回
+  span → CAUGHT、H3 去掉 margin 重置 → CAUGHT。
+
+### Changed
+- **内容维度验收（同轮）另外两项结论**：
+  ① **错误提示可操作性**：静态提取全部「失败/错误」类 toast 共 1 条（`详情面板缺失`），
+  属渲染契约错误提示，无需给用户下一步动作（开发者向）。其余失败提示均走「XX失败：<原因>」
+  形态（前轮已固化判据），用户能看到原因。
+  ② **空态完整度 3/5（60%）**：两条「没有失败任务 —— 保持这样最好。」只有「为什么空」无「怎么处理」
+  —— 但这是**语义上正确的**（没有失败任务不需要用户处理），非缺陷；其余三条完整。
+
+> ⚠️ **本轮未发布**：官方链 3/6 步 gofmt 门禁判红（25 个文件 LF 归一化后仍需 gofmt）。
+> 已用 `git cat-file blob HEAD:<path>` 逐一证明：**我的 7 个改动文件全部 gofmt 干净**，
+> 被点名文件为 `docx.go`/`hub.go`（HEAD blob 本身就 dirty，历史遗留）与
+> `home_contract_test.go`/`subnav_contract_test.go`（他方新建未跟踪件）。
+> 按「不碰他人在途件」纪律不代跑 gofmt，故本轮只入库不发布，待门禁恢复后补发。
+### Fixed
 - **`queue.json` 只增不减：59MB 快照 / 33,740 条记录常驻内存（2026-10-23 实测，治本）**：
   上一轮 e2e 判红暴露的「常驻内存 170MB vs 基线 64MB」不是泄漏，是**数据规模**：
   实测 `queue.json` **69.3MB / 33,740 条任务**，其中终态 **33,733 条**（rejected 33,187 条 ——

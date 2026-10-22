@@ -475,7 +475,11 @@ body.admin{
 }
 .pagecrumb::after{content:'/';color:var(--line-3)}
 .pagetitle{
-  font-family:var(--font-display);font-size:clamp(26px,3.4vw,40px);
+  /* h1 语义 + span 外观（2026-10-23 Awwwards 内容维度验收）：
+     页面主标题此前是 <span class="pagetitle">，视觉是大标题、语义上**没有任何层级** ——
+     全站 h1 数为 0，屏幕阅读器用户无法用标题导航定位主标题（这是无障碍核心导航方式）。
+     改用 <h1>，并在此重置 h1 默认 margin（.pagebar 是 flex 容器，默认 margin 会破坏基线对齐）。 */
+  margin:0;font-family:var(--font-display);font-size:clamp(26px,3.4vw,40px);
   font-weight:600;line-height:1.05;letter-spacing:.02em;color:var(--fg);
 }
 .pagesub{
