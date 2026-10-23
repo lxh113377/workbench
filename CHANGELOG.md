@@ -34,6 +34,20 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **干净 worktree 端到端拦截验证：`check_repo_eol` 无缺陷，我的测试设计错了（round 73）**：
+  本轮想做「门禁有没有牙齿」的最终检验：在干净 worktree 里往 `config.go` 注入 CRLF，
+  跑 `check_repo_eol` 期望判红 —— **结果报合规**。一度以为是门禁漏判，逐层取证后确认**门禁完全正确**：
+  ① `git ls-files --eol` 输出 `i/lf  w/crlf  attr/text eol=lf` —— 索引是 LF（合规）、只有工作区是 CRLF；
+  ② `git add` 时 `.gitattributes` 的 `text eol=lf` **自动把 CRLF 归一化回 LF 才入索引**，
+     所以我那针「注入」被 git 属性机制当场修复，从未进入索引；
+  ③ `check_repo_eol` 判的是 `i/crlf`/`i/mixed`（入库形态），对 `w/crlf` 刻意不判 ——
+     因为 `core.autocrlf=true` 下**全仓 1671 个文件天然是 `i/lf -> w/crlf`**（含 `.gitattributes` 自身、
+     `ci.yml` 等），那是正常工作区形态而非缺陷。
+  **这是 round 65「证伪判据前先证明测法正确」的第三次应验**（前两次：round 65 四次门禁「失效」、
+  round 70 两次「数据丢了」）。本次的具体教训：**要检验「入库形态」的门禁，必须让缺陷真正进入索引**
+  （例如写一个无 `text` 属性的新文件、或直接 `git hash-object -w` 造 blob），
+  而不能指望「改工作区文件」能穿透 gitattributes 的归一化。
+  顺带核实：CI `1f809da` 的 **22 个门禁全部实际执行且 PASS**（`===== GATE:` 22 / `GATE PASS` 22）。
 - **在途 .go 格式漂移清单登记（round 72，交接记录 §8）—— `check_gofmt` PASS 与 44 个文件漂移并存，二者都对**：
   round 72 跑 `gofmt -l .` 报 **44 个文件漂移**，而 `check_gofmt.ps1` 同时 PASS。初看像门禁漏判，
   实测证明**两边都正确**：44 个漂移文件**全部是未跟踪文件**（并行会话在途），
