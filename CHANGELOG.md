@@ -34,6 +34,18 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **`check_no_shrink` / `check_spawn_silent` / `check_subsystem` 端到端验证成功（round 80）—— 其中 subsystem 是 round 19 真实事故的完整复现**：
+  ① **`check_no_shrink`**（防整文件覆盖丢并发改动，本仓最有历史价值的门禁之一）：三向变异全过 ——
+     target 是 source 子集 ⇒ 覆盖安全；target 有独有实质行 ⇒ **判红并直接列出「会丢的内容」**
+     （`OTHER_SESSION_WORK`）+ 要求改用 edit 增量合并；target 不存在 ⇒ 新建安全。
+     它保护的正是 round 19「同一错误犯了三次」的场景（Copy-Item 覆盖掉别会话的 ProbeRunning 重构）。
+  ② **`check_spawn_silent`**：注入 `exec.Command("cmd", ...)` 无 hidden 标记，精确判红
+     `internal/evildir/evil.go:7` 并展示违规代码行。
+  ③ **`check_subsystem`**：**用裸 `go build`（无 `-H=windowsgui`）复现 round 19 事故**，
+     产物 PE 子系统 = CONSOLE(3)，门禁判红 `WOULD pop a window ; please rebuild with -ldflags "-H=windowsgui"`；
+     对照组 `dist/workbench.exe` = GUI(2) 正常放行。**这是本轮最有价值的验证** ——
+     它不仅证明门禁有效，还证明了「事故的成因路径今天依然能复现」（防护因此不是多余的）。
+  至此累计 **23 个判据拿到正向证据**。
 - **三个门禁端到端验证 + 修一个真缺陷：头注比实现旧两天（round 79）**：
   ① **`check_changelog`**：把 `[Unreleased]` 挤到第二段，门禁精确报「[Unreleased] 必须是第一个版本段，
      实际排在第 2 位（其前是 9.9.9）」✅；
