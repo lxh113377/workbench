@@ -10,13 +10,19 @@
 #   不判红的理由：趋势变差的语义因人因时而异（gap 上升可能只是并行会话在写新测试），
 #   拿它做硬闸会制造噪声（本仓在册：模糊语义检查 => 门禁被删）。它负责把变化摆出来。
 #
-# 四个消费点（每个序列各一条趋势）：
+# 五个核对（前四为趋势，第五为存在性）：
 #   check_untracked_go        gap / 未跟踪数的 首->末
 #   check_untracked_go_health badPkgCount 首->末 + 尾部连续红读数 + 红窗持续时长
 #   coverage                  avgPct / minPct 首->末，**区分 local/ci**（round 22 教训：
 #                             两环境覆盖率系统性差 10~20pp，混算没意义）
 #   resident_longrun          中位 首->末（涨跌方向）+ 极差 + 稳定等待 + 离上界余量
 #                             （round 41 补：内存前几轮量错过三次，根因都是单次读数没参照物）
+#   【存在性】$declared 里的每个 gate 必须在读数文件里至少出现一次 —— 这是 round 47
+#   教训的直接机制化：那轮「内存门禁恒 0 条」的结构性 bug 能静默存活 6 小时，正因为
+#   恒 0 的序列在按现有读数分组的报告里**根本不出现**（沉默 != 正常）。现在恒 0 = 显式告警。
+#   coverage 单列豁免：它由 setup/build.ps1 在 **CI 侧**落盘，本地文件里出现不了（本地
+#   读数由 CI artifacts 回传时才带上），把「本地查不到」当故障会误报 —— 豁免要写明理由，
+#   并随 $ciOnly 计数输出（在册债务可见，不是静默跳过）。
 #
 # 实现注记：不用反引号转义 —— 本仓多次踩「JS/外层模板把 PowerShell 反引号吃掉」的坑，
 #   换行一律走 [char]10，Trim 的 BOM 走 [char]0xFEFF。
@@ -138,4 +144,45 @@ foreach ($g in @($rows | Group-Object -Property gate | Sort-Object Name)) {
 if ($badLines -gt 0) {
   Write-Host ('跳过坏行 ' + $badLines + ' 条（不阻断；有写入方格式漂移时来查这里）') -ForegroundColor Yellow
 }
+
+# ---- 存在性核对（round 48 新增，round 47 教训机制化）----
+# 已声明落盘的 gate 从源码自动提取（扫本目录 + setup 下引用 gate-readings.jsonl 的脚本里的
+# 单引号 gate 赋值）：这样**将来新增落盘脚本会自动纳入核对**，不靠人记得更新清单（防漂移）。
+$scriptDir = $PSScriptRoot
+$repoRoot = Split-Path -Parent $scriptDir
+$scanDirs = @($scriptDir, (Join-Path $repoRoot 'setup'))
+$declared = @()
+foreach ($d in $scanDirs) {
+  if (-not (Test-Path -LiteralPath $d)) { continue }
+  foreach ($sc in @(Get-ChildItem -LiteralPath $d -Filter '*.ps1' -File -ErrorAction SilentlyContinue)) {
+    # 排除消费脚本自身：它是读者不是落盘方。round 48 实测：不排它时
+    # 本件注释里的字面例子被自我扫描当成声明，污染清单（与 round 32「门禁自己的
+    # 文案命中自己的正则」同族 —— 扫描判据代码时，说明文字里的示例是污染源）。
+    if ($sc.FullName -eq $PSCommandPath) { continue }
+    $txt = [IO.File]::ReadAllText($sc.FullName)
+    if ($txt -notmatch 'gate-readings\.jsonl') { continue }   # 只认往读数文件落盘的脚本
+    foreach ($m in [regex]::Matches($txt, "gate\s*=\s*'([^']+)'") ) { $declared += $m.Groups[1].Value }
+  }
+}
+$declared = @($declared | Sort-Object -Unique)
+# CI 侧落盘、本地读数文件里出现不了的，显式豁免（理由见头部）。新增此类要在登记处写明来源。
+$ciOnly = @('coverage')   # 由 setup/build.ps1 落盘，只在 CI 跑；本地无读数属正常
+$gatesSeen = @($rows | Group-Object -Property gate | ForEach-Object { $_.Name })
+$toCheck = @($declared | Where-Object { $ciOnly -notcontains $_ })
+$absent = @($toCheck | Where-Object { $gatesSeen -notcontains $_ })
+foreach ($c in $ciOnly) {
+  if ($gatesSeen -contains $c) { Write-Host ('  （' + $c + ' 本地也有读数了 —— CI 回传链路通了，可考虑并入 $declared）') -ForegroundColor DarkGray }
+}
+if ($toCheck.Count -eq 0) {
+  Write-Host '  （自动提取未找到任何本地落盘声明 —— 若确有落盘脚本被移动/重命名，来此核查）' -ForegroundColor DarkGray
+}
+if ($absent.Count -gt 0) {
+  Write-Host ('存在性告警：已声明落盘却**零读数**的序列（' + ($absent -join ', ') + '）—— 要么没被调用、要么判据失效（round 47 就是后者）') -ForegroundColor Red
+} else {
+  Write-Host ('存在性核对通过（自动提取 ' + $toCheck.Count + ' 个落盘声明）：' + ($toCheck -join ' / ') + ' 均已有读数') -ForegroundColor Green
+}
+if ($ciOnly.Count -gt 0 -and -not $Quiet) {
+  Write-Host ('  豁免（CI 侧落盘，本地出现不了）：' + ($ciOnly -join ', ') + ' 共 ' + $ciOnly.Count + ' 个') -ForegroundColor DarkGray
+}
+# 定位不变：本件仍是 informational（趋势与存在性都只报不拦），rc 只会是 0 或 2。
 exit 0
