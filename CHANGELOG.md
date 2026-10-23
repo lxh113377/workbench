@@ -34,6 +34,20 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **归档后计数口径澄清 + 门禁 pathspec 审计（round 70，两次虚惊都归因为我的测法）**：
+  round 69 归档 73 份报告后复查，本轮先后出现两次「数据好像丢了」的警报，**最终都证明是我的统计口径错**，
+  数据完好无损。留记 because 这两个坑极容易复发，且都会把人推向错误的修复动作：
+  ① **`git ls-files 'docs/*.md'` 返回 131，我据此以为「顶层暴涨」** —— 真相：git 的 pathspec glob
+     **不锚定目录层级**（`*` 会跨 `/` 匹配，fnmatch 无 FNM_PATHNAME 语义）。真实分布是
+     顶层 24 / archive 74 / handoff 2 / benchmark 5 / skill-audit 26，合计 131。
+     要按层级数必须用 `-z` 取原始路径后自己 `split('/')` 过滤（中文路径还要防 quotePath 八进制转义）。
+  ② **我以为 5 个门禁的 glob pathspec 漏匹配**（写出 `*.go` 命中 334 vs 我算的 361）—— 真相：
+     我那个「361」是自己正则过滤器写错（`[^/]*` 把含 `/` 的路径全滤掉），实测 `*.go` **命中 334 = 全仓 334，零遗漏**。
+  **两次的共同教训（round 65 已记过一次，这是第二次）**：发现「数据异常」时，先证明测量工具本身对，
+  再动数据。本轮若据误判去「修」门禁或「恢复」文件，就是在破坏本来正确的状态。
+  顺带完成的审计结论：本仓门禁里的 glob pathspec 用法（`tests/check_*.ps1` / `workbench/*.go` / `*.go` / `*.ps1`）
+  **全部正确**，无一处因跨目录语义而漏匹配；`check_gate_coverage` 与 `check_report_figures` 用的是
+  `tests/check_*.ps1`（只可能命中 tests 下的门禁，跨层也无副作用）。
 - **仓库卫生续：32MB 构建目录与一次性取证 JSON 进 .gitignore（round 68）**：
   round 67 清掉 `tests/_egress/` 后继续查，发现第二块死角：`workbench/build/` 是 DSH 桌面版的
   构建目录 —— 实测 **0 个受跟踪文件、53 个 untracked / 32.1MB**（含 node_modules、`*.exe`、
