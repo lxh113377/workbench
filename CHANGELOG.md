@@ -15,6 +15,24 @@
 > 未重新输出）—— 本轮恢复，并记下这条教训：以「包含后文的多行锚点」做插入时，
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
+### Changed
+- **agent-browser 本机读取通道定位并恢复；上游 #1922 复现并提交两条评论（2026-10-23 实测）**：
+  **通道根因**（此前 4 次复现全部失败、只报「环境障碉」）：本地静态服务与 agent-browser 不在同一条 pwsh
+  进程树，Chrome 被本机 127.0.0.1:7897 代理拒后空转 —— 表现为 `open` 报 `ERR_CONNECTION_REFUSED`，
+  或 `open` 成功但 `snapshot`/`get text`/`eval` **全空输出且 rc=0**。
+  **解法**（三者缺一不可，已写进 agent-browser skill v3.2.0）：同一个 .ps1 里 `Start-Process node server.js`
+  → `agent-browser --engine chrome open` → 后续命令；显式 `--engine chrome`；`Start-Sleep` 留页面脚本执行时间。
+  **恢复判据**：`get url` 返回真实 URL + `eval document.querySelector('h1').textContent` 返回真实文本。
+  **通道恢复后的复现结果（0.39.1 / Windows / 显式 chrome 引擎）**：`click @e13` 报 `✓ Done` exit=0，
+  但 URL 与 DOM **都没变**（连导航都没发生）；同一元素用 CSS `click #go` 却正常导航到 v2。
+  这比 #1922 原报的「跳转后旧 ref 静默 no-op」更宽 —— **没有 `frameNavigated` 事件可挂**，
+  现居的修复方向（PR #1923 清 `ref_map`）覆盖不到这一形态。
+  **已提交上游**（均经 `gh api` 复核存在）：
+  - issue #1922 评论 `6355789775`：Windows + 0.39.1 独立复现 + 同文档 no-op 变体 + 对照组；
+  - PR #1923 评论 `6355811044`：指出该 PR 覆盖面缺口，并建议判据断言「点击后可观测状态」而非退出码。
+  **顺带证伪一条旧口径**：3.1.0 对 `network unroute` 的 `--abort` 桩记「未见解除、不下结论」——
+  本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
+  `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
 - **`check_untracked_go` 补上「健康度」这一半：未跟踪测试不仅报数量，还报**是否正在失败**（2026-10-24）**：
   round 36 手动跑 `go test` 时发现工作区有 **6 个测试失败**（autonomy 4 + shortcut 1 +
