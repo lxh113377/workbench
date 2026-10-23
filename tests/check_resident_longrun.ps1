@@ -17,12 +17,18 @@
 #     96 会随机误判；128 仍能抓到「量级塌方」（如 200MB+ 或裁剪前的 170MB 稳态）。
 #     这是当前证据能支撑的最大结论 —— 写得更紧就是虚报（与本仓「别把没测成当合格」同一纪律）。
 #   rc=1 FAIL       —— 超界
-#   rc=2 UNVERIFIED —— 没有活实例 / 实例非空闲 / 取不到读数（**绝不把没测成当测得过**）
+#   rc=2 UNVERIFIED —— 没有活实例 / 队列有活跃任务 / 30s 内内存未稳（极差超带宽）/ 取不到读数
+#     （**绝不把没测成当测得过**）。空闲判据自 round 47 起用 queue.json 进行态数
+#     （running/evaluating，对齐引擎 model.IsActive()）—— 旧的 phase==running 拦截是
+#     结构性 bug：phase 只反映引擎循环开关，7×24 服务恒 running，门禁因此永不落盘。
 #
 # 用法: powershell -File tests\check_resident_longrun.ps1 [-Exe <path>] [-BoundMB 96] [-Quiet]
 param(
   [string]$Exe = "",
   [double]$BoundMB = 128,
+  # 稳定带宽：空闲态 OS RSS 仍在 GC 锯齿里小幅波动（实测极差约 6MB），极差 > 此值
+  #   说明内存还在爬升（执行期余震），读数属瞬态 => UNVERIFIED，不硬取虚高值。
+  [double]$StableBandMB = 8,
   [switch]$Quiet,
   [switch]$NoRecord
 )
@@ -62,36 +68,50 @@ if (Test-Path -LiteralPath $statePath) {
   } catch { Unverified "state.json 解析失败: $($_.Exception.Message)" }
 } else { Unverified "缺 state.json（无法判定是否空闲）: $statePath" }
 
-if ($phase -eq "running") {
-  Unverified ("引擎相位=running（正在执行任务，内存随并发变化属预期）—— 本判据只在空闲态适用")
+# 空闲判据（2026-10-24 round 47 修正，实测坐实的结构性 bug）：
+#   原判据 `if ($phase -eq "running") { Unverified }` 是错的 —— state.json 的 phase 反映的是
+#   **引擎循环 on/off（Start→PhaseRunning / Stop→PhaseStopped），不是任务活跃度**。7×24 常驻
+#   服务只要引擎壳活着就恒 phase=running（实测该字段还会陈旧：一度 100+ 分钟不更新），
+#   拿它当「忙」判据 => 本门禁自 round 41 装上起，在自动路径上**永不落盘**（resident 序列恒 0
+#   正是这个 bug 的必然结果，不是偶然）；而「服务空闲稳态」恰恰是它最该守的状态。
+#   真正的空闲 = 队列里没有进行态任务。引擎侧唯一权威判据是 model.IsActive()
+#   = (state==running || state==evaluating)（model/types.go:43），据此读只读的 queue.json。
+$queuePath = Join-Path $dataRoot "queue.json"
+$activeTasks = -1
+if (Test-Path -LiteralPath $queuePath) {
+  try {
+    $qj = Get-Content $queuePath -Raw | ConvertFrom-Json
+    $activeTasks = @($qj.tasks | Where-Object { $_.state -eq 'running' -or $_.state -eq 'evaluating' }).Count
+  } catch { Unverified ("queue.json 解析失败（无法判定是否有活跃任务）: " + $_.Exception.Message) }
+} else { Unverified ("缺 queue.json（无法判定是否有活跃任务）: " + $queuePath) }
+if ($activeTasks -lt 0) { Unverified "未能取得进行态任务数" }
+if ($activeTasks -gt 0) {
+  Unverified ("队列中有 " + $activeTasks + " 个进行态任务（running/evaluating），内存随并发变化属预期 —— 本判据只在无活跃任务时适用")
 }
 
-# 采样必须先**等内存稳定**（2026-10-23 实测的关键教训）：
-#   Go 的 GC 不是随任务结束立即归还 —— 实测 stopped 后 RSS 95.1MB，20 秒内回落到
-#   51.8MB 并稳定（随后 90 秒波动 ≤ 1.5MB）。若不等待就取数，会在「刚跑完任务」的
-#   高点上误判（实测 102.3MB 超 96MB 上界，而稳定值只有 51.8MB）。
-#   等待策略：最多 40s，连续 3 次相邻采样差 ≤ 1MB 即视为稳定，取稳定段中位。
+# 采样窗口 + 稳定性判据（2026-10-24 round 47 重写；原版为 stopped 回落场景设计）：
+#   实测**服务运行中的空闲态**（无活跃任务）OS RSS 也在 GC 锯齿里持续波动
+#   （15 次采样极差约 6MB），原「连续 5 次差 ≤1MB」判据在此场景永不满足；
+#   若退化成单点读数又违背 round 41 立的「单次读数没有参照物」纪律。
+#   折中：采满 15 点/30s 取**中位**（锯齿两端自然抵消），用**极差 ≤ StableBandMB**
+#   判稳 —— 极差过大 = 仍在执行期余震（刚跑完任务回落中），读数属瞬态 => UNVERIFIED，
+#   绝不硬取一个虚高值（实测刚跑完任务的实例会落在 85~107MB 区间）。
 $samples = @()
-$prev = -1
-$stableRun = 0
 $waited = 0
-for ($i = 0; $i -lt 40; $i++) {
+for ($i = 0; $i -lt 15; $i++) {
   $p.Refresh()
   if ($p.HasExited) { Unverified "实例在采样中途退出" }
-  $now = [math]::Round($p.WorkingSet64 / 1MB, 1)
-  if ($prev -ge 0 -and [math]::Abs($now - $prev) -le 1) { $stableRun++ } else { $stableRun = 0 }
-  $prev = $now
-  if ($stableRun -ge 2) { $samples += $now; if ($samples.Count -ge 5) { break } }
-  else { $samples = @() }
-  Start-Sleep -Seconds 2
-  $waited += 2
+  $samples += [math]::Round($p.WorkingSet64 / 1MB, 1)
+  if ($i -lt 14) { Start-Sleep -Seconds 2; $waited += 2 }
 }
-if ($samples.Count -lt 5) { Unverified ("等待 " + $waited + "s 后内存仍未稳定（稳定样本 " + $samples.Count + "/5）") }
 $sorted = @($samples | Sort-Object)
 $median = $sorted[[int][math]::Floor($sorted.Count / 2)]
 $spread = [math]::Round($sorted[-1] - $sorted[0], 1)
+if ($spread -gt $StableBandMB) {
+  Unverified ("30s 采样极差 " + $spread + "MB > 带宽 " + $StableBandMB + "MB —— 内存仍在波动（执行期余震/未空闲），这不是稳态读数")
+}
 
-Say ("  相位=" + $phase + " 稳定耗时=" + $waited + "s 采样=" + ($samples -join "/") + " 中位=" + $median + "MB 极差=" + $spread + "MB 上界=" + $BoundMB + "MB")
+Say ("  相位=" + $phase + "(仅引擎循环开关) 活跃任务=" + $activeTasks + " 采样=" + $samples.Count + "点/" + $waited + "s 中位=" + $median + "MB 极差=" + $spread + "MB(带宽" + $StableBandMB + ") 上界=" + $BoundMB + "MB")
 
 # ---- 读数落盘（2026-10-24 round 41 新增）----
 # 为什么：untracked / health / coverage 三个序列都落盘了，长驻内存是唯一没落的 ——
@@ -112,6 +132,7 @@ if (-not $NoRecord) {
       spreadMB = $spread
       boundMB = $BoundMB
       phase = $phase
+      activeTasks = $activeTasks
       stableWaitS = $waited
       pid = $p.Id
       verdict = $v

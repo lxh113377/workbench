@@ -132,7 +132,7 @@ foreach ($g in @($rows | Group-Object -Property gate | Sort-Object Name)) {
     }
     $phaseLast = ''
     if ($l3.phase) { $phaseLast = $l3.phase }
-    Write-Host ('   末次相位 ' + $phaseLast + '，判定 ' + $l3.verdict + '（相位非 stopped/idle 时本门禁不会落盘，见门禁内说明）')
+    Write-Host ('   末次活跃任务 ' + $l3.activeTasks + '（进行态=running/evaluating，空闲判据）相位 ' + $phaseLast + '，判定 ' + $l3.verdict)
   }
 }
 if ($badLines -gt 0) {

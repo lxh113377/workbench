@@ -34,6 +34,28 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **修正 `check_resident_longrun.ps1` 的结构性 bug —— phase=running 拦截让内存门禁自 round 41 装上起在自动路径上永不落盘（2026-10-24 round 47 实测坐实）**：
+  现象：round 41 给长驻内存建了「落盘 + 趋势消费」机制，6 小时后 resident_longrun 序列恒 0 条 ——
+  门禁挂在 check_all、活实例在跑，却一条都没落。查根因不是「没触发」，是判据本身错了：
+  `if ($phase -eq running) { Unverified }` 把 state.json 的 phase 当成了「任务活跃度」，
+  但 phase 反映的是引擎循环 on/off（Start->PhaseRunning / Stop->PhaseStopped），不是有没有任务。
+  对 7x24 常驻服务，引擎壳只要活着就恒 running（实测该字段还陈旧：一度 100+ 分钟不更新），
+  于是门禁把最该测的「服务空闲稳态」当成「执行期」永久跳过 —— 与它自己 round 41 的初衷正好相反。
+  修复（判据换成引擎侧唯一权威的空闲信号，纯读只读文件、不碰并行会话在途的 engine Go）：
+  (1) 空闲 = queue.json 里进行态任务数==0，取 state in {running, evaluating}，
+      对齐引擎 model.IsActive()（model/types.go:43）；有进行态 => UNVERIFIED（执行期，内存随并发变化）。
+  (2) 稳定判据重写：原「连续 5 次差 <=1MB」是为 stopped 后回落场景设计的，实测服务运行中的
+      空闲态 OS RSS 也在 GC 锯齿里波动（15 次采样极差约 6MB），原判据在此永不满足、退化成单点又
+      违背 round 41「单次读数没有参照物」的纪律；改为采满 15 点/30s 取中位、用极差 <= 8MB
+      判稳（极差过大=执行期余震，读数属瞬态 => UNVERIFIED，不硬取虚高值 —— 实测刚跑完任务的实例落在 85~107MB）。
+  三层实测验证：真实活实例产出第一条真实读数（median 66.1MB、极差 1.2MB、活跃任务=0、PASS）；
+  变异 -StableBandMB 0 => 极差超带宽 UNVERIFIED 且不落盘（前后条数相等，守住 round 41 负向纪律）；
+  变异 -BoundMB 40 -NoRecord => FAIL 正确判红；合成 queue（running+evaluating+rejected+queued）
+  => 进行态计数精确为 2（queued/rejected 不误计入）。趋势器同步显示新字段 activeTasks，
+  读到首条：余量 61.9MB>40 不触发提示（正确）。
+  教训：判据要落到「真实语义」而不是「名字像」—— phase=running 字面最像「在跑任务」，
+  实际是引擎开关；我 round 41 建机制时按名字取了它，机制就静默失效 6 小时且看起来一切正常
+  （门禁没报错、check_all 照跑）—— 又一次「装了就以为在工作」，正是不消费序列就不会发现的。
 - **CHANGELOG.md 累积了 5 个前导 BOM（289 个 .md 里唯一一个），round 44 查明并修复**：
   为新增门禁补 CHANGELOG 条目时，我用「读出来 -> replace(/^\uFEFF/, '') 去 BOM -> 再前置一个 BOM」
   的写法处理文件；但 **JS 的 `replace(/^\uFEFF/, "")` 只去掉一个**，而文件当时已有多个，
