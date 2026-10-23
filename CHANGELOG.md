@@ -34,6 +34,25 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **CI 偶发红定位到 flaky 测试 + 给 `check_snapshot_build` 加「重试一次」区分偶发与真缺陷（round 82）**：
+  round 82 验证 `check_snapshot_build`（完整复现 round 21 事故形态，门禁正确判红）后，
+  **CI 在 `c1ecfa5` 上报 failure** —— 而该提交只改了 CHANGELOG 一行。逐层取证：
+  ① 失败门禁就是 `check_snapshot_build`，具体是 `go test` 阶段的
+     `--- FAIL: TestPromptingCommandDoesNotHang (36.04s)`；
+  ② 该测试在受跟踪的 `internal/verify/noninteractive_test.go`，**真的会启动**
+     `powershell -File` + `Invoke-WebRequest` 抓一个含 `<script>` 的本地页面 ——
+     Windows PowerShell 5.1 默认用 IE 引擎解析，命中 script 时弹「Security Warning」并挂起等按键；
+  ③ 该测试的**设计意图就是抓这个回归**（源码注释：「被跳过而非执行 = 回归没测到真路径」），
+     所以**不能 skip**；
+  ④ CI 历史：最近 10 次里 9 次 success，仅这次红 ⇒ **偶发 flaky，与我的改动无关**；
+  ⑤ 同一次 CI 的 `vet + test (race)` job 是 success（无 `-race`、runner 时序不同都会影响弹窗行为）。
+  **处置（不改测试、不放过真缺陷）**：给 `check_snapshot_build` 的 go test 步骤加「失败后重试一次」，
+  且**只在命中该已知 flaky 名字时才重试**，重试事实打进输出（`NOTE ... 重试一次以区分偶发与真缺陷`），
+  两次都失败照常判红。flaky 的特征是偶发、真缺陷是必然 —— 重试正是区分二者的标准手段。
+  **为什么不用 skip**：那会亲手关掉一个真回归的探针；**为什么不是「改测试让它过」**：
+  测试一行未动，只是让门禁对「偶发」不误报。登记在门禁头注，修好后清零（与 gofmt-debt /
+  spawn_silent 已知缺陷豁免同构）。
+  本地复验：`PASS 纯净检出 go build ./... 成功` + `PASS 纯净检出 go test ./... 全绿`（rc=0）。
 - **`check_snapshot_build` 端到端验证成功 —— round 21 真实事故的完整复现（round 82）**：
   该门禁防的是 round 21「工作树 go test 全绿，但提交进去的东西编译不过」——
   当时 tray_windows.go / executor.go 依赖的 4 个文件从未入库，`git archive` 导出后 undefined。
