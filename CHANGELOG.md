@@ -34,6 +34,17 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **仓库卫生：41MB 一次性测试二进制数据与运行期辅助脚本进 .gitignore（round 67）**：
+  实测 `tests/_egress/` 下躺着 **41.2MB** 二进制数据（geoip.dat 16.6MB / ASN.mmdb 12.1MB /
+  Country.mmdb 7.6MB / geosite.dat 4.3MB / cache.db），**无生成脚本、无代码引用**，
+  仅被 `docs/本机通道测试-2026-10-19.md` 一份报告提到 —— 是 10-19 一次性本地通道测试的副产物。
+  同时登记 4 个运行期辅助文件（`*.bak-inject-append` 热修中间备份 / `.DISABLED.OFF` 主动下线的
+  看门狗 / `safe_merge` / `watch_soak` / `wb-hidden-launch.vbs` 本机一次性工具，无 CI 引用）。
+  **做法上刻意避开通配**：不写 `*.bak` / `*.ps1` 这类宽规则（会误伤真交付物 —— 本仓在册的
+  「判据过宽制造噪声」），而是**逐一列名 + 注释写明理由**，与 .gitignore 里已有的
+  `tests/docker-autonomy/evidence/` 段同口径（留档而非静默忽略）。
+  验证双向：8 个目标文件全部 `git check-ignore` 命中；**2052 个受跟踪文件逐一复检，零误伤**；
+  untracked 总数 178 → 165。
 - **`check_resident_longrun` 判据验证（round 66，补齐 round 65 遗留项）**：
   该门禁需要活实例才能完整跑，本轮用两条互补路径验证：
   ① **空闲判据单测 7/7 正确**：`running`/`evaluating` 判忙、`done`/`failed`/`cancelled`/`degraded`

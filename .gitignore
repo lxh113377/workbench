@@ -36,3 +36,18 @@ cover.out
 # 实测 tests/docker-autonomy/evidence/ 下单个 gate-* 目录就 500+ 文件
 tests/docker-autonomy/evidence/
 tests/_protoout/
+# 2026-10-24 round 67：tests/_egress/ 是 10-19 一次性本地通道测试留下的 41MB 二进制数据
+# （geoip.dat 16.6MB / ASN.mmdb 12.1MB / Country.mmdb 7.6MB / geosite.dat 4.3MB / cache.db）。
+# 实测：无生成脚本、无代码引用，仅被 docs/本机通道测试-2026-10-19.md 一份报告提到 ——
+# 属可再生的测试副产物而非交付物。留档说明而不是静默忽略（与上一段同口径）。
+tests/_egress/
+
+# 运行期辅助脚本的备份/变体（2026-10-24 round 67 实测登记）：
+#   *.bak-inject-append 是热修脚本的中间备份；.DISABLED.OFF 是主动下线的看门狗；
+#   safe_merge/watch_soak/wb-hidden-launch 是本机一次性工具，非交付物、无 CI 引用。
+#   逐一列名而非通配 *.bak/*.ps1 —— 通配会误伤真交付物（本仓在册：判据过宽制造噪声）。
+tests/fix-runtime-patch.ps1.bak-inject-append
+tests/soak_watchdog.ps1.DISABLED.OFF
+tests/safe_merge.ps1
+tests/watch_soak.ps1
+tests/wb-hidden-launch.vbs
