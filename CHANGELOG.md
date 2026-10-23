@@ -34,6 +34,22 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **`check_gate_links` / `check_deadcode` 端到端验证成功 + pre-commit 钩子意外拿到正向证据（round 77）**：
+  ① **`check_gate_links`**：在受跟踪 `check_all.ps1` 里引用一个磁盘存在但未入库的脚本，
+     门禁精确判红：`check_all.ps1（受跟踪）引用 tests/check_evil77.ps1 —— 磁盘存在但未入库：干净 clone/CI 里断链`。
+  ② **`check_deadcode`**：注入零引用未导出函数后**首跑报「无死代码」**，一度以为是漏判，
+     逐层取证发现是**我的注入方式缺陷**：函数定义 + 我在注释里写了函数名 = 语料中出现 2 次，
+     而门禁判据是「词边界计数 ≤1 才算死代码」。去掉注释里的函数名后立即精确判红：
+     `config.go:1014 evilUnusedFunc77`。**门禁的保守设计是对的**（注释提名字不构成引用证据，
+     宁可漏报也不误报 —— 与 round 64 的「判据本身误报」是同一设计哲学的两面）。
+  ③ **意外收获：`.githooks/pre-commit` 在真实场景拦住我并给出完整处置** ——
+     注入代码未 gofmt 时提交被拦：「暂存的 .go 未 gofmt，提交已拦截。修复: cd workbench && gofmt -w …」
+     且点明历史代价「这类疏漏已让人在 CI 上多跑三轮：round 14 / 22 / 23」。
+     `gofmt -w` 后同一提交即被放行 —— **证明钩子只拦真问题、不误拦**。这是本轮最有价值的副产品：
+     此前只验证过 ps1 门禁，从未在真实操作中触发过 Go 侧钩子。
+  至此 **9 个判 HEAD/索引/暂存区的门禁已有 6 个完成端到端验证**
+  （repo_eol / multi_bom / stdlib_only / ps1_eol / gate_links / deadcode），
+  另加 1 个钩子（pre-commit gofmt）与 7 个行为类门禁（round 65/66），共 14 个判据拿到正向证据。
 - **三个入库形态门禁端到端拦截验证全部成功（round 76）—— 判据层次方法论第 4 次应验**：
   沿用 round 74/75 方法，把缺陷**一步送到正确层级**（HEAD 或暂存区），三个门禁全部拿到正向证据：
   ① **`check_stdlib_only`**：`go.mod` 加 require + 新文件外部 import + `go.sum` 三缺陷同时注入 HEAD，
