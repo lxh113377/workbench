@@ -34,6 +34,22 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **`check_multi_bom` 端到端拦截验证成功 + 判据层次澄清（round 75）**：
+  沿用 round 74 的「缺陷必须进入索引」方法验证第二个入库形态门禁。**这次多走了一步才拿到正向证据**，
+  而那一步本身揭示了门禁设计的重要特性：
+  ① `hash-object -w` + `update-index` 造出 3-BOM 的 `docs/evil75.md`（实测索引前导 BOM=3、
+     且在 `*.md` glob 的 366 个命中里）——门禁却报「多BOM=0，缺HEAD 1 个」；
+  ② 根因：门禁查的是 **`HEAD:`**（`cat-file --batch` 请求前缀），我的缺陷只进了索引没 commit，
+     git 回 missing => 记入 `missingCount`。**门禁行为完全正确** —— 它注释里写明了
+     「本地已 add 未 commit 的新文件，并行会话常态」；
+  ③ 补 `git commit` 后再跑，立即判红并点名：`docs/evil75.md 前导BOM=3`、`evil75top.md 前导BOM=2`，
+     连同成因/危害/修法四件套。
+  **方法论再固化（round 73/74/75 三次才完整）**：验证判 HEAD 的门禁，缺陷要进 **HEAD**；
+  验证判索引的门禁，缺陷进**索引**即可。二者差一个 commit，选错层级就会看到「像漏检」的输出 ——
+  而门禁其实在正确地报告「这个文件不在 HEAD」。
+  另记一个本次排除的**假警报**：一度怀疑 `git ls-files -z '*.md'` 的 glob 失效（实测返回 0），
+  真相是 **JS `execSync` 走 cmd.exe 会把 `*` 当通配符吃掉**；改用 Node `execFileSync`（无 shell）
+  实测 glob 正常返回 364/366 条。这与 round 65/70/73 的「测法错」是同一家族，本次是第 5 次。
 - **`check_repo_eol` 端到端拦截验证成功（round 74）—— 补上 round 73 缺的「让缺陷真正进入索引」方法**：
   round 73 想验证该门禁却因「改工作区文件」穿不透 git 归一化而失败。本轮用**正确方法**重做并拿到正向证据：
   ```powershell
