@@ -55,7 +55,11 @@ if (-not $gitExe) {
   Write-Error "找不到 git 可执行文件（无法取受跟踪文件列表）"
   exit 2
 }
-$relFiles = @(& $gitExe -C $Root ls-files '*.ps1' '*.psm1' '*.cmd' '*.bat')
+# 2026-10-24 round 83：扫描范围加入 *.go —— 实测本仓唯一的裸 Invoke-WebRequest 就藏在
+# internal/verify/noninteractive_test.go 的 Go 字符串字面量里（PS 缺陷不必在 .ps1 里），
+# 而 Go 侧恰是产品生成/执行 PS 命令的地方（verify.go 的 forceNonInteractive）。
+# 不扩这一条，「PS 脚本缺 -UseBasicParsing」这个判据就有一条稳定的绕过路径。
+$relFiles = @(& $gitExe -C $Root ls-files '*.ps1' '*.psm1' '*.cmd' '*.bat' '*.go')
 if ($LASTEXITCODE -ne 0) {
   Write-Error "git ls-files 失败"
   exit 2
@@ -77,7 +81,15 @@ foreach ($f in $files) {
   for ($i = 0; $i -lt $lines.Count; $i++) {
     $ln = $lines[$i]
     $t = $ln.Trim()
-    if ($t -eq "" -or $t.StartsWith("#")) { continue }
+    # 注释行跳过（2026-10-24 round 83 扩到 Go 注释）：
+    #   #   = PowerShell / 配置文件注释
+    #   //  = Go / C 风格行注释
+    #   /*  = Go / C 块注释起始
+    # 为什么必须跳：实测把 *.go 纳入扫描后，verify.go 的事故说明注释（解释模型当年写了什么）
+    # 与判据自身的模式说明都被判成违规，5 处里 4 处是注释 —— 这正是判据过宽制造噪声的形态。
+    # 同口径先例：本件第 102-103 行的 schtasks 窗口早已「只取代码行」。
+    if ($t -eq "") { continue }
+    if ($t.StartsWith("#") -or $t.StartsWith("//") -or $t.StartsWith("/*") -or $t.StartsWith("*")) { continue }
   $rel = $f.FullName.Substring($Root.Length + 1)   # 根目录后紧跟分隔符，+1 即跳过
 
     # 1) Invoke-WebRequest 必须带 -UseBasicParsing（同一逻辑行内查找，续行按 ; | { 断句）

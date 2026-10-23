@@ -67,12 +67,18 @@ func TestPromptingCommandDoesNotHang(t *testing.T) {
 	dir := t.TempDir()
 	script := filepath.Join(dir, "probe.ps1")
 	body := "param([string]$U)\n" +
-		"try { $r = Invoke-WebRequest -Uri $U -TimeoutSec 20; exit 0 } catch { exit 3 }\n"
+		"try { $r = Invoke-WebRequest -Uri $U -UseBasicParsing -TimeoutSec 20; exit 0 } catch { exit 3 }\n"
 	if err := os.WriteFile(script, []byte(body), 0o600); err != nil {
 		t.Fatal(err)
 	}
 
 	// 相对引用：cwd 已锁在 workspace 内，符合 verify 的越界约束。
+	//
+	// -UseBasicParsing 是必需的（2026-10-24 round 83 补）：PS 5.1 的 Invoke-WebRequest 默认走 IE 引擎，
+	// 抓含 <script> 的页面时会弹「Security Warning」并挂起等按键 —— 那正是本测试要抓的回归形态。
+	// 产品侧的两道加固（-NonInteractive 注入 + CREATE_NO_WINDOW）管的是「等人输入」和「控制台载体」，
+	// 管不住 IE 引擎这个 GUI 弹窗；且 CI runner 上该弹窗行为依赖桌面 session 状态，实测偶发 36s 超时
+	// （round 82 的 flaky 根因）。全仓另外 25 处 Invoke-WebRequest 都带 -UseBasicParsing，此处是唯一漏的。
 	cmd := "powershell -File probe.ps1 " + srv.URL
 
 	type res struct {

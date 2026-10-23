@@ -34,6 +34,22 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **修掉 round 82 flaky 的根因 + 堵一个判据绕过路径（round 83）**：
+  round 82 给 `check_snapshot_build` 加了「命中已知 flaky 才重试」，但**根因未除**。本轮修根因：
+  ① **测试自身**：`internal/verify/noninteractive_test.go:70` 的 `Invoke-WebRequest` **没带 `-UseBasicParsing`** ——
+     PS 5.1 因此走 IE 引擎解析含 `<script>` 的页面，弹「Security Warning」并挂起等按键。
+     已补 `-UseBasicParsing`（全仓另外 **25 处都带了，这是唯一漏的**）+ 注释说明为什么产品侧两道加固
+     （`-NonInteractive` 注入 + `CREATE_NO_WINDOW`）管不住这个 GUI 弹窗。
+  ② **判据覆盖缺口**：`check_noninteractive.ps1` 本该抓这个缺陷，却只扫 `*.ps1 *.psm1 *.cmd *.bat`——
+     **完全不含 `.go`**，而 Go 侧恰是产品生成/执行 PS 命令的地方（`verify.go` 的 `forceNonInteractive`）。
+     也就是说「PS 脚本缺 `-UseBasicParsing`」这个判据**有一条稳定的绕过路径**：把 PS 写进 Go 字符串。
+  ③ 扩范围后**立刻自曝 5 处误报**（`verify.go` 的事故说明注释、判据自身的模式说明被当成违规）——
+     因为原逻辑只跳 PS 风格 `#` 注释，不跳 Go 的 `//` 与 `/*`。已补 Go 注释跳过（含块注释起始行），
+     并引用本件第 102-103 行「schtasks 窗口只取代码行」的同口径先例。
+  这正是本仓在册的「判据过宽制造噪声」—— **扩范围与防误报必须同时做，只做前者会让门禁被撤**。
+  双向验证：修复后的测试 ⇒ 0 违规（399 个文件）；注入真缺陷到 `.go` ⇒ `evilni\evil.go:7` 精确判红（400 个文件）。
+  顺带确认：该测试的 flaky 是**真回归风险**而非「测试写错了」—— 产品侧若无那两道加固，
+  这个弹窗就是 round 19 老大桌面被反复打扰的同一形态。修的是「测试自身的环境依赖」，不是「关掉探针」。
 - **CI 偶发红定位到 flaky 测试 + 给 `check_snapshot_build` 加「重试一次」区分偶发与真缺陷（round 82）**：
   round 82 验证 `check_snapshot_build`（完整复现 round 21 事故形态，门禁正确判红）后，
   **CI 在 `c1ecfa5` 上报 failure** —— 而该提交只改了 CHANGELOG 一行。逐层取证：
