@@ -16,6 +16,24 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **`check_untracked_go` 补上「健康度」这一半：未跟踪测试不仅报数量，还报**是否正在失败**（2026-10-24）**：
+  round 36 手动跑 `go test` 时发现工作区有 **6 个测试失败**（autonomy 4 + shortcut 1 +
+  cmd/workbench build failed），而 `check_untracked_go` 的读数完全看不出这件事 ——
+  它只报「31 个未跟踪 / gap=77」，数量连续 5 次稳定，**像是一切正常**。
+  但实际形态是「**工作区红 / 干净 HEAD 绿**」（已在干净 worktree 实测 HEAD 三包全绿 rc=0）。
+  危害：并行会话的在途件长期停在红色状态，该会话自己可能没意识到；
+  别人看到 gap=77 也只以为「只是没提交」，不知道其实是「没提交**且是红的**」。
+  改动：门禁在原有数量读数之外，把未跟踪测试文件按包分组、对涉及包跑 `go test`，
+  报告哪些包因未跟踪件而失败。**刻意不判红** —— 未跟踪件所有权不在本门禁
+  （提交决策由人按 ownership 判），判红会让它从「可见性工具」变成「拦截器」，违背定位。
+  **实现踩到一个会产生 7 个误报的坑（已修并留注）**：未跟踪文件路径是
+  `workbench/internal/engine`（**已含** workbench 前缀），而 `go test` 的 WorkingDirectory
+  已设为 `<root>/workbench` —— 直接拼会变成 `workbench/workbench/internal/engine`，
+  `directory not found`、ExitCode=1 被当成 FAIL，**10 个包里误报 7 个**。
+  修法：剥掉 `workbench/` 前缀后再拼，且只对 workbench 下的包检测（tests/ 等非模块目录跳过）。
+  修正后与手动 `go test` 结果**完全一致**（3 个：cmd/workbench / autonomy / shortcut）。
+  另记一次本人在同类的第三次失误：从 HEAD 取字节写回时又造出双 BOM
+  （`check_ps1_encoding` 当场抓到）—— 根因是 HEAD 版本已带 BOM，而我又前置了一个。
 - **删掉 3 个零断言「假绿测试」，并把这类缺陷上闸（CI 门禁数 14→15）**：
   round 34 审计断言密度时发现 3 个 `1T/0A` 文件（1 个 Test、0 条断言），round 35 处置。
   三个都是 `a5cf134`「仓库损毁后全量恢复」时进来的**调试残留**：

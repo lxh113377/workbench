@@ -99,4 +99,70 @@ if (-not $Quiet) {
   Write-Host ""
   Write-Host ("PASS: 未跟踪件均为测试文件（提交决策由人按 ownership 判；差额 " + $gap + " 个测试只在本地跑）") -ForegroundColor Green
 }
+# ---------- 未跟踪测试的健康度检测（2026-10-24 round 36 新增）----------
+# 为什么需要（round 36 实测）：本门禁此前只报「有 N 个测试只在本地跑」这个数量，
+# 不报它们的状态。round 36 手动 go test 才发现工作区有 6 个测试失败
+#（autonomy 4 + shortcut 1 + cmd/workbench build failed），全部由未跟踪测试文件引起，
+# 而本门禁的读数完全看不出 —— 数量稳定在 31/gap=77，像是一切正常。
+#
+# 危害：并行会话在途件若长期停在「工作区红」状态，
+#   该会话自己可能没意识到；别人看到 gap=77 也只以为「只是没提交」。
+#
+# 判据（informational，刻意不计 rc）：把未跟踪测试文件按包分组，对涉及包跑 go test，
+# 报告哪些包因未跟踪件而失败。不判红的理由：未跟踪件所有权不在本门禁
+#（提交决策由人按 ownership 判），判红会让它从「可见性工具」变成「拦截器」。
+# 但必须可见 —— 这是数量读数看不到的那一半。
+$untrackedTests = @($untracked | Where-Object { $_ -match '_test\.go$' })
+if ($untrackedTests.Count -gt 0) {
+  $pkgs = @{}
+  foreach ($u in $untrackedTests) {
+    $dir = Split-Path $u -Parent
+    if ($dir) { $pkgs[$dir] = $true }
+  }
+  $goExe = (Get-Command go -ErrorAction SilentlyContinue).Source
+  if (-not $goExe) {
+    $cand = @('C:\Program Files\Go\bin\go.exe')
+    foreach ($c in $cand) { if (Test-Path $c) { $goExe = $c; break } }
+  }
+  if ($goExe) {
+    $badPkgs = @()
+    $wbDir = Join-Path $root 'workbench'
+    foreach ($dir in ($pkgs.Keys | Sort-Object)) {
+      # 坑（2026-10-24 实测，10 个包里误报 7 个）：未跟踪文件的路径是
+      # `workbench/internal/engine`（**已含** workbench 前缀），而 go test 的
+      # WorkingDirectory 已设为 <root>/workbench —— 直接拼会变成
+      # `workbench/workbench/internal/engine`（directory not found，ExitCode=1 被当成 FAIL）。
+      # 故必须先剥掉前缀，且只对 workbench 下的包做检测（tests/ 等非模块目录跳过）。
+      $dirNorm = ($dir -replace '\\', '/')
+      if (-not $dirNorm.StartsWith('workbench/')) { continue }
+      $pkgRel = './' + $dirNorm.Substring('workbench/'.Length)
+      $tpsi = New-Object System.Diagnostics.ProcessStartInfo
+      $tpsi.FileName = $goExe
+      $tpsi.Arguments = 'test -count=1 ' + $pkgRel
+      $tpsi.WorkingDirectory = $wbDir
+      $tpsi.UseShellExecute = $false
+      $tpsi.CreateNoWindow = $true
+      $tpsi.RedirectStandardOutput = $true
+      $tpsi.RedirectStandardError = $true
+      try {
+        $tp = [System.Diagnostics.Process]::Start($tpsi)
+        $null = $tp.StandardOutput.ReadToEnd()
+        $null = $tp.StandardError.ReadToEnd()
+        $tp.WaitForExit()
+        if ($tp.ExitCode -ne 0) { $badPkgs += $dir }
+      } catch { }
+    }
+    if ($badPkgs.Count -gt 0) {
+      Write-Host ''
+      Write-Host ('WARN: 以下包因未跟踪测试文件而测试失败（' + $badPkgs.Count + ' 个）：') -ForegroundColor Yellow
+      foreach ($b in $badPkgs) { Write-Host ('  ! ' + $b) -ForegroundColor Yellow }
+      Write-Host '  形态：「工作区红 / 干净 HEAD 绿」—— 提交本身没问题，但在途件是红的。' -ForegroundColor Yellow
+      Write-Host '  本门禁刻意不判红（所有权不在它），但这条 WARN 是数量读数看不到的那一半。' -ForegroundColor Yellow
+    } elseif (-not $Quiet) {
+      Write-Host ''
+      Write-Host ('未跟踪测试健康度：' + $pkgs.Count + ' 个涉及包 go test 全绿') -ForegroundColor Green
+    }
+  }
+}
+
 exit 0
