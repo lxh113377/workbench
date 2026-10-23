@@ -34,6 +34,21 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **`check_comment_staleness` / `check_gate_coverage` / `check_gofmt` 端到端验证成功（round 78）—— 9/9 入库形态门禁全部拿到正向证据**：
+  ① **`comment_staleness`**：首跑 MISSED（注入在第 2 行，相邻 2 行窗口里第 4 行含日期 `2026-10-22`，
+     按设计被判「有免责标记」）。移到无日期区后立即判红：`check_gofmt.ps1:12` + 形态说明 + 修法。
+     **门禁行为符合设计**（窗口内有日期即豁免），是我的注入位置撞上了头注日期区。
+  ② **`gate_coverage`**：造一个入库但无受理面引用的孤儿门禁，精确判红：
+     `check_orphan78.ps1` + 「判据存在但没人跑 = 以为有护栏，实际是空气」+ 四个受理面修法。
+  ③ **`gofmt`**：首跑也 MISSED —— 逐层插桩发现**我注入的 `config.go` 本来就在债务豁免清单里**
+     （26 条之一），门禁走 exempt 路径（点名不计 rc）是**正确行为**。换到未登记的
+     `workbench/internal/artifact/loose.go` 后立即判红。
+  **本轮三次 MISSED 全部是我的注入位置/对象选择问题，零门禁缺陷** —— 这与 round 77 的
+  deadcode（注释里写函数名凑成引用计数）是同一类：**变异测试的注入必须避开该门禁的已知豁免区**。
+  至此 **9 个判 HEAD/索引/暂存区的门禁全部完成端到端正向验证**：
+  repo_eol / multi_bom / stdlib_only / ps1_eol / gate_links / deadcode / comment_staleness /
+  gate_coverage / gofmt。加上 round 65/66 的 7 个行为类门禁与 round 77 的 pre-commit 钩子，
+  **共 17 个判据拿到正向证据**。
 - **`check_gate_links` / `check_deadcode` 端到端验证成功 + pre-commit 钩子意外拿到正向证据（round 77）**：
   ① **`check_gate_links`**：在受跟踪 `check_all.ps1` 里引用一个磁盘存在但未入库的脚本，
      门禁精确判红：`check_all.ps1（受跟踪）引用 tests/check_evil77.ps1 —— 磁盘存在但未入库：干净 clone/CI 里断链`。
