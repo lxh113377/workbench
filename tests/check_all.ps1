@@ -18,7 +18,11 @@
   用法:
     powershell -NoProfile -ExecutionPolicy Bypass -File tests/check_all.ps1
     powershell ... -File tests/check_all.ps1 -Source <我的文件> -Target <live文件>   # 附带覆盖安全检查
-  退出码：0 = 全部通过 / 1 = 至少一段失败 / 2 = 参数错误
+  退出码（2026-10-24 round 63 起，段级三态）：
+    0 = 全部段 PASS；1 = 至少一段 FAIL；2 = 参数错误
+    段级判定三态：PASS (rc=0) / FAIL (rc≠0,3) / SKIP (rc=3，门禁未执行，不计 PASS 也不判红)
+    段内还可能有 UNVERIFIED（门禁跑了但证据不足，rc=2 由各段自行降级并打印）
+    SKIP≠PASS：原先 SKIP 分支设 LASTEXITCODE=0 被 Section 判成 PASS（round 61 实测），已修。
 #>
 param(
   # 默认根目录由脚本位置推导；硬编码会让干净 clone/CI 检查另一棵树（2026-10-22 实测失真）。
@@ -37,42 +41,53 @@ $ErrorActionPreference = 'Continue'
 if ([string]::IsNullOrWhiteSpace($Root)) { $Root = Split-Path -Parent $PSScriptRoot }
 if ([string]::IsNullOrWhiteSpace($Exe)) { $Exe = Join-Path $Root 'dist\workbench.exe' }
 
+# SKIP 分支用 rc=3（约定常量，见头部「退出码口径」）返回，Section 据此区分三态。
 function Section([string]$name, [scriptblock]$body) {
   Write-Host ('==> ' + $name) -ForegroundColor Cyan
   & $body
   $rc = $LASTEXITCODE
   if ($null -eq $rc) { $rc = 0 }
-  if ($rc -eq 0) { Write-Host ('    PASS (rc=0) ' + $name) -ForegroundColor Green }
-  else { Write-Host ('    FAIL (rc=' + $rc + ') ' + $name) -ForegroundColor Red; $script:fails++ }
+  if ($rc -eq 0) { Write-Host ('    PASS (rc=0) ' + $name) -ForegroundColor Green; return }
+  # 三态（2026-10-24 round 63 实测修复）：原先 SKIP 分支设 $global:LASTEXITCODE = 0，
+  # 函数读完照样判 PASS —— 门禁**根本没跑却报通过**（round 61 实测：-Exe 指向不存在的路径时，
+  # 「SKIP exe 不存在（未构建）」下一行就是「PASS (rc=0) 产物静默」）。这是聚合洗绿的变体：
+  # 与「聚合把单个失败洗绿」不同，这里是**把没执行洗成执行成功**，危害更大（没人会怀疑）。
+  # 修复只升 SKIP 一态：rc=3 显示 SKIP 且不计 PASS 也不判红（跑不了 != 失败）。
+  # **刻意不把 rc=2(UNVERIFIED) 升成 FAIL**：28 个被引门禁里 26 个会返回 rc=2，
+  # 而在途文件/无产物/无活实例都会触发它 —— 判红会让本地总门禁天天红，然后被整体绕过，
+  # 那才是真的洗绿。rc=2 仍由各段自己的「UNVERIFIED（不计 PASS）」分支处理（保持原状）。
+  if ($rc -eq 3) { Write-Host ('    SKIP (rc=3) ' + $name + ' —— 门禁未执行，不计 PASS 也不判红') -ForegroundColor Yellow; $script:skips++; return }
+  Write-Host ('    FAIL (rc=' + $rc + ') ' + $name) -ForegroundColor Red; $script:fails++
 }
 $fails = 0
+$skips = 0
 
 Write-Host '=== 工作台预检总门禁 ===' -ForegroundColor White
 
 Section '产物静默（PE 子系统 = GUI）' {
   $g = Join-Path $Root 'tests\check_subsystem.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
-  if (-not (Test-Path $Exe)) { Write-Host '    SKIP exe 不存在（未构建）'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  if (-not (Test-Path $Exe)) { Write-Host '    SKIP exe 不存在（未构建）'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Exe $Exe -RequireGui
 }
 
 Section '实例唯一（无孤儿/无重复生产实例）' {
   $g = Join-Path $Root 'tests\instance_guard.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   # 报告模式（不加 -Apply）：只为判口，不在这里杀进程；回收位在 keepalive 每分钟那一跳
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -MaxInstances 6
 }
 
 Section '首页契约（产物页面 = 当前源码页面）' {
   $g = Join-Path $Root 'tests\check_homepage.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
-  if (-not (Test-Path $Exe)) { Write-Host '    SKIP exe 不存在（未构建）'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  if (-not (Test-Path $Exe)) { Write-Host '    SKIP exe 不存在（未构建）'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Exe $Exe
 }
 
 Section '子进程静默（spawn 点全隐藏）' {
   $g = Join-Path $Root 'tests\check_spawn_silent.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Root (Join-Path $Root 'workbench')
 }
 
@@ -80,7 +95,7 @@ Section '子进程静默（spawn 点全隐藏）' {
 # 只做源码判据（不加 -CheckLive），保证 CI/无头环境可用；运行期取证见下面的独立入口。
 Section '托盘窗口样式（消息窗不得进任务视图）' {
   $g = Join-Path $Root 'tests\check_tray_window.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Root $Root
 }
 
@@ -88,13 +103,13 @@ Section '托盘窗口样式（消息窗不得进任务视图）' {
 # 实测抓到过：git archive 导出 HEAD 后 go build 报 undefined，因 4 个依赖文件从未入库。
 Section '纯净检出编译（防提交编译不过的快照）' {
   $g = Join-Path $Root 'tests\check_snapshot_build.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Repo $Root
 }
 
 Section '服务化长驻实例·空闲态内存（三态 rc=2 不计 PASS）' {
   $g = Join-Path $Root 'tests\check_resident_longrun.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Exe (Join-Path $Root 'dist\workbench.exe')
   # 三态：rc=2 = 无活实例 / 引擎在跑 / 内存未稳定 —— 按项目铁律记 UNVERIFIED，
   # 不计 PASS 也不判红（与 check_perf / check_queue_size 同口径）。
@@ -103,7 +118,7 @@ Section '服务化长驻实例·空闲态内存（三态 rc=2 不计 PASS）' {
 
 Section 'queue 规模（记录只增不减的复发检测；三态 rc=2 不计 PASS）' {
   $g = Join-Path $Root 'tests\check_queue_size.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   # 三态：rc=2 = 无 queue.json（未构建/未运行），按项目铁律记 UNVERIFIED，
   # **不得**当 PASS 也不得直接判红 —— 但 check_all 的 Section 只会把非 0 记 FAIL。
@@ -113,25 +128,25 @@ Section 'queue 规模（记录只增不减的复发检测；三态 rc=2 不计 P
 
 Section '文档引用完整性（活文档点名的验收入口必须存在或已披露）' {
   $g = Join-Path $Root 'tests\check_doc_refs.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
 }
 
 Section '报告待办与 CI 现实一致性（防状态栏滞后误导下游）' {
   $g = Join-Path $Root 'tests\check_report_claims.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
 }
 
 Section 'PowerShell 脚本编码（含非 ASCII 必须带 UTF-8 BOM）' {
   $g = Join-Path $Root 'tests\check_ps1_encoding.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
 }
 
 Section '门禁读数趋势（informational：有数据就报，无数据 UNVERIFIED）' {
   $g = Join-Path $Root 'tests/check_readings_trend.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   # 本件只报趋势、不设红线（rc 只会是 0 或 2）；rc=2 = 还没有读数落盘，按 UNVERIFIED 处理
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（尚无读数落盘）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
@@ -139,7 +154,7 @@ Section '门禁读数趋势（informational：有数据就报，无数据 UNVERI
 
 Section '未跟踪 Go 文件（本地判据：CI 干净检出恒 PASS，不接 repo-gates）' {
   $g = Join-Path $Root 'tests\check_untracked_go.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   # 生产代码未跟踪 = 一定坏（工作区与提交语义不一致）=> 计入 FAIL
   # 测试文件未跟踪 = 并行在途件的正常工作流 => 已逐条点名，不判红
@@ -149,28 +164,28 @@ Section '未跟踪 Go 文件（本地判据：CI 干净检出恒 PASS，不接 r
 
 Section '注释时效（现状型数字断言必须带日期，round 31/32 同型教训）' {
   $g = Join-Path $Root 'tests\check_comment_staleness.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
 Section '.ps1 语法可解析（字节层之上的第三层：能解析才能跑）' {
   $g = Join-Path $Root 'tests\check_ps1_syntax.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
 Section '多 BOM（受跟踪文本文件不得有多个前导 BOM）' {
   $g = Join-Path $Root 'tests\check_multi_bom.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
 Section '报告数字一致性（体检报告的规模数字必须与仓库实况相符）' {
   $g = Join-Path $Root 'tests\check_report_figures.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
@@ -178,7 +193,7 @@ Section '报告数字一致性（体检报告的规模数字必须与仓库实�
 Section '纯标准库约束（go.mod 无 require、无 go.sum/vendor、模块内无外部 import）' {
 
   $g = Join-Path $Root 'tests\check_stdlib_only.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
@@ -186,7 +201,7 @@ Section '纯标准库约束（go.mod 无 require、无 go.sum/vendor、模块内
 Section 'soak JSON 契约（验收断言必须落在 soakReport 的真实字段上）' {
 
   $g = Join-Path $Root 'tests\check_soak_json_contract.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
@@ -194,7 +209,7 @@ Section 'soak JSON 契约（验收断言必须落在 soakReport 的真实字段�
 Section '产物时效（soak/A7 判定逻辑必须在产物里；无产物则 UNVERIFIED）' {
 
   $g = Join-Path $Root 'tests\check_artifact_soak_fresh.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
@@ -202,7 +217,7 @@ Section '产物时效（soak/A7 判定逻辑必须在产物里；无产物则 UN
 Section '受理面覆盖（每个 check_*.ps1 必须挂某个受理面，防判据没挂受理面）' {
 
   $g = Join-Path $Root 'tests\check_gate_coverage.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
@@ -211,21 +226,21 @@ Section '全仓入库 EOL（已入库的 CRLF/混合残留，CI 兜底层）' {
 
 
   $g = Join-Path $Root 'tests\check_repo_eol.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
 Section '.ps1 入库 EOL（防 CRLF 混入把 diff 放大成全行改动）' {
   $g = Join-Path $Root 'tests\check_ps1_eol.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
 Section 'git hooks 启用状态（提交前闸是否真装着）' {
   $g = Join-Path $Root 'tests\check_hooks_enabled.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   # rc=2 = 不在 git 仓库（CI 干净检出本就不装 hook）=> UNVERIFIED，不计 PASS 不判红
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
@@ -233,7 +248,7 @@ Section 'git hooks 启用状态（提交前闸是否真装着）' {
 
 Section '暂存区 gofmt（提交前闸，防「改完忘 gofmt」进提交）' {
   $g = Join-Path $Root 'tests\check_staged_gofmt.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   # 三态：rc=2（不在 git 仓库/找不到 gofmt）按 UNVERIFIED 处理，不计 PASS 也不判红
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
@@ -241,33 +256,33 @@ Section '暂存区 gofmt（提交前闸，防「改完忘 gofmt」进提交）' 
 
 Section '测试必须有断言（零断言测试 = 假绿）' {
   $g = Join-Path $Root 'tests\check_test_assertions.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
 Section '死代码（未导出函数全树零引用）' {
   $g = Join-Path $Root 'tests\check_deadcode.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
 }
 
 Section 'Go 代码格式（LF 归一化口径，与 .gitattributes 分工）' {
   $g = Join-Path $Root 'tests\check_gofmt.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
 }
 Section '门禁引用完整性（受跟踪脚本的引用不得断链）' {
   $g = Join-Path $Root 'tests\check_gate_links.ps1'
-  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
 }
 
 if ($Source -ne '' -or $Target -ne '') {
   Section '覆盖安全（禁止整文件覆盖丢改动）' {
     $g = Join-Path $Root 'tests\check_no_shrink.ps1'
-    if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
-    if ($Source -eq '' -or $Target -eq '') { Write-Host '    SKIP 需同时给 -Source 与 -Target'; $global:LASTEXITCODE = 0; return }
+    if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+    if ($Source -eq '' -or $Target -eq '') { Write-Host '    SKIP 需同时给 -Source 与 -Target'; $global:LASTEXITCODE =  3; return }
     & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Source $Source -Target $Target
   }
 } else {
@@ -276,6 +291,16 @@ if ($Source -ne '' -or $Target -ne '') {
 }
 
 Write-Host '========================================'
-if ($fails -eq 0) { Write-Host 'PRECHECK: all-gates-pass' -ForegroundColor Green; exit 0 }
-Write-Host ('PRECHECK: ' + $fails + ' section(s) failed') -ForegroundColor Red
-exit 1
+# 汇总措辞（round 63）：有 SKIP 时不许再说 all-gates-pass —— 「全过」这个词必须名实相符，
+# 否则又回到 round 61 那个缺陷的语言版（门禁没跑却报通过）。SKIP 只说明「跑不了」，
+# 不判红，但要让看结果的人一眼知道有几段没验。
+if ($fails -gt 0) {
+  Write-Host ('PRECHECK: ' + $fails + ' section(s) failed' + $(if ($skips -gt 0) { '（另有 ' + $skips + ' 段 SKIP 未执行）' } else { '' })) -ForegroundColor Red
+  exit 1
+}
+if ($skips -gt 0) {
+  Write-Host ('PRECHECK: pass-with-skips (' + $skips + ' 段未执行，不计 PASS)') -ForegroundColor Yellow
+  exit 0
+}
+Write-Host 'PRECHECK: all-gates-pass' -ForegroundColor Green
+exit 0

@@ -34,6 +34,23 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **check_all 的 SKIP 被计成 PASS —— 聚合洗绿的第二形态「把没执行洗成执行成功」（round 63 实测修复）**：
+  `Section` 函数原本只分 PASS/FAIL 两态，而 33 个 SKIP 分支（门禁脚本不存在 / exe 未构建 / 缺参数）
+  都以 `$global:LASTEXITCODE = 0; return` 退出 —— 函数读完 $LASTEXITCODE 是 0，**照样打印 PASS**。
+  round 61 实测：`-Exe` 指向不存在的路径时，「SKIP exe 不存在（未构建）」下一行就是
+  `PASS (rc=0) 产物静默（PE 子系统 = GUI）`。**门禁根本没跑，却报通过。**
+  这与脚本头部自己写的设计原则直接矛盾（第 15 行：「有段被 SKIP 必须显式打印 SKIP，且**不计入 PASS**」）
+  —— 原则写在注释里，实现没兑现。比「聚合把单个失败洗绿」更危险：没人会怀疑一个报 PASS 的段。
+  修法：**段级三态化**，只升 SKIP 一态 ——
+  - SKIP 分支改用约定 rc=3；`Section` 识别 rc=3 打印 `SKIP (rc=3) ... 门禁未执行，不计 PASS 也不判红` 并计数；
+  - **刻意不把 rc=2(UNVERIFIED) 升成 FAIL**：28 个被引门禁里 26 个会返回 rc=2，而在途文件/无产物/
+    无活实例都会触发它 —— 判红会让本地总门禁天天红，然后被整体绕过，那才是真的洗绿；
+  - 汇总措辞同步诚实化：有 SKIP 时输出 `PRECHECK: pass-with-skips (N 段未执行，不计 PASS)`，
+    **不再说 all-gates-pass**（「全过」这个词必须名实相符，否则就是该缺陷的语言版）；
+  - 头部「退出码口径」补三态说明。
+  双向实测：`-Exe` 不存在 ⇒ `SKIP (rc=3) 产物静默` + `SKIP (rc=3) 首页契约` 出现、产物类段报 PASS 数=0、
+  汇总 `1 failed（另有 2 段 SKIP 未执行）`；正常跑 ⇒ 28 PASS / 1 FAIL / 0 SKIP（唯一 FAIL 是产物时效，真问题）。
+  33 处 SKIP 分支全量转换，残留 `LASTEXITCODE = 0; return` **0 处**；16 处 UNVERIFIED 分支的 `= 0` 保留（原设计）。
 - **产物重建阻塞面精确到「单包 + 单符号」（round 59 实测，交接记录 §7 + 体检报告 §3.1 同步）**：
   round 52/56 只笼统记「在途测试挡住 go vet」。本轮实测把范围收到最窄，给收尾方一条可执行指令：
   - **唯一阻塞**：`go vet ./...` 在 `workbench/cmd/workbench` 失败，**其余 30/30 个包 vet 全过**；
