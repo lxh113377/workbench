@@ -1,4 +1,4 @@
-# Changelog
+﻿# Changelog
 
 > 本项目所有值得一提的变更都记在这里。
 > 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
@@ -34,6 +34,31 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **补上 Windows 平台上「可写探针」的测试缺口（round 38，唯一 SKIP 用例审计引出）**：
+  全仓 `-count=1 -v` 跑下来只有 1 个 SKIP：`workspace_test.go` 的
+  `TestProbeWriteRejectsReadOnlyDir` —— 它在 Windows 上直接 `t.Skip`
+  （Unix 用 chmod 0o500 构造只读目录，Windows 权限模型不同）。
+  而 `probeWrite` 正是 `workspace.go:335` 判定「目录是否可写」的核心探针
+  （external 模式选目录的闸门，不可写就报「目录不可写」+ 建议）。
+  **荒谬之处**：本项目是 Windows 单 EXE —— 恰恰在唯一会发布它的平台上，
+  「探针能否拒绝只读目录」从未被执行过一次。
+  补法：新增 `probe_windows_test.go`（`//go:build windows`），用 `icacls /deny W`
+  构造只读目录（本机实测：施加后直写 Access denied、移除后恢复可写，两步均如预期）。
+  两处防假绿的设计：
+  ① **前置自检** —— 真正调 probeWrite 前先直连 `os.Create` 确认 deny 生效；
+     若直连仍写得进去（进程带绕过 ACL 的特权），那是前置条件不成立，显式 SKIP 并说明，
+     与被测逻辑失败区分开（禁把「没验成」当「验过了」）；
+  ② **cleanup 顺序** —— deny 会挡住 `t.TempDir()` 的删除，故用 `t.Cleanup` 先恢复 ACL
+     （Go 的 cleanup 是 LIFO，本注册晚于 TempDir 的清理注册，故先执行）。
+  变异验证（两轮才做对，值得记）：
+  - 首轮变异「probeWrite 吞掉 OpenFile 的 err」**没有判红** —— 因为 f 为 nil 时
+    `f.WriteString` 仍返回 ErrInvalid，探针照样报错，**这不是有效变异**；
+  - 换成「直接 return 假装写成功」（模拟探针没真写、永远说可写的真实缺陷形态）
+    ⇒ 判红且消息精准：「只读目录应写入失败，但 probeWrite 返回成功 —— 可写探针在本平台形同虚设」。
+  教训：**变异要针对「缺陷的真实形态」设计，不是随便删一行** —— 删错地方会得到
+  「测试仍 PASS」的假安全感，比不做变异更糟。
+  验证：新测试 PASS；workspace 包 -race 全绿；gofmt 门禁 PASS（333 文件，26 豁免）；
+  提交前 staged gofmt 闸通过（round 32 装的机制，本轮第一次帮我避免了 CI 判红）。
 - **未跟踪测试的健康度读数序列化（round 20 设计补完）+ 双 BOM 犯第四次后的根治（2026-10-24）**：
   **① 健康度序列化**：round 36 给 `check_untracked_go` 加了健康度检测（WARN 哪些包因未跟踪件失败），
   但只是**单次快照** —— 看不出「在途件红了多久」。按 round 20 立下的理由（单次读数不够），
