@@ -34,6 +34,26 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **未跟踪测试的健康度读数序列化（round 20 设计补完）+ 双 BOM 犯第四次后的根治（2026-10-24）**：
+  **① 健康度序列化**：round 36 给 `check_untracked_go` 加了健康度检测（WARN 哪些包因未跟踪件失败），
+  但只是**单次快照** —— 看不出「在途件红了多久」。按 round 20 立下的理由（单次读数不够），
+  把健康度也落盘到 `gate-readings.jsonl`（`gate=check_untracked_go_health`），字段含
+  `badPkgCount` / `badPkgs`（包名列表）/ `untrackedTests` / `head`。
+  首版试过「把原落盘段整体搬到健康度检测之后」，结果**搬坏了括号**
+  （parse 报 `L174 Unexpected token '}'`）—— 从 HEAD 恢复后改为**就地追加一小段**，
+  不动原有结构。教训：**搬整个块的风险大于收益，能追加就不要搬**。
+  首条读数已落盘：`badPkgCount=3`（cmd/workbench / autonomy / shortcut）、`untrackedTests=31`。
+  这 3 个包的失败已逐个查明性质：**并行会话未完成的 TDD 红态** ——
+  autonomy 的 4 个失败全是风险配置开关未实现（`EscalateMinQuality`/`BlockOnRepeat`/
+  `MaxDraftsPerRound`/`OnCostOverrun`），shortcut 是 `--silent` 参数残留未清。
+  **测试已写、行为没做**，所有权在并行会话，不代改（已在门禁 WARN 里说明形态）。
+
+  **② 双 BOM 第四次的根治**：本轮又从 HEAD 取字节写回 `.ps1`，造出双 BOM（第四次，前三次在 round 24/26/32）。
+  `check_ps1_encoding` 每次都当场抓到 —— 但**修四次说明靠门禁兜底不够**。
+  根因：`git cat-file blob HEAD:<path>` 取到的字节已含 BOM，而我写回时又前置了一个。
+  根治：`runtime/tmp/restore-from-head.ps1` —— **用 `git checkout HEAD -- <path>` 代替手工字节读写**，
+  它天然保持对象里的 BOM/换行状态，并在写完自检 BOM 数。
+  已把「能追加就不要搬、能 checkout 就不要手工读写字节」记进 CHANGELOG。
 - **`check_untracked_go` 补上「健康度」这一半：未跟踪测试不仅报数量，还报**是否正在失败**（2026-10-24）**：
   round 36 手动跑 `go test` 时发现工作区有 **6 个测试失败**（autonomy 4 + shortcut 1 +
   cmd/workbench build failed），而 `check_untracked_go` 的读数完全看不出这件事 ——

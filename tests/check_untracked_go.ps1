@@ -157,6 +157,25 @@ if ($untrackedTests.Count -gt 0) {
       Write-Host ('WARN: 以下包因未跟踪测试文件而测试失败（' + $badPkgs.Count + ' 个）：') -ForegroundColor Yellow
       foreach ($b in $badPkgs) { Write-Host ('  ! ' + $b) -ForegroundColor Yellow }
       Write-Host '  形态：「工作区红 / 干净 HEAD 绿」—— 提交本身没问题，但在途件是红的。' -ForegroundColor Yellow
+    # ---- 健康度读数落盘（2026-10-24 round 37 新增）----
+    # 为什么单独一段（不并进上面的读数落盘段）：那段在文件前部，跑在健康度检测**之前**，
+    # 拿不到 $badPkgs。round 37 首版试过「把落盘段整体搬到健康度之后」，结果搬坏了括号
+    # （parse 报 L174 Unexpected token '}'）—— 搬整个块风险大于收益，故改为就地追加一段。
+    # 序列意义：单次 WARN 只是快照，序列才能看出「在途件红了多久」（round 20 的同个理由）。
+    if (-not $NoRecord) {
+      $memDir2 = Join-Path $root '.workbuddy\memory'
+      if (Test-Path -LiteralPath $memDir2) {
+        $rec2 = [ordered]@{
+          at = (Get-Date).ToString('o')
+          gate = 'check_untracked_go_health'
+          badPkgCount = $badPkgs.Count
+          badPkgs = ((@($badPkgs) | ForEach-Object { $_ -replace '\\', '/' }) -join ';')
+          untrackedTests = $untrackedTests.Count
+          head = (& git -C $root rev-parse --short HEAD 2>$null)
+        }
+        Add-Content -LiteralPath (Join-Path $memDir2 'gate-readings.jsonl') -Value ($rec2 | ConvertTo-Json -Compress) -Encoding UTF8
+      }
+    }
       Write-Host '  本门禁刻意不判红（所有权不在它），但这条 WARN 是数量读数看不到的那一半。' -ForegroundColor Yellow
     } elseif (-not $Quiet) {
       Write-Host ''
