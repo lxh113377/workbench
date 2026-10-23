@@ -34,6 +34,24 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **`check_snapshot_build` 端到端验证成功 —— round 21 真实事故的完整复现（round 82）**：
+  该门禁防的是 round 21「工作树 go test 全绿，但提交进去的东西编译不过」——
+  当时 tray_windows.go / executor.go 依赖的 4 个文件从未入库，`git archive` 导出后 undefined。
+  本轮用**完全相同的事故形态**做变异：入库 `consumer.go`（调用 `HelperOnlyLocal()`）、
+  把定义那个符号的 `helper_untracked.go` 留在工作区**不入库**。门禁完整给出四层输出：
+  ```
+  快照大小: 8.8 MB
+  internal\snap\consumer.go:4:33: undefined: HelperOnlyLocal
+  FAIL 纯净检出编译失败 —— 提交了编译不过的快照（上面即为缺失符号）
+  常见原因：tracked 文件引用了从未入库的符号/文件。
+  自查: git log --all -- <缺失文件>  (空 = NEVER TRACKED)
+  ```
+  **连当初的取证方法都写进了门禁输出**（`git log --all` 空 = NEVER TRACKED）。
+  这是本轮最有价值的验证：它证明的不仅是「门禁有效」，而是**那条事故路径今天依然能复现**，
+  且门禁能在提交进来的那一刻就拦住（而不是等到别人 clone 后编译失败）。
+  至此累计 **27 个判据拿到正向证据**。剩余未验 8 个中，artifact_soak_fresh 已被真实场景反复验证、
+  homepage 需活实例页面，其余 6 个（hooks_enabled / issue_forms / noninteractive / ps1_syntax /
+  staged_gofmt / tray_window）判据形态简单、方法论已通。
 - **`check_untracked_go` / `check_test_assertions` / `check_report_claims` 端到端验证成功（round 81）**：
   ① **`check_untracked_go`**：造一个未跟踪的**生产** .go，门禁判红并给出双视角读数 ——
      `[**生产代码**] workbench/internal/evilprod/prod.go` + 「提交的测试函数 = 741 / 工作区 = 741 /
