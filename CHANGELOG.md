@@ -1330,6 +1330,27 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **门禁体系体检报告（`docs/门禁体系体检报告-2026-10-23.md`，round 56）**：
+  把 round 50-55 零散发现的失效形态汇总成一份可直接据以整改的报告，不必后续会话重新考古。
+  实测数字（**逐条核对过，非引用记忆**）：受跟踪门禁 **32** 个、CI repo-gates 执行 **19** 个、
+  CI build job 附加 3 个判据、本地 check_all 覆盖 **28** 个、未跟踪 Go 测试 **31** 个、
+  读数落盘 **47** 条（其中 resident 8 条：中位 63.6~66.1MB / 上界 128MB，余量充足）。
+  报告的**核心是一张「已确认失效形态」表**，6 种全部真实发生过、且现在都有对应护栏：
+  ① 判据存在但没挂受理面（round 22 前 23 个门禁 CI 只跑 4 个）⇒ check_gate_coverage；
+  ② 挂了受理面但判据恒不落盘（round 47 内存门禁 phase=running 恒真，静默失效 6h）⇒ 存在性核对；
+  ③ 修好判据但产物没重建（round 52 A7 修复在源码、产物旧 12.6h，走产物的调用仍报假 leak）⇒
+     check_artifact_soak_fresh；
+  ④ 挂了受理面但断言空转（round 55 e2e_soak 读不存在的字段，对 round 39 缺陷 18 PASS/0 FAIL）⇒
+     check_soak_json_contract + MissingFlat 前置守卫；
+  ⑤ 读数过期当现状报（round 42 报「红窗 1.3h」而实际已 >2h）⇒ 新鲜度 + 6h 陈旧告警；
+  ⑥ 门禁自己的文案命中自己的判据（round 32 注释过期自检自红、round 48 字面示例被自我扫描）⇒
+     排除自身 / 历史记录措辞。
+  **共性值得单独记**：6 种里有 5 种的表现都是「**看起来是绿的**」—— 这不是流程洁癖的问题，
+  而是这类缺陷只有主动证伪才暴露，这正是本仓把变异测试/双向 fixture/负向路径实测列为硬要求的理由。
+  报告同时如实标出**边界与不做的事**：产物重建阻塞在他人所有权（活实例占用 + 在途测试使
+  go vet 失败）、31 个未跟踪测试属并行会话、24h soak 只差攒时长；以及 §9 两个内存口径互比
+  **刻意不设门禁**（语义问题，硬做会触发「模糊语义检查⇒门禁被删」）。
+  全部 8 个文档类门禁（doc_refs/report_claims/multi_bom/repo_eol/ps1_syntax/gate_coverage/gate_links/changelog）PASS。
 - **产物时效门禁（`tests/check_artifact_soak_fresh.ps1`，round 52）—— 修好判据 != 判据生效**：
   本轮用生产产物跑 `--soak`，拿到 **verdict=leak / spanHours=99.73**；对同一份 metrics.csv
   用当前源码跑，得到 **ok / 14.58**。差别只有一个：round 39 的趋势修复提交于 10-23 12:14，
