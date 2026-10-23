@@ -16,6 +16,31 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **删掉 3 个零断言「假绿测试」，并把这类缺陷上闸（CI 门禁数 14→15）**：
+  round 34 审计断言密度时发现 3 个 `1T/0A` 文件（1 个 Test、0 条断言），round 35 处置。
+  三个都是 `a5cf134`「仓库损毁后全量恢复」时进来的**调试残留**：
+  只有 `fmt.Println` 打印中间状态，没有任何 `t.Fatal/t.Error` —— **永远 PASS，但什么都不保证**。
+  逐个核实后确认**全部冗余**（已有等价的真断言覆盖）：
+  | 调试测试 | 已有等价覆盖 |
+  |---|---|
+  | `artifact/debug_loose_test.go` | `loose_real_test.go` 的 `TestParseRealModelOutput`（同 testdata、同调用链、有断言） |
+  | `artifact/debug_strict_test.go` | `artifact_test.go` 的 `TestParseStrict` 等 12 个 |
+  | `config/zz_debug_test.go` | `config_test.go` 的 `TestNormalizeClamps` 等 11 个 |
+  **删除后覆盖率不变**（artifact 84.4%→84.4%、config 70.3%→70.3%）—— 零贡献的实证。
+  危害不是风格问题，是实质性的：① 虚增 PASS 数（740 个 Test 里有 3 个是假的）；
+  ② 让人以为「这里有测试」而跳过补测试，形成真实覆盖漏洞。
+  新增 `tests/check_test_assertions.ps1`，接入 repo-gates（第 15 个）与 `check_all`。
+  **判据经过两轮精细化才收敛**（首轮一刀切报了 4 个、其中 3 个合理）：
+  - 豁免① **编译期契约断言**：`var _ SomeInterface = ...` 在编译期就完成了断言，
+    运行期无需再断言（实例：`TestRunnerContractSatisfied`）；
+  - 豁免② **显式声明的不 panic 契约**：doc comment 写明「不得 panic」且函数体无 `fmt.Print*`
+    （实例：`TestFinishCancelledOnUnknownTask`、`TestHooksAttachSurvivesNilChain`）。
+  - 头注保留这份分类的理由：**不精细化，门禁第一次运行就会产生 3 个假红，离「被删」就不远了**。
+  实现上踩到两个坑（都已修并留注）：① 豁免窗口漏了 **func 上方的 doc comment**
+  （Go 的文档注释在那里，不在函数体内）；② pattern 写成 `不\s*panic` 匹配不到「**不得** panic」
+  （中间隔着「得」字）—— 改为 `不[得应会]?\s*panic`。
+  验证：删除后覆盖率不变；三个变异全捕获（无断言判红并点名 `:5` / 有断言 PASS / 编译期契约 PASS）；
+  当前基线 **737 个 Test 全部有断言**。
 - **把「注释里的数字会过期」这门类做成机器判据（round 31/32 两次同型教训的产物，CI 门禁数 13→14）**：
   round 31 更正了「CRLF 会进索引」的错误机理，round 32 又发现 `check_gofmt.ps1` 头注写
   「35 条债务里 33 条已失效，只剩 2 条 live」而**实际 26 条 live**。
