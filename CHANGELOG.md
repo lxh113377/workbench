@@ -1446,6 +1446,29 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **gitignore 泄漏门禁（`tests/check_gitignore_leak.ps1`，CI 第 22 个，round 71）—— 治「靠人凭记忆补 ignore」**：
+  本仓三连实测同一根因：round 67 `tests/_egress/` **41.2MB** GeoIP 数据、round 68
+  `workbench/build/` **32.1MB** 构建目录、round 71 `workbench/exec`（**17KB Go 覆盖率 profile**）
+  都没被忽略。三次都是「.gitignore 靠人凭记忆补，漏一类就静默积累」。后果不只是占空间 ——
+  untracked 越来越长后，后来者分不清「并行会话在途工作」与「忘了忽略的垃圾」，
+  而 round 69 已演示过：73 份真有价值的报告因为在 untracked 里躺了几天，处于误删即永失的状态。
+  四族判据（只认客观形态，不做语义推断）：
+  - **A 构建与依赖**：`node_modules/`、`*.exe`、`*.dll`、`*.so`、`*.dylib`、`*.wasm`、`*.map`；
+  - **B 覆盖率/测试副产物**：`coverage*`、`*.test`、`*.coverprofile`，以及**内容特征**
+    `mode: set`/`mode: count`/`mode: atomic` 开头（round 71 的真实案例既无前缀也无扩展名，只能靠内容认）；
+  - **C 大型二进制**：>5MB 且非源码扩展名；
+  - **D 缓存**：`*.pyc`、`__pycache__/`、`*.cache`、`cache.db`。
+  三项显式豁免（带理由）：并行会话在途 `*.go`（他人所有权，不代改不判红）、
+  `workbench/cmd/workbench/rsrc_windows_amd64.syso`（受跟踪的交付必需资源，见 build.ps1:70-77）、
+  `.workbuddy/memory/gate-readings.jsonl`（读数数据，按约定故意不跟踪也不忽略）。
+  **刻意不判「untracked 总数太多」** —— 那会把并行会话的正常在途工作判红（在册：判据过宽制造噪声）。
+  四向变异实测：node_modules / exe / 6MB 二进制 / cache.db+pyc / coverprofile **各自精确点名**
+  （如 `out/app.exe [A:*.exe 构建产物]`、`data.bin [C:大二进制 6MB]`、
+  `workbench/exec [B:Go coverprofile（mode: 开头）]`），三个豁免项正确未判；真仓库 rc=0。
+  开发中一次自纠：首版漏了 `mode: set` 内容判据（只在注释里提了），变异测试立刻暴露 ——
+  round 71 的真实案例因此没被抓到。**「注释里写了」不等于「实现了」**，与本仓
+  「修好判据≠判据生效」（round 52）同族，这是它的微观版。
+  另：`check_report_figures` **第三次在真实场景兑现** —— 本门禁入库后再次点名报告 5 处数字滞后，已同步。
 - **73 份历史报告归置入库（`docs/archive/2026-10/`，round 69）**：
   实测 docs 顶层有 **57 个受跟踪 .md**，另有 **73 份高价值报告散在 untracked 里**
   （前线门禁回执 14 份 / 前端视觉系统重做 / 缺陷根因分析 / 体验治理指标体系 / 验收报告等，共 252KB）。

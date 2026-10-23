@@ -103,6 +103,7 @@ jobs:
             'tests/check_soak_json_contract.ps1',
             'tests/check_stdlib_only.ps1',
             'tests/check_caliber_isolation.ps1',
+            'tests/check_gitignore_leak.ps1',
             'tests/check_gate_coverage.ps1',
             'tests/check_report_claims.ps1',
             'tests/check_doc_refs.ps1',

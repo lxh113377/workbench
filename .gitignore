@@ -62,3 +62,11 @@ workbench/build/
 docs/damage-inventory.json
 docs/ratelimit-diff-e0245f85.json
 docs/ratelimit-diff-e0245f85.json.bak
+# 2026-10-24 round 71：go test -coverprofile 的自定义名产物漏出 ignore。
+# 实测 workbench/exec 是 17KB 的 Go 覆盖率 profile（mode: set + 文件:行.列 语句数 执行次数），
+# 名字没有 coverage 前缀也没有扩展名，所以上面的 coverage* / *.coverprofile 都匹配不到。
+# 通配按「目录 + 无扩展名」收：workbench/ 下的构建/测试副产物一律不进库（该目录只放源码）。
+workbench/exec
+# workbench/workbench.exe 是本地构建产物（实测 13.88MB / ProductVersion 1.0.0.0，
+# 与 dist/workbench.exe 9.82MB 不同 —— 是另一条构建路径的输出）。交付物只在 dist/。
+workbench/workbench.exe
