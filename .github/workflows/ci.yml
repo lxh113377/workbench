@@ -100,6 +100,7 @@ jobs:
             'tests/check_test_assertions.ps1',
             'tests/check_repo_eol.ps1',
             'tests/check_multi_bom.ps1',
+            'tests/check_soak_json_contract.ps1',
             'tests/check_gate_coverage.ps1',
             'tests/check_report_claims.ps1',
             'tests/check_doc_refs.ps1',
@@ -206,6 +207,17 @@ jobs:
           if ($rc -eq 2) { Write-Warning '产物时效未判定（UNVERIFIED）'; exit 0 }
           if ($rc -ne 0) { throw "artifact freshness gate failed (rc=$rc)：产物里的 soak/A7 判定逻辑已过期" }
           Write-Host 'GATE PASS: artifact 含当前判定逻辑'
+      - name: Soak acceptance (e2e_soak 差分回归)
+        shell: pwsh
+        # 为什么显式跑它（round 53）：此前 e2e_soak 只在注释里被提到、没有任何受理面真正
+        # 执行它 —— 所以它对 round 39 缺陷空转（旧产物照样 18 PASS）也没人发现。现在它
+        # 含 4.5 差分回归节（跨进程重启的负载台阶不得判 leak），必须在**刚构建的新鲜产物**
+        # 上跑（旧产物会 FAIL，正是那节要抓的）。放 build job、与 artifact freshness gate 同层。
+        run: |
+          ./tests/e2e_soak.ps1
+          $rc = $LASTEXITCODE
+          if ($rc -ne 0) { throw "soak acceptance failed (rc=$rc)：A7 判据回归，见 4.5 节断言" }
+          Write-Host 'GATE PASS: e2e_soak 全部断言通过（含跨重启差分回归）'
       - name: Perf baseline gate
         shell: pwsh
         # 对标 temporal/river 的 bench/产物断言进 CI：把 docs/benchmark/WorkBench-开源对标报告.md §3.5

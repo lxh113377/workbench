@@ -168,7 +168,15 @@ Section '多 BOM（受跟踪文本文件不得有多个前导 BOM）' {
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
+Section 'soak JSON 契约（验收断言必须落在 soakReport 的真实字段上）' {
+  $g = Join-Path $Root 'tests\check_soak_json_contract.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section '产物时效（soak/A7 判定逻辑必须在产物里；无产物则 UNVERIFIED）' {
+
   $g = Join-Path $Root 'tests\check_artifact_soak_fresh.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g

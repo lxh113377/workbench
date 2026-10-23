@@ -34,6 +34,43 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **e2e_soak 的空转验收：断言全落在不存在的字段上（round 53-55 实测，三层同族缺陷）**：
+  拿 round 39 修复**之前**的产物跑 `tests/e2e_soak.ps1`，照样 **18 PASS / 0 FAIL** —— 
+  这份 A7 验收对它在防的那个缺陷（跨进程重启把负载台阶误报成 heap +174% leak）**完全空转**。
+  根因不是断言写错，是**契约漂移无人拦**：`e2e_soak.ps1`（10-22 提交）按**嵌套契约**写断言
+  （`reports.heap.verdict` / `reports.heap.slopePerHour` / `longEnough`），而 HEAD 的 `soakReport`
+  是 **flat** 的（`heap`/`handles`/`verdict`/`spanHours`/`samples`/`exists`/`reason`/`exitCode`）。
+  PowerShell 读不存在的属性返回 null，于是断言静默变质成两种致命形态：
+  - `null -ne "leak"` **恒真** ⇒ 空转（对缺陷永不敏感）；
+  - `null -eq $false` **恒假** ⇒ 在**正确实现**上误红（本轮用含修复的构建实测挂 2 条，
+    差点把验收挂进 CI 就直接红）。
+  `longEnough` 的移除是有意的：并行会话在途的 `soak_verdict_test.go` 记录现场缺陷为「报表
+  同时输出 `longEnough:false` 与 `verdict:leak/exitCode:2`」——自己声明证据不足却给出已证泄漏
+  的结论；唯一实现 `soakConclusion` 让短跨度一律 unknown/3 后，那种自相矛盾在结构上不可能，
+  字段才删。所以 **flat 才是当前正确契约**，验收脚本必须跟上。
+  三层修复：
+  ① **`e2e_soak.ps1` 全面对齐 flat 契约**，并新增一道 `MissingFlat` **契约齐全前置断言**——
+     实测证明它不可省：旧产物缺 `heap`/`handles` 字段时，「heap 不判 leak」会因 `null -ne "leak"`
+     **空转通过**；有了守卫，旧产物立刻 7 条 FAIL（`缺字段: heap,handles` 直接点名）。
+     另补 **4.5 差分回归节**（跨重启台阶不得判 leak，fixture 段1 heap=10、段2 heap=30 且 num_gc
+     回跳）：在旧产物上 `span=25h/verdict=leak` FAIL，在修复构建上 `span=12h/ok` PASS ——
+     双向都实测过，这才算有内容的验收。
+  ② **新增 `tests/check_soak_json_contract.ps1`（CI 第 19 个门禁）**：从 `soak.go` 的 `soakReport`
+     结构体解析 json tag 得白名单，扫验收脚本对 soak 结果对象的属性链，链首不在白名单即判红。
+     纯静态、不依赖产物，因此能在 repo-gates 安全运行。变异验证：注入旧嵌套写法 ⇒ 精确点名
+     `leakObj.reports.heap.verdict` 与 `sObj.longEnough` 两处，且**注释行正确跳过**。
+  ③ 把 `e2e_soak.ps1` 真正挂进 CI build job（此前它只在注释里被提到、**没有任何受理面执行它**
+     —— 所以这个错位从 10-20 存活至今没人发现；与 round 50「判据没挂受理面」、
+     round 52「修好判据≠判据生效」同族，这是第三种形态：**挂了受理面，但断言空转**）。
+  过程中的两次自纠（都靠实测，不靠推理）：
+  - 我一度按「handles 300→425 = +42%」断言 `handles=leak`，实测 FAIL —— 判据取的是**首尾 1/3
+    均值**（320→405 = +26.6%）而非全程极差，故 `ok` 才正确。**单点比例不是判据**，与
+    `性能基线口径.md` §9「别用单点建换算直觉」是同一课，当日第二次踩。
+  - 门禁自身两处 PowerShell 陷阱：`-split [char]46` 的参数按**正则**解释（点是「任意字符」，
+    把字段名逐字切碎成空串，15 条访问全误报），必须用 `'\.'`；以及 JS 侧 `String.replace` 的
+    dollar-quote 会把「匹配之后的全部文本」展开复制进文件 —— 「用脚本改脚本，产物必须回读+实跑」
+    第 6、7 次。
+  实测结果：修复构建 **25 PASS / 0 FAIL**（rc=0）、旧产物 **18 PASS / 7 FAIL**（rc=1，原为 18/0）。
 - **自我更正：内存比值不是 3.8 倍常数，实测带为 1.5×~3.8×（性能基线口径.md §9 精化，round 52）**：
   round 51 我写下「RSS 约为 HeapInuse 的 3.8 倍」并据此推论 MemLimitMB 的后果。本轮拿第二个
   时点一对照，**发现我自己正踩在刚写进文档的那条禁令上**（「不能假设某个固定倍数」）：
