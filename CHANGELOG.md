@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿# Changelog
+﻿# Changelog
 
 > 本项目所有值得一提的变更都记在这里。
 > 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
@@ -34,6 +34,18 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **CHANGELOG.md 累积了 5 个前导 BOM（289 个 .md 里唯一一个），round 44 查明并修复**：
+  为新增门禁补 CHANGELOG 条目时，我用「读出来 -> replace(/^\uFEFF/, '') 去 BOM -> 再前置一个 BOM」
+  的写法处理文件；但 **JS 的 `replace(/^\uFEFF/, "")` 只去掉一个**，而文件当时已有多个，
+  于是每改一次就多攒下一个。跨多轮累积到 **5 个前导 BOM**（HEAD 里就是 5 个，不是我本轮造的）。
+  全仓 289 个 .md 扫描：无 BOM 281、单 BOM 7、**多 BOM 只有 CHANGELOG.md 这一个**。
+  修法：把开头**连续的** BOM 全剥掉，再前置恰好一个（实测修好后前导 BOM=1、正文 `# Changelog` 完好，
+  `check_changelog` 仍 PASS）。
+  教训（与双 BOM 第 2/3/4 次同源，那是 .ps1 上的同类问题）：**补 BOM 前必须先数清楚已有几个**，
+  不能用「去掉一个再加一个」的假设 —— 剥 BOM 要按**连续前导**循环剥，不能只剥一次。
+  顺带记录一个真实判据缺口：`check_ps1_encoding` 只管 .ps1/.psm1 的 BOM，
+  **.md 的多 BOM 无人守**（本仓 .md 基本不带 BOM，7 个带 BOM 者里混进多 BOM 不会被发现）。
+  本轮不扩判据（避免给 CI 添噪声），记在此作为后续可做的窄面。
 - **A7 泄漏判据修复：趋势必须**在同一进程内**算 —— 跨重启的 metrics.csv 曾把 3 天误报成 heap +174% leak（2026-10-24 round 39 实测）**：
   `--soak` 对着**真实的 96 小时 metrics.csv**（9,570 样本）报 `verdict=leak`
   （heap 头 13.4→尾 36.8MB +174%，handles 386→534 +38%）—— 我按这条在册待办去查根因，
@@ -1219,6 +1231,28 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **入库 EOL 门禁（`tests/check_repo_eol.ps1`，CI 第 16 个）—— 补上「已入库的 CRLF 残留」这个无人管的层（round 44）**：
+  顺着 round 25 那次「173 个 CRLF 进 HEAD、diff 被放大成 177 增/169 删」做全仓核查：
+  用 `git ls-files --eol` 扫全部 2,043 个受跟踪文件，实况 i/lf=1944、i/none=95、i/-text=4，
+  **i/crlf 与 i/mixed 均为 0** —— 当前库是干净的。但**没有任何门禁在守这个不变**：
+  已有的 `check_ps1_eol.ps1` 查的是**暂存区**，残留一旦提交上去就永远看不见了。
+  新门禁查**已在库**的（i/crlf / i/mixed 即判红），三层时点各管一段：
+  check_ps1_eol 管提交前暂存区（本地）、check_repo_eol 管已入库全量（CI 兜底）。
+  **两个关键实验把机理钉死（一次性临时仓库，用完即删）**：
+  - 实验1：`core.autocrlf=false` 时 add 一个 CRLF 文件 => 报 `i/crlf`（能进库）；
+  - 实验2：之后补 `*.ps1 text eol=crlf` 并提交、不 renormalize => **依旧 i/crlf、
+    HEAD 原始字节仍含 CRLF** => CRLF 一旦进对象库，后来加规则**不会自动纠正**，会一直残留。
+  修复手段因此写进判红提示：`git add --renormalize <文件>`（不 renormalize 就一直留着）。
+  **顺带更正 round 42 我写下的一句过强结论**：当时写「当前配置下 CRLF 根本进不了 HEAD」。
+  那只对**本机**成立 —— `core.autocrlf` 是仓库本地配置、**不随 clone 传播**（round 41 已实测
+  `core.hooksPath` 同性质），CI runner 与他人的机器完全可能是 false/input。
+  「本机不会发生」不等于「仓库不会发生」，而这正是本门禁必须存在的理由 ——
+  与本仓反复踩的「实测一次当机理正确」（round 26/31/42）同族，第三次记。
+  验证（三态全覆盖，不是只测 happy path）：真实仓库 rc=0；对含 CRLF 残留的临时仓库
+  rc=1 且点名 `a.ps1 i/crlf（w/crlf，…）`；非 git 目录 rc=2 UNVERIFIED。
+  刻意不管 i/-text（二进制/标了 -text：.exe/.syso/.pyc、故意保留编码的样本）与
+  i/none（文件根本没有换行，实测证据件 result.py 即此类）—— 避免假红。
+  上闸前已确认实况为 0 违例，所以**上线即绿**，不是给 CI 添噪声。
 - **趋势器补「新鲜度」：不再把末次落盘的状态当成现在的状态（round 42 实测引出）**：
   自己上一轮（round 40/41）建的趋势机制有个真实缺陷，本轮第一次用就暴露：
   它报「红窗 1.3h」，而我复核时红态已 >2h —— 因为**落盘是被动的**（靠人跑门禁产生），

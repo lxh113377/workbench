@@ -161,6 +161,13 @@ Section '.ps1 语法可解析（字节层之上的第三层：能解析才能跑
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
+Section '全仓入库 EOL（已入库的 CRLF/混合残留，CI 兜底层）' {
+  $g = Join-Path $Root 'tests\check_repo_eol.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section '.ps1 入库 EOL（防 CRLF 混入把 diff 放大成全行改动）' {
   $g = Join-Path $Root 'tests\check_ps1_eol.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
