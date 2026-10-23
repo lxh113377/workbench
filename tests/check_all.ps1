@@ -168,7 +168,15 @@ Section '多 BOM（受跟踪文本文件不得有多个前导 BOM）' {
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
+Section '报告数字一致性（体检报告的规模数字必须与仓库实况相符）' {
+  $g = Join-Path $Root 'tests\check_report_figures.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section '纯标准库约束（go.mod 无 require、无 go.sum/vendor、模块内无外部 import）' {
+
   $g = Join-Path $Root 'tests\check_stdlib_only.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
