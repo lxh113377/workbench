@@ -129,6 +129,14 @@ Section 'PowerShell 脚本编码（含非 ASCII 必须带 UTF-8 BOM）' {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
 }
 
+Section '门禁读数趋势（informational：有数据就报，无数据 UNVERIFIED）' {
+  $g = Join-Path $Root 'tests/check_readings_trend.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  # 本件只报趋势、不设红线（rc 只会是 0 或 2）；rc=2 = 还没有读数落盘，按 UNVERIFIED 处理
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（尚无读数落盘）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section '未跟踪 Go 文件（本地判据：CI 干净检出恒 PASS，不接 repo-gates）' {
   $g = Join-Path $Root 'tests\check_untracked_go.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }

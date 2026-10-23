@@ -1,4 +1,4 @@
-﻿﻿# Changelog
+﻿﻿﻿# Changelog
 
 > 本项目所有值得一提的变更都记在这里。
 > 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
@@ -1219,6 +1219,31 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **补上趋势的「消费端」：新增 `tests/check_readings_trend.ps1`（round 40）**：
+  round 20 起，多个门禁把核心读数落盘到 `.workbuddy/memory/gate-readings.jsonl`，
+  动机是 round 31/32 的教训「单次读数会被一次性脚本骗，序列不会」。
+  但 round 40 检查发现：**数据一直在积累，没有任何东西在消费它** ——
+  没有趋势工具，等于记了流水账没人对账。本件把序列变成信息。
+  三个消费点：`check_untracked_go`（gap / 未跟踪数 首→末）、
+  `check_untracked_go_health`（badPkgCount 首→末 + 红读数占比 + **尾部连续红的次数与时长**）、
+  `coverage`（avgPct/minPct 首→末，**区分 local/ci**：round 22 已证两环境系统性差 10~20pp，混算没意义）。
+  **定位是 informational 报告、不是拦截器**（有数据 rc=0 / 无数据 rc=2 UNVERIFIED）——
+  「趋势变差」的语义因人因时而异（gap 上升可能只是并行会话在写新测试），
+  拿它做硬闸会制造噪声（本仓在册：模糊语义检查 ⇒ 门禁被删）。
+  **它第一次运行就产出了单看快照绝对看不到的信息**：
+  `gap 175 → 77（-98，改善方向）`、未跟踪 .go 97→31 —— 而此前每次读到「gap=77」
+  都只当它是一个静态数，看不出它其实正在往好的方向走。
+  健康度序列则如实显示 badPkg=3 已连续 3 次读数全红（红窗 1.3h），
+  并给出「在途会话多半没在收尾，值得对齐所有权」的提示。
+  健壮性（实测）：PS5.1 的 `Add-Content -Encoding UTF8` 可能给追加段夹带 BOM，
+  解析端先 `Trim([char]0xFEFF)` 再 ConvertFrom-Json —— 用**故意带 BOM 的行**实测 7/7 全解析；
+  `-Path` 参数支持注入别的读数文件做端到端自测（默认路径由 `$PSScriptRoot` 推导，
+  不硬编码 —— 2026-10-22 的在册教训）。
+  另确认一项边界：**读数文件本身不入库**（`.workbuddy/memory/gate-readings.jsonl` 未跟踪）。
+  这是刻意的：数据里含本机路径与时间戳，属机器本地历史；**工具入库、数据不入库**；
+  读数缺失时本件走 rc=2 UNVERIFIED，不把「没有历史」当「趋势没问题」。
+  实现注记：本次写文件彻底避开反引号（换行用 [char]10、BOM 用 [char]0xFEFF）——
+  「外层模板吃掉 PowerShell 反引号」我已踩第三次，这次从写法上根除而不是事后修。
 - **200%/400% 缩放审计（WCAG 1.4.4，同轮）**：5 页 × 2 档实测（720×450 / 360×225，
   deviceScaleFactor 2/4）：`overflowX` 全 ≤0、越界元素 0、内容截断 0、按钮高度 36px 达标、
   正文最小 12.5px。缩放场景此前从未实测过，本轮证明布局在极端缩放下不塌。
