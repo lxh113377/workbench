@@ -98,6 +98,95 @@ if ($venRes.rc -eq 0 -and $venRes.out.Trim() -ne '') {
   $bad += ('HEAD 受跟踪 workbench/vendor/ 下 ' + $n + ' 个文件 —— 引入 vendored 依赖')
 }
 
+# --- 3.5) 模式自检（round 58）：判据 4 的正则必须证明它认得出各种 import 形态 ---
+#   判据 4 的全部价值在那条正则上，而它**静默失效过一次**（round 57：正则穿四层转义，
+#   \. 被中间层吃掉 => 外部 import 判 PASS）。光跑真仓库抓不到漏报（真仓库本就合规）。
+#   所以每次运行都用 git grep 自己的引擎（POSIX ERE，**不是 .NET regex** —— 两者对
+#   [[:space:]] 语义不同；round 58 用 .NET 测会把 11 种形态全判不匹配，那是测法错误）
+#   跑一遍已知答案的形态矩阵，任一行不符 => UNVERIFIED：连自己模式都证不了的判据没资格宣称合规。
+#   两个实测踩过的坑（都写进来防再犯）：
+#   ① 临时文件必须写到 TEMP 并 Push-Location 过去用**相对路径**跑 git grep。
+#      否则 cwd 在仓库内、目标在 TEMP（仓库外），即便加了 --no-index，git 仍 fatal
+#      「outside repository」=> 输出为空 => 自检把所有应命中判成不命中。
+#   ② 形态矩阵用**两个平行数组**（want / lines），不能用 @('Y', a + b) 这种嵌套：
+#      PowerShell 里**逗号优先级高于 +**，@('Y', $tab + 'x') 会被解析成 @('Y', $tab) + 'x'
+#      压平成 3 元素数组（round 58 实测），取 [1] 只剩一个制表符、[2] 才是字符串。
+$patS = '^[[:space:]]*([A-Za-z_.][A-Za-z0-9_]*[[:space:]]+)?' + [string][char]34 + '[a-z0-9.-]+[.][a-z]+/'
+$tab = [string][char]9
+$dq = [string][char]34
+$want = @('Y', 'Y', 'Y', 'N', 'N', 'N', 'N', 'N', 'N', 'Y', 'Y')
+$lines = @(
+  ($tab + $dq + 'github.com/pkg/errors' + $dq),
+  ($tab + 'errorsx ' + $dq + 'github.com/x/y' + $dq),
+  ('import ' + $dq + 'github.com/x/y' + $dq),
+  ('import stdlibx ' + $dq + 'strings' + $dq),
+  ($tab + $dq + 'slices' + $dq),
+  ($tab + $dq + 'workbench/internal/x' + $dq),
+  ('url = ' + $dq + 'github.com/foo/bar' + $dq),
+  ('// see github.com/foo/bar'),
+  ('repoURL: ' + $dq + 'github.com/foo/bar' + $dq + ','),
+  ($tab + 'gjson ' + $dq + 'github.com/tidwall/gjson' + $dq),
+  ($tab + '_ ' + $dq + 'github.com/x/y' + $dq)
+)
+$selfFail = ''
+if ($want.Count -ne $lines.Count) { $selfFail = '自检数组长度不齐' }
+$patT = Join-Path ([IO.Path]::GetTempPath()) ('stl-pat-' + [Guid]::NewGuid().ToString('N').Substring(0, 8) + '.pat')
+$txtT = Join-Path ([IO.Path]::GetTempPath()) ('stl-txt-' + [Guid]::NewGuid().ToString('N').Substring(0, 8) + '.txt')
+[IO.File]::WriteAllText($patT, $patS + [string][char]10, (New-Object System.Text.UTF8Encoding($false)))
+[IO.File]::WriteAllText($txtT, (($lines) -join [string][char]10) + [string][char]10, (New-Object System.Text.UTF8Encoding($false)))
+# 在 TEMP 里用相对文件名跑（见坑①）
+$oldLoc = Get-Location
+try {
+  Set-Location -LiteralPath ([IO.Path]::GetTempPath())
+  $ptN = [IO.Path]::GetFileName($patT)
+  $txN = [IO.Path]::GetFileName($txtT)
+  $gpsi = New-Object System.Diagnostics.ProcessStartInfo
+  $gpsi.FileName = $gitExe
+  $gpsi.WorkingDirectory = [IO.Path]::GetTempPath()
+  $gq = [string][char]34
+  $gpsi.Arguments = 'grep -n -h --no-index -E -f ' + $gq + $ptN + $gq + ' -- ' + $gq + $txN + $gq
+  $gpsi.UseShellExecute = $false
+  $gpsi.CreateNoWindow = $true
+  $gpsi.RedirectStandardOutput = $true
+  $gpsi.RedirectStandardError = $true
+  $gpsi.StandardOutputEncoding = (New-Object System.Text.UTF8Encoding($false))
+  $gp = [System.Diagnostics.Process]::Start($gpsi)
+  $gout = $gp.StandardOutput.ReadToEnd()
+  $gerr = $gp.StandardError.ReadToEnd()
+  $gp.WaitForExit()
+} finally {
+  Set-Location -LiteralPath $oldLoc
+  try { Remove-Item -LiteralPath $patT -Force -ErrorAction SilentlyContinue } catch { }
+  try { Remove-Item -LiteralPath $txtT -Force -ErrorAction SilentlyContinue } catch { }
+}
+if ($gp.ExitCode -eq 2) { $selfFail = 'git grep 自检失败 (rc=2): ' + $gerr.Trim() }
+elseif ($selfFail -eq '') {
+  $hitSet = @{}
+  foreach ($h in ($gout -split [char]10)) {
+    $h2 = $h.Trim()
+    if (-not $h2) { continue }
+    # -h 抑制文件名前缀，输出即 `行号:内容`；只按第一个冒号切（内容也可能含冒号）
+    $ci = $h2.IndexOf([char]58)
+    if ($ci -gt 0) {
+      $lnTxt = $h2.Substring(0, $ci)
+      if ($lnTxt -match '^[0-9]+$') { $hitSet[[string]([int]$lnTxt)] = $true }
+    }
+  }
+  for ($fi = 0; $fi -lt $want.Count; $fi++) {
+    $ln = $fi + 1
+    $wantY = ($want[$fi] -eq 'Y')
+    $gotY = $hitSet.ContainsKey([string]$ln)
+    if ($wantY -ne $gotY) {
+      $selfFail = ('第 ' + $ln + ' 行形态期望 ' + $(if ($wantY) { '命中' } else { '不命中' }) + '，实得 ' + $(if ($gotY) { '命中' } else { '不命中' }))
+      break
+    }
+  }
+}
+if ($selfFail -ne '') {
+  Write-Host ('UNVERIFIED: import 正则自检未通过 —— ' + $selfFail + '（判据 4 的模式不可信，拒绝按它宣称合规）') -ForegroundColor Red
+  exit 2
+}
+
 # --- 4) 外部 import（git grep -f 模式文件；范围限定 workbench/ = Go 模块根）---
 # 正则：可选别名 + 双引号路径，且路径首段含点（github.com/... golang.org/x/...）。
 # 标准库首段永不含点；本模块是 workbench/... 也不含点 —— 判据即「模块路径 import」的形态。
@@ -108,7 +197,6 @@ if ($venRes.rc -eq 0 -and $venRes.out.Trim() -ne '') {
 # 为什么范围限定 workbench/：docs/benchmark/evidence/*.go 是 asynq/river 的**对标取证摘录**
 # （不在 Go 模块里、不参与编译），全仓扫会把 47 行外部 import 误判违规 —— 判据过宽制造噪声
 # 正是本仓在册的「模糊语义检查 => 门禁被删」形态。威胁面是模块，判据范围就等模块。
-$patS = '^[[:space:]]*([A-Za-z_.][A-Za-z0-9_]*[[:space:]]+)?' + [string][char]34 + '[a-z0-9.-]+[.][a-z]+/'
 $patFile = Join-Path ([IO.Path]::GetTempPath()) ('stdlibimp-' + [Guid]::NewGuid().ToString('N').Substring(0, 8) + '.pat')
 [IO.File]::WriteAllText($patFile, $patS, (New-Object System.Text.UTF8Encoding($false)))
 $impRes = Invoke-Git @('grep', '-n', '-I', '-E', '-f', $patFile, 'HEAD', '--', 'workbench')
