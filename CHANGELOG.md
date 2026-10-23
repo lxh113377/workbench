@@ -34,6 +34,27 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **`check_repo_eol` 端到端拦截验证成功（round 74）—— 补上 round 73 缺的「让缺陷真正进入索引」方法**：
+  round 73 想验证该门禁却因「改工作区文件」穿不透 git 归一化而失败。本轮用**正确方法**重做并拿到正向证据：
+  ```powershell
+  $blob = git hash-object -w --stdin   # 喂入 CRLF 内容，直接造 blob（绕过 add 归一化）
+  git update-index --add --cacheinfo 100644,$blob,tests/evil.csv
+  ./tests/check_repo_eol.ps1           # => rc=1，点名 + 危害 + 修复命令三件套
+  ```
+  实测输出（门禁有真牙的完整证据）：
+  ```
+  入库 EOL 门禁未通过（1 个文件以 CRLF/混合换行在库，共扫 2129 个受跟踪文件）：
+    - tests/evil.csv  i/crlf（w/crlf，规则后补也不会自动纠正，需 git add --renormalize）
+    危害：每次改动都会被算成全行变更（实测 8 行新增被放大成 177 增 / 169 删），评审看不出真实改动。
+    修复: git add --renormalize <上述文件> 后提交（一次性把库里换行归一）。
+  ```
+  过程中还取证了一个 round 73 没细究的点：**`core.autocrlf=true` 下连没有 `.gitattributes` 规则的
+  `.csv` 也会在 `git add` 时被归一化成 LF**（实测 `i/lf`）—— 归一化不只来自 `.gitattributes`，
+  这是「改工作区 + add」这条路径永远造不出索引级缺陷的原因。要造缺陷必须 `hash-object -w` +
+  `update-index --cacheinfo`，完全绕过 add。
+  **方法论固化（round 73/74 两轮合起来才是完整的）**：验证「入库形态」类门禁时，
+  缺陷必须真正进入索引；而进入索引有两条路 —— `git add`（会被 autocrlf/gitattributes 归一化，
+  造不出缺陷）与 `hash-object -w` + `update-index`（原样入库，能造出缺陷）。选后者。
 - **干净 worktree 端到端拦截验证：`check_repo_eol` 无缺陷，我的测试设计错了（round 73）**：
   本轮想做「门禁有没有牙齿」的最终检验：在干净 worktree 里往 `config.go` 注入 CRLF，
   跑 `check_repo_eol` 期望判红 —— **结果报合规**。一度以为是门禁漏判，逐层取证后确认**门禁完全正确**：
