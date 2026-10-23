@@ -1231,6 +1231,32 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **多 BOM 门禁（`tests/check_multi_bom.ps1`，CI 第 17 个，round 44 记的待办兑现）—— 但它最值钱的是开发过程**：
+  判据：受跟踪文本文件在 HEAD 中的原始字节若有 >=2 个连续前导 EF BB BF 即判红
+  （单 BOM 与无 BOM 都合规；.ps1 必须带 BOM、.md 多为无 BOM，两类都不强迫改）。
+  起因是 round 44 我查出的「CHANGELOG.md 攒了 5 个前导 BOM」，且 round 45 实测确认
+  clean 过滤器只管换行、**不碰 BOM**（3 BOM -> add 后仍 3 -> 补规则仍 3 -> 提交仍 3），
+  多 BOM 会一路进库，而上轮只把它记成一条待办、没上门禁。
+  **本轮真正的教训：传输层自己会污染数据，而且症状是「漏检还很像全绿」。**
+  首版把请求写进 `git cat-file --batch` 的 stdin，两条常见写法都被污染：
+  ① `New-Object IO.StreamWriter($stream)` —— PS5.1（.NET Framework）默认吐 UTF-8 BOM，
+     第一条请求变成 `<BOM>HEAD:x.md`，git 回 missing；
+  ② 直接 `BaseStream.Write($bytes)` —— **逐字节 hexdump 证明写入是干净的**（48 45 41 44...），
+     git 仍回 `<BOM>HEAD:multi.md missing`，BOM 来源未查明。
+  后果：首版报「查 1620 个」完全正常，**实际第一个文件从未被检查**；修好后真实数是 1621，
+  差的那 1 个正是被跳过的。查 BOM 的门禁被 BOM 咬了还漏检 —— 若无变异测试（造一个
+  含 3-BOM 文件的一次性仓库）就会带病上线，而这门禁的全部意义就是抓这种东西。
+  定稿：请求写临时文件 + `cmd /c` 文件重定向（字节由 OS 保证；node 同字节 input 实测返回
+  blob 17 含 3 个 BOM 为参照），并强制「响应记录数 == 请求数」，对不上直接 UNVERIFIED ——
+  **静默漏检比误报更危险，因为它看起来是绿的**。
+  cmd 引号规则也是实测三轮才定稿（在册）：`/c "<带空格exe> ..."` 会被剥外层引号去执行
+  'C:\Program'；`/c "<exe> <args>" < "<file>"` 会把重定向当参数喂给 git（unknown option）；
+  唯一可靠是整体再包一层：`/c ""<exe>" cat-file --batch < "<file>""`。
+  四态实测全对：真实仓库 rc=0（1621 个：单BOM 67 / 无BOM 1554 / 多BOM 0，耗时 3.5s）、
+  变异仓库 rc=1 且点名 `multi.md 前导BOM=3`、非 git 目录 rc=2、**目录不存在也走 rc=2**
+  （首版这里会抛裸 Win32Exception「The directory name is invalid」，round 46 补前置校验——
+  路径打错字必须 UNVERIFIED，不是崩栈）。
+  上闸前已确认实况多 BOM=0 => 上线即绿，不给 CI 添噪声。
 - **入库 EOL 门禁（`tests/check_repo_eol.ps1`，CI 第 16 个）—— 补上「已入库的 CRLF 残留」这个无人管的层（round 44）**：
   顺着 round 25 那次「173 个 CRLF 进 HEAD、diff 被放大成 177 增/169 删」做全仓核查：
   用 `git ls-files --eol` 扫全部 2,043 个受跟踪文件，实况 i/lf=1944、i/none=95、i/-text=4，

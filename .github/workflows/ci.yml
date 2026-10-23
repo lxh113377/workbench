@@ -99,6 +99,7 @@ jobs:
             'tests/check_comment_staleness.ps1',
             'tests/check_test_assertions.ps1',
             'tests/check_repo_eol.ps1',
+            'tests/check_multi_bom.ps1',
             'tests/check_report_claims.ps1',
             'tests/check_doc_refs.ps1',
             'tests/check_tray_window.ps1',
