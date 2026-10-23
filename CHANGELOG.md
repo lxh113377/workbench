@@ -1432,6 +1432,18 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **73 份历史报告归置入库（`docs/archive/2026-10/`，round 69）**：
+  实测 docs 顶层有 **57 个受跟踪 .md**，另有 **73 份高价值报告散在 untracked 里**
+  （前线门禁回执 14 份 / 前端视觉系统重做 / 缺陷根因分析 / 体验治理指标体系 / 验收报告等，共 252KB）。
+  它们既是 objective 要的「报告与优化建议落点」，又处在**最危险的状态**：未入库 = 误删即永失、
+  `check_doc_refs` 等门禁看不到、后续会话无法引用。
+  处理：
+  ① **入库前敏感信息扫描**（API key/token/密码/私钥/机器名 5 类模式）—— 73 份全部干净；
+  ② 归置到 `docs/archive/2026-10/`（按月归档），docs 顶层恢复为「当前有效文档」的语义；
+  ③ 生成**归档索引 README**（73 条，含标题与大小），否则散文件不可导航；
+  ④ 编码统一（无 BOM、纯 LF，与受跟踪 .md 一致，复检 0 偏差）。
+  一并清理：空的 `deliverables/` 目录、根目录一次性 `前端自检.cmd`（归入归档）。
+  入库后 5 个文档门禁（doc_refs / report_claims / multi_bom / repo_eol / comment_staleness）全 PASS。
 - **内存口径隔离门禁（`tests/check_caliber_isolation.ps1`，CI 第 21 个，round 64）+ 第 9 类失效形态「判据本身误报」**：
   本仓同时存在两个内存口径且**比值不是常数**（§9 实测带 1.5×~3.83×）：RSS（WorkingSet64，
   128MB 上界判它）与 Go heap（HeapInuse，A7 趋势/MemLimitMB=700 判它）。「RSS 超 limit 就判泄漏」
