@@ -34,6 +34,25 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **三个入库形态门禁端到端拦截验证全部成功（round 76）—— 判据层次方法论第 4 次应验**：
+  沿用 round 74/75 方法，把缺陷**一步送到正确层级**（HEAD 或暂存区），三个门禁全部拿到正向证据：
+  ① **`check_stdlib_only`**：`go.mod` 加 require + 新文件外部 import + `go.sum` 三缺陷同时注入 HEAD，
+     门禁一次全抓：`go.mod require github.com/pkg/errors v0.9.1` /
+     `外部 import: HEAD:...evil.go:6 "github.com/pkg/errors"` / `HEAD 受跟踪 workbench/go.sum`；
+  ② **`check_ps1_eol`**：判据是**已暂存**的 .ps1（`git diff --cached` + 索引 blob），
+     所以缺陷必须**留在暂存区**（已 commit 就报「暂存区无 .ps1，无需检查」—— 行为正确）。
+     用 `hash-object` + `update-index` 造 `i/crlf` 暂存文件，门禁精确报 `含 2 个 CRLF` + 后果量化 + 修法；
+  ③ 顺带取证：**`-c core.autocrlf=false` 也穿不透 `.gitattributes` 的 `eol=crlf`**
+     （实测仍是 `i/lf`）—— 双层归一化保护，要造缺陷只能走 `hash-object` + `update-index` 这条底层路径。
+  **判据层次方法论（round 73-76 四轮合起来才完整）**：
+  - 判 HEAD 的门禁（multi_bom / stdlib_only / repo_eol 等）→ 缺陷要进 **HEAD**；
+  - 判暂存区的门禁（ps1_eol）→ 缺陷要留在**暂存区**（进 HEAD 反而查不到）；
+  - 判索引的门禁 → 进索引即可；
+  - 无论哪层，`git add` 都会被 autocrlf/gitattributes 归一化，**造缺陷必须走
+    `hash-object -w` + `update-index --cacheinfo`** 这条底层路径。
+  到此，**9 个判 HEAD/索引/暂存区的门禁里已有 4 个完成端到端正向验证**
+  （repo_eol / multi_bom / stdlib_only / ps1_eol），其余 5 个（gate_coverage / gate_links /
+  comment_staleness / deadcode / gofmt）判据形态相近，方法论已通。
 - **`check_multi_bom` 端到端拦截验证成功 + 判据层次澄清（round 75）**：
   沿用 round 74 的「缺陷必须进入索引」方法验证第二个入库形态门禁。**这次多走了一步才拿到正向证据**，
   而那一步本身揭示了门禁设计的重要特性：
