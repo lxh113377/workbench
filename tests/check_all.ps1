@@ -168,7 +168,15 @@ Section '多 BOM（受跟踪文本文件不得有多个前导 BOM）' {
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
+Section '受理面覆盖（每个 check_*.ps1 必须挂某个受理面，防判据没挂受理面）' {
+  $g = Join-Path $Root 'tests\check_gate_coverage.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section '全仓入库 EOL（已入库的 CRLF/混合残留，CI 兜底层）' {
+
 
   $g = Join-Path $Root 'tests\check_repo_eol.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 0; return }
