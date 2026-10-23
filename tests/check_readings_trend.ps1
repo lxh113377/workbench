@@ -21,6 +21,12 @@
 # 实现注记：不用反引号转义 —— 本仓多次踩「JS/外层模板把 PowerShell 反引号吃掉」的坑，
 #   换行一律走 [char]10，Trim 的 BOM 走 [char]0xFEFF。
 #
+# 新鲜度（round 42 补）：每条趋势都报「末读数距今多久」。不报就会把
+#   「末次落盘时的状态」当成「现在的状态」——round 42 实测：趋势报红窗 1.3h，
+#   而红态从上次落盘起已 >2h 未被再确认。序列只覆盖到落盘的那一秒，之后是盲区。
+#   阈值取 6h：本仓读数靠人跑 check_all/门禁产生，非定时任务（实测 24 条/13.2h
+#   约 30 多分钟一条），超过 6h 无新读数即可判定为陈旧。
+#
 # 用法: powershell -File tests/check_readings_trend.ps1 [-Quiet]
 # 退出码: 0=有趋势可报 / 2=UNVERIFIED（无读数文件或无有效行）
 param(
@@ -63,7 +69,14 @@ foreach ($g in @($rows | Group-Object -Property gate | Sort-Object Name)) {
   $last = $items[-1]
   $spanH = 0.0
   try { $spanH = ([datetime]$last.at - [datetime]$first.at).TotalHours } catch { }
-  Write-Host ('== ' + $g.Name + '  读数=' + $items.Count + '  窗=' + $spanH.ToString('0.0') + 'h（' + (Short-At $first.at) + ' -> ' + (Short-At $last.at) + '）')
+  $ageMin = -1.0
+  try { $ageMin = ((Get-Date) - [datetime]$last.at).TotalMinutes } catch { }
+  $ageTxt = '未知'
+  if ($ageMin -ge 0) { $ageTxt = [math]::Round($ageMin / 60.0, 1).ToString('0.0') + 'h' }
+  Write-Host ('== ' + $g.Name + '  读数=' + $items.Count + '  窗=' + $spanH.ToString('0.0') + 'h（' + (Short-At $first.at) + ' -> ' + (Short-At $last.at) + '）末读数距今 ' + $ageTxt)
+  if ($ageMin -gt 360) {
+    Write-Host ('   陈旧警告：该序列已 ' + [math]::Round($ageMin / 60.0, 1) + 'h 无新落盘 —— 下面的趋势只覆盖到末读数那一刻，当前实况未测（盲区）。') -ForegroundColor Yellow
+  }
 
   if ($g.Name -eq 'check_untracked_go') {
     $dg = [double]$last.gapLocalOnly - [double]$first.gapLocalOnly
@@ -81,7 +94,7 @@ foreach ($g in @($rows | Group-Object -Property gate | Sort-Object Name)) {
     }
     $redSpanH = 0.0
     if ($red.Count -ge 2) { try { $redSpanH = ([datetime]$red[-1].at - [datetime]$red[0].at).TotalHours } catch { } }
-    Write-Host ('   badPkg ' + $first.badPkgCount + ' -> ' + $last.badPkgCount + '；红读数 ' + $red.Count + '/' + $items.Count + '，尾部已连续 ' + $tailRun + ' 次，红窗约 ' + $redSpanH.ToString('0.0') + 'h')
+    Write-Host ('   badPkg ' + $first.badPkgCount + ' -> ' + $last.badPkgCount + '；红读数 ' + $red.Count + '/' + $items.Count + '，尾部已连续 ' + $tailRun + ' 次，红窗**至少** ' + $redSpanH.ToString('0.0') + 'h（测于两次落盘之间，末读数后是盲区）')
     $cur = ''
     if ($last.badPkgs) { $cur = $last.badPkgs } else { $cur = '（当前无红）' }
     Write-Host ('   当前红包: ' + $cur)
