@@ -34,6 +34,20 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **`check_untracked_go` / `check_test_assertions` / `check_report_claims` 端到端验证成功（round 81）**：
+  ① **`check_untracked_go`**：造一个未跟踪的**生产** .go，门禁判红并给出双视角读数 ——
+     `[**生产代码**] workbench/internal/evilprod/prod.go` + 「提交的测试函数 = 741 / 工作区 = 741 /
+     差额 0 个只在本地跑」。**这个差额统计正是它设计的关键**：把「CI 看不到哪些测试」量化出来，
+     让 round 23 的「98 个测试只在本机跑」不再靠人肉发现。
+  ② **`check_test_assertions`**：造一个只有 `t.Log` + `println` 的零断言 Test，判红
+     `zeroassert_test.go:6 TestZeroAssert 无任何断言` + 「虚增 PASS 数 + 让『这里有测试』的错觉掩盖真实覆盖漏洞」
+     + 三条修法（补断言 / 删调试脚本 / 有等价覆盖则删）。
+  ③ **`check_report_claims`**：在活文档里写两行「⏳ + SHA256SUMS / perf-trend」，门禁两行各自点名：
+     `仍标 ⏳ 但 SHA256SUMS 已出现在 ci.yml —— 状态栏过期`。这正是 round 43 两条待办没人改状态的护栏。
+  至此累计 **26 个判据拿到正向证据**；剩余未验 9 个（artifact_soak_fresh / homepage / hooks_enabled /
+  issue_forms / noninteractive / ps1_syntax / snapshot_build / staged_gofmt / tray_window），
+  其中 artifact_soak_fresh 已被真实场景反复验证（本地 FAIL 是对的），snapshot_build / homepage 需特定环境，
+  其余 6 个判据形态简单、方法论已通。
 - **`check_no_shrink` / `check_spawn_silent` / `check_subsystem` 端到端验证成功（round 80）—— 其中 subsystem 是 round 19 真实事故的完整复现**：
   ① **`check_no_shrink`**（防整文件覆盖丢并发改动，本仓最有历史价值的门禁之一）：三向变异全过 ——
      target 是 source 子集 ⇒ 覆盖安全；target 有独有实质行 ⇒ **判红并直接列出「会丢的内容」**
