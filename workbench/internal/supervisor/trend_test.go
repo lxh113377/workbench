@@ -146,3 +146,69 @@ func TestSoakVerdictExitCodes(t *testing.T) {
 		t.Fatalf("含 unknown 必须 unknown/3（不得降级为 ok），实际 %s/%d", v, c)
 	}
 }
+
+// TestAnalyzeTrendSegmentsAcrossProcessRestart 守护进程段裁剪（2026-10-23 实测事故）。
+//
+// 现场：96h 的 metrics.csv 含 52 次进程重启（num_gc 回退）。旧实现跨段算趋势，
+// 把「重启后负载更高」误报成 heap +174% leak；而当前进程内 heap 实为 -2.5%。
+// 判据：趋势只算**最后一个进程段**，并如实报段数。
+func TestAnalyzeTrendSegmentsAcrossProcessRestart(t *testing.T) {
+	var pts []TrendPoint
+	// 段 1（旧进程，负载轻）：200 点，heap 10MB 平走，NumGC 递增
+	for i := 0; i < 200; i++ {
+		pts = append(pts, TrendPoint{At: int64(i) * 3600000, HeapMB: 10, Handles: 300, NumGC: int64(100 + i*3)})
+	}
+	// 段 2（新进程，负载重）：NumGC 从 5 回跳 = 换进程；heap 基线 30MB 平走
+	for i := 0; i < 200; i++ {
+		pts = append(pts, TrendPoint{At: int64(200+i) * 3600000, HeapMB: 30, Handles: 500, NumGC: int64(5 + i*2)})
+	}
+	r := AnalyzeTrend(pts, "heap", 0.25)
+	if r.ProcessSegments != 2 {
+		t.Fatalf("应报覆盖 2 个进程段，实际 %d（%s）", r.ProcessSegments, r.Reason)
+	}
+	// 段内无增长 => ok。若不裁剪，头 1/3 全在 10MB、尾 1/3 全在 30MB，必判 leak。
+	if r.Verdict != "ok" {
+		t.Fatalf("跨重启的负载台阶不得判 leak（趋势只能在进程内算），实际 %s：%s", r.Verdict, r.Reason)
+	}
+	if r.HeadAvg < 29 || r.HeadAvg > 31 {
+		t.Fatalf("头均值应是当前进程段的水位（~30），实际 %.2f = 裁段没生效", r.HeadAvg)
+	}
+}
+
+// TestAnalyzeTrendStillDetectsRealLeakWithinSegment 反向判据：裁剪不得放过**真泄漏** ——
+// 最后一个进程段内单调上升必须照判 leak。
+func TestAnalyzeTrendStillDetectsRealLeakWithinSegment(t *testing.T) {
+	var pts []TrendPoint
+	for i := 0; i < 150; i++ {
+		pts = append(pts, TrendPoint{At: int64(i) * 3600000, HeapMB: 10, Handles: 300, NumGC: int64(i * 5)})
+	}
+	// 重启后：段内从 10 一路涨到 40（真泄漏形态）
+	for i := 0; i < 150; i++ {
+		pts = append(pts, TrendPoint{At: int64(150+i) * 3600000, HeapMB: 10 + float64(i)*0.2, Handles: 300 + i, NumGC: int64(i * 3)})
+	}
+	r := AnalyzeTrend(pts, "heap", 0.25)
+	if r.Verdict != "leak" {
+		t.Fatalf("段内真泄漏必须判 leak，实际 %s：%s", r.Verdict, r.Reason)
+	}
+}
+
+// TestAnalyzeTrendNoTrimWithoutNumGC 向后兼容：无第 6 列（NumGC 全 0）不得裁剪 ——
+// 宁可维持旧行为，也不能因为「看不到 GC 计数」就悄悄丢数据。
+func TestAnalyzeTrendNoTrimWithoutNumGC(t *testing.T) {
+	var pts []TrendPoint
+	for i := 0; i < 60; i++ {
+		heap := 10.0
+		if i >= 30 {
+			heap = 30
+		}
+		pts = append(pts, TrendPoint{At: int64(i) * 3600000, HeapMB: heap, Handles: 300})
+	}
+	r := AnalyzeTrend(pts, "heap", 0.25)
+	if r.ProcessSegments != 1 {
+		t.Fatalf("NumGC 全 0 时应视为不可判、不裁剪（段数应为 1），实际 %d", r.ProcessSegments)
+	}
+	// 不可判时维持旧行为：台阶照样判 leak（保守，不装聪明）
+	if r.Verdict != "leak" {
+		t.Fatalf("无 GC 计数时必须维持旧行为（不裁数据），实际 %s", r.Verdict)
+	}
+}

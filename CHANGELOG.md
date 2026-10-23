@@ -1,4 +1,4 @@
-﻿# Changelog
+﻿﻿# Changelog
 
 > 本项目所有值得一提的变更都记在这里。
 > 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
@@ -34,6 +34,29 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **A7 泄漏判据修复：趋势必须**在同一进程内**算 —— 跨重启的 metrics.csv 曾把 3 天误报成 heap +174% leak（2026-10-24 round 39 实测）**：
+  `--soak` 对着**真实的 96 小时 metrics.csv**（9,570 样本）报 `verdict=leak`
+  （heap 头 13.4→尾 36.8MB +174%，handles 386→534 +38%）—— 我按这条在册待办去查根因，
+  发现它是**误报**：96h 数据里有 **52 次进程重启**（用 num_gc 回退检测，重启后 GC 计数
+  从新进程重新起步）。`AnalyzeTrend` 跨段排序后，头 1/3 落在轻载期、尾 1/3 落在重载期，
+  得出的「上升趋势」其实是负载形态差 + 重启不连续。**当前进程段内 heap 实为 -2.5%，无泄漏**
+  （GC 计数持续增长，堆是锯齿回落的）。
+  修复：`TrendPoint` 增加 `NumGC` 字段（metrics.csv 第 6 列，老格式缺省=0），
+  `AnalyzeTrend` 判定前先用 `trimToLastProcess` 按 num_gc 显著回退点（>20 次，远超抖动）
+  切段，**只对最后一个进程段**算趋势，并在报告里如实带 `processSegments` 字段。
+  三个保守设计：① NumGC 全 0（老格式/合成夹具）= 不可判 => **不裁剪**，维持旧行为，
+  绝不因「看不清」就悄悄丢数据；② 只裁到最后一段，不丢中间段的历史（判定只用尾段）；
+  ③ 段内真泄漏照判 leak（反向判据测试钉死，裁剪不得制造假 ok）。
+  判据测试 3 个（restart 台阶不判 leak / 段内真泄漏照判 / 无 NumGC 不裁），
+  加原有 5 个全 PASS；**真实数据双向验证**：
+  - 修复后：`heap=ok handles=ok`，spanHours 96.14→14.58h（正确裁到最后进程段），
+    整体 unknown（14.58h < 24h 门槛）—— **诚实的 unknown 优于虚报的结论**；
+  - 变异（禁用裁剪）：立刻回到 `heap=leak handles=leak` 误报 —— 修复确实在起作用。
+  顺带：A7 验收（acceptance.go）走同一对调用，**同一个误报源头一并修掉**；
+  `e2e_soak.ps1` 的 18 条 fixture 判据全绿（向后兼容无回归）。
+  本轮同时验证了 round 37/38 装的读数机制：健康度 WARN（badPkg=3）持续存在，
+  其中 cmd/workbench 的红正是并行会话引用尚未实现的 `soakConclusion` 等（TDD 红态），
+  我只动 supervisor，未碰他们的所有权。
 - **补上 Windows 平台上「可写探针」的测试缺口（round 38，唯一 SKIP 用例审计引出）**：
   全仓 `-count=1 -v` 跑下来只有 1 个 SKIP：`workspace_test.go` 的
   `TestProbeWriteRejectsReadOnlyDir` —— 它在 Windows 上直接 `t.Skip`

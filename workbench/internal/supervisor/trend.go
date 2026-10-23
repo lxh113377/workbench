@@ -28,6 +28,12 @@ type TrendPoint struct {
 	At      int64   // 毫秒时间戳
 	HeapMB  float64 // 堆内存
 	Handles int     // 句柄数
+	// NumGC 是该采样时刻 runtime 的 GC 总次数（metrics.csv 第 6 列，可缺省）。
+	// 用途：**进程重启的判别器** —— 同一进程内 NumGC 单调不减，一旦回退就是
+	// 换了进程（round 39 实测：96h 的 metrics.csv 里有 52 次回退 = 53 个进程段，
+	// 跨段算趋势会把「负载变化 + 重启」误报成内存泄漏）。
+	// 老格式/合成夹具没有第 6 列时恒为 0：全 0 视作「不可判」，不做裁剪（向后兼容）。
+	NumGC int64
 }
 
 // TrendReport 是一次趋势判定的结果。
@@ -39,7 +45,9 @@ type TrendReport struct {
 	HeadAvg      float64 `json:"headAvg"`
 	TailAvg      float64 `json:"tailAvg"`
 	Verdict      string  `json:"verdict"` // ok / leak / unknown
-	Reason       string  `json:"reason"`
+	// ProcessSegments 是本次判定实际覆盖的进程段数（>1 说明数据跨重启、已裁剪到最后一段）。
+	ProcessSegments int    `json:"processSegments,omitempty"`
+	Reason          string `json:"reason"`
 }
 
 // MinSoakSamples / MinSoakSpanMin 是判定「有资格下结论」的最低门槛。
@@ -60,6 +68,15 @@ func AnalyzeTrend(points []TrendPoint, metric string, growthRatio float64) Trend
 	}
 	pts := append([]TrendPoint(nil), points...)
 	sort.SliceStable(pts, func(i, j int) bool { return pts[i].At < pts[j].At })
+	// ---- 进程段裁剪（round 39 新增，2026-10-23 实测驱动）----
+	// 趋势必须在**同一进程内**算。metrics.csv 跨进程重启连续追加，而 heap/handles 在
+	// 新进程里从个位数重新起步 —— 不裁剪时「头 1/3 落在旧进程、尾 1/3 落在负载更高的
+	// 新进程」就会得出 leak 假结论（实测：96h 数据被误报 heap +174% / handles +38%，
+	// 而当前进程段内 heap 实为 -2.5%，GC 计数持续增长、无泄漏）。
+	// 重启判别器：NumGC 在同一进程内单调不减，一旦显著回退就是换了进程。
+	// NumGC 全 0（老格式/无第 6 列）时不可判，保持原样（向后兼容，宁漏不误裁）。
+	pts, restarts := trimToLastProcess(pts)
+	r.ProcessSegments = restarts + 1
 	r.SpanMin = float64(pts[len(pts)-1].At-pts[0].At) / 60000.0
 	if r.SpanMin < MinSoakSpanMin {
 		r.Reason = fmt.Sprintf("时间跨度不足（需要 ≥ %.0f 分钟，实际 %.1f）", MinSoakSpanMin, r.SpanMin)
@@ -111,6 +128,32 @@ func AnalyzeTrend(points []TrendPoint, metric string, growthRatio float64) Trend
 	return r
 }
 
+// trimToLastProcess 按 NumGC 显著回退点切段，返回**最后一段**与其前的切点数。
+// 判据保守：只有回退幅度明显（>20 次，远超一次 GC 抖动）才认定为换进程；
+// NumGC 全 0（不可判）或没有回退时原样返回，绝不因为「看不清」就裁数据。
+func trimToLastProcess(pts []TrendPoint) ([]TrendPoint, int) {
+	allZero := true
+	for _, pt := range pts {
+		if pt.NumGC != 0 {
+			allZero = false
+			break
+		}
+	}
+	if allZero {
+		return pts, 0
+	}
+	start := 0
+	cuts := 0
+	for i := 1; i < len(pts); i++ {
+		if pts[i].NumGC < pts[i-1].NumGC-20 {
+			start = i
+			cuts++
+		}
+	}
+	return pts[start:], cuts
+}
+
+// avgFloat 求均值（空切片返回 0）。
 func avgFloat(v []float64) float64 {
 	if len(v) == 0 {
 		return 0
@@ -155,7 +198,15 @@ func ReadMetricsCSV(path string) ([]TrendPoint, int, error) {
 			skipped++
 			continue
 		}
-		out = append(out, TrendPoint{At: at, HeapMB: heap, Handles: handles})
+		var numGC int64
+		if len(row) >= 6 {
+			// 第 6 列坏值不整行丢弃：置 0 = 该点不参与重启判别（保守，不误裁）。
+			n, gerr := strconv.ParseInt(strings.TrimSpace(row[5]), 10, 64)
+			if gerr == nil {
+				numGC = n
+			}
+		}
+		out = append(out, TrendPoint{At: at, HeapMB: heap, Handles: handles, NumGC: numGC})
 	}
 	return out, skipped, nil
 }
