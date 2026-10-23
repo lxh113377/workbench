@@ -23,7 +23,8 @@
 param(
   [string]$Exe = "",
   [double]$BoundMB = 128,
-  [switch]$Quiet
+  [switch]$Quiet,
+  [switch]$NoRecord
 )
 $ErrorActionPreference = "Stop"
 if ([string]::IsNullOrWhiteSpace($Exe)) { $Exe = Join-Path (Split-Path -Parent $PSScriptRoot) "dist\workbench.exe" }
@@ -91,6 +92,34 @@ $median = $sorted[[int][math]::Floor($sorted.Count / 2)]
 $spread = [math]::Round($sorted[-1] - $sorted[0], 1)
 
 Say ("  相位=" + $phase + " 稳定耗时=" + $waited + "s 采样=" + ($samples -join "/") + " 中位=" + $median + "MB 极差=" + $spread + "MB 上界=" + $BoundMB + "MB")
+
+# ---- 读数落盘（2026-10-24 round 41 新增）----
+# 为什么：untracked / health / coverage 三个序列都落盘了，长驻内存是唯一没落的 ——
+# 而内存恰是前几轮反复量错的指标：round 22 把探针与长驻两种形态互比、
+# round 25 单点抽样得出「稳态波动 2 倍」（后来证实是空闲/执行期两态之差）、
+# round 28 又发现双环境与 Explorer 的影响。三次教训同一根因：单次读数没有参照物。
+# 落盘后趋势器能回答：中位在涨还是在跌、极差是否变大（GC 归还变慢的早期信号）、
+# 稳定等待耗时是否变长。
+if (-not $NoRecord) {
+  $memDir = Join-Path (Split-Path -Parent $PSScriptRoot) '.workbuddy\memory'
+  if (Test-Path -LiteralPath $memDir) {
+    $v = 'PASS'
+    if ($median -gt $BoundMB) { $v = 'FAIL' }
+    $rec = [ordered]@{
+      at = (Get-Date).ToString('o')
+      gate = 'resident_longrun'
+      medianMB = $median
+      spreadMB = $spread
+      boundMB = $BoundMB
+      phase = $phase
+      stableWaitS = $waited
+      pid = $p.Id
+      verdict = $v
+      head = (& git -C (Split-Path -Parent $PSScriptRoot) rev-parse --short HEAD 2>$null)
+    }
+    Add-Content -LiteralPath (Join-Path $memDir 'gate-readings.jsonl') -Value ($rec | ConvertTo-Json -Compress) -Encoding UTF8
+  }
+}
 
 if ($median -gt $BoundMB) {
   Say ("CHECK residentLongrun result=FAIL median=" + $median + "MB bound=" + $BoundMB + "MB")

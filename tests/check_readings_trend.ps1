@@ -10,11 +10,13 @@
 #   不判红的理由：趋势变差的语义因人因时而异（gap 上升可能只是并行会话在写新测试），
 #   拿它做硬闸会制造噪声（本仓在册：模糊语义检查 => 门禁被删）。它负责把变化摆出来。
 #
-# 三个消费点（每个序列各一条趋势）：
+# 四个消费点（每个序列各一条趋势）：
 #   check_untracked_go        gap / 未跟踪数的 首->末
 #   check_untracked_go_health badPkgCount 首->末 + 尾部连续红读数 + 红窗持续时长
 #   coverage                  avgPct / minPct 首->末，**区分 local/ci**（round 22 教训：
 #                             两环境覆盖率系统性差 10~20pp，混算没意义）
+#   resident_longrun          中位 首->末（涨跌方向）+ 极差 + 稳定等待 + 离上界余量
+#                             （round 41 补：内存前几轮量错过三次，根因都是单次读数没参照物）
 #
 # 实现注记：不用反引号转义 —— 本仓多次踩「JS/外层模板把 PowerShell 反引号吃掉」的坑，
 #   换行一律走 [char]10，Trim 的 BOM 走 [char]0xFEFF。
@@ -96,6 +98,28 @@ foreach ($g in @($rows | Group-Object -Property gate | Sort-Object Name)) {
       $d = [math]::Round([double]$l2.avgPct - [double]$f2.avgPct, 2)
       Write-Host ('   [' + $envName + '] avg ' + $f2.avgPct + ' -> ' + $l2.avgPct + '（' + $d + '）；最低包 ' + $l2.minPkg + '=' + $l2.minPct + '%')
     }
+  }
+  elseif ($g.Name -eq 'resident_longrun') {
+    # 内存序列（round 41）：三个可回答的问题 ——
+    #   中位在涨还是跌（涨=泄漏/负载上移的早期信号）、极差是否变大（GC 归还变慢）、
+    #   离上界还有多少余量（余量收窄=迟早误判，需要提前调界或补裁剪）。
+    $f3 = $items[0]
+    $l3 = $items[-1]
+    $dm = [math]::Round([double]$l3.medianMB - [double]$f3.medianMB, 1)
+    $dir = '（持平）'
+    if ($dm -gt 5) { $dir = '（上升 ' + $dm + 'MB：泄漏或负载上移，值得查裁剪/重启是否生效）' }
+    elseif ($dm -lt -5) { $dir = '（下降 ' + $dm + 'MB：改善）' }
+    $maxSpread = 0.0
+    foreach ($it in $items) { if ([double]$it.spreadMB -gt $maxSpread) { $maxSpread = [double]$it.spreadMB } }
+    $headroom = [math]::Round([double]$l3.boundMB - [double]$l3.medianMB, 1)
+    Write-Host ('   中位 ' + $f3.medianMB + ' -> ' + $l3.medianMB + 'MB' + $dir)
+    Write-Host ('   末次极差 ' + $l3.spreadMB + 'MB（序列内最大 ' + $maxSpread + 'MB）稳定等待 ' + $f3.stableWaitS + ' -> ' + $l3.stableWaitS + 's；上界 ' + $l3.boundMB + 'MB，余量 ' + $headroom + 'MB')
+    if ($headroom -lt 40) {
+      Write-Host ('   提示：余量不足 40MB，一次正常抖动就可能判红 —— 该复核上界是否定太紧（round 22 的双环境教训）。') -ForegroundColor Yellow
+    }
+    $phaseLast = ''
+    if ($l3.phase) { $phaseLast = $l3.phase }
+    Write-Host ('   末次相位 ' + $phaseLast + '，判定 ' + $l3.verdict + '（相位非 stopped/idle 时本门禁不会落盘，见门禁内说明）')
   }
 }
 if ($badLines -gt 0) {

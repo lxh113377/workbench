@@ -1,4 +1,4 @@
-﻿﻿﻿# Changelog
+﻿﻿﻿﻿# Changelog
 
 > 本项目所有值得一提的变更都记在这里。
 > 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
@@ -1219,6 +1219,25 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **长驻内存读数纳入序列机制（round 41，趋势机制的最后一块）**：
+  round 20/40 已给 untracked / health / coverage 三个序列建了落盘 + 消费端，
+  但**长驻内存这个核心指标偏偏没落** —— 而内存正是前几轮反复量错的维度：
+  round 22 把探针与长驻两种形态互比、round 25 单点抽样得出「稳态波动 2 倍」
+  （后证实是空闲/执行期两态之差）、round 28 又发现双环境与 Explorer 的影响。
+  **三次误判同一根因：单次读数没有参照物。**
+  改动：`check_resident_longrun.ps1` 判定后落盘一条（medianMB / spreadMB / boundMB /
+  phase / stableWaitS / pid / verdict / head）；趋势器加第四分支 ——
+  报中位首→末方向（涨=泄漏或负载上移）、序列内最大极差（GC 归还变慢的早期信号）、
+  以及**离上界余量**（<40MB 提示「一次正常抖动就可能误判，该复核上界是否定太紧」，
+  即 round 22 双环境教训的自动化）。
+  **关键的负向行为（真实执行验证）**：引擎 running 时门禁走 UNVERIFIED，
+  **且一条都不落盘**（before=0→after=0）—— 「没测成」绝不进趋势序列，
+  否则内存序列会被执行期高值污染，重演 round 25 的误判。
+  验证分三层：① 落盘块字段完整（隔离验证，PASS/FAIL 两分支）；
+  ② 趋势器合成数据端到端（+6MB 触发「上升」方向、余量 36<40 触发提示，两分支都覆盖）；
+  ③ 真实执行确认负向路径（UNVERIFIED 不落盘）。合成假读数用后即删，不污染真实序列。
+  如实记：内存序列的**真实**读数要等空闲窗口才有（不为验证去停生产实例，那会打断
+  并行会话的任务）；当前该序列长度 0，趋势器对空序列正常跳过，不算断。
 - **补上趋势的「消费端」：新增 `tests/check_readings_trend.ps1`（round 40）**：
   round 20 起，多个门禁把核心读数落盘到 `.workbuddy/memory/gate-readings.jsonl`，
   动机是 round 31/32 的教训「单次读数会被一次性脚本骗，序列不会」。
