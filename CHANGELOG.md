@@ -1293,6 +1293,32 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **产物时效门禁（`tests/check_artifact_soak_fresh.ps1`，round 52）—— 修好判据 != 判据生效**：
+  本轮用生产产物跑 `--soak`，拿到 **verdict=leak / spanHours=99.73**；对同一份 metrics.csv
+  用当前源码跑，得到 **ok / 14.58**。差别只有一个：round 39 的趋势修复提交于 10-23 12:14，
+  而 `dist/workbench.exe` 构建于 10-22 23:41 —— **修复已在源码、不在产物**（旧 12.6 小时）。
+  受影响面是实的：`tests/e2e_soak.ps1`（第 18 行默认用该产物）与 `tests/keepalive.ps1`（拉起的也是它）。
+  也就是说「A7 趋势已修好」这个结论，在任何走产物的真实调用里仍然是错的 —— 这比没修更糟，
+  因为它给「已经修了」的错觉。新门禁取 `--version` 里的构建时间，与**会改变 soak/A7 结论的
+  4 个源码文件**在 HEAD 的最新提交时间比较，源码更新即判红并给出「重跑 setup/build.ps1、
+  不要靠改判据把结论圆回去」的修法。
+  口径刻意极窄：只比那 4 个（trend.go / supervisor.go / soak.go / acceptance.go）。
+  若比「所有源码」，「产物总落后于 README/无关包」这种常态会天天红 => 噪声 => 门禁被删（在册教训）。
+  三态端到端自证（用 `-PathsOverride` 注入不同清单）：PASS 0（注入早于产物的 types.go，
+  源码 10-22 17:19 < 产物 23:41）、FAIL 1（注入 trend.go，滞后 12.6h）、UNVERIFIED 2（产物不存在）。
+  **它第一次运行就抓到真实缺陷**（不是理论护栏）。
+  挂载选择：只挂 **build job**（repo-gates 阶段还没有产物，挂那里必然 UNVERIFIED；build job 里
+  产物当场重建，判据天然成立）+ 本地 check_all（本地未重建就是红的，红得对）。CI 里
+  UNVERIFIED 按 rc=0 放行（不计 PASS 也不误红），FAIL 才 throw。
+  **本轮我没重建产物，两条硬约束实测过**（已写进在途件交接记录 §6，含解铃步骤）：
+  ① `dist/workbench.exe` 被 7×24 活实例 PID 29404 占用（运行 17+ 小时、正在跑任务），
+     覆盖它必须先停生产实例 —— 不为验证牺牲在跑的活儿；② `go build ./cmd/workbench` rc=0 但
+     `go vet` 因并行会话在途测试失败（`hiddenTestCmd redeclared`），而 `setup/build.ps1` 内含
+     `go test` 会被挡住。解铃人是收尾那批测试的会话，不是强行停实例的我。
+  自曝一条：写交接记录时又造出**第 6 次双 BOM** —— 读文件时 JS 把 BOM 保留成 \uFEFF 字符、
+  我没剥就前置一个。**而这正是我本轮早些时候刚写进 CHANGELOG 的纪律**（「补 BOM 前必须数清
+  已有几个，剥要按连续前导循环剥」）。教训：纪律写下来 ≠ 会用上，必须在**每次写文件后回读计数**
+  —— 本轮起我把「字节级回读 BOM 计数」作为固定收尾动作（当场发现并修好，且自查了全部 4 个改动文件）。
 - **受理面覆盖门禁（`tests/check_gate_coverage.ps1`，CI 第 18 个）—— 把「判据没挂受理面」变成机器不变量（round 50）**：
   起因：做自动化覆盖率审计，找「判据写好了但没有任何自动化会跑它」的脚本。本仓反复犯这错 ——
   round 22 前 tests/ 有 23 个门禁、CI 只跑 4 个；round 47 更隐蔽：内存门禁挂在 check_all 上

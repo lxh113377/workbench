@@ -190,6 +190,22 @@ jobs:
           if ($ver -and $ver -notmatch "workbench") { Write-Warning "--version 输出异常: $ver" }
           Write-Host "产物校验通过: $size bytes; --version: $ver"
 
+      - name: Artifact freshness gate (soak/A7 判定逻辑必须在产物里)
+        shell: pwsh
+        # 为什么单独一步（2026-10-24 round 52）：修好判据 != 判据生效。实测现场：
+        # round 39 修了 A7 趋势误报（10-23 12:14 提交），而 dist 产物是 10-22 23:41 构建的 ——
+        # 同一份 metrics.csv，旧产物报 verdict=leak/spanHours=99.73、当前源码报 ok/14.58。
+        # tests/e2e_soak.ps1 与 tests/keepalive.ps1 都默认用这个产物，于是「已修复」的结论
+        # 在真实调用里仍是错的。判据极窄：只比 4 个会改变 soak/A7 结论的源码文件，
+        # 不比其它（否则「产物总落后于 README」这类常态会天天红 => 噪声 => 门禁被删）。
+        # 本步骤在 build 之后，产物刚构建 => 正常必然 PASS；它防的是「跳过构建直接复用旧产物」
+        # 与「产物路径与判定源码漂移」。无产物/取不到 --version 一律 UNVERIFIED（不计合格）。
+        run: |
+          ./tests/check_artifact_soak_fresh.ps1
+          $rc = $LASTEXITCODE
+          if ($rc -eq 2) { Write-Warning '产物时效未判定（UNVERIFIED）'; exit 0 }
+          if ($rc -ne 0) { throw "artifact freshness gate failed (rc=$rc)：产物里的 soak/A7 判定逻辑已过期" }
+          Write-Host 'GATE PASS: artifact 含当前判定逻辑'
       - name: Perf baseline gate
         shell: pwsh
         # 对标 temporal/river 的 bench/产物断言进 CI：把 docs/benchmark/WorkBench-开源对标报告.md §3.5
