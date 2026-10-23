@@ -34,6 +34,16 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **仓库卫生续：32MB 构建目录与一次性取证 JSON 进 .gitignore（round 68）**：
+  round 67 清掉 `tests/_egress/` 后继续查，发现第二块死角：`workbench/build/` 是 DSH 桌面版的
+  构建目录 —— 实测 **0 个受跟踪文件、53 个 untracked / 32.1MB**（含 node_modules、`*.exe`、
+  `runtime/dsh-home` 整套 profiles 与 our-free-model 数据）。本仓只交付 workbench 单 EXE，
+  该目录是本地构建副产物。同时登记 2 个 docs 下的一次性取证 JSON
+  （`damage-inventory.json` / `ratelimit-diff-e0245f85.json`，当时那轮的证据快照，非交付物）。
+  **延续 round 67 的做法纪律**：`docs/*.json` **不通配**（docs 下有受跟踪的 `perf-baseline.json`
+  等真配置，通配即误伤 —— 本仓在册教训），逐个列名 + 注释写明理由。
+  验证双向：4 个目标路径全部 `check-ignore` 命中；`perf-baseline.json` 确认**未被误伤**；
+  **2052 个受跟踪文件全量复检零误伤**；untracked 总数 165 → **110**（两轮共清 68 个/73MB+）。
 - **仓库卫生：41MB 一次性测试二进制数据与运行期辅助脚本进 .gitignore（round 67）**：
   实测 `tests/_egress/` 下躺着 **41.2MB** 二进制数据（geoip.dat 16.6MB / ASN.mmdb 12.1MB /
   Country.mmdb 7.6MB / geosite.dat 4.3MB / cache.db），**无生成脚本、无代码引用**，

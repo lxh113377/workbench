@@ -51,3 +51,14 @@ tests/soak_watchdog.ps1.DISABLED.OFF
 tests/safe_merge.ps1
 tests/watch_soak.ps1
 tests/wb-hidden-launch.vbs
+# 2026-10-24 round 68：workbench/build/ 是 DSH 桌面版的构建目录（round 67 实测：0 个受跟踪文件、
+# 53 个 untracked / 32.1MB，含 node_modules、*.exe、runtime/dsh-home 整套 profiles 与
+# our-free-model 数据）。本仓只交付 workbench 单 EXE，这个目录是本地构建副产物。
+workbench/build/
+
+# 2026-10-24 round 68：docs 下的一次性取证/清点 JSON（damage-inventory / ratelimit-diff 等）。
+# 它们是当时那轮的证据快照，不是交付物；逐一列名而非通配 docs/*.json ——
+# docs 下有受跟踪的 perf-baseline.json 等真配置，通配会误伤（本仓在册教训）。
+docs/damage-inventory.json
+docs/ratelimit-diff-e0245f85.json
+docs/ratelimit-diff-e0245f85.json.bak
