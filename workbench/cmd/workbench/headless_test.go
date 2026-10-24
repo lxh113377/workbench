@@ -20,24 +20,20 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
-	"syscall"
 	"testing"
 	"time"
 )
 
-// hiddenTestCmd 构造一个不会弹窗的测试子进程命令。
+// hiddenTestCmd 的平台拆分实现在同目录两个文件里（对调用方零改动）：
+//   headless_testcmd_windows_test.go //go:build windows  —— HideWindow + CREATE_NO_WINDOW
+//   headless_testcmd_other_test.go   //go:build !windows —— 裸 exec.Command
 //
-// HideWindow 处理"程序自己申请了窗口"的情况；CREATE_NO_WINDOW 处理
-// "CONSOLE 子系统程序被分配控制台"的情况 —— 两者都要，缺一个就会闪窗。
-func hiddenTestCmd(name string, args ...string) *exec.Cmd {
-	cmd := exec.Command(name, args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		HideWindow:    true,
-		CreationFlags: 0x08000000, // CREATE_NO_WINDOW
-	}
-	cmd.Env = headlessTestEnv()
-	return cmd
-}
+// 2026-10-24 收敛重复声明：本文件（无构建 tag）此前自带一份 Windows 专有实现，
+// 与上面两个平台文件三方同名同签名，导致 go vet ./... 直接判红
+// （hiddenTestCmd redeclared in this block），构建产物因此无法重建。
+// 拆分理由是 syscall.SysProcAttr.HideWindow/CreationFlags 只在 Windows 存在，
+// 写在无 tag 的 _test.go 里会让 Linux 容器侧 vet 报 unknown field。
+// 本文件自此只保留跨平台共用的助手（headlessTestEnv / killTree / 目录回收）。
 
 // headlessTestEnv 返回带无头标记的完整环境（继承当前环境，只覆盖/追加开关）。
 //

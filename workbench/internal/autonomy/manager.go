@@ -65,10 +65,20 @@ func NewManager(store *Store, cfg func() config.AutonomyConfig, log Logger, now 
 // refreshPlanner 按当前配置重建规划器（配置热更新时调用）。
 func (m *Manager) refreshPlanner() {
 	c := m.config()
+	// 产出上限取「规划目标」与「边界硬上限」的**更小者**。
+	//
+	// 2026-10-19 现场审计：Bounds.MaxDraftsPerRound 与 Plan.MaxDrafts 语义重复，
+	// 但前者从未被读取 —— 防扇出爆炸的那道闸门形同虚设（与 D9「限速闸门未接线」同型）。
+	// 语义约定：边界只做**上限**，不放宽（规划目标更小时以规划为准）；
+	// 边界未配置（<=0）时不干预。
+	maxDrafts := c.Plan.MaxDrafts
+	if bound := c.Bounds.MaxDraftsPerRound; bound > 0 && (maxDrafts <= 0 || bound < maxDrafts) {
+		maxDrafts = bound
+	}
 	m.planner = NewPlanner(PlanConfig{
 		DefaultDomain: c.Plan.DefaultDomain,
 		Words:         c.Plan.Words,
-		MaxDrafts:     c.Plan.MaxDrafts,
+		MaxDrafts:     maxDrafts,
 		StageEvery:    c.Budget.StageEvery,
 	})
 }
@@ -224,8 +234,9 @@ func detectCapabilityGap(goal *Goal, tasks []*model.Task) string {
 // criteriaWords 计算"目标级总字数判据"的合理阈值。
 //
 // 关键教训（2026-10-19 运行时实测，两次踩到）：
-//   判据必须能在"当前执行通道的真实产出能力"内达成，否则目标永远无法验收通过，
-//   最后被预算闸门判 blocked —— 运行日志两次出现「现 90 / 需 3000」「现 90 / 需 1500」。
+//
+//	判据必须能在"当前执行通道的真实产出能力"内达成，否则目标永远无法验收通过，
+//	最后被预算闸门判 blocked —— 运行日志两次出现「现 90 / 需 3000」「现 90 / 需 1500」。
 //
 // 实测事实：本机 OFM sealed 车道单任务产出稳定在 90–270 字（模型一次性输出长度受限），
 // 与 Plan.Words（生成目标，默认 1000）不是一个量级。因此：

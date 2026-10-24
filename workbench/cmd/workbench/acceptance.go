@@ -214,29 +214,33 @@ func checkModelPool(layout config.Layout) acceptanceItem {
 	return it
 }
 
-// 要求3：轮询/优先级/负载均衡策略。判据：策略枚举在源码中齐全 + 池子配置可读。
+// 要求3：轮询/优先级/负载均衡策略。
+//
+// 判据演进（2026-10-19 现场缺陷 → 2026-10-24 升级为行为级）：
+//
+// v1 只 grep scheduler.go 里有没有四个策略字符串 —— 而 StrategyLeastLoaded
+// 曾与 round-robin 共用同一分支、从不读 inflight，实测「A 在飞 3、C 在飞 0
+// 却挑了 A」，grep 判据对此全绿。字符串齐全的副本与真实实现对 grep 同形。
+//
+// v2 改为直接驱动 Scheduler 施加带区分的场景（见 scheduler_probe.go）：
+// 只有真实实现能全绿。原 grep 降级为「枚举齐全」这一条必要非充分判据保留。
 func checkSchedulerStrategies(layout config.Layout) acceptanceItem {
 	it := acceptanceItem{ID: "R3", Title: "自动轮询调度：优先级/轮询/加权/最少负载"}
-	src, err := readRepoFile("workbench/internal/modelpool/scheduler.go")
-	if err != nil {
-		it.State, it.Detail = stateUnverified, "无法读取调度器源码: "+err.Error()
+	pr := probeSchedulerStrategies()
+	it.Evidence = append(it.Evidence, pr.evidence...)
+	if len(pr.failures) > 0 {
+		it.State = stateFail
+		it.Detail = "调度策略行为探针未过: " + strings.Join(pr.failures, "; ")
 		return it
 	}
-	want := []string{"StrategyPriority", "StrategyRoundRobin", "StrategyWeighted", "StrategyLeastLoaded"}
-	var missing []string
-	for _, w := range want {
-		if !strings.Contains(src, w) {
-			missing = append(missing, w)
-		}
+	// 探针全绿后再确认配置侧可读（面板能切换才有意义）。
+	poolPath := filepath.Join(layout.DataRoot, "models", "model-pool.json")
+	if _, err := os.Stat(poolPath); err != nil {
+		it.State, it.Detail = stateUnverified, "模型池账本不存在（实例尚未运行过）: "+poolPath
+		return it
 	}
-	it.Evidence = append(it.Evidence, "scheduler.go 策略枚举: "+strings.Join(want, " / "))
-	if len(missing) == 0 {
-		it.State = statePass
-		it.Detail = "四种调度策略均已实现，可在 /modelpool 控制台切换"
-	} else {
-		it.State = stateFail
-		it.Detail = "缺少策略: " + strings.Join(missing, ", ")
-	}
+	it.State = statePass
+	it.Detail = "四种调度策略均通过行为探针（least-loaded 读在飞数 / priority 取最高 / round-robin 轮转 / weighted 按权重），可在 /modelpool 控制台切换"
 	return it
 }
 
@@ -497,20 +501,22 @@ func checkSoak(layout config.Layout) acceptanceItem {
 		fmt.Sprintf("堆内存趋势 %s（斜率 %.2f MB/小时）", heapRep.Verdict, heapRep.SlopePerHour),
 		fmt.Sprintf("句柄趋势 %s（斜率 %.2f 个/小时）", handlesRep.Verdict, handlesRep.SlopePerHour))
 
+	// 判据走唯一实现（soak_verdict.go），与 --soak CLI 同一套四象限。
+	// 改造前这里另写一遍 switch，与 soak.go 的实现漂移过（2026-10-19 现场缺陷）。
 	verdict, _ := supervisor.SoakVerdict([]supervisor.TrendReport{heapRep, handlesRep})
-	switch {
-	case verdict == "leak":
-		it.State = stateFail
+	it.State = classifySoakVerdict(verdict, spanHours)
+	switch it.State {
+	case stateFail:
 		it.Detail = fmt.Sprintf("检出泄漏趋势（堆 %s / 句柄 %s，跨度 %.2f 小时）", heapRep.Verdict, handlesRep.Verdict, spanHours)
-	case verdict == "ok" && spanHours >= 24:
-		it.State = statePass
+	case statePass:
 		it.Detail = fmt.Sprintf("已覆盖 %.2f 小时，堆内存与句柄均无泄漏趋势", spanHours)
-	case spanHours >= 24:
-		it.State = stateUnverified
-		it.Detail = fmt.Sprintf("已覆盖 %.2f 小时但趋势未能判定：堆 %s", spanHours, heapRep.Reason)
 	default:
-		it.State = stateUnverified
-		it.Detail = fmt.Sprintf("采样跨度 %.2f 小时，未覆盖要求的 24 小时（当前不足以宣称已跑满，也不构成失败）", spanHours)
+		// unverified 要把「为什么没结论」讲清楚：跨度不够与趋势不可判定是两回事。
+		if spanHours >= soakVerdictMinHours {
+			it.Detail = fmt.Sprintf("已覆盖 %.2f 小时但趋势未能判定：堆 %s", spanHours, heapRep.Reason)
+		} else {
+			it.Detail = fmt.Sprintf("采样跨度 %.2f 小时，未覆盖要求的 %.0f 小时（当前不足以宣称已跑满，也不构成失败）", spanHours, soakVerdictMinHours)
+		}
 	}
 	return it
 }

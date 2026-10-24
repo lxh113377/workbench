@@ -53,6 +53,12 @@ func CheckStageRisk(goal *Goal, t *model.Task, cfg config.AutonomyConfig, recent
 	if goal == nil || t == nil {
 		return rep, false
 	}
+	// 回退次数上限（R1/R2 共用）：先算出来，后面的 OnCostOverrun 回退项要引用它。
+	maxRollbacks := cfg.Budget.MaxRollbacks
+	if maxRollbacks <= 0 {
+		maxRollbacks = 3
+	}
+
 	// R1 质量风险
 	minQ := cfg.Budget.MinQuality
 	if minQ <= 0 {
@@ -62,22 +68,39 @@ func CheckStageRisk(goal *Goal, t *model.Task, cfg config.AutonomyConfig, recent
 		minQ = 6
 	}
 	if q := qualityOf(t); q < minQ {
+		// 升级语义（EscalateMinQuality）：该旋钮是**升级器**不是触发器 ——
+		// 只有已经低于下限时它才起作用，把等级从 medium 提到 high。
+		//
+		// 2026-10-19 现场审计：这个开关在 config 里有定义、有注释、有钳制，
+		// 但**从未被任何代码读取** —— 运维把它调大毫无效果，系统却显示"有保护"。
+		// 与 D9「全局限速闸门生产从未接线」同型，属同一个家族。
+		level := RiskMedium
+		if esc := cfg.Risk.EscalateMinQuality; esc > 0 && q < esc {
+			level = RiskHigh
+		}
 		rep.Items = append(rep.Items, RiskItem{
-			Code: "quality.belowMin", Level: RiskMedium,
+			Code: "quality.belowMin", Level: level,
 			Detail: fmt.Sprintf("阶段自评 %d/10 低于下限 %d", q, minQ),
 			Action: "rollback",
 		})
-		rep.Level = RiskMedium
+		rep.Level = level
 	}
 	// R3 空转风险：产出摘要与近期高度重复
 	if t.Summary != "" && duplicatedLoose(t.Title, recentTitles) {
+		// BlockOnRepeat 决定「只是提示」还是「真的踩刹车」。
+		// 默认 false = 仅告警（低风险场景不打断自主循环）；
+		// 运维打开后空转必须停下规划，否则 7x24 无人值守会一直产同质内容。
+		action, level := "continue", RiskLow
+		if cfg.Risk.BlockOnRepeat {
+			action, level = "block", RiskMedium
+		}
 		rep.Items = append(rep.Items, RiskItem{
-			Code: "loop.duplicated", Level: RiskLow,
+			Code: "loop.duplicated", Level: level,
 			Detail: "本轮标题与近期产出高度相似，可能空转",
-			Action: "continue",
+			Action: action,
 		})
-		if rep.Level == RiskNone {
-			rep.Level = RiskLow
+		if rep.Level == RiskNone || (action == "block" && rep.Level == RiskLow) {
+			rep.Level = level
 		}
 	}
 	// R2 预算风险：阶段数/任务数达到上限
@@ -92,12 +115,20 @@ func CheckStageRisk(goal *Goal, t *model.Task, cfg config.AutonomyConfig, recent
 			Action: "block",
 		})
 		rep.Level = RiskHigh
+		// OnCostOverrun：预算超限时是否**同时**给出回退通道。
+		//
+		// 语义（与 config 注释一致）：block 是必然的（目标必须停下），
+		// 该旋钮决定的是「停下后能不能靠回退把某个阶段重做」——
+		// 关掉时运维只能手工介入，打开时自主循环可自行回退重试。
+		// 2026-10-19 现场审计：此开关同样只定义未接线。
+		if cfg.Rollback.OnCostOverrun {
+			rep.Items = append(rep.Items, RiskItem{
+				Code: "budget.costOverrunRollback", Level: RiskMedium,
+				Detail: fmt.Sprintf("预算超限且允许回退（OnCostOverrun=true）：可回退重做阶段，上限 %d 次", maxRollbacks),
+				Action: "rollback",
+			})
+		}
 		return rep, true
-	}
-	// 回退次数超限
-	maxRollbacks := cfg.Budget.MaxRollbacks
-	if maxRollbacks <= 0 {
-		maxRollbacks = 3
 	}
 	if goal.Rollbacks >= maxRollbacks {
 		rep.Items = append(rep.Items, RiskItem{

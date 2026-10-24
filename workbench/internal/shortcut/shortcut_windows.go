@@ -29,10 +29,16 @@ foreach ($lnkPath in $targets) {
     $lnk.IconLocation = "$exe,0"
     $lnk.WindowStyle = 1
     $lnk.Description = "个人 AI 自动化工作台"
+    # 显式清空 Arguments（2026-10-19 现场缺陷：曾被写死 "--silent"，
+    # 而 --silent 的语义是「服务化实例：不弹面板」，于是双击后进程起来了、
+    # 端口也在，桌面上却什么都不出现，表现就是「点了没反应 / 打不开」）。
+    # CreateShortcut 打开的是**已有** .lnk 时字段是读旧值，只删赋值不清空
+    # 会让老 lnk 里的残留 Arguments 继续生效 —— 必须显式置空。
+    $lnk.Arguments = ""
     $lnk.Save()
-    # 回读校验
+    # 回读校验：必须同时看 TargetPath 与 Arguments（只看前者查不出 --silent 残留）
     $check = $shell.CreateShortcut($lnkPath)
-    if ($check.TargetPath -eq $exe) { $ok++ } else { Write-Error "回读不一致: $lnkPath" }
+    if ($check.TargetPath -eq $exe -and $check.Arguments -eq "") { $ok++ } else { Write-Error "回读不一致: $lnkPath (TargetPath=$check.TargetPath Arguments=$check.Arguments)" }
   } catch { Write-Error $_.Exception.Message }
 }
 if ($ok -ge 1) { Write-Output "SHORTCUT_OK $ok" } else { Write-Error "未能创建任何快捷方式"; exit 1 }`
@@ -103,6 +109,7 @@ func truncate(s string, n int) string {
 	}
 	return s[:n]
 }
+
 // Guard 判断当前 EXE 是否位于正式安装位置（同目录有 runtime/ 或 workbench-output/）。
 //
 // 背景：桌面快捷方式曾被测试副本劫持（wbsoak24.exe / app-cache 临时目录），

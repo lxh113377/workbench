@@ -15,6 +15,41 @@
 > 未重新输出）—— 本轮恢复，并记下这条教训：以「包含后文的多行锚点」做插入时，
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
+### Fixed
+- **解掉阻塞产物重建 5 天的 hiddenTestCmd 重复声明；A7/--soak 判据收敛为单一实现；R3 升级为行为级探针；三个「只定义未接线」的自主运行安全旋钮真正接线（2026-10-25 实测）**：
+  **① hiddenTestCmd 三方重复声明（阻塞面）**：`cmd/workbench` 的 `hiddenTestCmd` 在无 tag 的
+  `headless_test.go:32` 与两个平台拆分文件（`headless_testcmd_windows_test.go:19` /
+  `headless_testcmd_other_test.go:13`）里**三方同名同签名**，`go vet ./...` 直接判红
+  （`hiddenTestCmd redeclared in this block`）—— 交接记录 §7 记的唯一阻塞点，实测确认仍在。
+  后果：`setup/build.ps1` 第 3 段的 `go vet ./...` 无条件执行（`-SkipTests` 绕不过），
+  **产物因此 5 天无法重建**，A7/soak 的修复一直没进 `dist/workbench.exe`（check_artifact_soak_fresh 判红）。
+  修法：删除无 tag 文件里那份 Windows 专有实现，只保留跨平台共用的助手；`go vet ./...` rc=0（30/30 包）。
+  **② A7 与 --soak 判据收敛为单一实现（2026-10-19 现场缺陷的根治）**：两处各自实现
+  「趋势 × 跨度 ⇒ 结论」，只修一处即漂移；报表曾同时输出 `longEnough: false` 与 `verdict: leak / exitCode: 2`。
+  新增 `cmd/workbench/soak_verdict.go`（`soakConclusion` / `classifySoakVerdict`），`checkSoak` 与
+  `buildSoakReport` 都只调用它；`minHours <= 0` 时回落默认门槛（否则门槛归零 = 复现现场缺陷）。
+  新产物实测：11700 样本 / 12.82h 跨度 ⇒ `verdict=unknown, exitCode=3`（旧产物给假 `leak/2`）。
+  **③ R3 从 grep 字符串升级为行为级探针**：原判据只查 scheduler.go 里有没有四个策略**名字**，
+  而 StrategyLeastLoaded 曾与 round-robin 共用同一分支、从不读 inflight（实测 A 在飞 3、C 在飞 0 却挑 A），
+  **grep 判据全绿**。新增 `cmd/workbench/scheduler_probe.go`：逐策略施加带区分的场景
+  （least-loaded 读在飞数 / priority 取最高 / round-robin 轮转 / weighted 按权重 + 护栏 + excluded）。
+  原 grep 降级为「枚举齐全」这一条必要非充分判据。
+  **④ 三个「只定义未接线」的自主运行安全旋钮接线（D9 家族复发）**：`Risk.EscalateMinQuality`、
+  `Risk.BlockOnRepeat`、`Rollback.OnCostOverrun`、`Bounds.MaxDraftsPerRound` 在 config 里有定义、
+  有注释、有钳制，但**生产代码零消费方** —— 运维调这些值毫无效果，系统却显示「有保护」。
+  与本仓 D9「全局限速闸门生产从未接线」同型。四个旋钮全部接上（risk.go 三处 + manager.go 一处）。
+  **⑤ 快捷方式 Arguments 显式置空**：脚本从不写 `$lnk.Arguments`，而 `CreateShortcut` 打开**已有** .lnk
+  时读的是旧值 ⇒ 早期写死的 `--silent` 会在老快捷方式里残留（双击后进程在、端口在、桌面什么都不出现）。
+  回读校验同步扩到 Arguments。
+  **变异验证（6 条，全部 MATCH）**：摘 span 护栏 ⇒ 3 条判据点名（正是 2026-10-19 现场缺陷复现）；
+   least-loaded 不读 inflight ⇒ 3 条点名；摘 round-robin 场景 ⇒ 首版**未抓住**（暴露判据自身覆盖面缺口），
+  补 `TestR3ProbeCoversAllStrategies` 后再摘即判红；三个旋钮各自反接均被对应判据点名。
+  **回归**：`go vet ./...` rc=0；30 包 `go test` 全 ok；覆盖率门禁通过（29 包达标）；
+  `check_all.ps1` 唯一剩余 FAIL 即本条目要修的未跟踪生产件；`setup/build.ps1` rc=0 重建产物。
+  **覆盖率**：shortcut 23.9% → 30.4%（阈值 25%，未降阈值；补 `truncate` 与脚本契约测试）；
+  autonomy 74.2% → 79.7%。
+  **一条自纠**：探针首版把 `Spec.Priority` 方向写反（以为数字越大越优先，实际 1 = 最高），
+  被自己的场景当场判红 —— 跨项目/跨模块迁移判据前必须先确认被迁移语义的方向。
 ### Changed
 - **agent-browser 本机读取通道定位并恢复；上游 #1922 复现并提交两条评论（2026-10-23 实测）**：
   **通道根因**（此前 4 次复现全部失败、只报「环境障碉」）：本地静态服务与 agent-browser 不在同一条 pwsh

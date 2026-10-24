@@ -94,21 +94,23 @@ func buildSoakReport(csvPath string, minHours float64) soakReport {
 	r.SpanHour = heapRep.SpanMin / 60.0
 	r.Heap = heapRep.Verdict
 	r.Handles = handlesRep.Verdict
-	verdict, _ := supervisor.SoakVerdict([]supervisor.TrendReport{heapRep, handlesRep})
+	// 判据走唯一实现（soak_verdict.go）：与总验收 A7 同一套四象限。
+	// 改造前这里另写一遍 switch —— 正是 2026-10-19「两处实现漂移」现场缺陷的一半。
+	trendVerdict, _ := supervisor.SoakVerdict([]supervisor.TrendReport{heapRep, handlesRep})
+	verdict, code := soakConclusion(trendVerdict, r.SpanHour, minHours)
 	r.Verdict = verdict
-	switch {
-	case verdict == "leak":
+	r.ExitCode = code
+	switch code {
+	case 2:
 		r.Reason = "检出泄漏趋势（堆 " + heapRep.Verdict + " / 句柄 " + handlesRep.Verdict + "）"
-		r.ExitCode = 2
-	case verdict == "ok" && r.SpanHour >= minHours:
+	case 0:
 		r.Reason = "已覆盖要求的时长且无泄漏趋势"
-		r.ExitCode = 0
-	case r.SpanHour >= minHours:
-		r.Reason = "跨度已够但趋势未能判定：" + heapRep.Reason
-		r.ExitCode = 3
-	default:
-		r.Reason = "采样跨度 " + fmt.Sprintf("%.2f", r.SpanHour) + " 小时，未覆盖要求的 " + fmt.Sprintf("%.0f", minHours) + " 小时（不足以宣称跑满，也不构成失败）"
-		r.ExitCode = 3
+	case 3:
+		if r.SpanHour >= minHours {
+			r.Reason = "跨度已够但趋势未能判定：" + heapRep.Reason
+		} else {
+			r.Reason = "采样跨度 " + fmt.Sprintf("%.2f", r.SpanHour) + " 小时，未覆盖要求的 " + fmt.Sprintf("%.0f", minHours) + " 小时（不足以宣称跑满，也不构成失败）"
+		}
 	}
 	return r
 }
