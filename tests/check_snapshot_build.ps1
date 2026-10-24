@@ -35,7 +35,11 @@ if (-not (Test-Path -LiteralPath $gitDir)) {
   exit 1
 }
 
-$tmp = Join-Path $env:TEMP ("wb-snapshot-" + [DateTime]::Now.ToString("HHmmss"))
+# 唯一名（2026-10-25 实测修假红）：原命名只到秒，同秒两次调用得到**完全相同**的目录名
+# （实测 wb-snapshot-033919 两次相等=True）；本仓是多会话同机并发，两个门禁的 finally
+# 会 Remove-Item -Recurse 互删对方的快照树，正在编译的那个 go build 随即报缺失而判红 ——
+# 红的是门禁自身的竞态，不是提交内容。改用与 e2e_soak/selfheal 等既有门禁同一 GUID 惯例。
+$tmp = Join-Path $env:TEMP ("wb-snapshot-" + [guid]::NewGuid().ToString("N").Substring(0,8))
 New-Item -ItemType Directory -Force -Path $tmp | Out-Null
 
 Write-Host "=== 纯净检出编译门禁 ===" -ForegroundColor White
@@ -109,7 +113,12 @@ try {
     #   并把重试事实打进输出（不静默）。若两次都失败才是真缺陷，照常判红。
     #   这不是「改测试让它过」：测试本身一行未动；也不放过真缺陷（连挂两次必红）。
     $ErrorActionPreference = "Continue"
-    $tout = & go test ./... -count=1 2>&1 | Out-String
+    # -timeout 接线（2026-10-25）：$TimeoutSec 原先声明了却全仓无人使用（只在 param 出现一次），
+    # 属「文档承诺比实现新」的第三种形态。接进 go test 的 -timeout：它约束测试二进制的**执行时长**
+    # （不含编译），实测全量执行 70.7s 远小于默认 300s，故不引入新假红；换来的是「卡死挂钟」变成
+    # 有栈输出的超时 —— PS5.1 抓不住挂起子进程，等 check_all 整段跑完才发现代价更高。
+    # 下方 flaky 重试同样接上，保证「重试一次」不会变成「再挂一次」。
+    $tout = & go test ./... -count=1 -timeout ("{0}s" -f $TimeoutSec) 2>&1 | Out-String
     $trc = $LASTEXITCODE
     $ErrorActionPreference = $eapBackup
     if ($trc -ne 0) {
@@ -118,7 +127,7 @@ try {
         Write-Host "NOTE 纯净检出 go test 首轮失败，命中已知 flaky（TestPromptingCommandDoesNotHang，PS5.1+IE 弹窗挂起）—— 重试一次以区分偶发与真缺陷" -ForegroundColor Yellow
         Write-Host $tout
         $ErrorActionPreference = "Continue"
-        $tout = & go test ./... -count=1 2>&1 | Out-String
+        $tout = & go test ./... -count=1 -timeout ("{0}s" -f $TimeoutSec) 2>&1 | Out-String
         $trc = $LASTEXITCODE
         $ErrorActionPreference = $eapBackup
         if ($trc -eq 0) {

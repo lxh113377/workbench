@@ -100,7 +100,10 @@ if ($mutant -eq $src) { throw "变异点未找到：keepalive 的启动守卫形
 # keepalive 用 $PSScriptRoot 定位该库，同目录才走真实拉起路径。否则它会退回
 # Start-Process，而本机 PS 5.1 存在 NO_PROXY/no_proxy 重名缺陷会直接抛异常 ——
 # 那样变异体"没拉起"是环境噪声，不是判据结果（不可当证据）。
-$mutantDir = Join-Path $env:TEMP "wb-mutation-ka"
+# 唯一名（2026-10-25）：原为固定名，且 L104 前置删 + L119 后置删都递归 —— 两个会话同跑时
+# 后启动者的前置 Remove-Item 会删掉前者正在用的变异体目录，判据结果变成竞态噪声（同
+# check_snapshot_build 那一类假红）。GUID 后缀与本仓其它 e2e 一致。
+$mutantDir = Join-Path $env:TEMP ("wb-mutation-ka-" + [guid]::NewGuid().ToString("N").Substring(0,8))
 if (Test-Path $mutantDir) { Remove-Item -Recurse -Force $mutantDir -ErrorAction SilentlyContinue }
 New-Item -ItemType Directory -Force -Path $mutantDir | Out-Null
 $mutantPath = Join-Path $mutantDir "keepalive.ps1"

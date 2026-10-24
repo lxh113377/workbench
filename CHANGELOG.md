@@ -16,6 +16,43 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **修门禁自身的并发互删假红：纯净检出门禁临时目录只到秒 + 接上声明却从未使用的超时参数（round 121-123）**：
+  起因是全量 check_all 出现过一次「FAIL 纯净检出编译」，但我单独重跑同一门禁是 PASS、
+  复跑全量也是 36 PASS / 0 FAIL。偶发红若不归因，下次会再撞并被当成真缺陷追查。
+  **根因机制实测**（不是推理）：原命名 'wb-snapshot-' + HHmmss，同秒两次调用得到
+  **完全相同**的目录名（实测 wb-snapshot-033919 两次相等=True；GUID 版两次相等=False）。
+  本仓是多会话同机并发（handoff §10 已两次实证共享 index 竞态），而门禁 finally 里有
+  Remove-Item -Recurse —— 两个实例**互删对方的快照树**，正在编译的一方报缺文件 exit 1。
+  红的是判据实现，不是被检查的提交。
+  同形态第二处 quit_mutation_check.ps1 用固定名 wb-mutation-ka，且前置删+后置删都 -Recurse，
+  后启动者的前置删会删掉前者正在使用的变异体目录。
+  **修法用本仓既有惯例、不发明新模式**：e2e_soak / selfheal_e2e / e2e_workspace /
+  failover_evidence / check_staged_gofmt 都已经是 [guid]::NewGuid().Substring(0,8)，
+  这两处只是漏网的。
+  **顺带接上空头承诺**：[int]$TimeoutSec = 300 声明了却全仓无人使用（本门禁只出现 1 次，
+  即 param 声明本身）—— 属本仓在册「文档承诺比实现新」的第三种形态，头部写着超时而
+  实际任何一步挂住都会一直挂着。接进 go test -timeout 两处（首轮 + flaky 重试）。
+  安全性实测后才接：-timeout 约束测试二进制执行时长（不含编译），逐包实测最慢
+  cmd/workbench 45.1s、engine 26.0s，300s 余量 6.6× ⇒ 不引入新假红；格式化结果实测 300s。
+  附带发现（登记未改）：ci.yml 全文没有任何 timeout-minutes，CI 侧比本地更依赖这个接线。
+  **未修两处如实登记**：keepalive.ps1 固定名但全仓无删除动作（最坏日志混排、不产生假红，
+  且该件在跑 7x24 保活，本轮不动）；agg_e2e.ps1 不在 check_all 常规段且 agg_e2e.py 有
+  同名兜底路径，改唯一名要同步改 Python 侧 —— 属改一处需动两处的独立小轮。
+  **不建常驻判据**（扫描「TEMP 命名无唯一性 + 本文件有 -Recurse 删」）：现存 4 处已逐个
+  分级收敛（2 修 2 登记），属一次性收敛；常驻判据会挡住未来故意复用固定目录的合法写法
+  （缓存目录），还要处理 -RedirectStandardOutput 这类不删的假阳性 —— 收益低于噪声。
+  验证：check_snapshot_build 改后 rc=0；全量 check_all 36 PASS / 0 FAIL；PS 语法/多BOM/
+  EOL/编码 4 门禁 PASS；两文件写回后逐字节复核（BOM 恰 1、snapshot 纯 CRLF 裸 LF=0、
+  mutation 保持原 LF）；quit_mutation_check 不在 check_all 常规段且会起停真实进程，
+  按「不为验证打扰 7x24 实例」纪律未单独运行，只做静态变量流复核（$mutantDir 6 处引用
+  全经同一变量、无第二处硬编码字面量）+ 语法门禁。
+  本轮我自己的四处测量错误（报告附节逐条记）：分类器漏看 Get-Random 把 homepage/perf
+  误判成隐患（人工读原始行才排除，两处因此不在修复范围）；PS 正则解析 go test 得「包数=0」
+  连锁空索引崩溃，改落文件用 Node 解析才拿到真实 29 包；按整行等值匹配 go test 调用行只中
+  1 处（两处缩进不同 4/8 空格），先打 JSON.stringify 真实字节再改；以及直接猜门禁脚本名
+  check_clean_checkout_build.ps1（真名 check_snapshot_build.ps1），靠 git ls-files 列全名纠正 ——
+  「严禁猜标识符」我本轮破了两次，记在这里而不是藏起来。
+  报告：docs/门禁快照并发互删-五轴审查-2026-10-25.md
 - **DOCX 导出落盘改造（并入统一原子写入口）+ junction 安全行为测试（round 119-121，硬约束 #5 审计的落地）**：
   审硬约束 #5「所有删除走回收站」时逐点核对全仓删除原语（15 个生产文件），两处结论：
   **① 推翻了自己的怀疑**：linkDir 的 Stat 失败后 os.RemoveAll(dst) 初看像经典「rd /s 删穿
