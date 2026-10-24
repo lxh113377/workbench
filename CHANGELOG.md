@@ -34,6 +34,20 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **清理 --muted 骗人别名（round 99 报告 P2-1 兑现，round 100 执行）**：
+  round 99 的五轴报告在 P2-1 记了一条命名债：--muted:#8fa6c0 与在用的 --dim:#8fa6c0 **同色**。
+  本轮实测确认这是**骗人的别名**（不是冗余兜底）：全仓 class="muted" 出现 38 处、.muted CSS 类
+  走的是 color:var(--dim)，而 var(--muted) 引用 **0 次** —— 改 --muted 不会让任何 .muted 变，
+  读代码的人若以为调 --muted 能改弱文字色就上当了（虚假抽象，round 93 同族）。
+  **删除安全三重确认**：① var(--muted)=0 无引用；② 同色 --dim 在用 39 次（视觉有归属）；
+  ③ getPropertyValue 剥注释后 0 处 —— 无 JS 读取路径，删它运行期零风险。
+  删除后：--muted 0 残留、--dim 保留、gofmt clean、大括号配平 474、
+  web 全量测试 rc=0（118 Test）、死令牌门禁自洽 50=45 在用+4 死+1 锚点、rgb_pair 15 hex/5 通道一致。
+  基线 5 → 4 条（--muted 移出：它不是待清的死令牌，是已删的债）。
+  **一个重要判断（避免过度工程）**：是否给 rgb_pair 加「两个 hex 令牌同值就判红」的 L3？不加 ——
+  --muted 本就被死令牌门禁抓到（var 引用 0），而「不同名但同值且都在用」是合法设计选择，
+  L3 会误报这种，正是 round 64「判据本身误报」家族要防的。现有体系已覆盖，无需新判据。
+  前提也已实测：生产代码里 CSS :root 块**仅 assets_css.go 一处**（单一来源假设成立，判据不误判多源）。
 - **两个门禁互相拆台 + 判据被自己的注释污染：一次判据审计（round 99）**：
   round 98 同时上线了 check_dead_css_tokens（死令牌）与 check_css_rgb_pair（配对校验），本轮审出三个耦合缺陷：
   **① vacuous pass（rgb_pair）**：L1 循环 `if (-not $hexMap.ContainsKey($base)) { continue }` ——

@@ -8,7 +8,7 @@
 #   round 96 间距第二批复活（68 处 margin/padding/gap 换 var(--sp-*)）。
 #   round 99 判据口径修正：从「出现次数」改为「var(--x) 引用次数」并剥 CSS 注释 ——
 #     补出被注释污染长期漏判的 --glow-cyan（出现 3 次、var() 引用 0）。
-#   当前 5 条，全是「纯抽象死令牌」：值在 CSS 里也不出现，机械替换无从下手，
+#   当前 4 条（round 100 删 --muted：与在用的 --dim 同色 #8fa6c0 的骗人别名，见 P2-1）。
 #   处置需设计判断 —— 见 docs/CSS死令牌第三批-五轴审查与处置建议-2026-10-24.md。
 #
 # 注：--accent-3 不在本名单。它虽无 var() 引用，但是 --accent-3-rgb 的配对锚点
@@ -16,7 +16,6 @@
 #   处置顺序：--glow-cyan/--glow-violet（辉光族，可能已被 --glow-cyan-soft 取代，先判是否还需要）；
 #   --muted 与 --dim 语义重叠（建议合并）；--ink 最深色（可能真没人要）；--accent-soft 需先定 α 约定。
 --ink
---muted
 --accent-soft
 --glow-cyan
 --glow-violet

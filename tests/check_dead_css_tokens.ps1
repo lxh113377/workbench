@@ -17,6 +17,12 @@
 #
 # 用法: powershell -File tests/check_dead_css_tokens.ps1 [-Quiet]
 # 退出码: 0=无新增死令牌 / 1=有新死令牌 / 2=UNVERIFIED（取不到文件）
+#
+# 单一来源前提（2026-10-24 实测，防未来漂移）：本门禁只解析 assets_css.go 的 :root 块，
+#   语料虽扫 web 包全部 .go，但令牌「定义」以 :root 为准。这一前提是成立的前提是 ——
+#   生产代码里 CSS :root 块**仅此一处**（已用 ':root{' 精确匹配核实：assets_css.go x1，
+#   其余命中都是脚本里的 PowerShell 变量 $root，不是 CSS 块）。若将来新增第二个 :root
+#   （如拆出子主题文件），本门禁会漏判那个文件里定义的令牌，须同步扩展解析面。
 param([switch]$Quiet)
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot

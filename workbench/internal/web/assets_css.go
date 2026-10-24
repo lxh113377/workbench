@@ -38,7 +38,6 @@ const appCSS = `
   --fg-2:#c3d4e8;
   --dim:#8fa6c0;        /* 对 --panel 对比度 ≈ 6.6:1 */
   --dim-2:#7189a4;      /* ≈ 4.6:1，仍过 AA */
-  --muted:#8fa6c0;
   /* ——— 信号色：电光青为主（原暖橙 #ff6a3d → 电青 #22d3ee），紫为副信号 ——— */
   --accent:#22d3ee;
   --accent-soft:rgba(var(--accent-rgb),.14);
