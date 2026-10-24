@@ -4,14 +4,15 @@ import "testing"
 
 func TestDefaultsCount(t *testing.T) {
 	all := Defaults()
-	if len(all) != 24 {
-		t.Fatalf("内置模板数 = %d, want 24", len(all))
+	if len(all) != 28 {
+		t.Fatalf("内置模板数 = %d, want 28", len(all))
 	}
 	domains := map[string]int{}
 	for _, tpl := range all {
 		domains[tpl.Domain]++
 	}
-	want := []string{"content", "code", "knowledge", "data", "solution", "report"}
+	// quality 领域 2026-10-24 round 88 新增（工程质量四动作：体检/判据化/验证/固化）
+	want := []string{"content", "code", "knowledge", "data", "solution", "report", "quality"}
 	for _, d := range want {
 		if domains[d] != 4 {
 			t.Fatalf("领域 %s 模板数 = %d, want 4", d, domains[d])
@@ -58,8 +59,8 @@ func TestRegistryRoundtrip(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := len(reg.List()); got != 24 {
-		t.Fatalf("registry list = %d, want 24", got)
+	if got := len(reg.List()); got != 28 {
+		t.Fatalf("registry list = %d, want 28", got)
 	}
 	custom := Defaults()[0]
 	custom.ID = "custom-1"
