@@ -728,7 +728,14 @@ func runStopCLI() int {
 		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
-	_ = st.Savepoint()
+	// 2026-10-24 round 89：Savepoint 失败不再忽略。它是重启后的恢复点 ——
+	// 写失败时上面那句「已标记停止」就是虚假成功反馈：用户以为停成了，
+	// 重启后接续判读到的却是旧状态（与 SaveState 同属「停机器」这件事的两半）。
+	// 判据：失败是否会让已打印的成功消息变成假话；会 => 必须判，不能 _ = 忽略。
+	if err := st.Savepoint(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
 	fmt.Println("已标记停止；若进程仍在运行，请通过面板或托盘退出。")
 	return 0
 }
