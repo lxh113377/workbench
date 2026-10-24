@@ -137,6 +137,19 @@
   **一条自纠**：探针首版把 `Spec.Priority` 方向写反（以为数字越大越优先，实际 1 = 最高），
   被自己的场景当场判红 —— 跨项目/跨模块迁移判据前必须先确认被迁移语义的方向。
 ### Changed
+- **第四轮开源对标报告落地（2026-10-25）`docs/benchmark/WorkBench-开源对标报告-2026-10-25.md`**：
+  首次逐行精读前几轮未读的 peer 内核模块——temporal `common/tasks` 调度器家族（10 种）与
+  prometheus `tsdb/wlog`（WAL + Repair + checkpoint），peer 仓本轮 `git fetch` 刷新到最新 HEAD
+  （temporal 1bcd882 / prometheus a2fda0e / river 928c04a，2026-10-23~24）。
+  产出四部分结构化交付：对比总览表（八维增量口径）、逐项差距说明、改进建议清单（P3-1/P3-2 已落地、
+  P3-3 核实后判 NO-OP）、分阶段可实施路径（M0-M5）。
+  **一处 NO-OP 判断单独留档**（§4.3）：temporal `FIFOScheduler.Stop` 的 drainTasks/Abort 疑似缺口，
+  核实 `engine.go:685` Reset 含 StateQueued 重入队 ⇒ 本项目无丢失无卡死，按「无病不乱吃药」不改，
+  登记依据防后人重复怀疑同一处。
+  报告内所有自报数字当场自纠两处：「29 包全有测试」实测为 internal 28/29（browser 无测试文件）；
+  prometheus Windows 句柄注释行号从估计的 424-428/494-495 校正为实测 426/484-496。
+  **教训（写进报告 §7.2）**：引用 peer 行号必须逐条 read 回原文核对，不能凭精读时的记忆写——
+  记忆会漂，行号漂一个，下游 agent 按错行号读到的就是另一段代码。
 - **agent-browser 本机读取通道定位并恢复；上游 #1922 复现并提交两条评论（2026-10-23 实测）**：
   **通道根因**（此前 4 次复现全部失败、只报「环境障碉」）：本地静态服务与 agent-browser 不在同一条 pwsh
   进程树，Chrome 被本机 127.0.0.1:7897 代理拒后空转 —— 表现为 `open` 报 `ERR_CONNECTION_REFUSED`，
