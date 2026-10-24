@@ -22,7 +22,7 @@ func mkSpec(format string, sections []string, minWords, minBytes int) spec {
 	return spec{Format: format, Sections: sections, MinWords: minWords, MinBytes: minBytes}
 }
 
-// Defaults 返回内置的 28 条持续产出模板（7 领域 × 4；quality 领域 2026-10-24 round 88 新增）。
+// Defaults 返回内置的 29 条持续产出模板（7 领域；quality 领域 2026-10-24 round 88/90 新增，含五轴审查）。
 // 设计原则：每条都必须能独立产出真实可用的成果物，且彼此有逻辑递进关系。
 func Defaults() []tpl {
 	now := model.Now()
@@ -223,6 +223,20 @@ func Defaults() []tpl {
 				"⑤ 汇总清理前后的 untracked 数量变化。上下文：\n{context}",
 			[]string{"卫生", "清理"}, 80, 35, 3,
 			mkSpec("md", []string{"分类盘点", "ignore 条目", "验证", "前后对比"}, 500, 1500), nil),
+
+		mk("review-five-axis", "五轴审查报告", "quality",
+			"按正确性/可读性/架构/安全/性能五轴分级出报告，可直接贴 PR",
+			"请对「{topic}」做一次五轴审查，产出**可直接贴进 PR** 的审查报告。要求："+
+				"① 五轴逐一过：正确性（逻辑错误/边界/并发）、可读性（命名/注释/结构）、"+
+				"架构（耦合/边界/可测试性）、安全（注入/越权/ Secrets ）、性能（热点/分配/复杂度）；"+
+				"② 每个发现按 **P0 阻塞 / P1 应改 / P2 建议** 分级，含文件:行号、问题一句说清、"+
+				"为什么是问题（后果）、建议改法（可直接执行的 diff 思路）；"+
+				"③ 无问题的轴也要明确写「本轴未发现问题」并说明检查了什么 —— 不许留空让读者猜；"+
+				"④ 结尾给**合并结论**（可合并 / 改后可合并 / 需重写）与**门禁建议**（哪些发现应变成机器判据）；"+
+				"⑤ 区分「已证实」与「存疑」：没读代码证实的不许写成事实。上下文：\n{context}",
+			[]string{"审查", "PR", "五轴"}, 95, 60, 5,
+			mkSpec("md", []string{"正确性", "可读性", "架构", "安全", "性能", "合并结论与门禁建议"}, 900, 3000),
+			[]string{"quality-gate-spec"}),
 	}
 }
 
