@@ -13,9 +13,9 @@
 #
 # 注：--accent-3 不在本名单。它虽无 var() 引用，但是 --accent-3-rgb 的配对锚点
 #   （check_css_rgb_pair 的 L1 靠它校验漂移），删它等于拆掉判据，故门禁对它豁免为「承重」。
-#   处置顺序：--glow-cyan/--glow-violet（辉光族，可能已被 --glow-cyan-soft 取代，先判是否还需要）；
+# 处置顺序：辉光族 cyan/violet 两档已于 round 101 删除（零 var() 引用、语义由 soft 档承载、
+# 实际写法已迁到按语义色现写两段）。剩余 2 个：--ink（最深底色，已被纯黑深影取代）、
+# --accent-soft（需先定「半透明主色底」的 α 约定，见五轴报告 P1-2）。
 #   --muted 与 --dim 语义重叠（建议合并）；--ink 最深色（可能真没人要）；--accent-soft 需先定 α 约定。
 --ink
 --accent-soft
---glow-cyan
---glow-violet

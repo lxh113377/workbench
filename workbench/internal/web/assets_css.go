@@ -50,10 +50,10 @@ const appCSS = `
   --accent-rgb:34,211,238;
   --bg-rgb:4,7,13;  /* 由 --bg:#04070d 派生 */
   --accent-3-rgb:167,139,250;  /* 由 --accent-3:#a78bfa 派生（2026-10-24 收编；配套 tests/check_css_rgb_pair.ps1）*/
-  /* ——— 光效令牌：HUD 的「发光」统一从这里取，避免各处硬编码 ——— */
-  --glow-cyan:0 0 0 1px rgba(var(--accent-rgb),.35),0 0 28px -8px rgba(var(--accent-rgb),.55);
+  /* ——— 光效令牌：HUD 的「发光」仅 soft 一档在用（2026-10-24 删掉 cyan/violet 两档：
+     二者零 var() 引用且实际写法已迁到按语义色现写两段，如 .armPulse 的 rgba(var(--danger-rgb),..)
+     —— 留着就是「统一从这里取」的虚假承诺） ——— */
   --glow-cyan-soft:0 0 60px -28px rgba(var(--accent-rgb),.45);
-  --glow-violet:0 0 28px -10px rgba(var(--accent-3-rgb),.5);
   --scanline:rgba(var(--accent-rgb),.055);
   --grid-line:rgba(120,190,255,.055);
   /* ——— 形状：切角（HUD 面板的角不是圆的，是斜切的） ——— */
