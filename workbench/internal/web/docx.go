@@ -2,31 +2,30 @@ package web
 
 import (
 	"archive/zip"
+	"bytes"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
+
+	"workbench/internal/config"
 )
 
 // writeDocx 用 archive/zip 手写最小但合规的 OOXML 文档（零第三方依赖）。
+//
+// 2026-10-25（硬约束 #5 五轴审查）改造：原先自制原子写 —— Create(path+.tmp) 写、Close、
+// Sync、Close，再 os.Remove(path)、os.Rename(tmp, path)。实测三缺陷：
+// ① 固定后缀 .tmp 并发导出互相覆盖：os.Create 清空已存在文件，两个请求写同一个 tmp，
+// 第二个 Rename 因源文件已没了而失败（导出面并发是被 HTTP handler 允许的）。
+// ② 先删目标再 rename，中间失败即丢失旧导出 —— 与 config/atomic.go 本轮修的「数据归零」
+// 同形态；且那句 IsNotExist 豁免接不住目录：os.Remove 对非空目录返回的是
+// 「The directory is not empty」类错误而非 IsNotExist，删不掉就直接 return err。
+// ③ 与同文件 md/txt 分支的 config.WriteFileAtomic 双实现并存，导出面两条落盘路径。
+// 最优解不是逐条打补丁而是并入统一入口：zip 先写进内存 buffer（本文件本来就把整篇
+// document.xml 收在 strings.Builder 里，没有流式优势可言），再交 WriteFileAtomic 落盘 ——
+// 它已带 tmp 唯一名、fsync、rename 失败退避与 .bak 备份，且有 seam 判据钉着。
 func writeDocx(path string, docs []exportDoc) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
-	}
-	tmp := path + ".tmp"
-	f, err := os.Create(tmp)
-	if err != nil {
-		return err
-	}
-	cleanup := true
-	defer func() {
-		f.Close()
-		if cleanup {
-			os.Remove(tmp)
-		}
-	}()
-	zw := zip.NewWriter(f)
+	var buf bytes.Buffer
+	zw := zip.NewWriter(&buf)
 	add := func(name, body string) error {
 		w, err := zw.Create(name)
 		if err != nil {
@@ -53,20 +52,7 @@ func writeDocx(path string, docs []exportDoc) error {
 	if err := zw.Close(); err != nil {
 		return err
 	}
-	if err := f.Sync(); err != nil {
-		return err
-	}
-	if err := f.Close(); err != nil {
-		return err
-	}
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		return err
-	}
-	cleanup = false
-	return nil
+	return config.WriteFileAtomic(path, buf.Bytes())
 }
 
 func buildDocumentXML(docs []exportDoc) string {
