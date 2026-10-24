@@ -2083,6 +2083,45 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **硬约束机器保障审计：钉住「不挂 dsh-web-app」+ PR 模板补 2 条自查项 + 五轴报告（round 116-118）**：
+  审计动机：objective 要求把硬约束落到可机器判定。本仓是三层形态 —— CONTRIBUTING 硬约束 6 条
+  PR 模板自查 6 项 tests/check_*.ps1 41 门禁 + Go 测试。三层不重合就是缺口。
+  实测（git grep -rn dsh-web-app，逐 pathspec 查 rc）：
+  - 全仓该字符串仅 1 处，且是 dshprofile/bootstrap.go:8 的注释；
+  - tests/ 41 个门禁 0 处、.github/pull_request_template.md 0 处；
+  - CONTRIBUTING 有（约束 #4，且原文「违反 1 或 2/4 一律不合并，没有例外」）。
+  而 dshprofile 包两个受跟踪测试文件（13 个 Test）没有一个断言 Bundles 的内容。
+  后人往 Bundles 加一行就能静默违反「一律不合并」级约束，而后果不是崩溃：
+  dsh-web-app 起常驻 HTTP 服务、headless 永不退出（CONTRIBUTING 记的实测：卡死 150s+），
+  在 7x24 无人值守里表现为「任务不再推进」—— 难归因、难发现。
+
+  修：新增 workbench/internal/dshprofile/bundles_contract_test.go，两面判据 ——
+  黑名单（任一项含 web-app 即 Errorf，附为什么文案）；白名单快照（恰为 base/headless/
+  our-free-model 三项，增减须显式改测试与 CONTRIBUTING）+ 空切片 fatal 防空转。
+  CI 的 go test -race ./... 自动覆盖，无需单独挂载。
+  双向变异：往 Bundles 注入 @deepseek-ai/dsh-web-app 后 rc=1，点名违反硬约束 #4 并附快照变化提示；
+  还原后 rc=0 且 bootstrap.go 与原始字节一致；dshprofile 包全量 rc=0（既有 13 个 Test 无一受影响）。
+  PR 模板补 2 条自查项（9 增至 11 项）：约束 #4（dsh-web-app）与 #6（产出根 workbench-output）——
+  此前模板独缺这两条，其余 6 项覆盖 #1/#2+#3/#5 及 3 条模板独有项。
+  报告：docs/硬约束机器保障缺口-五轴审查-2026-10-25.md（用 round 90 的 review-five-axis 模板格式）。
+  剩余两项登记不夹带（objective 逐点攻破）：约束 #6 的 DataRoot 测试（小、独立一轮）；
+  约束 #5 的新增删除路径必经 refuseDangerousPath 门禁（需先定义删除路径的可机判形态，否则易误报）。
+
+  本轮我自己的四处测量错误（都如实记进报告附节）：
+  门禁数一会儿 41、一会儿 1、dsh-web-app 0 处 vs 1 处矛盾 —— 根因是助手函数 g() 在 catch 里
+     return 空串，随后 split 算成长度 1，把命令失败当成零结果。定规：测量必须查 rc 并打印错误，
+     空输出与失败是两件事（后两次重测后数字才可信）。
+  我给约束 #5 判过「无任何门禁覆盖」—— 偏严：refuseDangerousPath 有 Go 单测（1 文件）且非 Windows
+     分支 trash_other.go 与 Windows 同序；缺的是校验新增删除路径是否经过它的门禁。两回事。
+  PR 模板 #1 假阴性缺 —— 我用自动子串匹配建映射（约束「Go 纯标准库」vs 模板「go.mod 未新增 require」），
+     字面不匹配但语义同物。定规：建映射必须人工逐条核对（与 round 115 分类器同族）。
+  我一度要给新报告补 BOM 才对 —— 实测 docs 顶层 28 个 .md 里 23 个无 BOM，且
+     docs/archive/2026-10/README.md:8 早写明「无 BOM、纯 LF，与受跟踪 .md 一致」；反倒是上一轮那份
+     报告带了 BOM/CRLF。定规：涉惯例先测分布，别拿自己上一份文件当基准；且两种形态门禁都接受
+     （multi_bom 判 >=2、repo_eol 对 *.md 无规则），故不回改已提交文件 —— 无必要不等于应改。
+  另：报告标题首版写「两次测量错误」而表格已有 4 行（4 行但仅 3 个根因）—— 当场发现并改，
+  这正是本轮在修的那类漂移，发生在自己的新文件上。
+  本轮只 add 自己的 4 个文件（并行会话在途的 atomic.go 与 32 个未跟踪 .go 未碰，见交接纪律）。
 - **模板 OutputSpec.Sections 五轴审计报告（round 115）—— 结论是 NO-OP，但审计本身改了两处认知**：
   用 round 116 修 `{prev}` 的同一思路复查「模板声明的产出契约是否被 prompt 真正要求」。
   **主发现（架构）**：`Sections` 是「有定义、有写入方、**零读取方**」的装饰性元数据 ——

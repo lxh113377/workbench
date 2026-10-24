@@ -35,6 +35,8 @@ go test -race -count=1 ./...
 
 - [ ] `go.mod` 未新增 `require`（纯标准库）
 - [ ] 未读写 `~/.dsh/profiles/desktop`；执行通道 profile 仍固定 `web-desktop`
+- [ ] 未挂 `@deepseek-ai/dsh-web-app`（它起常驻 HTTP 服务，headless 进程永不退出；实测卡死 150s+）—— `dshprofile.Bundles` 已有测试钉住白名单，要加 bundle 须同步改该测试与 CONTRIBUTING
+- [ ] 产出根仍是 `workbench-output`（由 `config.BuildLayout` 集中派生；面板/导出/恢复逻辑都基于该布局）
 - [ ] 删除路径走回收站（非 Windows 分支必须有 `refuseDangerousPath` 安全阀）
 - [ ] 新增测试**不会**因缺少 pwsh/python 而在 Linux 容器静默跳过（用 `tests/lib_silent_launch.ps1` 同族的解释器探针）
 - [ ] 未提交 `.exe` / `dist/` / `_recovery/` / `src-backup/` 产物
