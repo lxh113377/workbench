@@ -121,7 +121,15 @@ $bad = @()
 
 # ---- L1 配对不得漂移 ----
 foreach ($base in $rgbMap.Keys) {
-  if (-not $hexMap.ContainsKey($base)) { continue }
+  # 【round 99 关闭空转洞】原来这里 continue：锚点被删（或从未写）时，该颜色的漂移校验
+  #   静默消失而门禁仍报「全部配对一致」—— round 99 隔离实验证实：删掉 --accent-3 后
+  #   本门禁与死令牌门禁双双 rc=0（vacuous pass，round 53 同族）。
+  #   本仓惯例是「-rgb 通道由同名 hex 令牌派生」（5 对全如此，注释也这么写），
+  #   故无锚点通道就是缺陷：要么补回 hex，要么连通道一起删，不许留着当孤儿。
+  if (-not $hexMap.ContainsKey($base)) {
+    $bad += ('L1 配对缺口：--' + $base + '-rgb = ' + $rgbMap[$base] + ' 没有同名 --' + $base + ' 的 hex 锚点 —— 该颜色的漂移校验已静默失效（删锚点等于拆掉判据）')
+    continue
+  }
   $expect = HexToTriple $hexMap[$base]
   if ($expect -ne $rgbMap[$base]) {
     $bad += ('L1 配对漂移：--' + $base + ' = ' + $hexMap[$base] + ' 应为 ' + $expect + '，但 --' + $base + '-rgb 写的是 ' + $rgbMap[$base])

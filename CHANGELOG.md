@@ -34,6 +34,26 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **两个门禁互相拆台 + 判据被自己的注释污染：一次判据审计（round 99）**：
+  round 98 同时上线了 check_dead_css_tokens（死令牌）与 check_css_rgb_pair（配对校验），本轮审出三个耦合缺陷：
+  **① vacuous pass（rgb_pair）**：L1 循环 `if (-not $hexMap.ContainsKey($base)) { continue }` ——
+  配对锚点被删时该颜色的漂移校验**静默消失而门禁仍报「全部一致」**。隔离实验证实：删掉 --accent-3
+  后 rgb_pair 与死令牌门禁双双 rc=0。修：无锚点通道直接判红（L1 配对缺口）。
+  **② 两个门禁互相拆台（dead_tokens）**：--accent-3 无 var() 引用被判死并建议删，
+  但它其实是 --accent-3-rgb 的漂移校验锚点 —— 死令牌门禁的建议会拆掉 rgb_pair 的判据。
+  修：配对锚点豁免出死名单，计入「承重」而非「在用」。
+  **③ 判据被自己的注释污染（最隐蔽）**：round 98 我在 --accent-3-rgb 定义行写了注释提到 --accent-3，
+  使它「出现次数」从 1 变 2，于是脱离死名单。顺此查出 --glow-cyan 出现 3 次（全在注释）却 var() 引用 0，
+  从 round 93 起一直被误算成活。=> **出现次数 != 使用次数**。重写：只数 var(--x) 引用，并剥 CSS 块注释 +
+  Go 行注释；判据口径从「名字出没出现」升级为「有没有被真正用起来」。
+  数字自洽校验和 45 在用 + 5 死 + 1 锚点 = 51/51，与独立 Node 镜像计算逐一对上。
+  **④ 又一种反斜杠被吃（这次是 JS 字符串自己）**：重写时 `Join-Path $root 'tests\css-token-debt.txt'`
+  经 JS 模板串降为 `testscss-token-debt.txt`（\c 是非法 JS 转义被丢），Test-Path 失败→基线空→五个全判死。
+  修：路径分隔改用 [string][char]92 拼接，全文件零反斜杠（Strip-Block 也改逐字符扫描）。教训：**反斜杠
+  要在 write→JS→PS 三层里活着，最稳是不写反斜杠**。
+  **⑤ 三路差分变异全过（判据有效性的关键证据）**：注入新令牌 --evil99 并在 CSS 注释里提它 → 仍 rc=1
+  点名（旧口径会被骗成活）；给 --ink 加真 var() 使用 → --ink 脱离 KNOWN（能识别复活）；还原 → rc=0 文件字节一致。
+  本轮 3 个改动文件（两门禁 + 基线），12 个门禁全 PASS；--accent-3 从基线移出（它是承重锚点不是债）。
 - **修「虚假抽象」第二、三例 + CSS 颜色令牌门禁（CI 第 27 个，round 98）**：
   round 99 报告里登记的 P1-1（紫色绕过 --accent-3）本轮实施：新增 --accent-3-rgb 通道，
   把 L55 --glow-violet 与 L91 背景紫两处硬编码换成 rgba(var(--accent-3-rgb),a)（同值替换，视觉零变化）。
