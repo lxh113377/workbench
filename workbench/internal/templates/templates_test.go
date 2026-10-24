@@ -1,6 +1,9 @@
 package templates
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestDefaultsCount(t *testing.T) {
 	all := Defaults()
@@ -77,4 +80,23 @@ func TestRegistryRoundtrip(t *testing.T) {
 	if _, ok := reg2.Get("custom-1"); !ok {
 		t.Fatal("自定义模板未持久化")
 	}
+}
+
+// TestQualityVerifyPromptCarriesMutationSampleRule 钉住「变异样本必须取自真实缺陷形态」
+// 这条教训确实在运行时 prompt 里（round 98 实测踩过：判据只搜 rgb( 而本仓多数写 rgba(，
+// 注入 rgba 样本时 rc=0 漏检）。写进源码不等于运行时读得到 —— 故用断言实测字符串值。
+func TestQualityVerifyPromptCarriesMutationSampleRule(t *testing.T) {
+	for _, tpl := range Defaults() {
+		if tpl.ID != "quality-verify" {
+			continue
+		}
+		if !strings.Contains(tpl.PromptTemplate, "变异样本必须取自本仓真实缺陷形态") {
+			t.Error("quality-verify 的 prompt 缺「变异样本取自真实形态」这条 —— 教训没进运行时指令")
+		}
+		if !strings.Contains(tpl.PromptTemplate, "rgba") {
+			t.Error("quality-verify 的 prompt 未举 rgba/rgb 双形态实例 —— 抽象规则需要一个具体反例才有效")
+		}
+		return
+	}
+	t.Fatal("找不到 quality-verify 模板")
 }
