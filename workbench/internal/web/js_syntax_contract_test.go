@@ -35,9 +35,12 @@ func TestEmbeddedJSIsSyntaxValid(t *testing.T) {
 	}
 	blobs := map[string]string{"app.js": appJS, "gov.js": govJS, "pool.js": poolJS}
 	// 受理面哨兵：raw string 若因声明改写变成空串，node 检查空文件照样通过 —— 判据就成了比空气。
-	// 下限取首次实测字节值的三成：app 74285 / gov 14539 / pool 34123（UTF-8 字节；
-	// 对应 JS 字符数是 62914 / 12068 / 28249，中文按 3 字节故比值约 1.18 —— 单位别混）。
-	// 这里判的是字节，因为 len(b.s) 与 node 看到的文件都是字节口径。
+	// 口径：判的是字节 —— len(b.s) 与 node 看到的文件都是字节口径。
+	// 首次实测字节值：app 74285 / gov 14539 / pool 34123（对应 JS 字符数
+	// 62914 / 12068 / 28249，中文按 3 字节故比值约 1.18 —— 两种单位别混）。
+	// 下面三个下限是「大致三成量级」的**取整近似**，不是由某公式精确导出：
+	// 作用是抓「整段丢失/退化成空串」，不是量体裁衣。故意留宽松 —— 抬高阈值
+	// 只会增加假红风险（改一行 JS 就可能掉到阈值下），而它守的是数量级差异。
 	minLen := map[string]int{"app.js": 20000, "gov.js": 4000, "pool.js": 9000}
 	dir := t.TempDir()
 	for name, src := range blobs {
