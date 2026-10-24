@@ -16,6 +16,43 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **helper 一致判据从 1 组扩到 7 组 + 修 check_gofmt 的顺序死结 + 更正我把 fold 误分类（round 124）**：
+  承接上一条 toast 审计：判据不该只管撞见的那一个。文件 `git mv` 改名
+  toast_duration_contract_test.go -> **helper_identity_contract_test.go**（保留历史），cases 覆盖
+  api / toast / TOKEN / armConfirm / disarmArm / fmtTime / fold 七组，加两道防自转结构：
+  ① 抽取失败即点名「判据失去受理面」；② 归一长度低于登记值一半即报「提取法可能退化，判据在比空气」。
+  **三项变异全部判红闭环**：真实代码分叉（把 poolJS 的 zh-CN 改 en-US）⇒ 点名 fmtTime 分叉；
+  提取法退化（只取首字符）⇒ 报归一长度 0 远低于登记值；把 fold 改名 ⇒ 报受理面失效。
+  **注释差异不算分叉（判据太严会假红）**：首版把 armConfirm 判成分叉，实际代码逐字相同，差在
+  appJS 有一条行尾注释、poolJS 多两行整行注释。正解是复用仓内已被 TestStripLineCommentsIsSound
+  四项自检验过的 stripLineComments，而不是再写一个更难保证正确的剥离器 —— 与 round 64 家族同源
+  （判据不准），但这次方向是误报而非漏报。
+  **修 check_gofmt 的顺序死结（真实缺陷，不是并行会话的锅）**：清单来自 git ls-files（含已 stage
+  未提交的新文件），而 HEAD blob 取不到 ⇒ 一律记成「HEAD 漂移」判红；这与本仓验证流程「先 git add
+  让 check_report_figures 的未跟踪计数反映提交后状态」直接冲突，形成「必须先提交才能跑绿、提交前
+  又必须跑绿」。修法：先用 git ls-tree -r --name-only HEAD 一次性列出 HEAD 路径，按存在性选
+  HEAD:$rel 或 index 的 :$rel。
+  **我第一版写成「HEAD 失败就重试 index」是错的** —— 脚本 ErrorActionPreference='Stop'，native 往
+  stderr 写 fatal 会被当 NativeCommandError 抛出，失败路径根本走不完（本仓在册同族坑，我自己又踩）。
+  双向验证：当前态（含已 stage 新文件）rc=0；stage 一个真不合规的新文件 => rc=1 且点名 zz_badfmt；
+  清理后回 0、文件与暂存均无残留（负向变异专门证明修死结没顺手弱化判据）。
+  **更正我把 fold 误分类**：首次比较用花括号配对提取函数体，而 blob 里既有块体函数也有箭头表达式体
+  （const fold 是 => 一行、无花括号），配对逻辑从 fold 一路吞进后面的函数，给出 fold 与
+  renderOverview 相同长度的假数据，我据此把逐字节相同的 fold 判成「同名异义」写进了报告。
+  改用按缩进取块重测：fold 两侧 127/127 完全相同，已入判据。
+  教训（写进报告）：**提取器出错的症状是两侧长度相等而不是不等** —— 只盯「有没有分叉」，
+  看不见「我比较的对象是不是同一件事」。
+  本轮我自己还有两次误操作，都如实记（不藏）：
+  ① 试探 edit 时传了 new_string 空串 —— 它**真的把 fmtTime 那行删空**了（字符串字面量未终止）。
+     靠 gofmt 报语法错当场发现，按 HEAD 恢复后重做。**教训：绝不用空 new_string 试探，
+     删除就明确用删除语义，别拿试探当读取。**
+  ② 追加报告章节时写了 `ins = [数组] + ["## 合并结论"]` —— JS 把数组隐式转成逗号字符串，
+     再 spread 成逐字符行，把 99 行报告炸成 1360 行。靠 git checkout HEAD 恢复。
+     教训：数组合并一律用 concat，绝不用 +（本仓「多层字符串改写」在册家族的又一实例）。
+  验证：全量 check_all **36 PASS / 0 FAIL**；ps1_syntax / multi_bom / ps1_encoding 三个门禁 PASS；
+  go vet rc=0（无重复顶层声明）；BOM 恰 1、纯 CRLF（check_gofmt.ps1 保持自身形态）；
+  worktree 已删、zz_badfmt 探针文件已清、untracked 无我残留。
+  报告：docs/三份内嵌JS同名helper分叉-五轴审查-2026-10-25.md 新增 §5.5 并更正 §2/§门禁建议。
 - **三份内嵌 JS 的同名 helper 全量对比审计：修 toast 延时复制漂移 + 新增逐字节一致判据（round 122-124）**：
   三份复制粘贴的内嵌脚本（appJS/govJS/poolJS，各自 IIFE 不共享模块）是本项目「单 EXE 零依赖」
   换架构的代价。round 108 只为 api() 立过契约；本轮把所有同名跨 blob 定义过完：

@@ -75,9 +75,22 @@ if ($hasGitAll) {
   $td = Join-Path ([IO.Path]::GetTempPath()) ('hwchk-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
   New-Item -ItemType Directory -Force $td | Out-Null
   try {
+    # 一次性取 HEAD 文件清单：用 ls-tree（它对不存在的 blob 不写 stderr，规避 Stop 抛错）
+    $headPaths = @(& git -C $rr ls-tree -r --name-only HEAD 2>$null)
+    if ($LASTEXITCODE -ne 0) { $headPaths = @() }
     foreach ($rel in @($tracked)) {
       $tf = Join-Path $td (($rel -replace '[\\/]', '__'))
-      cmd /c "git -C `"$rr`" cat-file blob HEAD:$rel > `"$tf`"" 2>$null
+      # 取内容前先按 HEAD 清单选来源（2026-10-25 实测两轮才修对）：
+      #   第一版写「HEAD 失败就重试 index」，仍判红 —— 本脚本 ErrorActionPreference=Stop，
+      #   native 命令往 stderr 写 fatal 会被当 NativeCommandError 抛出（本仓在册同族坑），
+      #   失败路径根本走不完。正解是不制造失败：先一次性列出 HEAD 里的路径，按存在性选
+      #   HEAD:$rel 或 index 的 :$rel（后者 = 已 stage 但尚未提交的新文件）。
+      # 为什么必须支持 index（顺序死结）：本仓验证流程是「先 git add 让 check_report_figures
+      #   的未跟踪计数反映提交后状态，再提交」。若新文件在 HEAD 取不到就算漂移，就成了
+      #   「必须先提交才能跑绿、提交前又必须跑绿」。判据不退化：index blob 就是即将进 HEAD
+      #   的那份内容，不合规照样判红。
+      $src = $(if ($headPaths -contains $rel) { "HEAD:$rel" } else { ":$rel" })
+      cmd /c "git -C `"$rr`" cat-file blob $src > `"$tf`"" 2>$null
       if ($LASTEXITCODE -ne 0 -or -not (Test-Path $tf)) { $headDriftAll[$rel] = $true; continue }
       $o = & gofmt -l $tf 2>$null
       $headDriftAll[$rel] = [bool]$o
