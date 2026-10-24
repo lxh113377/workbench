@@ -57,4 +57,24 @@ if [ $rc -ne 0 ]; then
   exit 1
 fi
 
+# ---- 第二道闸：暂存区 BOM（round 95 加）----
+# 为什么判索引而不是等工作区：check_multi_bom / check_ps1_encoding 判 HEAD 口径，
+# 文件没 commit 就不在 HEAD 里 —— round 95 实测：本地 check_all 33 PASS 而 CI 红，
+# 差的正是这段窗口。判索引能在入库前那一刻拦住。
+gate2="$repo_root/tests/check_staged_bom.ps1"
+if [ ! -f "$gate2" ]; then
+  echo "pre-commit: 找不到 $gate2 —— 跳过 BOM 闸" >&2
+  exit 0
+fi
+
+"$ps" -NoProfile -ExecutionPolicy Bypass -File "$gate2"
+rc2=$?
+if [ $rc2 -ne 0 ]; then
+  echo "" >&2
+  echo "pre-commit: 即将入库的文件有 BOM 缺陷，提交已拦截。" >&2
+  echo "修复: 剥净多重 BOM（.ps1/.psm1 含非 ASCII 需恰好 1 个；.go 必须 0 个）后 git add" >&2
+  echo "（紧急跳过: git commit --no-verify，但 CI 的 check_multi_bom 会判红，代价更大）" >&2
+  exit 1
+fi
+
 exit 0

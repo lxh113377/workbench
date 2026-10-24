@@ -34,6 +34,22 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **补上「本地绿 = CI 红」的结构性窗口：暂存区 BOM 门禁 + pre-commit 第二道闸（round 95）**：
+  round 94 提交（3ec83e9）在 CI 上被 `check_multi_bom` 判红：`tests/css-token-debt.txt` 有 **3 个前导 BOM**
+  —— 我三次用 `Buffer.concat([BOM, ...])` 写它，每次 prepend 却没先剥旧的（第 10 次 BOM 类错误）。
+  **真正的发现不是我又手滑，而是「本地 check_all 当时 33 PASS、CI 却红」**：
+  `check_multi_bom` / `check_ps1_encoding` 判的是 **HEAD 口径** —— 文件没 commit 就不在 HEAD 里，
+  所以 HEAD 口径的门禁**天然看不见「即将入库」的内容**。靠「提交后再跑一次」不可靠（我恰恰没记得）。
+  **修法：补判索引的门禁**。新增 `tests/check_staged_bom.ps1`：
+  对每个已暂存文件取 `git cat-file blob :path`（索引内容），多重 BOM（>=2）判红、
+  .ps1/.psm1 含非 ASCII 却无 BOM 判红 —— 与 check_ps1_encoding 同口径但查索引而非工作区/HEAD。
+  **挂 pre-commit 第二道闸**（`.githooks/pre-commit`，复用已有 `ps` 变量与 cd 到仓库根的修复），
+  **实测真实拦截**：故意带 3 BOM 文件提交，钩子当场拒绝并打印完整处置（含「为什么本地门禁没提前发现」）。
+  同时挂 check_all 与 CI repo-gates（第 26 个）。
+  **附带修复**：`check_staged_bom.ps1` 自身与 `css-token-debt.txt` 的 BOM 都按「先剥净再前置恰好一个」写，
+  并把这条固化成 Node 写入的标准姿势（第 10 次错误的根治不是「记得」，是让判据在入库前拦）。
+  验证：双向（合规暂存 rc=0 / 注入双 BOM + 无 BOM 中文 ps1 两处点名 rc=1）+ 钩子真实拦截 +
+  `check_report_figures` 第五次兑现（点名报告 5 处数字滞后，已同步：40/26/36）。
 - **字阶令牌第一批复活：57 处硬编码 font-size 换成 var(--fs-*)（round 94，死令牌基线逐点攻破的第一步）**：
   round 93 登记的 20 个死令牌里，字阶族（--fs-micro/mono/small/base/lead/kpi）是最大头 ——
   设计系统定义了完整字阶却**零使用**（0 处 var(--fs-*)），同时有 76 处硬编码 font-size。
