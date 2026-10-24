@@ -100,6 +100,7 @@ jobs:
             'tests/check_test_assertions.ps1',
             'tests/check_skip_disclosure.ps1',
             'tests/check_ignored_error.ps1',
+            'tests/check_dead_css_tokens.ps1',
             'tests/check_repo_eol.ps1',
             'tests/check_multi_bom.ps1',
             'tests/check_soak_json_contract.ps1',

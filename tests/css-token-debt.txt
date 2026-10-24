@@ -1,0 +1,27 @@
+﻿# CSS 死令牌基线（2026-10-24 round 93 实测登记）
+# 语义：登记在册的死令牌每次运行都打印（KNOWN 行）但不计入 rc；
+# 清掉一条（把令牌用起来 / 删掉定义）后从本文件删掉该行，门禁自动收紧。
+# 现状：56 个令牌里 20 个从未被 var() 引用；同时实际排版有 78 处硬编码 font-size
+# + 36 处硬编码 margin/padding —— 设计系统名义存在实际失效。
+# 处置顺序（逐点攻破，不一次改 114 处）：先字阶（--fs-*，78 处硬编码的最大头），
+# 再间距（--sp-*），最后颜色族。每清一批，本文件同步瘦一圈。
+--ink
+--muted
+--accent-soft
+--accent-3
+--glow-cyan
+--glow-violet
+--scanline
+--fs-micro
+--fs-mono
+--fs-small
+--fs-base
+--fs-lead
+--fs-kpi
+--sp-1
+--sp-2
+--sp-3
+--sp-4
+--sp-5
+--sp-6
+--sp-7

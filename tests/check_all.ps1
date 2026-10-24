@@ -1,4 +1,4 @@
-﻿<#
+<#
   check_all.ps1 — 工作台预检总门禁：把三条独立门禁串成一次调用。
 
   为什么需要（2026-10-19）：
@@ -270,7 +270,15 @@ Section '暂存区 gofmt（提交前闸，防「改完忘 gofmt」进提交）' 
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
+Section 'CSS 死令牌（设计令牌不得定义了却没人用）' {
+  $g = Join-Path $Root 'tests\check_dead_css_tokens.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section '忽略错误（同一操作的两半不得区别对待）' {
+
   $g = Join-Path $Root 'tests\check_ignored_error.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
