@@ -5,12 +5,25 @@ package web
 const appJS = `(() => {
   const TOKEN = window.__WB_TOKEN__ || '';
   const isAdmin = document.body.classList.contains('admin');
+  // opts.timeoutMs 是**可选**的：不传就不建 AbortController，行为与改动前逐字节一致 ——
+  // 因为 /api/pool/probe 这类接口是合法慢的（probeSpecs 串行遍历 base，每个 client 超时 10s，
+  // 整体可达 N×10s）。给所有调用一刀切设超时会把能用的功能改坏，那比原缺陷更糟。
+  // 目前只有两个高频轮询器（ping / refreshTop）显式启用它。
   const api = async (path, opts = {}) => {
-    const res = await fetch(path, {
-      ...opts,
-      headers: { 'Content-Type': 'application/json', 'X-WB-Token': TOKEN, ...(opts.headers || {}) },
-    });
-    const text = await res.text();
+    const timeoutMs = opts.timeoutMs;
+    const ctl = timeoutMs ? new AbortController() : null;
+    const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : null;
+    let res, text;
+    try {
+      const rest = { ...opts };
+      delete rest.timeoutMs;
+      const fetchOpts = { ...rest, headers: { 'Content-Type': 'application/json', 'X-WB-Token': TOKEN, ...(opts.headers || {}) } };
+      if (ctl) { fetchOpts.signal = ctl.signal; }
+      res = await fetch(path, fetchOpts);
+      text = await res.text();
+    } finally {
+      if (timer) { clearTimeout(timer); }
+    }
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch (e) { data = { raw: text }; }
     if (!res.ok) throw new Error((data && (data.error || data.message)) || ('HTTP ' + res.status));
@@ -101,9 +114,14 @@ const appJS = `(() => {
       catch (e) { paint('paused'); toast('继续失败：' + e.message); }
     };
     let fails = 0;
+    // 重入守卫：ping 每 4s 一次且同样可能排队（见 refreshTop 的说明）。守卫必须与
+    // api() 的超时**配套** —— 只加守卫不加超时，一次永久挂起就会让轮询永久停摆（比现状更糟）。
+    let pingBusy = false;
     const ping = async () => {
+      if (pingBusy) { return; }
+      pingBusy = true;
       try {
-        const st = await api('/api/status');
+        const st = await api('/api/status', { timeoutMs: 8000 });
         fails = 0;
         const phase = (st && st.phase) || 'idle';
         paint(PHASES[phase] ? phase : 'idle');
@@ -111,6 +129,7 @@ const appJS = `(() => {
         fails += 1;
         if (current !== 'busy' && current !== 'error') { paint(fails >= 3 ? 'error' : current); }
       }
+      finally { pingBusy = false; }
     };
     const start = async (enter) => {
       if (inflight) {
@@ -976,9 +995,15 @@ const appJS = `(() => {
     }
   }
 
+  // 重入守卫：/api/status 要拿引擎写锁（Phase/LastError 都 e.mu.Lock），
+  // 点「启动」时 Start() 持锁跨 bootstrapAutonomy（内含模型调用）可达数秒 —— 此时顶栏
+  // 请求会排队。5s 一轮 + 无守卫 = 一次卡顿就堆一串在途，且旧响应后到会把顶栏往回拨。
+  let topBusy = false;
   async function refreshTop() {
+    if (topBusy) { return; }
+    topBusy = true;
     try {
-      const st = await api('/api/status');
+      const st = await api('/api/status', { timeoutMs: 20000 });
       const s = st.stats || {};
       const phaseText = { running: '运行中', paused: '已暂停', stopped: '已停止', idle: '待启动' }[st.phase] || st.phase;
       const el = document.getElementById('topStat');
@@ -1008,6 +1033,7 @@ const appJS = `(() => {
       }
       if (el) { el.textContent = top; el.style.color = color; el.title = tip; }
     } catch (e) { /* ignore */ }
+    finally { topBusy = false; }
   }
 
   const btnPause = document.getElementById('btnPause');
