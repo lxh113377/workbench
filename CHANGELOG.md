@@ -16,6 +16,26 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **quality-verify 模板新增要求⑥「时序类判据必须给复现率」+ 本轮我自己两个错（round 123-124）**：
+  编码的教训来自本轮真事：我 round 121 给 DOCX 并发写了测试、本机跑过一次绿就写「一次消除三缺陷」，
+  CI run 40127263998 用同一个测试把它证伪 —— 复现率约 1/30，主 race job 绿、只有纯净检出 job 红。
+  新⑥要求：并发/竞态/偶发类判据必须给「N 次里失败 M 次」，修复后同样重复并给出 M=0；
+  原⑥顺延为⑦（结论只能是已验证有效或未验证）。
+  **我的错一（写模板时自己踩了转义坑）**：给 Go 字符串拼接行加了行尾两个反斜杠，渲染出字面
+  「仍绿）。」这种残渣；更糟的是我的探针判据查的是「两个连续反斜杠」，单反斜杠照样放行 ——
+  运行时打印 TAIL 才看见。这与本仓在册的 round 116「判据只搜 rgb( 而仓库多数写 rgba(」完全同族：
+  **判据比被测缺陷窄，就会假绿**。改成数「字面反斜杠总数」（LITERAL_BS=0）才算真验证。
+  **我的错二（凭记忆叙述验证结果）**：我说「figures 判红、要同步报告数字」，实际本轮根本没跑过它 ——
+  那是上一轮的记忆。实测 FIG=0 全项一致。定规重申：凡能从磁盘状态重推的结论，必须当场机器验证。
+  中途 defaults.go 曾被我的字符串手术削掉闭合引号（slice 算错长度）导致 5 行语法坏；
+  处理方式是 git checkout HEAD 恢复后重新一次成型插入，而不是在坏文件上打补丁。
+  验证走运行时：临时 cmd 遍历 Defaults() 取 quality-verify 渲染真值 ——
+  LEN=1193、VALIDATE=OK、HAS6/HAS7=true、LITERAL_BS=0、UNKNOWN_PH=false、LINECOUNT=2；
+  探针用完即删并复验未跟踪生产件 0。templates+chain 包 rc=0、vet rc=0、gofmt clean、
+  BOM 0 纯 LF；check_report_figures rc=0。
+  同轮 CI 4a161e3（WriteFileAtomic 加锁修复）三 job 全绿、snapshotBuild result=PASS、
+  GATE PASS 行数 27/27；我那个「疑似真实失败」分类器把 ANSI [36;1m 源码回显误判成执行输出，
+  已用计数佐证排除（同族第三次测量错）。
 - **修生产缺陷：WriteFileAtomic 同路径并发全失败（pathLocks 串行化）+ 更正我自己两处 over-claim（round 123）**：
   **真凶不是我这轮改的门禁**：CI run 40127263998 的 repo gates 判红，但红的是我 round 121
   写的 TestWriteDocxConcurrentExportsAllSucceed ——
