@@ -16,6 +16,30 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **修 WriteFileAtomic 兜底路径的「数据归零」缺陷（对标 prometheus tsdb/wlog 的 Repair 时发现，2026-10-25 实测）**：
+  **缺陷**：`WriteFileAtomic`（全仓唯一的原子写入口，config/queue/state 快照都走它）在第一段
+  `rename(tmp→path)` 失败后，走的是「先 `os.Remove(path)` 删原文件、再重试 rename」。
+  该窗口下若第二段 rename 也失败，函数返回错误，但**原文件已被删掉、新内容也没进去**
+  ⇒ 目标文件彻底丢失（数据归零）。已用等效步骤实测复现（Remove 成功 + 第二次 rename 失败
+  ⇒ 目标文件消失）。「尽力兜底反而造成数据归零」比「写不进去」严重得多。
+  **对标来源**：prometheus `tsdb/wlog/wlog.go` 的 `Repair()` —— 它处理损坏段用
+  `Rename(fn, fn+".repair")` **先备份再重建**，从不先删；正是这条对照让我看清本仓「先删后建」的风险。
+  **修法**：「先删后建」改为「先备份后替换」—— 第一段 rename 失败 ⇒ 先把原文件 `rename` 成
+  `<path>.bak`（保数据）⇒ 再替换；若替换也失败 ⇒ 从 `.bak` 恢复；若连备份都失败（原文件被独占）
+  ⇒ 原文件不动只报错。「写不进去」远好于「把旧数据删了还是写不进去」。
+  **判据分两层**（`atomic_fallback_test.go`）：
+  ① 主力 = `TestWriteFileAtomicFallbackMatrix`，用 seam（`writeFileAtomicWith` 注入 rename/remove）
+    把四种成败组合钉死，**平台无关、不碰运气**；含 `calls` 计数断言实现调用次序（结构变了自杀不空转）。
+  ② 补充 = `TestWriteFileAtomicRenameFallbackKeepsData`，Windows 真实独占打开走「备份也失败⇒原数据保留」分支。
+  **为什么主力用 seam 而非真实文件系统**（本轮踩坑如实记）：为构造「第一段失败但备份成功」的真实窗口，
+  实测扫过四种方案 —— 独占打开（两段 rename 都失败，备份无从发生）/ 目标空目录（Go 的 rename 竞放行）/
+  非空目录（同放行）/ 只读属性（Linux 不拦）—— **本机一种都构造不出稳定组合**。若硬写真实文件系统的断言，
+  它会 `t.Skip`，判据等于不存在（本仓在册的「vacuous pass」家族）。seam 才是诚实解。
+  **变异双向**：实现改回「先删后建」⇒ 三条子判据同时判红（backup-fails 直接点名「数据归零」+
+  次序断言点名 calls=2≠3）；修复态 ⇒ 六条全绿、零 SKIP。config 覆盖 70.3%。
+  **一处顺带核实后判 NO-OP（不臆造工作）**：对标 temporal FIFOScheduler 的 `drainTasks/Abort`（停机时
+  残留任务显式中止）—— 查 engine.stop 不碰内存队列、queued 态持久化在 store、重启 Reset 会重新入队，
+  **无丢失无卡死**，属工作区已有分层设计，故不改（「无病不乱吃药」）。
 - **修模板占位符 {prev} 渲染成空洞（首轮与「父任务无摘要」两条路径）+ 抓到一个我自己写的空转测试（round 113-116）**：
   **探针实测的真实缺陷**（临时 go run 驱动真实 RenderVars，跑完即删）：
   RootTask 只填 Topic/Words/Context/Date —— **不填 Prev**；Successor 填的是
