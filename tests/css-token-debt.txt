@@ -4,10 +4,9 @@
 # 现状（2026-10-24 round 94 第一批已清）：:root 定义 49 个令牌，字阶 6 个已全部复活
 # （57 处硬编码 font-size 换成 var(--fs-*)）；剩 13 个死令牌：间距 7 + 颜色/装饰 6。
 # 现状（2026-10-24 round 96 第二批已清）：字阶 6（57 处）+ 间距 7（68 处）共 12 个令牌复活；
-# 第三批（本基线剩余 6 个）：颜色/装饰族 --ink/--muted/--accent-soft/--accent-3/--glow-violet/--scanline。
+# 第三批（本基线剩余 5 个）：纯抽象死令牌 --ink/--muted/--accent-soft/--accent-3/--glow-violet。
 --ink
 --muted
 --accent-soft
 --accent-3
 --glow-violet
---scanline

@@ -851,7 +851,7 @@ caption{caption-side:top;text-align:left;color:var(--dim);font-size:var(--fs-sma
 th,td{text-align:left;padding:11px var(--sp-3);border-bottom:1px solid var(--line);vertical-align:top}
 th{
   position:sticky;top:0;z-index:1;
-  background:linear-gradient(180deg,rgba(var(--accent-rgb),.055),transparent),var(--panel);
+  background:linear-gradient(180deg,var(--scanline),transparent),var(--panel);
   font-family:var(--font-mono);font-weight:500;font-size:var(--fs-micro);
   letter-spacing:.12em;text-transform:uppercase;color:var(--dim);
   border-bottom:1px solid var(--line-2);
