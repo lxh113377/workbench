@@ -16,6 +16,25 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **布局契约测试钉住硬约束 #6（产出根 workbench-output）+ 两次口径自纠（round 118-120）**：
+  config 包 9 个受跟踪测试里 BuildLayout/DataRoot/workbench-output 出现 0 次，硬约束 #6 只靠
+  paths.go 一行 Join 成立 —— 改它不会让任何测试变红，却会让 10 个派生路径整体搬家。
+  新增 layout_contract_test.go（TestBuildLayoutContract）三层判据：数据根名字、每字段按
+  layoutClasses 归类挂根（反射遍历 + 显式映射两层）、DSHHome 绝不落进用户 ~/.dsh（硬约束 #2 同源）。
+  **两层是被变异测试逼出来的**：第一版我删掉显式归类映射、只要求「落在三大根之一」，于是
+  「TasksDir 从 DataRoot 改挂到 Root」直接漏过 —— root 下的 tasks 当然以 root 为前缀。
+  放宽判据 = 制造假绿，与我这几轮在册的 round 64/99 同一类；这次栽在自己刚写的判据上。
+  三向变异全判红且点名（数据根改名/TasksDir reparent/DSHHome 进用户 profile），全在临时 worktree
+  内做、主仓 paths.go 复验未被污染。
+  另两处自纠（都是我的测量法错，不是代码错）：
+  ① 我用 gofmt -l 原始字节判「14 个未豁免漂移」—— 门禁是 LF 归一化口径，那 14 个全是工作区
+     CRLF（index 里是 LF），归一化后全部 clean。判漂移必须按门禁口径测，否则会把别人的
+     受跟踪文件误报成待修债务。
+  ② status 解析用 trim() 吃掉了首行前导空格，把「未暂存」显示成「已暂存」，一度让我以为
+     误吞了他人的 CHANGELOG 条目。逐字符读 X/Y 才判对（他人确实只动了 atomic/CHANGELOG，未碰我的）。
+  共享暂存区竞态实证：并行会话为解除我方未 gofmt 暂存对它的阻挡，把我的文件退回未跟踪
+  （内容未动，其 handoff §10 有记录），并提醒「add 与 commit 之间不要隔太久」——本轮遵守。
+
 - **修 WriteFileAtomic 兜底路径的「数据归零」缺陷（对标 prometheus tsdb/wlog 的 Repair 时发现，2026-10-25 实测）**：
   **缺陷**：`WriteFileAtomic`（全仓唯一的原子写入口，config/queue/state 快照都走它）在第一段
   `rename(tmp→path)` 失败后，走的是「先 `os.Remove(path)` 删原文件、再重试 rename」。
