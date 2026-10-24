@@ -34,6 +34,22 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **`check_ps1_syntax` / `check_hooks_enabled` / `check_issue_forms` 端到端验证成功（round 85）—— 剩余未验仅 4 个**：
+  ① **`check_ps1_syntax`**：造一个未闭合字符串的 `.ps1`，判红 `tests/check_evil85.ps1:3`
+     `The string is missing the terminator: '.`，并附本地自检命令（`Parser::ParseFile`）。
+     它补的正是 round 30 盘点发现的覆盖缺口（此前 3 个最相关门禁对语法错误全部 rc=0 放过）。
+  ② **`check_hooks_enabled`**：**双向**验证。PASS 路径有个意外收获 —— git worktree **继承**主仓库的
+     `core.hooksPath`（共享配置），所以 worktree 里 rc=0 是正确行为（hook 确实装着）；
+     FAIL 路径把 `core.hooksPath` 临时指向 `/nonexistent-hooks`，门禁精确报
+     `FAIL: core.hooksPath=[/nonexistent-hooks]，期望 [.githooks]` + 修复命令 `install-hooks.ps1`。
+     **测后立即恢复配置并复验**（`.githooks`）—— 这类「改全局配置做变异」的测试必须带恢复步骤，
+     否则会把好体系改坏（本仓在册：改坏比不改更糟）。
+  ③ **`check_issue_forms`**：把 `bug_report.yml` 里 dropdown 的 `options` 左移到 `attributes` 外（块级），
+     判红 `块 subsystem 的 options 缩进错（与 type 同级），必须放在 attributes 之下`。
+     它防的是「GitHub 静默少渲染一个字段、页面看起来正常」这类缺陷。
+  至此累计 **31 个判据拿到正向证据**；剩余未验 4 个：
+  `artifact_soak_fresh`（已被真实场景反复验证 —— 本地 FAIL 是对的）、`homepage` / `tray_window`（需活实例或桌面会话）、
+  `staged_gofmt`（判据形态与 gofmt 相同、且 pre-commit 钩子已在 round 77 真实捕获过它）。
 - **6 小时空窗后全面健康检查 + `check_readings_trend` 存在性核对二次验证（round 84）**：
   空窗 6h 后（活实例仍在用户停止状态）做全量复验，结论：**体系无腐坏**。
   ① 本地 `check_all` 全量：**30 PASS / 1 FAIL / 0 SKIP**，唯一 FAIL 是产物时效（已知阻塞项，未变）；
