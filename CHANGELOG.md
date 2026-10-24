@@ -34,6 +34,18 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **第 9 次 BOM 错 + 根治方案固化（round 93 收尾）**：
+  round 93 提交后 CI 红：`check_ps1_encoding` 判 `tests/check_all.ps1` 缺 BOM ——
+  我用 `Buffer.from(ca.replace(...), 'utf8')` 写回时又忘前置 BOM（第 9 次；round 90 修过一次同文件）。
+  **本地 PS7 容忍无 BOM、CI PS5.1 不容忍** —— 这正是该门禁存在的理由，它第 9 次兑现。
+  **为什么屡犯不改**（诚实归因）：根因是「我的 Node 写入路径与 .ps1 的 BOM 契约是两套逻辑」——
+  `tools.write` 写 .ps1 时我会手动补 BOM，但 `fs.writeFileSync(p, Buffer.from(...))` 这条**代码路径**没有，
+  而我在 check_all.ps1 上反复用后者（因为要做 replace 拼接）。
+  **根治（不再靠「记得」）**：所有 .ps1 写入统一走 `runtime/tmp/bomcheck.ps1` 自检（round 90 已建），
+  且本Round起定规：**凡用 `fs.writeFileSync` 写 .ps1，写完必须立即跑 bomcheck**，
+  把「写完才发现」变成「写完即查」。bomcheck 三向自检已通过（.ps1=1 / .go=0 / 反向判 BAD+修法）。
+  另：CI 日志确认本轮新门禁 `check_dead_css_tokens` **执行正常**（KNOWN 行逐条打印），
+  红的是两个老门禁抓我的写入疏漏 —— 门禁体系工作正常，是我的操作流程漏了一道。
 - **修「虚假成功反馈」真缺陷 + 新增忽略错误门禁（round 89，objective「包裹代码质量、报错修复」）**：
   **① 修掉一处真缺陷**：`cmd/workbench/main.go` 的 `--stop` 命令里，
   `if err := st.SaveState(state); err != nil { ...return 1 }` 之后紧跟 `_ = st.Savepoint()`，
