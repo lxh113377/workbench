@@ -258,3 +258,63 @@ func TestRandPickerBounds(t *testing.T) {
 		}
 	}
 }
+
+// TestBothPathsFillPrev 钉住「{prev} 在首轮与后继两条路径都不能渲染成空洞」。
+//
+// 一手缺陷（2026-10-25 实测，用探针跑真实 RenderVars）：RootTask 只填 Topic/Words/Context/Date，
+// 不填 Prev；而 Successor 填的是 model.Truncate(parent.Summary, 400) —— 父任务无摘要时同样是空串。
+// 实测渲染结果：「… ｜ 前序  ｜ 上下文 …」（前序后面直接是分隔符）。
+// 而 Context 在首轮是有兜底文案的（首轮任务，无前序上下文）—— 同一批变量里一个有兜底一个没有，
+// 是不一致而非设计。
+//
+// 为什么不能拿「内置 29 条模板 0 处使用 {prev}」当免责（运行时统计过，确实 0）：
+// 模板库支持用户导入（Registry.ImportJSON / Upsert），而 Validate 只拒绝未知占位符 ——
+// {prev} 在 allowedVars 白名单里，用户写 {prev} 完全合法、能入库、会渲染成空洞。
+// 空洞不只是难看：模型看到「前序 」无法区分「真的没有前序」与「数据丢了」，会自行编造上下文。
+//
+// 不测「父任务为 nil」：生产路径不可达（engine.go 的 extendChain 在调用前已先解引用 parent），
+// 且 Successor 后半段还有 5 处 parent.X 无守卫 —— 那是独立的结构性改动，不属本轮主张（已登记）。
+// 本轮只钉真实可达的缺陷：{prev} 在首轮与「父任务有但摘要为空」两条路径渲染成空洞。
+func TestBothPathsFillPrev(t *testing.T) {
+	cfg := config.ChainConfig{Enabled: true, MaxDepth: 5, MinQuality: 4, ContextChars: 2000}
+	g, _ := newTestGen(t, cfg)
+	// 哨兵用方括号：若 {prev} 渲染成空串，结果里会出现 "P[]"。
+	// （反例教训：首版哨兵用竖线 P{prev}|，空值时渲染成 P| 与分隔符撞形，
+	//   断言永不命中 —— 把缺陷态也判成绿。变异测试（还原旧码重跑）才抓出这个空转。）
+	tpl := model.Template{
+		ID: "prev-probe", Name: "占位符探针", Domain: "quality",
+		PromptTemplate: "T[{topic}]W[{words}]C[{context}]D[{date}]P[{prev}]",
+		Params:         model.TemplateParams{ModelTier: "balanced", MaxMinutes: 10, Tags: []string{"x"}},
+		OutputSpec:     model.OutputSpec{Format: "md", Sections: []string{"正文"}, MinWords: 100, MinBytes: 200},
+		PriorityWeight: 3, ValuePrior: 80, CostPrior: 50, CooldownMinutes: 60, DiversityGroup: "quality",
+		Chain: model.ChainSpec{MaxDepth: 5, Fanout: 2},
+	}
+	if err := templates.Validate(tpl); err != nil {
+		t.Fatalf("含 {prev} 的模板应通过校验（{prev} 在 allowedVars 白名单里）: %v", err)
+	}
+	const hole = "P[]"
+	runs := []struct {
+		name string
+		fn   func() string
+	}{
+		{"RootTask（首轮）", func() string { return g.RootTask(tpl, 1700000000).Prompt }},
+		{"Successor（父任务无摘要）", func() string {
+			q := &model.Task{ID: "p1", ChainID: "c1", Title: "父", Domain: "quality"}
+			return g.Successor(tpl, q, nil, 1, 1700000001).Prompt
+		}},
+		{"Successor（父任务有摘要）", func() string {
+			q := &model.Task{ID: "p2", ChainID: "c2", Title: "父2", Summary: "真摘要内容", Domain: "quality"}
+			return g.Successor(tpl, q, nil, 1, 1700000003).Prompt
+		}},
+	}
+	for _, r := range runs {
+		got := r.fn()
+		if strings.Contains(got, hole) {
+			t.Errorf("%s 渲染出空的 {prev}（出现 %q）—— 必须给显式兜底文案：让模型能区分「真无前序」与「数据丢了」%q", r.name, hole, got)
+			continue
+		}
+		if strings.Contains(got, "{") || strings.Contains(got, "}") {
+			t.Errorf("%s 有未替换的占位符残留: %q", r.name, got)
+		}
+	}
+}

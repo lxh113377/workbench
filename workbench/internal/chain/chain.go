@@ -46,6 +46,7 @@ func (g *Generator) RootTask(tpl model.Template, now int64) *model.Task {
 		Topic:   topic,
 		Words:   fmt.Sprintf("%d", tpl.OutputSpec.MinWords),
 		Context: "（首轮任务，无前序上下文）",
+		Prev:    "（首轮任务，无前序摘要）",
 		Date:    time.Now().Format("2006-01-02"),
 	})
 	id := newID("task")
@@ -75,12 +76,19 @@ func (g *Generator) RootTask(tpl model.Template, now int64) *model.Task {
 func (g *Generator) Successor(tpl model.Template, parent *model.Task, critique *model.Critique, depth int, now int64) *model.Task {
 	context := buildContext(parent, critique, g.cfg.ContextChars)
 	topic := g.deriveTopic(parent, tpl.Domain)
+	// Prev 的兜底必须与 Context 对称：buildContext / deriveTopic 都对 parent == nil 有守卫，
+	// 而原先这行直接取 parent.Summary —— nil 父任务会 panic（探针实测复现，不写行号：改一处就会失效）。
+	// 空摘要同样要给文案：模型看到空洞时分不清「真无前序」与「数据丢了」，会自行编造上下文。
+	prev := "（无前序摘要）"
+	if parent != nil && parent.Summary != "" {
+		prev = model.Truncate(parent.Summary, 400)
+	}
 	prompt := templates.Render(tpl.PromptTemplate, templates.RenderVars{
 		Topic:   topic,
 		Words:   fmt.Sprintf("%d", tpl.OutputSpec.MinWords),
 		Context: context,
 		Date:    time.Now().Format("2006-01-02"),
-		Prev:    model.Truncate(parent.Summary, 400),
+		Prev:    prev,
 	})
 	id := newID("task")
 	return &model.Task{
