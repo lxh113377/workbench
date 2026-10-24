@@ -277,7 +277,15 @@ Section '暂存区 BOM（即将入库的文件不得有多重 BOM）' {
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
+Section 'CSS 颜色令牌（rgb 通道不得漂移、:root 外不得绕过）' {
+  $g = Join-Path $Root 'tests\check_css_rgb_pair.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section 'CSS 死令牌（设计令牌不得定义了却没人用）' {
+
 
   $g = Join-Path $Root 'tests\check_dead_css_tokens.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }

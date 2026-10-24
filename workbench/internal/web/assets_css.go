@@ -49,10 +49,12 @@ const appCSS = `
   --danger:#ff5c7a;
   --danger-rgb:255,92,122;
   --accent-rgb:34,211,238;
+  --bg-rgb:4,7,13;  /* 由 --bg:#04070d 派生 */
+  --accent-3-rgb:167,139,250;  /* 由 --accent-3:#a78bfa 派生（2026-10-24 收编；配套 tests/check_css_rgb_pair.ps1）*/
   /* ——— 光效令牌：HUD 的「发光」统一从这里取，避免各处硬编码 ——— */
   --glow-cyan:0 0 0 1px rgba(var(--accent-rgb),.35),0 0 28px -8px rgba(var(--accent-rgb),.55);
   --glow-cyan-soft:0 0 60px -28px rgba(var(--accent-rgb),.45);
-  --glow-violet:0 0 28px -10px rgba(167,139,250,.5);
+  --glow-violet:0 0 28px -10px rgba(var(--accent-3-rgb),.5);
   --scanline:rgba(var(--accent-rgb),.055);
   --grid-line:rgba(120,190,255,.055);
   /* ——— 形状：切角（HUD 面板的角不是圆的，是斜切的） ——— */
@@ -88,7 +90,7 @@ body{
   /* 顶部冷极光：科技感的「环境光」，只在中上部可见，不干扰读数 */
   background-image:
     radial-gradient(1200px 520px at 50% -10%,rgba(var(--accent-rgb),.075),transparent 62%),
-    radial-gradient(760px 380px at 82% -6%,rgba(167,139,250,.055),transparent 60%),
+    radial-gradient(760px 380px at 82% -6%,rgba(var(--accent-3-rgb),.055),transparent 60%),
     repeating-linear-gradient(90deg,var(--grid-line) 0 1px,transparent 1px 56px),
     repeating-linear-gradient(180deg,var(--grid-line) 0 1px,transparent 1px 56px);
   background-attachment:fixed,fixed,fixed,fixed;
@@ -433,7 +435,7 @@ body.admin{
 /* 顶栏外壳：命令区（topbar）+ 页面识别区（pagebar）共用一条吸顶壳 */
 .topbar-shell{
   position:sticky;top:0;z-index:20;
-  background:rgba(4,7,13,.88);
+  background:rgba(var(--bg-rgb),.88);
   -webkit-backdrop-filter:blur(18px) saturate(1.4);
           backdrop-filter:blur(18px) saturate(1.4);
   border-bottom:1px solid var(--line-2);
