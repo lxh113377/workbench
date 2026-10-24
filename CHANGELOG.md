@@ -34,6 +34,32 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **补齐顶栏「更多」菜单的 Escape（govJS/poolJS 两份漏抄）+ 用实质判据替换脆弱的计数判据（round 111）**：
+  **缺陷**（实测取证）：adminPage / governancePage / modelPoolPage 三页都有 `id="btnMore"` + `id="topMore"`，
+  但菜单块里只有 appJS 绑了 Escape —— 而 appJS 的注释把这条当硬性要求（「键盘用户用 Enter 打开后，
+  鼠标外点逻辑对他们不存在」）。**更糟的是 poolJS 有条注释「与顶栏「更多」菜单的 Escape 处理同型」，
+  拿一个当时并不存在的实现当参照**（文档描述了一个没有的行为；本轮补齐后该说法才成立）。
+  这是 round 109 esc 单引号映射那次的**同型复发**：三份内嵌脚本是各自独立副本，一份里修的另两份不会自动跟上。
+  **修法**：给 govJS/poolJS 各补一个与 appJS 同形态的顶层 keydown 块（含 `btnMore.focus()` 焦点回退）。
+  **行为验证**（假 DOM 真跑三份的菜单块）：三份都是「Enter 能打开 → Escape 关闭 → 焦点归按钮」；
+  **反证有牙齿**：拿 HEAD（改动前）的 govJS/poolJS 跑同一 harness，两者都是「打开=Y Escape关闭=N 焦点归位=N」。
+  **判据侧的关键决定**：补完菜单 Escape 后 poolJS 的 keydown 到 3 处，撞上既有判据「n > 2 判红」而 CI 会挂。
+  我没有去放宽数字，而是查清那条判据**两头都错**：
+  · 假红 —— 本仓合法就有 3 处（菜单 / 编辑器 / 待确认态各一），加第四个合法入口即撞线；
+  · 假绿 —— 若只有一处但写进 render 体内，按一次 Escape 触发 N 次关闭，原缺陷照样漏。
+  真实风险是「监听器随重绘累积」，不是「数量多」。故换成**实质判据**：
+  `repeatableFuncBodies()` 抽出 render* / load / fill* 的函数体，keydown 绑定不得出现在其中。
+  双向验证：正常态三份 0 命中（rc=0，不因合法的第 3、4 处绑定误报）；注入 renderList 体内 => 判红点名。
+  新增 `TestTopbarMenuEscapeInAllBlobs`（三份菜单块各查三件事实：Escape 键判据 / hidden=true / focus()），
+  变异 A 拆掉我补的 gov 块 => 判红点名「治理台 govJS 的顶栏菜单缺键盘可达性构件」；
+  **对照：那种情况下 keydown 计数是 0，旧的 n>2 判据完全判不出来（静默放过）** —— 这是实质判据优于计数的实证。
+  过程中的自纠错（都靠跑真结果暴露，非推测）：
+  ① 我第一次跑变异 B 得 rc=0，误以为「实质判据没牙齿」，深挖发现是**我的正则写坏了**
+     （占位符构造时把 `\w*` 误成 `$W*`，`repeatableHead` 永不匹配 => 判据静默空转）；
+     修好后 B 立刻判红点名。**「测试判绿」有两种：真干净，和判据根本没跑** —— 必须做变异才知道是哪种。
+  ② 我重建 keyboard 测试文件后逐行 diff 显示 51 行差异，实为整体错位一行（多 import 一行），
+     改用「旧行是否都在新文件」的包含性检查才确认无内容丢失（只少了被删旧函数的 3 行文档注释，含义已写入新注释）。
+  顶栏菜单三份齐全 + 两份新判据双向验证完成。
 - **我自己的流程退化被 CI 抓到：提交前只跑手工挑的 12 个门禁，漏了 check_test_assertions（round 109 收尾）**：
   `bc4ed04` 推上去 repo-gates 判红 —— `TestAppJSEscCoversAllDangerousChars 无任何断言`。
   **判据是对的，我的改动是错的**：为跑三份内嵌脚本，我把主体搬进 `checkEscContract(t, name, js)`，

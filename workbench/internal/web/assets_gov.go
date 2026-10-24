@@ -190,6 +190,14 @@ const govJS = `(() => {
         topMore.hidden = true; btnMore.setAttribute('aria-expanded', 'false');
       }
     });
+    // Escape 必须能关掉菜单：键盘用户用 Enter 打开后，鼠标外点逻辑对他们不存在。
+    // （2026-10-24 补齐：appJS 早已有这段，本份漏抄 —— 三份内嵌脚本是各自独立的副本，
+    //   一份里修的另两份不会自动跟上；同型缺陷见 esc 单引号映射那次。）
+    document.addEventListener('keydown', function (ev) {
+      if (ev.key === 'Escape' && !topMore.hidden) {
+        topMore.hidden = true; btnMore.setAttribute('aria-expanded', 'false'); btnMore.focus();
+      }
+    });
   }
 
   document.getElementById('govRefresh').addEventListener('click', load);
