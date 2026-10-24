@@ -16,6 +16,23 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **修任务队列「低优任务被饿死」结构缺陷：严格优先级加有界 aging（2026-10-25，对标 temporal IWRR 权重公平）**：
+  **缺陷**：`internal/queue/sortTasks` 原是**纯严格优先级**（置顶 > 优先级高 > 创建时间早 FIFO）。
+  7×24 自主循环会**持续产任务**（链衍生用模板 PriorityWeight、自主目标固定 4、面板可设 1/5 ——
+  生产优先级实测异质 1-5，不是恒相等），低优任务在高优持续流入下可**永久排队（饥饿）**。
+  这是无人值守系统的经典故障：面板"运行中但产出为0"一类在册事故的上游候选根因之一。
+  **修法**：有界 aging —— 有效优先级 = `Priority + min(agingMaxBoost, 已等步数)`，
+  每等 `agingStepMs=5min` +1，封顶 5（够让 prio-1 追平并反超 fresh prio-5）。
+  **有界是关键**：当所有任务都比封顶更老时，全体获得相同 boost ⇒ 退化回严格优先级，
+  既修饥饿又不无谓打乱既有顺序 ⇒ 既有 `TestPopRespectsPriorityAndFIFO`（全饱和区）仍成立。
+  **时钟注入**：新增 `q.now` 字段（默认走 `model.Now()`，实测返回 UnixMilli ⇒ aging 单位是毫秒，
+  与 CreatedAt 同口径），单测用它构造**非饱和**档位（等 30min 的 prio1 反超刚到的 prio5），
+  这样判据落在真实缺陷区而非退化区。
+  **变异双向**：把 `sortTasks` 退回严格优先级 ⇒ `TestQueueAgingPreventsStarvation` 判红且**逐字打印
+  饿死序列**（`[high-fresh mid-fresh low-waited]`，等待的 prio1 落到最后）；修复态判绿。
+  RED 由缺陷本身触发，非旁支 panic（本仓在册教训）。
+  **覆盖**：queue 包 `effectivePriority`/`nowMs`/`sortTasks` 三新函数均有判据；queue 覆盖 100%→98.8%
+  （新增 aging 分支，纯函数全测到）。全量 `go test ./... -count=1` 30 包全 rc=0。
 - **布局契约测试钉住硬约束 #6（产出根 workbench-output）+ 两次口径自纠（round 118-120）**：
   config 包 9 个受跟踪测试里 BuildLayout/DataRoot/workbench-output 出现 0 次，硬约束 #6 只靠
   paths.go 一行 Join 成立 —— 改它不会让任何测试变红，却会让 10 个派生路径整体搬家。
