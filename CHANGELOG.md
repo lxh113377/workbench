@@ -34,6 +34,29 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **收敛三份 api() 分叉 + 推翻我上轮自己写的 P1（round 108）—— 登记遗留时「同源推测」不等于「实测」**：
+  **① 上轮的 P1 被本轮实测推翻（诚实修正）**：我上轮把 gov/pool 的 load() 列为「同源 P1 风险、
+  待补守卫」。本轮 Node 直读源码复核：`handleGovSummary`（gov_api.go:28）只调 Store().Summary、
+  `handlePoolStatus`（pool_api.go:28）→ Service.Status()（service.go:368）读 specs/health/lanes ——
+  **两者都不打网络、不碰 e.mu**，原 P0 的因果链（读端点被写侧持锁拖慢）在这两个端点上不存在。
+  更要命的是 assets_pool.go 的 load() 有 **10 个调用点**，多数是用户动作后的刷新（删除/保存/
+  切换整池/刷新按钮）—— 照搬 `if (busy) return` 会**吞掉这些刷新**，把修好的问题换成新问题。
+  ⇒ 不改守卫（无病不乱吃药）。报告原文保留 + 标注「已被推翻」并写清我错在哪：
+  **依据是「同源推测」而非「实测该端点成本」时，应标「待核」不是「应改」**（新增元教训 #6）。
+  **② 本轮做的是另一件真实的事：收敛我上轮引入的三份 api() 分叉**。复核时靠 Node 逐行 diff
+  发现**比 timeoutMs 更早的一处静默分叉**：govJS 错误处理是 `data.error`，appJS/poolJS 是
+  `data.error || data.message`。查服务端：bad() 只发 `{"error": msg}`、web 全包 message 键 **0 处**
+  ⇒ 那是死分支、不改输出（否则我「统一」它会顺手改变 gov 的错误语义）。三份现统一为同一份
+  timeoutMs 能力；行为测试证明**不传 timeoutMs 时三份逐字节等价于改前**（快速 resolved、挂起
+  不 abort、错误文案一致、timeoutMs 不泄漏进 fetch 参数），零行为变更。
+  **③ 新增一致性门禁 `api_consistency_contract_test.go`**：三份 api() 去注释后必须逐行相同 ——
+  它不判「谁对谁错」（那是设计问题），只判「不许分叉」。可证伪、零误报。
+  变异双向验证：注入真实分叉（headers 少 X-WB-Token）=> 判红并逐行点名差异；
+  **把 api() 改名 => 报 Fatal「结构变了须同步本测试」而非静默判绿**（round 53 vacuous pass 家族
+  的防护：判据找不到目标时必须自杀，不能空转）；还原 rc=0 文件字节一致。
+  另记一次自己的测试 bug：行为 harness 里 `const [outcome] = await wd(...)` 对**字符串**解构取到
+  首字符（'resolved'→'r'），导致四条判定假失败。修正为直接接收。**测试脚本自己也要 review。**
+  验证：三份 embedded JS `node --check` 全过；go test ./internal/web/ rc=0；go build rc=0；gofmt clean。
 - **更正上一轮的虚报：那次提交根本没落地（round 107，#36 禁止假完成的自我违反）**：
   上一轮报告结尾写「提交穿过 pre-commit 两道闸、推送到 CI 全绿」——但本轮 `git log` 显示
   HEAD 仍是 `5086a76`（round 102），**那次提交从未发生**：commit 那一步被中断，修复只在

@@ -3,12 +3,25 @@ package web
 // poolJS 是模型池控制台的前端逻辑（原生 JS，无框架、无构建）。
 const poolJS = `(() => {
   const TOKEN = window.__WB_TOKEN__ || '';
+  // opts.timeoutMs 是**可选**的：不传就不建 AbortController，行为与改动前逐字节一致 ——
+  // 因为 /api/pool/probe 这类接口是合法慢的（probeSpecs 串行遍历 base，每个 client 超时 10s，
+  // 整体可达 N×10s）。给所有调用一刀切设超时会把能用的功能改坏，那比原缺陷更糟。
+  // 本文件的调用方目前都不传它（gov/pool 端点经查为快速只读，无等锁问题），保留与改前一致的行为。
   const api = async (path, opts = {}) => {
-    const res = await fetch(path, {
-      ...opts,
-      headers: { 'Content-Type': 'application/json', 'X-WB-Token': TOKEN, ...(opts.headers || {}) },
-    });
-    const text = await res.text();
+    const timeoutMs = opts.timeoutMs;
+    const ctl = timeoutMs ? new AbortController() : null;
+    const timer = ctl ? setTimeout(() => ctl.abort(), timeoutMs) : null;
+    let res, text;
+    try {
+      const rest = { ...opts };
+      delete rest.timeoutMs;
+      const fetchOpts = { ...rest, headers: { 'Content-Type': 'application/json', 'X-WB-Token': TOKEN, ...(opts.headers || {}) } };
+      if (ctl) { fetchOpts.signal = ctl.signal; }
+      res = await fetch(path, fetchOpts);
+      text = await res.text();
+    } finally {
+      if (timer) { clearTimeout(timer); }
+    }
     let data = null;
     try { data = text ? JSON.parse(text) : null; } catch (e) { data = { raw: text }; }
     if (!res.ok) throw new Error((data && (data.error || data.message)) || ('HTTP ' + res.status));
