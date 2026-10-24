@@ -20,12 +20,10 @@
 
 tests/docker-autonomy/fakedsh/main.go
 tests/docker/httpget/main.go
-workbench/cmd/workbench/acceptance.go
 workbench/cmd/workbench/acceptance_test.go
 workbench/cmd/workbench/plan_selftest_dispatch_test.go
 workbench/internal/artifact/artifact.go
 workbench/internal/artifact/protocol_test.go
-workbench/internal/autonomy/manager.go
 workbench/internal/autonomy/planner.go
 workbench/internal/blueprint/plan.go
 workbench/internal/config/config.go
@@ -43,4 +41,3 @@ workbench/internal/supervisor/metrics_csv_test.go
 workbench/internal/tray/tray_window_style_test.go
 workbench/internal/web/export.go
 workbench/internal/workspace/deadlock_test.go
-workbench/internal/shortcut/shortcut_windows.go
