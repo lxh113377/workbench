@@ -25,13 +25,25 @@ import (
 //  4. esc 对 null/undefined 不炸；
 //  5. esc 确实被大量使用（不是死码）。
 func TestAppJSEscCoversAllDangerousChars(t *testing.T) {
-	js := appJS
+	// 【round 109 扩覆盖面】本测试原本只测 appJS 一份 —— 这正是 poolJS 的
+	// esc 漏抄单引号映射却无人发现的原因（判据逻辑是对的，跑错了对象）。
+	// 现改为三份各跑：helper 在三份里是**独立副本**（内嵌脚本不共享顶层 const），
+	// 任何一份的 esc 坏掉，它那份 innerHTML 就同时失守。
+	for _, b := range []struct {
+		name string
+		js   string
+	}{{"appJS", appJS}, {"govJS", govJS}, {"poolJS", poolJS}} {
+		t.Run(b.name, func(t *testing.T) { checkEscContract(t, b.name, b.js) })
+	}
+}
+
+func checkEscContract(t *testing.T, blobName, js string) {
 	if js == "" {
-		t.Fatal("appJS 为空 —— 判据失去受理面")
+		t.Fatal("内嵌脚本为空 —— 判据失去受理面")
 	}
 	constIdx := strings.Index(js, "const esc =")
 	if constIdx < 0 {
-		t.Fatal("找不到 esc 定义 —— XSS 防线的根基函数被改名或删除？18 处 innerHTML 会同时失守")
+		t.Fatal("找不到 esc 定义 —— XSS 防线的根基函数被改名或删除？该页所有 innerHTML 会同时失守")
 	}
 	// 【round 92 修漏检】首版取 esc 定义后 300 字节窗口查「包含某字符」—— 窗口里
 	// 的 '' : s 兜底表达式自带单引号，导致「含 '」恒真，变异（删掉正则里的 '）漏检。
@@ -53,15 +65,15 @@ func TestAppJSEscCoversAllDangerousChars(t *testing.T) {
 			t.Errorf("esc() 的 replace 正则 %q 缺少字符 %q —— 该字符不过转义，innerHTML 注入可直接用", reLit, c)
 		}
 	}
-	escIdx := strings.Index(js, "const ESC =")
-	if escIdx < 0 {
-		t.Fatal("找不到 ESC 映射表")
-	}
-	escMap := js[escIdx : escIdx+300]
+	// 【round 109 形态无关化】原本要求「必须有 const ESC 表」，但三份实现形态不同：
+	//   appJS / poolJS 用 const ESC 映射表；govJS 把映射**内联**在回调里（无 const ESC）。
+	//   那是风格差异不是缺陷 —— 原判据会对 govJS 误报（实测撞上 t.Fatal）。
+	// 改为查「五实体在整份脚本里各至少出现一次」：三份实测每份都恰好 1 次（只存在于 esc 相关处），
+	// 而本轮抓到的缺陷正是 poolJS 缺 &#39;（计数 0）—— 既不误报又能判出真漏抄。
 	ents := []string{"&amp;", "&lt;", "&gt;", "&quot;", "&#39;"}
 	for _, e := range ents {
-		if !strings.Contains(escMap, e) {
-			t.Errorf("ESC 映射表缺少实体 %s", e)
+		if !strings.Contains(js, e) {
+			t.Errorf("%s 的 esc 缺实体 %s —— 对应字符不被转义（映射内联或表缺项都算），innerHTML 注入可直接用", blobName, e)
 		}
 	}
 	if !strings.Contains(escDef, "== null") {
@@ -71,5 +83,12 @@ func TestAppJSEscCoversAllDangerousChars(t *testing.T) {
 	if uses < 5 {
 		t.Errorf("esc( 只用了 %d 处 —— 要么大量 innerHTML 没转义，要么 esc 已是死码", uses)
 	}
-	t.Logf("esc() 契约合规：五字符全覆盖 + 五实体齐全 + null 兜底；全脚本 esc( 使用 %d 处", uses)
+	// 【round 109 新增】禁静默透传：兜底只能是「映射缺失即出错」，不能原样返回。
+	// 实测病灶：poolJS 曾是 c => ESC[c] || c，且漏抄单引号映射 ——
+	// 正则声称处理 ' ，映射却不处理，|| c 把它变成**静默原样透传**（比报错更难发现）。
+	// 另两份都是 c => ESC[c]（缺映射会产出 "undefined" 字样，走查立刻可见）。
+	if strings.Contains(js, "ESC[c] || c") {
+		t.Errorf("%s 的 esc 用 `ESC[c] || c` 静默透传兜底 —— 映射缺项时会原样输出危险字符且不报错", blobName)
+	}
+	t.Logf("%s: esc() 契约合规（五字符全覆盖 + 无静默透传；全脚本 esc( 使用 %d 处）", blobName, uses)
 }

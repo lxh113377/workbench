@@ -28,7 +28,8 @@ const poolJS = `(() => {
     return data;
   };
   const ESC = { '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' };
-  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ESC[c] || c);
+  ESC[String.fromCharCode(39)] = '&#39;';
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, c => ESC[c]);
   // 两段式就地确认（armed confirm）—— 取代原生 confirm()，理由见 app.js 同名注释。
   // 本包**自带**一份：app.js / pool.js / gov.js 是三个独立脚本包，顶层 const 不跨页可见。
   const ARM_MS = 4000;
