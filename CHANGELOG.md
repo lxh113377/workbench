@@ -16,6 +16,39 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **修生产缺陷：WriteFileAtomic 同路径并发全失败（pathLocks 串行化）+ 更正我自己两处 over-claim（round 123）**：
+  **真凶不是我这轮改的门禁**：CI run 40127263998 的 repo gates 判红，但红的是我 round 121
+  写的 TestWriteDocxConcurrentExportsAllSucceed ——
+  「替换目标文件失败（已从备份恢复）: rename … being used by another process」。
+  主 vet+test(race) job 绿、只有纯净检出 job 红：本机 -count=30 实测**无锁版至少 1 次
+  失败（约 1/30）、带锁版 0/30** —— 典型时序 flaky，正是本仓在册的「本地绿 CI 红」。
+  机制：tmp 名唯一只解决了临时文件互相覆盖，**目标文件与 .bak 仍是共享名**；
+  rename(path→.bak) 与 rename(tmp→path) 在 writer 之间交错，A 搬走目标时 B 正动同一
+  文件，四个 writer 全部返回错误。WriteFileAtomic 是全仓唯一原子写入口（config/queue/
+  state/导出/面板保存都走它），所以这是生产数据路径上的缺陷。
+  **修在正确的层**：config 包加 pathLocks（sync.Map，key 走 filepath.Clean）
+  + writeFileAtomicWith 入口 defer lockFor(path).Unlock()。不同路径互不阻塞；
+  不给 .bak 加唯一名的理由是那样四个 writer 仍在抢目标、失败只换个形式。
+  判据也加在缺陷所在层：新增 config/atomic_concurrent_test.go 两条性质（全部成功 +
+  内容不撕裂，四个等长同字节载荷混合可辨）；只钉 web 层的话，将来别的使用者踩同坑没人报警。
+  **加锁前的锁序复核**（在册教训 round 111 自写）：持锁期间只做文件系统调用、不再取任何锁；
+  外部 Store.Replace 是 s.mu 到本锁单向，反向不存在 ⇒ 无环。config+web -race rc=0。
+  **双向验证**：worktree（HEAD 0c55a0e 无锁版）第 2 轮即判红并点名「pathLocks 未生效？」；
+  带锁版 60 轮 × 4 writer 全绿且无 .bak/.tmp 残渣。
+  **更正一（本轮主报告）**：我 round-123 报告 §1 把那次 check_all 假红归因给「Temp 目录
+  同秒撞 + finally 互删」。Temp 机制本身实测成立（同秒 HHmmss 相等=True），但**那次红的
+  真实来源是上面的并发缺陷** —— 我把一个成立但未验证的机制当成了已证实的归因。已在该
+  报告里就地更正（不删原文，写更正，让读者看到判断怎么改的）。
+  **更正二（round 121 报告）**：原文「一次消除三缺陷」含「并发已解决」之意，属 over-claim；
+  并入 WriteFileAtomic 只解决了临时文件互踩。已就地更正并指向本报告。
+  教训写进 round 121 报告的 PR 模板建议 #3：**凡含并发类断言的「消除缺陷」必须给复现率**，
+  否则「测过一次绿」会被读成「并发安全」。
+  新增报告 docs/原子写同路径并发-五轴审查-2026-10-25.md（五轴 + 合并结论 + 门禁建议；
+  建议 #2「静态扫描入口是否对共享路径加锁」明确不采纳 —— 区分不了「已在上层串行化」
+  与「真漏锁」，误报率高）。
+  验证：config -race / web -race rc=0；vet rc=0；gofmt clean；atomic.go BOM 0 纯 LF、
+  反斜杠与 HEAD 差 0（我没引入新的）；worktree 与探针已删。
+
 - **修门禁自身的并发互删假红：纯净检出门禁临时目录只到秒 + 接上声明却从未使用的超时参数（round 121-123）**：
   起因是全量 check_all 出现过一次「FAIL 纯净检出编译」，但我单独重跑同一门禁是 PASS、
   复跑全量也是 36 PASS / 0 FAIL。偶发红若不归因，下次会再撞并被当成真缺陷追查。

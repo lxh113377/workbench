@@ -40,8 +40,48 @@ var (
 	fsRemove = os.Remove
 )
 
+// pathLocks 把「同一目标路径的原子写」串行化（2026-10-25 CI 实测暴露的缺陷）。
+//
+// 缺陷与取证：tmp 名唯一只解决了「临时文件互相覆盖」，目标与 .bak 仍是共享名。
+// 四个 writer 并发写同一 path 时 Windows 报：
+//
+//	替换目标文件失败（已从备份恢复）: rename ... 被另一进程占用
+//
+// 即 rename(path 到 .bak) 与 rename(tmp 到 path) 在 writer 之间交错 ——
+// A 把文件搬走的同时 B 正动同一目标，最终四个 writer 全部失败。
+// 现场 CI run 40127263998：纯净检出 go test 判红（主 race job 绿，时序相关 = flaky）。
+//
+// 锁序复核（在册教训：加锁前必看锁序，防自锁/死锁）：持锁期间只做文件系统调用，
+// 不再取本包或他包任何锁；外部调用方是 config.Store 的 s.mu 指向本锁的单向顺序，
+// 反向不存在，无环。
+//
+// 为什么不给 .bak 也加唯一名：那样四个 writer 仍在抢目标，失败只是换个形式；
+// 串行化一次同时解决目标与 .bak 两处竞态，且不同路径互不阻塞（key 取 path）。
+//
+// 内存边界（我自己引入的取舍，如实记）：pathLocks 不清理条目，每个被写过的不同
+// path 留一个 mutex（约 100-200B）。增长由「不同路径数」而非「写次数」决定：
+// queue/state/config 是固定名，导出文件名带时间戳（用户触发的低频操作，实测日增量级）。
+// 不做清理的原因不是省事 —— 清理有正确性风险：条目在被持锁时删除，会让后续
+// LoadOrStore 拿到第二把锁，等于把竞态换了个地方复现。宁留上界明确的小内存。
+//
+// 边界如实声明：key 区分大小写，而 Windows 文件系统不区分 —— 同一文件若被写成
+// 两种大小写形式仍可能各拿一把锁。本仓路径全部由 config.BuildLayout 单点派生，
+// 不存在第二种写法；为不存在的情形加平台分支归一反而引入新风险面，故不做。
+var pathLocks sync.Map
+
+// lockFor 取该路径的互斥锁并加锁，调用方负责 Unlock。
+// key 经 filepath.Clean 归一化，避免同一文件的多种等价写法各拿一把锁。
+func lockFor(path string) *sync.Mutex {
+	v, _ := pathLocks.LoadOrStore(filepath.Clean(path), new(sync.Mutex))
+	mu := v.(*sync.Mutex)
+	mu.Lock()
+	return mu
+}
+
 // writeFileAtomicWith 是带 seam 的实现主体（WriteFileAtomic 走默认 seam）。
 func writeFileAtomicWith(path string, data []byte, rename func(old, new string) error, remove func(name string) error) error {
+	// 同一目标路径串行化（原因与锁序复核见 pathLocks 注释）。
+	defer lockFor(path).Unlock()
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("创建父目录失败: %w", err)
