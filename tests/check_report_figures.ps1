@@ -13,7 +13,7 @@
 #     1) 受跟踪门禁数      = git ls-files 'tests/check_*.ps1' 的条数
 #     2) CI repo-gates 数  = ci.yml 里本 job 引用的 'tests/check_*.ps1' 去重数
 #     3) check_all 覆盖数  = tests/check_all.ps1 里出现的 check_*.ps1 去重数
-#     4) 未跟踪 Go 测试数  = git status -uall 里 ?? *.go 的条数
+#     4) 未跟踪 Go 测试数  = git status -uall 里 ?? *_test.go 的条数（生产文件另计，见下）
 #   另核「结论行」**N 个判据 / M 个进 CI / 0 个孤儿 / K 类** 的 N/M/K 与上述一致。
 #   任一不符 => rc=1 并点名「报告说 X，实测 Y」，给出改哪一个字段。
 #
@@ -103,9 +103,18 @@ $caN = $caSet.Count
 
 $st = Invoke-Git @('status', '--porcelain=v1', '-uall')
 if ($st.rc -ne 0) { Write-Host ('UNVERIFIED: git status 失败: ' + $st.err.Trim()) -ForegroundColor Red; exit 2 }
+# 【round 112 修口径不一致】标签写「未跟踪 Go 测试文件」，但原算法数的是全部 *.go ——
+#   两者只在 untrackedProd > 0 时才分叉，过去恒为 0 所以被掩盖；本轮并行会话新增 2 个未跟踪
+#   **生产**文件，实测立刻差 2（报告 31 vs 算出 33），而我一度把这个红当成「报告滞后」。
+#   修法：按标签本义只数 _test.go。未跟踪**生产**文件不由这里判 —— 那是 check_untracked_go.ps1
+#   的职责（它对生产单列 [生产代码] 并直接 rc=1，是安全网不是规模数）；这里仍把生产数打出来，
+#   避免「只数测试」让生产未入库看起来被藏起来。
 $untN = 0
+$untProdN = 0
 foreach ($ln in ($st.out -split [char]10)) {
-  if ($ln.StartsWith('?? ') -and $ln.EndsWith('.go')) { $untN++ }
+  if (-not $ln.StartsWith('?? ')) { continue }
+  if ($ln.EndsWith('_test.go')) { $untN++; continue }
+  if ($ln.EndsWith('.go')) { $untProdN++ }
 }
 
 # ---- 报告里的声明 ----
@@ -145,11 +154,11 @@ if ($tableRows -lt 3) {
 if ($bad.Count -gt 0) {
   Write-Host ('报告数字门禁未通过：' + $bad.Count + ' 处与仓库实况不符') -ForegroundColor Red
   foreach ($x in $bad) { Write-Host ('  - ' + $x) -ForegroundColor Red }
-  Write-Host ('  实测：受跟踪 ' + $trackedN + ' / CI ' + $ciN + ' / check_all ' + $caN + ' / 未跟踪 Go ' + $untN) -ForegroundColor Yellow
+  Write-Host ('  实测：受跟踪 ' + $trackedN + ' / CI ' + $ciN + ' / check_all ' + $caN + ' / 未跟踪 Go 测试 ' + $untN + '（生产 ' + $untProdN + '）') -ForegroundColor Yellow
   Write-Host '  修法：改报告里的数字（它开头就承诺「所有数字来自实测」）。' -ForegroundColor Yellow
   exit 1
 }
 if (-not $Quiet) {
-  Write-Host ('报告数字合规：受跟踪 ' + $trackedN + ' / CI ' + $ciN + ' / check_all ' + $caN + ' / 未跟踪 Go ' + $untN + ' 全与报告一致') -ForegroundColor Green
+  Write-Host ('报告数字合规：受跟踪 ' + $trackedN + ' / CI ' + $ciN + ' / check_all ' + $caN + ' / 未跟踪 Go 测试 ' + $untN + '（生产 ' + $untProdN + '）' + ' 全与报告一致') -ForegroundColor Green
 }
 exit 0
