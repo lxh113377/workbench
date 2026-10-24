@@ -34,6 +34,20 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **字阶令牌第一批复活：57 处硬编码 font-size 换成 var(--fs-*)（round 94，死令牌基线逐点攻破的第一步）**：
+  round 93 登记的 20 个死令牌里，字阶族（--fs-micro/mono/small/base/lead/kpi）是最大头 ——
+  设计系统定义了完整字阶却**零使用**（0 处 var(--fs-*)），同时有 76 处硬编码 font-size。
+  本轮把其中**值与令牌精确对应的 57 处**全部换成 var(--fs-*)（11px→micro 22 处、13px→base 15、
+  12px→small 14、11.5px→mono 3、15px→lead 2、29px→kpi 1）。纯机械替换、零设计决策。
+  剩余 19 处硬编码的值（10px/12.5px/14px/19px/20px/21px/22px/25px/32px 等）**无对应令牌** ——
+  换它们需要先决定是否扩字阶档位，属设计决策，**留给下一批**（不顺手塞进本提交）。
+  基线同步：tests/css-token-debt.txt 从 20 条瘦到 13 条（字阶 6 + --glow-cyan 因替换间接复活）；
+  门禁复跑确认「:root 49 个令牌、KNOWN 13 条与实际死令牌数一致」—— 基线收紧即门禁自动变严。
+  **一次重要的自我纠错**：本轮一度以为「门禁漏报 13 个死令牌」（因把上一轮旧输出「全部有使用」
+  与 KNOWN 过滤模式 'KNOWN --fs'（只匹配字阶）当成了全量），逐层复刻门禁解析 + 数 KNOWN 行后
+  确认**门禁一直正确**、是我读输出读错了。与 round 65「先证明测法正确」同族的第 6 次应验。
+  验证：gofmt clean；go test ./internal/web/ rc=0；check_dead_css_tokens rc=0（13 KNOWN 全在基线内）；
+  check_all 33 PASS / 1 FAIL（唯一 FAIL 仍是产物时效阻塞项）。
 - **第 9 次 BOM 错 + 根治方案固化（round 93 收尾）**：
   round 93 提交后 CI 红：`check_ps1_encoding` 判 `tests/check_all.ps1` 缺 BOM ——
   我用 `Buffer.from(ca.replace(...), 'utf8')` 写回时又忘前置 BOM（第 9 次；round 90 修过一次同文件）。
