@@ -101,6 +101,13 @@ if ($newDead.Count -gt 0) {
   exit 1
 }
 if (-not $Quiet) {
-  Write-Host ('死令牌门禁通过：' + $tokens.Count + ' 个令牌全部有实际使用（其中 ' + $keep.Count + ' 个为显式保留）') -ForegroundColor Green
+  # 【round 96 修措辞矛盾】有 KNOWN 时不许说「全部有实际使用」—— 那与上方打印的
+  # KNOWN 行自相矛盾（同类先例：round 63 修 check_all 的 all-gates-pass 措辞）。
+  $knownN = $knownDead.Count
+  if ($knownN -gt 0) {
+    Write-Host ('死令牌门禁通过（带已知缺陷）：' + $tokens.Count + ' 个令牌里 ' + ($tokens.Count - $knownN - $keep.Count) + ' 个在用、' + $knownN + ' 个登记未清（tests/css-token-debt.txt）、' + $keep.Count + ' 个显式保留') -ForegroundColor Yellow
+  } else {
+    Write-Host ('死令牌门禁通过：' + $tokens.Count + ' 个令牌全部有实际使用（其中 ' + $keep.Count + ' 个为显式保留）') -ForegroundColor Green
+  }
 }
 exit 0

@@ -166,7 +166,7 @@ body.home::after{
   position:absolute;inset:26px;pointer-events:none;z-index:1;
   font-family:var(--font-display);font-size:var(--fs-micro);font-weight:600;
   letter-spacing:.34em;color:var(--dim);white-space:nowrap;
-  padding:16px 0 0 44px;
+  padding:var(--sp-4) 0 0 var(--sp-7);
   --corner:26px;      /* 角标臂长 */
   --tw:1.5px;         /* 线宽 */
   background-image:
@@ -207,7 +207,7 @@ body.home::after{
 @media (max-width:900px){
   .home-main::after{
     inset:0;background-image:none;
-    padding:16px 0 0 16px;letter-spacing:.26em;font-size:10.5px;
+    padding:var(--sp-4) 0 0 var(--sp-4);letter-spacing:.26em;font-size:10.5px;
   }
 }
 .sr-only{
@@ -232,7 +232,7 @@ body.home::after{
      系数取 26 而非 16：16vw 在 1440 只有 230px，被 320 下限兜住 ⇒ 1440-1920 整段
      是「死区」（占比从 22% 掉到 17% 却一点没放大）。窄屏由下限 + 78vw 兜，零影响。 */
   width:clamp(320px,26vw,460px);min-width:min(260px,72vw);
-  min-height:clamp(120px,11vw,164px);padding:0 clamp(30px,2.4vw,42px);
+  min-height:clamp(120px,11vw,164px);padding:0 clamp(var(--sp-6),2.4vw,42px);
   display:flex;align-items:center;justify-content:center;gap:14px;
   border:1px solid transparent;border-radius:0;
   /* 切角「能量核心」：clip-path 切四角 + 双层背景（内芯渐变 + 巡游边框） */
@@ -384,7 +384,7 @@ body.home::after{
 .home-entry{
   position:relative;overflow:hidden;
   display:flex;align-items:center;justify-content:center;gap:6px;
-  min-height:clamp(46px,3.6vw,58px);padding:0 8px;
+  min-height:clamp(46px,3.6vw,58px);padding:0 var(--sp-2);
   font-family:var(--font-display);font-size:clamp(12.5px,1vw,14px);font-weight:500;
   letter-spacing:.14em;color:var(--dim);text-decoration:none;
   border-left:1px solid var(--line);
@@ -415,7 +415,7 @@ body.home::after{
 .home-admin{
   position:absolute;bottom:18px;right:20px;z-index:4;
   font-size:var(--fs-micro);line-height:1;color:transparent;
-  padding:10px 12px;border-radius:999px;
+  padding:10px var(--sp-3);border-radius:999px;
   transition:color .2s ease,background .2s ease,box-shadow .2s ease;
 }
 .home-admin:hover,.home-admin:focus-visible{
@@ -465,8 +465,8 @@ body.admin{
 /* 页面识别区：一个巨大到几乎充满视线的静态标题 + 细窄说明，
    —— 面板的「重量」主要落在这里，而不是靠更多卡片。 */
 .pagebar{
-  display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;
-  max-width:1320px;margin:0 auto;padding:26px 30px 6px;
+  display:flex;align-items:baseline;gap:var(--sp-4);flex-wrap:wrap;
+  max-width:1320px;margin:0 auto;padding:26px var(--sp-6) 6px;
 }
 .pagecrumb{
   display:inline-flex;align-items:center;gap:6px;
@@ -515,7 +515,7 @@ body.admin{
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
 .topstat b{color:var(--fg-2);font-weight:600}
-.topactions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.topactions{display:flex;gap:var(--sp-2);flex-wrap:wrap;justify-content:flex-end}
 
 /* —— 按钮：三种重量（primary / 默认 / ghost），全部 34px 高 —— */
 .btn{
@@ -546,7 +546,7 @@ body.admin{
 .btn.danger:hover{color:#fff;border-color:rgba(var(--danger-rgb),.65);background:linear-gradient(180deg,rgba(var(--danger-rgb),.22),rgba(var(--danger-rgb),.1))}
 .btn.ghost{background:transparent;border-color:var(--line-2);color:var(--dim)}
 .btn.ghost:hover{color:var(--fg);border-color:var(--line-3);background:rgba(255,255,255,.04)}
-.btn.sm{min-height:36px;padding:0 12px;font-size:var(--fs-small);border-radius:7px}
+.btn.sm{min-height:36px;padding:0 var(--sp-3);font-size:var(--fs-small);border-radius:7px}
 /* 两段式确认的「待确认」态：按钮自身变红并改写文案 —— 破坏性操作的第二击
    必须在视觉上与第一击明确区分（原生 confirm 的系统灰框被换成本体系内的状态）。 */
 .btn.armed{
@@ -566,7 +566,7 @@ body.admin{
   position:relative;z-index:4;
   flex:0 0 auto;min-height:46px;
   display:flex;gap:2px;align-items:stretch;
-  padding:0 22px;
+  padding:0 var(--sp-5);
   background:transparent;
   border-bottom:0;
   overflow-x:auto;scrollbar-width:none;
@@ -595,7 +595,7 @@ body.admin{
 .content{
   flex:1;
   width:100%;max-width:1320px;margin:0 auto;
-  padding:26px 30px 64px;
+  padding:26px var(--sp-6) 64px;
   counter-reset:panelcard;
   animation:shellIn .42s var(--ease) both;
 }
@@ -616,7 +616,7 @@ body.admin{
     var(--panel);
   border:1px solid transparent;
   border-radius:0;
-  padding:20px 22px;margin:0 0 18px;
+  padding:20px var(--sp-5);margin:0 0 18px;
   /* clip-path 切角 + 用 inset 阴影当描边（border 会被 clip-path 切掉，阴影不会） */
   box-shadow:inset 0 0 0 1px var(--line-2);
   clip-path:polygon(0 0,calc(100% - var(--cut)) 0,100% var(--cut),100% 100%,var(--cut) 100%,0 calc(100% - var(--cut)));
@@ -665,7 +665,7 @@ body.admin{
     repeating-linear-gradient(180deg,rgba(var(--accent-rgb),.022) 0 1px,transparent 1px 7px),
     var(--panel);
   border:1px solid transparent;border-radius:0;
-  padding:20px 22px;margin:0 0 18px;
+  padding:20px var(--sp-5);margin:0 0 18px;
   box-shadow:inset 0 0 0 1px var(--line-2);
   clip-path:polygon(0 0,calc(100% - var(--cut)) 0,100% var(--cut),100% 100%,var(--cut) 100%,0 calc(100% - var(--cut)));
   transition:border-color .22s var(--ease),background .22s var(--ease),box-shadow .22s var(--ease);
@@ -681,7 +681,7 @@ body.admin{
 /* 卡片标题 = 分区小标签：编号 + 展开字距，替代「大号黑标题」这种默认排版 */
 .card h3,.gov-card h3{
   display:flex;align-items:baseline;gap:10px;
-  margin:0 0 16px;padding-bottom:12px;
+  margin:0 0 var(--sp-4);padding-bottom:12px;
   border-bottom:1px solid var(--line);
   font-family:var(--font-display);font-size:12.5px;font-weight:600;
   letter-spacing:.12em;color:var(--fg-2);text-transform:uppercase;
@@ -693,7 +693,7 @@ body.admin{
   color:var(--accent);opacity:.9;
 }
 .card h4,.gov-card h4{
-  margin:16px 0 8px;font-family:var(--font-display);
+  margin:var(--sp-4) 0 var(--sp-2);font-family:var(--font-display);
   font-size:var(--fs-small);font-weight:600;letter-spacing:.16em;
   text-transform:uppercase;color:var(--dim);
 }
@@ -716,7 +716,7 @@ body.admin{
   border-radius:3px;
   /* 不再用 clip-path：切角会把 border 一起切掉，左上出现镂空（走查实测）。
      改为「直角小圆角 + 角标」，同样是仪表读数格的语言，但边缘干净。 */
-  padding:16px 16px 14px;
+  padding:var(--sp-4) var(--sp-4) 14px;
   transition:border-color .22s var(--ease),transform .22s var(--ease),box-shadow .22s var(--ease);
 }
 .kpi:hover{
@@ -777,7 +777,7 @@ label:has(> input[type=checkbox]){min-height:36px;align-items:center;display:inl
 .fold:first-of-type{margin-top:0;border-top:0}
 .fold > summary{
   display:flex;align-items:center;gap:9px;
-  padding:12px 2px;
+  padding:var(--sp-3) 2px;
   cursor:pointer;list-style:none;
   font-family:var(--font-mono);font-size:var(--fs-mono);letter-spacing:.12em;
   text-transform:uppercase;color:var(--dim);
@@ -793,13 +793,13 @@ label:has(> input[type=checkbox]){min-height:36px;align-items:center;display:inl
 .fold > summary:hover{color:var(--fg-2)}
 .fold > summary:hover::before{border-color:var(--accent)}
 .fold > summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
-.fold-body{padding:2px 0 16px;animation:foldIn .24s var(--ease) both}
+.fold-body{padding:2px 0 var(--sp-4);animation:foldIn .24s var(--ease) both}
 @keyframes foldIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
 .fold-body > table:first-child{margin-top:2px}
 
 /* 状态行：一行人话结论 + 几个关键读数，替代一排 10 个 KPI 卡 */
 .status-line{
-  display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:14px;
+  display:flex;align-items:center;flex-wrap:wrap;gap:var(--sp-2);margin-bottom:14px;
   font-size:var(--fs-base);line-height:1.7;color:var(--dim);
 }
 .status-line b{color:var(--fg);font-weight:600;font-variant-numeric:tabular-nums}
@@ -840,7 +840,7 @@ label:has(> input[type=checkbox]){min-height:36px;align-items:center;display:inl
 .topmore{animation:menuIn .18s var(--ease) both}
 @keyframes menuIn{from{opacity:0;transform:translateY(-6px) scale(.985)}to{opacity:1;transform:none}}
 .topmore a{
-  display:flex;align-items:center;min-height:38px;padding:0 12px;border-radius:var(--radius-xs);
+  display:flex;align-items:center;min-height:38px;padding:0 var(--sp-3);border-radius:var(--radius-xs);
   font-size:var(--fs-base);color:var(--fg-2);transition:background .14s var(--ease),color .14s var(--ease);
 }
 .topmore a:hover{background:rgba(var(--accent-rgb),.12);color:var(--fg)}
@@ -848,7 +848,7 @@ label:has(> input[type=checkbox]){min-height:36px;align-items:center;display:inl
 /* ============================================================ 表格 ==== */
 table{width:100%;border-collapse:collapse;font-size:var(--fs-base)}
 caption{caption-side:top;text-align:left;color:var(--dim);font-size:var(--fs-small);padding-bottom:8px}
-th,td{text-align:left;padding:11px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th,td{text-align:left;padding:11px var(--sp-3);border-bottom:1px solid var(--line);vertical-align:top}
 th{
   position:sticky;top:0;z-index:1;
   background:linear-gradient(180deg,rgba(var(--accent-rgb),.055),transparent),var(--panel);
@@ -881,8 +881,8 @@ tbody tr:last-child td{border-bottom:0}
 
 /* 提示面板：空态也要有设计（不是一整屏空白 + 一行小字） */
 .hint-panel{
-  display:flex;flex-direction:column;gap:12px;
-  padding:30px 28px;border-radius:var(--radius);
+  display:flex;flex-direction:column;gap:var(--sp-3);
+  padding:var(--sp-6) 28px;border-radius:var(--radius);
   border:1px dashed var(--line-2);
   background:
     radial-gradient(520px 200px at 82% -30%,rgba(var(--accent-rgb),.09),transparent 70%),
@@ -897,7 +897,7 @@ tbody tr:last-child td{border-bottom:0}
 .hint-panel code{background:rgba(255,255,255,.06);padding:1px 6px;border-radius:5px;font-family:var(--font-mono);font-size:var(--fs-small)}
 .hint-panel .hint-steps{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
 .hint-panel .hint-step{
-  display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:var(--sp-2);padding:8px 13px;border-radius:999px;
   border:1px solid var(--line-2);background:rgba(255,255,255,.03);
   font-family:var(--font-mono);font-size:var(--fs-micro);letter-spacing:.06em;color:var(--fg-2);
 }
@@ -908,7 +908,7 @@ input,select,textarea{
   width:100%;
   background:var(--bg2);
   border:1px solid var(--line-2);border-radius:var(--radius-xs);
-  padding:10px 12px;
+  padding:10px var(--sp-3);
   color:var(--fg);font-family:var(--font-body);font-size:var(--fs-base);line-height:1.5;
   transition:border-color .16s var(--ease),box-shadow .16s var(--ease),background .16s var(--ease);
 }
@@ -919,7 +919,7 @@ input:focus,select:focus,textarea:focus{
   border-color:rgba(var(--accent-rgb),.7);
   box-shadow:0 0 0 3px rgba(var(--accent-rgb),.16),0 0 24px -10px rgba(var(--accent-rgb),.35);
 }
-select{appearance:none;cursor:pointer;padding-right:30px;
+select{appearance:none;cursor:pointer;padding-right:var(--sp-6);
   background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);
   background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;
   background-size:5px 5px,5px 5px;background-repeat:no-repeat;
@@ -931,7 +931,7 @@ input[type=checkbox],input[type=radio]{
   flex:0 0 auto;cursor:pointer;
 }
 label:has(input[type=checkbox]),label:has(input[type=radio]){
-  display:inline-flex;align-items:center;gap:8px;min-height:32px;cursor:pointer;
+  display:inline-flex;align-items:center;gap:var(--sp-2);min-height:32px;cursor:pointer;
 }
 label{
   display:block;margin:14px 0 6px;
@@ -941,12 +941,12 @@ label{
 .row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 /* 工具条：与 .row 不同，**不**把子项拉成 flex:1 —— 操作按钮应保持自身宽度，
    否则三个导出按钮会各占半屏、视觉重量超过页面主体（实测走查缺陷）。 */
-.toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.toolbar{display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap}
 .toolbar > *{flex:0 0 auto}
 .row > *{flex:1;min-width:0}
 .row > .fix{flex:0 0 auto}
 .num{font-variant-numeric:tabular-nums;text-align:right}
-td.ops{display:flex;gap:4px;align-items:center;flex-wrap:wrap}
+td.ops{display:flex;gap:var(--sp-1);align-items:center;flex-wrap:wrap}
 tbody tr:hover td:last-child{box-shadow:none}
 .muted{color:var(--dim);font-size:var(--fs-small);line-height:1.6}
 .note{color:var(--dim-2);font-size:var(--fs-small);line-height:1.65}
@@ -969,7 +969,7 @@ tbody tr:hover td:last-child{box-shadow:none}
 }
 pre,.logbox{
   background:#080a0d;border:1px solid var(--line);border-radius:var(--radius-sm);
-  padding:14px 16px;overflow:auto;max-height:460px;
+  padding:14px var(--sp-4);overflow:auto;max-height:460px;
   font-family:var(--font-mono);font-size:var(--fs-small);line-height:1.7;color:var(--fg-2);
   /* 同 .doc：无换行长串（日志行 / JSON / 栈帧）会把容器撑开（实测 5657px 未修时）。
      关键：only overflow-wrap/word-break 对 pre **无效** —— <pre> 默认 white-space:pre
@@ -979,7 +979,7 @@ pre,.logbox{
 }
 .doc{
   background:#080a0d;border:1px solid var(--line);border-radius:var(--radius);
-  padding:22px 26px;max-height:62vh;overflow:auto;line-height:1.78;color:var(--fg-2);
+  padding:var(--sp-5) 26px;max-height:62vh;overflow:auto;line-height:1.78;color:var(--fg-2);
   /* 长串必须能断（2026-10-22 极端内容实测）：产出里常出现 URL / 哈希 / 代码标识符
      这类**无空格长串**，不加断行时 600 字符会把 898px 容器撑到 5831px，
      并让整页横向溢出近 1000px（实测 docOverflowX=979）。中文靠 CJK 原生断行，
@@ -1012,23 +1012,23 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
 .gov-actions{display:flex;gap:10px;align-items:center;margin:0 0 18px;flex-wrap:wrap}
 .gov-banner{
   display:flex;align-items:center;gap:10px;
-  border-radius:var(--radius);padding:12px 16px;margin:0 0 18px;
+  border-radius:var(--radius);padding:var(--sp-3) var(--sp-4);margin:0 0 18px;
   border:1px solid var(--line-2);
   font-family:var(--font-body);font-weight:600;font-size:var(--fs-base);letter-spacing:.02em;
 }
 .gov-banner::before{content:'';width:7px;height:7px;border-radius:50%;background:currentColor;box-shadow:0 0 12px currentColor}
 .gov-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(158px,1fr));gap:10px}
 .gov-kv{
-  display:flex;flex-direction:column;gap:4px;
+  display:flex;flex-direction:column;gap:var(--sp-1);
   background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-xs);
-  padding:12px 14px;
+  padding:var(--sp-3) 14px;
 }
 .gov-kv span{font-family:var(--font-mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
 .gov-kv b{font-family:var(--font-display);font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
-.gov-stages{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.gov-stages{display:flex;gap:var(--sp-2);margin-top:12px;flex-wrap:wrap}
 .gov-row{
-  display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;
-  padding:9px 12px;margin:6px 0;
+  display:flex;gap:var(--sp-3);align-items:baseline;flex-wrap:wrap;
+  padding:9px var(--sp-3);margin:6px 0;
   background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-xs);
   border-left:2px solid var(--line-2);
 }
@@ -1047,7 +1047,7 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
    这条横幅只在服务端判定「确实没有产出且能给出原因」时出现，正常产出时不渲染。 */
 .stall-banner{
   display:flex;gap:10px;align-items:flex-start;
-  margin:12px 0 4px;padding:10px 14px;
+  margin:var(--sp-3) 0 var(--sp-1);padding:10px 14px;
   background:rgba(var(--warn-rgb),.1);
   border:1px solid rgba(var(--warn-rgb),.3);
   border-left:2px solid var(--warn);
@@ -1087,13 +1087,13 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
 .lv-ok .gov-hero-level{color:var(--accent-2)}
 .lv-warn .gov-hero-level{color:var(--warn)}
 .lv-red .gov-hero-level{color:var(--danger)}
-.gov-hero-foot{margin-top:8px;font-size:var(--fs-small);line-height:1.7;color:var(--dim)}
+.gov-hero-foot{margin-top:var(--sp-2);font-size:var(--fs-small);line-height:1.7;color:var(--dim)}
 .gov-hero-cells{
   display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:1px;
   background:var(--line);
 }
 .gov-cell{
-  display:flex;flex-direction:column;justify-content:center;gap:4px;
+  display:flex;flex-direction:column;justify-content:center;gap:var(--sp-1);
   padding:20px 18px;background:var(--panel);
 }
 .gov-cell b{
@@ -1109,7 +1109,7 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
 .gov-card.foldcard{display:block;padding:0}
 .gov-card.foldcard > summary{
   display:flex;align-items:baseline;gap:10px;
-  margin:0;padding:20px 22px;
+  margin:0;padding:20px var(--sp-5);
   cursor:pointer;list-style:none;
   font-family:var(--font-display);font-size:12.5px;font-weight:600;
   letter-spacing:.2em;text-transform:uppercase;color:var(--fg-2);
@@ -1130,12 +1130,12 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
 .gov-card.foldcard[open] > summary::after{transform:rotate(45deg)}
 .gov-card.foldcard > summary:hover{color:var(--fg)}
 .gov-card.foldcard > summary:focus-visible{outline:2px solid var(--accent);outline-offset:-4px}
-.gov-card.foldcard > .fold-body{padding:0 22px 20px}
+.gov-card.foldcard > .fold-body{padding:0 var(--sp-5) 20px}
 .gov-card.foldcard > .fold-body > .gov-grid:first-child{margin-top:0}
 
 .gov-check-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px}
 .gov-check{
-  display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2px 8px;
+  display:grid;grid-template-columns:auto 1fr;align-items:center;gap:2px var(--sp-2);
   padding:11px 13px;border-radius:var(--radius-xs);
   background:var(--panel2);border:1px solid var(--line);
   border-left:2px solid var(--dim-2);
@@ -1164,15 +1164,15 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
 }
 @media (max-width:480px){
   .gov-hero{border-radius:14px}
-  .gov-hero-main{padding:16px 15px}
+  .gov-hero-main{padding:var(--sp-4) 15px}
   .gov-hero-level{font-size:clamp(34px,9vw,44px)}
   .gov-hero-foot{font-size:var(--fs-mono);line-height:1.65}
   .gov-hero-cells{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .gov-cell{padding:12px 13px;gap:2px}
+  .gov-cell{padding:var(--sp-3) 13px;gap:2px}
   .gov-cell b{font-size:22px}
   .gov-cell span{font-size:var(--fs-micro);letter-spacing:.1em;line-height:1.35}
   .gov-check-grid{grid-template-columns:1fr}
-  .gov-card.foldcard > summary{padding:16px 15px}
+  .gov-card.foldcard > summary{padding:var(--sp-4) 15px}
   .gov-card.foldcard > .fold-body{padding:0 15px 16px}
 }
 
@@ -1192,7 +1192,7 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
 .pill.unknown{background:rgba(255,255,255,.05);color:var(--dim);border-color:var(--line-2)}
 .pill.disabled{background:rgba(255,255,255,.03);color:var(--dim-2);border-color:var(--line);text-decoration:line-through}
 .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
-.kv .item{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-xs);padding:12px 14px}
+.kv .item{background:var(--panel2);border:1px solid var(--line);border-radius:var(--radius-xs);padding:var(--sp-3) 14px}
 .kv .item .v{font-family:var(--font-display);font-size:20px;font-weight:600;font-variant-numeric:tabular-nums}
 .kv .item .l{font-family:var(--font-mono);font-size:var(--fs-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-top:3px}
 
@@ -1202,8 +1202,8 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
 /* ============================================================ 响应式 ==== */
 @media (max-width:1080px){
   .content{padding:18px 20px 56px}
-  .pagebar{max-width:1080px;padding:22px 20px 4px}
-  .topbar{padding:12px 18px;gap:12px;max-width:1080px}
+  .pagebar{max-width:1080px;padding:var(--sp-5) 20px 4px}
+  .topbar{padding:var(--sp-3) 18px;gap:12px;max-width:1080px}
   .tabs{padding:0 14px;max-width:1080px;margin:0 auto}
 }
 @media (max-width:720px){
@@ -1211,7 +1211,7 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
   /* —— 窄窗口导航区瘦身（2026-10-20 实测：用户窗口 1040x613 物理 / DPR1.75 = 594x350 CSS，
         原导航吃掉 239px = 68% 屏高，子页只剩 99px 可见 ⇒ 体感「子页面被挡住」）。
         三处压缩：品牌行不再独占一行、状态行与按钮同排、页面标题取消超大字号。 —— */
-  .topbar{flex-wrap:nowrap;gap:8px;padding:8px 12px}
+  .topbar{flex-wrap:nowrap;gap:var(--sp-2);padding:8px 12px}
   .brand{width:auto;flex:0 0 auto}
   /* 品牌文字在窄屏让位给状态与操作：.brand 是 <a>纯文本</a>，用 font-size:0 隐藏文字、
      ::before 色块不受影响（仍显示 9px 方块，作为品牌锚点）。 */
@@ -1224,12 +1224,12 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
   .topactions{flex-wrap:wrap;gap:5px;justify-content:flex-end;flex:1 1 auto;min-width:0}
   .topactions .btn{flex:0 0 auto}
   /* 页面识别区：窄屏下不再用巨型标题（40px 只为撑"重量"，窄屏纯占地方） */
-  .pagebar{padding:8px 12px 0;gap:8px}
+  .pagebar{padding:var(--sp-2) var(--sp-3) 0;gap:8px}
   .pagetitle{font-size:var(--fs-lead);letter-spacing:.02em}
   .pagecrumb{font-size:10px}
   .pagesub{display:none}
-  .content{padding:12px 13px 48px}
-  .card{padding:16px 15px;border-radius:12px}
+  .content{padding:var(--sp-3) 13px 48px}
+  .card{padding:var(--sp-4) 15px;border-radius:12px}
   .card h3,.gov-card h3{letter-spacing:.14em}
   .grid.c2{grid-template-columns:1fr}
   .grid.c4{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -1255,7 +1255,7 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
   /* 窄屏顶部操作按钮：36px 足够鼠标点，也保住触屏 32px 以上可点性 */
   .topbar .btn{min-height:34px;padding:0 10px;font-size:var(--fs-small)}
   /* 页签：44 → 36，仍是可点尺寸（触屏档由 pointer:coarse 兜回 44） */
-  .tab{min-height:36px;padding:0 12px;font-size:12.5px}
+  .tab{min-height:36px;padding:0 var(--sp-3);font-size:12.5px}
   /* 页签条本体的 min-height 也要一起压（基座写死 46px 是为了防 flex 压扁；
      窄屏下 46 会白白多占 8px，改成 38 仍 >36 的页签高度，不破坏防压扁判据） */
   .tabs{min-height:38px}
@@ -1267,7 +1267,7 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
      就是「用户为了看清而放大、字号反而变小」—— 与 1.4.4 的意图正好相反。
      故保留 15px，靠布局（单列/卡片化/换行）消化窄视口，不靠牺牲可读性。 */
   /* 超窄屏顶栏：操作按钮缩小内距，保证 4 个按钮一行放得下 */
-  .topbar .btn{min-height:32px;padding:0 8px;font-size:var(--fs-mono)}
+  .topbar .btn{min-height:32px;padding:0 var(--sp-2);font-size:var(--fs-mono)}
   /* ≤480px 管理面板表格转卡片模式（2026-10-21 窄屏走查实测）：
      390px 下 table-layout:fixed 把 6-8 列均分成每列 ~48px，「价值先验」折成 4 行、
      「状态」列跑位 —— 那是列宽塌陷，不是内容问题。复用池表已验证的
@@ -1275,7 +1275,7 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
      只对 .content 内表格生效（池表 .pool-table 在 720px 已切，且是 5-6 列无中文长头）。 */
   .content table thead{display:none}
   .content table tbody{display:block}
-  .content table tr{display:block;border:1px solid var(--line-2);border-radius:12px;padding:12px 14px;margin:0 0 12px;background:rgba(255,255,255,.02)}
+  .content table tr{display:block;border:1px solid var(--line-2);border-radius:12px;padding:var(--sp-3) 14px;margin:0 0 var(--sp-3);background:rgba(255,255,255,.02)}
   .content table tr:last-child{margin-bottom:0}
   .content table td{display:flex;gap:10px;align-items:center;padding:5px 0;border-bottom:0}
   .content table td::before{content:attr(data-label);flex:0 0 auto;min-width:4.2em;color:var(--dim);font-family:var(--font-mono);font-size:10.5px;letter-spacing:.1em}
@@ -1290,7 +1290,7 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
   .pagetitle{font-size:14px}
   .card{padding:14px 13px;border-radius:11px}
   .start-btn{border-radius:18px;letter-spacing:.14em;padding:0 22px}
-  .home-admin{bottom:max(10px,env(safe-area-inset-bottom));right:12px;padding:8px 10px}
+  .home-admin{bottom:max(10px,env(safe-area-inset-bottom));right:12px;padding:var(--sp-2) 10px}
   .btn{padding:0 12px}
   .kpi{padding:13px 12px}
   .kpi .v{font-size:21px}
@@ -1330,8 +1330,8 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
     filter:drop-shadow(0 0 8px rgba(var(--accent-rgb),.7));
     opacity:.92;
   }
-  .content{padding:20px 44px 80px;max-width:1460px}
-  .pagebar{max-width:1460px;padding:32px 44px 4px}
+  .content{padding:20px var(--sp-7) 80px;max-width:1460px}
+  .pagebar{max-width:1460px;padding:32px var(--sp-7) 4px}
   .topbar{max-width:1460px}
   .kpi .v{font-size:32px}
 }
@@ -1340,7 +1340,7 @@ a:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(
    桌面用户把窗口拖窄时页签被强制 44px，导航区又变胖（用户窗口 594x350 时导航占 68%）。
    现在窄窗口走上面 720 档的 36px，只有粗指针设备才 44px。 */
 @media (pointer:coarse){
-  .btn{min-height:44px;padding-left:16px;padding-right:16px}
+  .btn{min-height:44px;padding-left:var(--sp-4);padding-right:16px}
   .btn.sm{min-height:38px}
   .tab{min-height:44px}
   input,select,textarea{min-height:44px}

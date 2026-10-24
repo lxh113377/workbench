@@ -34,6 +34,20 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **间距令牌第二批复活（68 处）+ 修死令牌门禁的措辞矛盾（round 96）**：
+  延续 round 94 字阶批的做法，把 margin/padding/gap 里与 7 档间距令牌**值精确对应**的硬编码
+  换成 var(--sp-*)（12px→sp-3 20、16px→sp-4 15、8px→sp-2 14、22px→sp-5 7、30px→sp-6 5、
+  4px→sp-1 4、44px→sp-7 3），**简写里的多值也处理**（如 padding:16px 0 0 44px → var(--sp-4) 0 0 var(--sp-7)）。
+  **两处刻意保留（关键：不一刀切）**：
+  - **6 处负值**（如 margin:-8px）：换 var() 会破坏语义，需 calc(0px - var(--sp-2))，属另一批决策；
+  - **130 处嵌入数字**（24px 含 4px、14px 含 4px、1080px 含 80px 等）：我的扫描器用
+    「前一字符不能是数字」边界判定正确排除 —— 若用无边界替换会造出 var(--sp-1)4px 这种畸形。
+  基线从 13 条瘦到 6 条（只剩颜色/装饰族：--ink/--muted/--accent-soft/--accent-3/--glow-violet/--scanline）。
+  **顺带修一个门禁自身缺陷**：有 KNOWN 死令牌时，门禁 summary 却报「49 个令牌**全部有实际使用**」——
+  与它自己刚打印的 KNOWN 行自相矛盾（round 63 修 check_all 的 all-gates-pass 措辞是同型问题）。
+  现改为「43 个在用、6 个登记未清」—— 数字自洽（43+6=49）。
+  验证：gofmt clean；go test ./internal/web/ rc=0；死令牌门禁 rc=0 且新措辞生效；
+  替换后 var(--sp-*) 共 68 处、无 var(var( 畸形。
 - **补上「本地绿 = CI 红」的结构性窗口：暂存区 BOM 门禁 + pre-commit 第二道闸（round 95）**：
   round 94 提交（3ec83e9）在 CI 上被 `check_multi_bom` 判红：`tests/css-token-debt.txt` 有 **3 个前导 BOM**
   —— 我三次用 `Buffer.concat([BOM, ...])` 写它，每次 prepend 却没先剥旧的（第 10 次 BOM 类错误）。
