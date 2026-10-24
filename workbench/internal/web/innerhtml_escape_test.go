@@ -29,10 +29,24 @@ func TestAppJSEscCoversAllDangerousChars(t *testing.T) {
 	// esc 漏抄单引号映射却无人发现的原因（判据逻辑是对的，跑错了对象）。
 	// 现改为三份各跑：helper 在三份里是**独立副本**（内嵌脚本不共享顶层 const），
 	// 任何一份的 esc 坏掉，它那份 innerHTML 就同时失守。
-	for _, b := range []struct {
+	// 外壳自身的断言（round 109）：先证「三份覆盖」这件事成立 —— 三份必须各自非空且互不相同。
+	// 为什么值得单独判：若有人把 govJS 写成 appJS 的别名（或复制时漏改），下面那个三份循环
+	// 会「三份全绿」而实际只守住一份 —— 那正是本轮要修的「判据跑错对象」的另一种复发形态。
+	blobs := []struct {
 		name string
 		js   string
-	}{{"appJS", appJS}, {"govJS", govJS}, {"poolJS", poolJS}} {
+	}{{"appJS", appJS}, {"govJS", govJS}, {"poolJS", poolJS}}
+	for i, b := range blobs {
+		if b.js == "" {
+			t.Fatalf("%s 为空 —— 三份覆盖不成立，本测试会静默漏守这一份", b.name)
+		}
+		for j := i + 1; j < len(blobs); j++ {
+			if blobs[i].js == blobs[j].js {
+				t.Errorf("%s 与 %s 内容完全相同 —— 疑似别名/复制漏改，三份覆盖会塌成一份", blobs[i].name, blobs[j].name)
+			}
+		}
+	}
+	for _, b := range blobs {
 		t.Run(b.name, func(t *testing.T) { checkEscContract(t, b.name, b.js) })
 	}
 }
