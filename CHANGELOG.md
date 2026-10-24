@@ -34,6 +34,18 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **6 小时空窗后全面健康检查 + `check_readings_trend` 存在性核对二次验证（round 84）**：
+  空窗 6h 后（活实例仍在用户停止状态）做全量复验，结论：**体系无腐坏**。
+  ① 本地 `check_all` 全量：**30 PASS / 1 FAIL / 0 SKIP**，唯一 FAIL 是产物时效（已知阻塞项，未变）；
+  ② round 63 的三态化在全量跑中再次复核（SKIP=0 时汇总诚实报 failed，不谎称 all-gates-pass）；
+  ③ 读数序列 69 条（在增长）；`resident_longrun` 末读数距今 **17.4h**（阈值 6h）——
+     因为活实例 17:10 被用户停止、之后无新采样。**这是预期行为**（没测成 != 造假数据）。
+  ④ `check_readings_trend` 正确报告该状态：`陈旧警告：该序列已 17.4h 无新落盘 —— 下面的趋势只覆盖到
+     末读数那一刻，当前实况未测（盲区）`。**正是 round 42 立的机制在工作**（不把末次落盘时的状态当成现在的状态）。
+  ⑤ **`check_readings_trend` 存在性核对变异验证成功**（round 66 单测后的第二次独立验证，这次走完整门禁路径）：
+     造一个「声明 `gate='seq_b'` 却零读数」的场景，门禁精确告警 ——
+     `已声明落盘却零读数的序列（seq_b）—— 要么没被调用、要么判据失效（round 47 就是后者）`。
+     round 47「内存门禁恒 0 条静默存活 6h」的护栏至此有**两条独立验证路径**（单测 + 端到端变异）。
 - **修掉 round 82 flaky 的根因 + 堵一个判据绕过路径（round 83）**：
   round 82 给 `check_snapshot_build` 加了「命中已知 flaky 才重试」，但**根因未除**。本轮修根因：
   ① **测试自身**：`internal/verify/noninteractive_test.go:70` 的 `Invoke-WebRequest` **没带 `-UseBasicParsing`** ——
