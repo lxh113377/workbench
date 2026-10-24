@@ -1,4 +1,4 @@
-﻿# Changelog
+# Changelog
 
 > 本项目所有值得一提的变更都记在这里。
 > 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
@@ -39,8 +39,10 @@
   待补守卫」。本轮 Node 直读源码复核：`handleGovSummary`（gov_api.go:28）只调 Store().Summary、
   `handlePoolStatus`（pool_api.go:28）→ Service.Status()（service.go:368）读 specs/health/lanes ——
   **两者都不打网络、不碰 e.mu**，原 P0 的因果链（读端点被写侧持锁拖慢）在这两个端点上不存在。
-  更要命的是 assets_pool.go 的 load() 有 **10 个调用点**，多数是用户动作后的刷新（删除/保存/
-  切换整池/刷新按钮）—— 照搬 `if (busy) return` 会**吞掉这些刷新**，把修好的问题换成新问题。
+  更要命的是 assets_pool.go 的 load() 有 **9 处调用点**（逐行核实：8 处用户驱动 + 1 处初始化；
+  setInterval(load,15000) 不带括号不计入）—— 照搬 `if (busy) return` 会**吞掉那 8 处刷新**，
+  把修好的问题换成新问题。**修正说明**：本条原写「10 个调用点」是把 L183 的注释行误算成调用 ——
+  我的分类脚本自身有 bug，靠逐行复核才发现（交付物里的数字必须实测，见 #36 家族）。
   ⇒ 不改守卫（无病不乱吃药）。报告原文保留 + 标注「已被推翻」并写清我错在哪：
   **依据是「同源推测」而非「实测该端点成本」时，应标「待核」不是「应改」**（新增元教训 #6）。
   **② 本轮做的是另一件真实的事：收敛我上轮引入的三份 api() 分叉**。复核时靠 Node 逐行 diff
