@@ -34,6 +34,17 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **一次「声称已清理但实际存活」的自查：xtmp91 工作树（round 91 记录为已删，实际到 round 114 才清）**：
+  round 91 的收尾输出里有 `worktree removed` 字样，但同一次调用里紧挨着的一条命令报的是
+  `git worktree remove --force xtmp91` **失败**（fatal，因该工作树被 lock）—— 我把「打印了 removed」
+  当成「删除成功」了。它带着 locked 标记存活了 3 轮，占着一份完整工作树副本。
+  本轮清理前先取证到可安全删除的程度：`git diff --name-only` 为空、HEAD `db97bef` 是 master 祖先
+  （无独有提交）、`status` 里 2130 条全是 `D ` 与 `?? ` **成对**（index 被清空的噪声，非真实改动），
+  且我当年复制进去的 `check_skip_disclosure.ps1` 早已作为跟踪文件入库（round 95）→ 无独有内容。
+  解锁后 `worktree remove --force` 成功，`.git/worktrees/xtmp91` 一并清掉，主仓状态未受影响。
+  **机制化认知（写给未来的我）**：`remove` 与 `list` 之间必须**读一次事实**（工作树列表 / 目录存在性），
+  不能凭同一段脚本里出现过的成功字样下结论 —— 与 round 107「提交被中断却报告 CI 全绿」是同一条教训的
+  另一种表现：**结论必须由独立的第二次测量支撑**。
 - **修 `check_report_figures` 的口径不一致（标签说「测试」算法数「全部」）+ 登记成组提交复发（round 112-114）**：
   **触发**：按 round 109 定规「提交前跑全量 check_all，不挑子集」，第一次跑就抓到 3 个 FAIL ——
   其中 `报告数字一致性` 报「未跟踪 Go 测试：报告写 31，实测 33」。我先把它当成
