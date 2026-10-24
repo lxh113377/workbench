@@ -1694,6 +1694,26 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **skip 披露门禁（`tests/check_skip_disclosure.ps1`，CI 第 23 个，round 87）—— Go 侧「没测成」第一次进入判据视野**：
+  round 87 侦察发现：全仓 172 个受跟踪 `_test.go` 里有 **49 处 `t.Skip`/`t.Skipf`、涉及 28 个文件**。
+  抽查确认质量是好的（`probe_windows_test.go` 的 icacls 三类跳过连「理由+后果」都写了，注释里甚至立了纪律
+  「禁把没验成当验过了」），但存在两个真问题：
+  ① **总数不可见** —— 49 处散在 28 个文件里，没有任何机制统计。于是「某个包其实全靠 skip 凑数」
+     这种腐化**静默发生**（与 round 47「内存门禁恒 0 条」同族：沉默 != 正常，只是这次沉默的是「跳过」）；
+  ② 个别 skip 可能没写理由（`t.Skip()` 空参数），静态可判。
+  本仓铁律是「没测成 != 合格」（check_resident_longrun / check_perf / check_queue_size 都按此设计），
+  **Go 侧的 t.Skip 正是「没测成」的本体，却一直不在任何判据视野里**。
+  判据（窄、可证伪，刻意不做阈值语义判断）：
+  1) `t.Skip()` / `t.Skipf()` **空参数** ⇒ 判红（客观事实，无需推断）；带字符串参数视为已披露；
+  2) **总数打进输出**（49 处 / 28 文件 / Top 5 文件）—— 让数字可见，但不做「skip 太多就判红」
+     （那需要定阈值，正是本仓在册「模糊语义检查制造噪声 ⇒ 门禁被删」的形态）；
+  3) **读数落盘** `skip_disclosure` 序列（总数/bareCount/文件数）—— 与 untracked_go / resident_longrun
+    同构：单次读数不够，**趋势上升 = 在靠 skip 凑数**（round 47 同族信号），由趋势器去判。
+  与 `check_test_assertions` 分工明确：后者管「Test 有没有断言」（零断言 = 假测试），
+  本件管「Test 有没有真的跑」（skip = 没跑）+「跳过是否披露」。合起来才覆盖「测试既存在、又真在测」。
+  首跑即绿（49 处全部带理由）；变异验证：注入 `t.Skip()` 空参数 ⇒ `evil_test.go:7` 精确判红，
+  同文件里有理由的那处正确放行。
+  **`check_report_figures` 第四次兑现**：本门禁入库后再次点名报告 5 处数字滞后（36→37 / 22→23 / 32→33 等），已同步。
 - **gitignore 泄漏门禁（`tests/check_gitignore_leak.ps1`，CI 第 22 个，round 71）—— 治「靠人凭记忆补 ignore」**：
   本仓三连实测同一根因：round 67 `tests/_egress/` **41.2MB** GeoIP 数据、round 68
   `workbench/build/` **32.1MB** 构建目录、round 71 `workbench/exec`（**17KB Go 覆盖率 profile**）

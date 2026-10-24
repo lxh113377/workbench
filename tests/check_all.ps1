@@ -270,7 +270,15 @@ Section '暂存区 gofmt（提交前闸，防「改完忘 gofmt」进提交）' 
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
+Section 'skip 披露（t.Skip 必须带理由；总数可见）' {
+  $g = Join-Path $Root 'tests\check_skip_disclosure.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section '测试必须有断言（零断言测试 = 假绿）' {
+
   $g = Join-Path $Root 'tests\check_test_assertions.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
