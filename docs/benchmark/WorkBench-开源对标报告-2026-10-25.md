@@ -88,7 +88,7 @@ $ 提交链：9b615dc(atomic) / 4df98ed(queue) 已推送，CI CI=success
 | **功能模块覆盖** | 9 环节闭环 + 双角色 + 自主树 + 契约治理 + 模型池 + WAL + **防饿死 aging** | temporal 10 种调度器族 / prometheus 段式 WAL+checkpoint | 核心闭环不缺；本轮补「写盘容错兜底」「调度公平性」两条内核 | 本轮新发现（已修） |
 | **技术架构** | 单进程 31 包（29 internal + 2 cmd）+ 内存队列 + 原子写 JSON ⊕ WAL | river leader election / temporal 事件溯源 | 单机取舍合理；本轮修的是内核自洽（非架构差距） | 已对齐 |
 | **实现方式** | internal 28/29 包有测试（仅 browser 无）、30 包 rc=0；错误 11 类分级；**aging + 先备份后替换** | prometheus Repair 备份语义 / temporal 权重公平 | 两处内核从"看着对"升到"判据守住" | 本轮新发现（已修） |
-| **性能** | EXE 9.83 MB（实测）；首页 P95/内存/句柄 **UNVERIFIED**（本机无常驻实例，不臆造） | 不可比（peer 为服务端多租户） | 单机口径，非差距项 | 不可比 |
+| **性能** | EXE **10,310,144 B（9.83 MB）**；首页 **P95=1.94ms**（P50=1.57 / MAX=14.68，n=40）；常驻 **12.48 MB**；句柄 **126**；线程 8 —— `check_perf.ps1 -Runtime` 实测 rc=0，四项判定做成、超界 0 | 不可比（peer 为服务端多租户） | 单机口径：P95 距 250ms 上界余 128×，常驻距 64MB 余 51.5MB，句柄距 512 余 386 | 不可比（已取实数） |
 | **可扩展性** | RunnerContract + Hooks + 能力接口 + 模板 + 模型池；**queue.now 时钟注入 seam** | river 插件 / temporal 调度器可插拔 | 新增 seam 让调度公平性可测可换 | 已对齐 |
 | **维护状态** | 本地+远端同步（master...origin 0/0）+ CI 双 workflow + 37 段门禁全绿 | n8n 日更级 / river 中节奏 | 本项目运营面已具 CI/CHANGELOG/handoff | 已对齐 |
 | **文档** | ARCHITECTURE + CONTRIBUTING + 对标报告**四代** + peer 精读 + 学习计划 | river AGENTS.md 分卷 | 中文文档面充分，报告演进到第四轮 | 已对齐 |
@@ -125,7 +125,7 @@ temporal `FIFOScheduler.Stop()`（`fifo_scheduler.go:71-90`）停机时 `drainTa
 
 | 项 | 说明 | 优先级 |
 |---|---|---|
-| 首页 P95/内存/句柄现值 | 本轮本机无常驻实例，取不到数 ⇒ UNVERIFIED，须实例在跑时现取（禁臆造） | 中 |
+| ~~首页 P95/内存/句柄现值~~ | **本轮已取实数**（2026-10-25 02:5x）：走 `check_perf.ps1 -Runtime` 的空闲探针（`--ui-probe --expect-idle` + 全新 TEMP 数据根 + `--seconds 120` 自终止 + finally 收尾），实测 P95=1.94ms / 常驻 12.48MB / 句柄 126；跑完实测 0 残留目录、0 残留进程，不触生产实例不耗模型额度 | 已闭环 |
 | prometheus checkpoint 语义 | wlog 有 `checkpoint.go`（把快照写进 WAL 目录做检查点），本项目压缩是"写快照+截断"无独立 checkpoint；单机体量下收益低 | 低 |
 | temporal 执行感知调度（execution_aware） | 按队列深度/延迟反压调并发度，本项目并发固定 `Concurrency`；属团队多租户需求，单机暂不需 | 低 |
 
@@ -180,7 +180,28 @@ foreach ($n in 'river','asynq','temporal','prometheus') {
 | 每通道独立缓冲 | `temporal/common/tasks/weighted_channel.go:15-34` |
 | FIFOScheduler 停机 drain/Abort | `temporal/common/tasks/fifo_scheduler.go:71-90, 217-227`（本项目判 NO-OP）|
 
-### 7.3 本项目关键落点
+### 7.3 性能读数取证（2026-10-25 02:5x 实测，可复算）
+
+```powershell
+cd D:/workdesktop
+pwsh -NoProfile -File tests/check_perf.ps1 -Exe dist/workbench.exe -Runtime
+# 输出（原文）：
+#   CHECK exeSize result=PASS value=10310144 bound=20971520 余量=10.17MB
+#   探针读数: P50=1.57ms P95=1.94ms MAX=14.68ms (n=40) 常驻=12.48MB 句柄=126 线程=8
+#   CHECK homeP95Ms result=PASS value=1.94 bound=250
+#   CHECK residentMBMax result=PASS value=12.48 bound=64
+#   CHECK handleMax result=PASS value=126 bound=512
+#   判定 PASS 已做成=4 超界=0 SKIP=1 取不到读数=0  ->  VERDICT: PASS rc=0
+```
+
+口径与边界（为什么这条读数是可信的、且没污染任何东西）：
+- 探针形态 = 性能基线口径 §2 登记的「空闲短生命周期·空数据根」档，与 `residentMBMax=64` 同口径；
+- 用全新 TEMP 数据根、`--expect-idle`、`--seconds 120` 自终止 + `finally` Stop-Process；
+- 跑完实测 **0 残留 `workbench-perf-*` 目录、0 残留 workbench 进程**（本轮复核），
+  不触生产 7×24 实例、不耗模型额度（`taskDurationSecMax` 那类需真模型字段的仍为 null，未动）；
+- `exeSizeMin` 仍 SKIP（基线 `exeMinBytes=null`，未实测 ⇒ 严禁臆造，与门禁口径一致）。
+
+### 7.4 本项目关键落点
 
 | 结论 | 文件:行 |
 |---|---|

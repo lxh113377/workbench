@@ -16,6 +16,37 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **DOCX 导出落盘改造（并入统一原子写入口）+ junction 安全行为测试（round 119-121，硬约束 #5 审计的落地）**：
+  审硬约束 #5「所有删除走回收站」时逐点核对全仓删除原语（15 个生产文件），两处结论：
+  **① 推翻了自己的怀疑**：linkDir 的 Stat 失败后 os.RemoveAll(dst) 初看像经典「rd /s 删穿
+  junction」。一次性探针实测相反 —— Go 把 junction 认成普通目录（Lstat isDir=false），
+  Stat 成功即早退；即便执行 RemoveAll 也是**摘链**，target 与其内容完好。
+  探针结论必须变测试才守得住，故新增 executor/linkdir_target_safety_test.go 锁两层，
+  并如实声明平台边界（非 Windows t.Skip，与本包既有 linkdir_silent_test.go 同模式；
+  但 Windows 上「建不出 junction」判 FAIL 不判 SKIP —— skip 会把环境故障洗成绿）。
+  **牙齿验证**：控制组直接毁 target 内容 => 判红（证明断言不是空转）；
+  而把摘链换成 cmd rd /s /q **也不判红** —— 本机直测证明 rd /s /q 对 junction 同样只摘链
+  （「rd 删穿 junction」是 XP 时代行为，Vista+ 已修）。所以测试锁的是**这台 OS 的现行语义**，
+  不是替旧传说话。注释里我原先写的「Go 语义层/那会真的删穿」两处据此改正。
+  **② 抓到真缺陷**：web/writeDocx 是自制原子写（Create(path+".tmp") 写、Close、Sync、
+  再 os.Remove(path)、os.Rename(tmp, path)），探针实测并发导出同一目标
+  「RESULTS=[B-ERR:rename ... The process cannot access the file because it is being used
+  by another process. A-OK]」—— 固定后缀 .tmp 让并发导出必有一方失败（用户见「生成 DOCX 失败」）；
+  另有「先删目标再 rename」的丢失窗口（与并行会话本轮在 config/atomic.go 修的数据归零同形态），
+  且那句 IsNotExist 豁免接不住目录；还与同函数 md/txt 分支的 config.WriteFileAtomic 双实现并存。
+  **按 #39 不选折中**：不逐条打补丁，而是 zip 先写内存 buffer 再交 config.WriteFileAtomic ——
+  一次消除三缺陷（本文件本来就把整篇 document.xml 收在 strings.Builder 里，无流式优势可言）。
+  新增 web/docx_atomic_test.go 测行为不测源码文本：并发四路导出全成功 + 产物是含 OOXML
+  四部件的合法 zip 且正文真写进去 + 无 .tmp 残渣。
+  **双向变异**：worktree 里对照 HEAD 旧实现，并发测试 3/3 稳定判红并点名 rename 冲突；
+  新实现全绿。OOXML 有效性测试两边都绿（它验内容不验竞态，符合预期，不冒充成竞态证据）。
+  失败窗口（rename 失败时旧内容仍在）由 config 包的 seam 判据负责，**不在此重复构造** ——
+  那个窗口本机四种方案都构造不稳，重复尝试只会造出 SKIP 假绿。
+  另修自己一处违规：测试里凭猜写 model.Task 的 ModelID 字段（真名是 Model），
+  编译报错抓到 —— 「严禁猜标识符」这条我自己也会破，读结构体才是唯一正路。
+  验证：web / executor 包全量 rc=0；vet rc=0；gofmt clean；探针与 worktree 均已删并复验
+  check_untracked_go rc=0；提交前只 add 自己的 3 个文件（并行会话在途的 10 个 web 测试未碰）。
+
 - **修任务队列「低优任务被饿死」结构缺陷：严格优先级加有界 aging（2026-10-25，对标 temporal IWRR 权重公平）**：
   **缺陷**：`internal/queue/sortTasks` 原是**纯严格优先级**（置顶 > 优先级高 > 创建时间早 FIFO）。
   7×24 自主循环会**持续产任务**（链衍生用模板 PriorityWeight、自主目标固定 4、面板可设 1/5 ——
@@ -137,6 +168,18 @@
   **一条自纠**：探针首版把 `Spec.Priority` 方向写反（以为数字越大越优先，实际 1 = 最高），
   被自己的场景当场判红 —— 跨项目/跨模块迁移判据前必须先确认被迁移语义的方向。
 ### Changed
+- **第四轮对标补第四项：性能读数从 UNVERIFIED 取成实数（2026-10-25 02:5x 实测）**：
+  报告初稿把首页 P95/常驻/句柄记为 UNVERIFIED（理由「本机无常驻实例」）。复核性能基线口径 §2 后确认
+  `check_perf.ps1 -Runtime` 走的是**空闲短生命周期探针**（`--ui-probe --expect-idle` + 全新 TEMP 数据根
+  + `--seconds 120` 自终止 + finally Stop-Process），与既有基线字段同口径，**不需要生产实例**
+  —— 即「取不到数」的原因是我没走对取证路径，而不是环境真的取不到。
+  实测（rc=0，四项判定做成、超界 0）：EXE 10,310,144 B（余量 10.17MB）/ 首页 P95 **1.94ms**
+  （P50 1.57 / MAX 14.68，n=40；距 250ms 上界 128.9×）/ 常驻 **12.48MB**（距 64MB 余 51.52MB）/
+  句柄 **126**（距 512 余 386）/ 线程 8。
+  跑完复核 **0 残留 `workbench-perf-*` 目录、0 残留 workbench 进程**：不触生产、不耗模型额度。
+  `exeSizeMin` 与 `taskDurationSecMax` 仍 null/SKIP（未实测 ⇒ 严禁臆造，与门禁三态口径一致）。
+  报告 §3 性能行、§4.4 待办、§7.3 取证命令已同步实数。**教训**：登记「取不到数」前先确认
+  是不是取证路径走错了 —— 把"我没用对口径"写成"环境不支持"，会让下游 agent 误判为长期缺口而不去做。
 - **第四轮开源对标报告落地（2026-10-25）`docs/benchmark/WorkBench-开源对标报告-2026-10-25.md`**：
   首次逐行精读前几轮未读的 peer 内核模块——temporal `common/tasks` 调度器家族（10 种）与
   prometheus `tsdb/wlog`（WAL + Repair + checkpoint），peer 仓本轮 `git fetch` 刷新到最新 HEAD
