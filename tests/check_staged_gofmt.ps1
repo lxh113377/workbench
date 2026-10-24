@@ -16,7 +16,14 @@
 #   后者是前者的「早一步」：在提交前就发现，而不是等 CI 五分钟后再判红。
 #
 # 用法: powershell -File tests\check_staged_gofmt.ps1 [-Quiet]
-# 退出码: 0=暂存区无漂移 / 1=有漂移 / 2=UNVERIFIED（不在 git 仓库/无暂存文件）
+# 退出码: 0=暂存区无漂移或无暂存 .go / 1=有漂移 / 2=UNVERIFIED（不在 git 仓库）
+# 【2026-10-24 round 86 更正】此处原写「2=UNVERIFIED（...无暂存文件）」，与实现不符：
+#   实现对「无暂存 .go」报 rc=0（L68-70），而**实现是对的** —— 没有暂存的 .go 意味着
+#   没有将要提交的 Go 改动，gofmt 判据无从失败，报 PASS 正确；报 UNVERIFIED 会让每次
+#   纯文档提交都触发告警（噪声）。这是 round 79「头注比实现旧」的同型第三例，
+#   前两例：check_ps1_encoding 的「都查未跟踪」、check_staged_gofmt 自己这次。
+#   已同步头注。**教训：改退出码语义时，头注那一行是最容易漏的**（它不在代码路径上，
+#   没有任何测试会碰到它）—— 这正是 check_comment_staleness 判据的已知盲区（只抓数字断言）。
 param([switch]$Quiet)
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot

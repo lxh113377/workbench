@@ -34,6 +34,21 @@
   本轮带同会话干净对照实测，pattern 与无参 unroute **均能解除**（`FETCH_FAILED` → 恢复 `OK {...}`）；
   `--body` 桩同样两侧生效。统一处置不变：清桩后仍须真发请求复验，不拿命令的 ✓ 当事实。
 ### Fixed
+- **`check_staged_gofmt` 三向验证 + 修「头注与实现不一致」第三例（round 86）**：
+  ① **FAIL 路径**：暂存一个坏格式 `.go`，判红 `workbench/internal/config/config.go` +
+     修复命令 + 历史代价（round 14/22/23 三轮白跑）；
+  ② **PASS 路径**：`gofmt -w` 后重新暂存 ⇒ rc=0；
+  ③ **无暂存路径**：`git reset` 后报「暂存区无 .go 文件（无需 gofmt 检查）」但 **rc=0**，
+     而头注第 19 行写的是「2=UNVERIFIED（无暂存文件）」——**头注与实现不一致**。
+  **实现是对的**（没有暂存的 .go = 没有将要提交的 Go 改动，判据无从失败，报 PASS 合理；
+  报 UNVERIFIED 会让每次纯文档提交都触发告警）。已修头注并留记录。
+  这是 round 79「头注比实现旧」的**同型第三例**（前两例：`check_ps1_encoding` 的「都查未跟踪」、
+  `check_comment_staleness` 语义声明漂移）。三例共同指向一个**结构性盲区**：
+  **头注不在代码路径上，没有任何测试会碰到它** —— 所以它腐烂时完全静默。
+  `check_comment_staleness` 只抓「只剩/共 N」这类数字断言，抓不到退出码语义声明。
+  已在三处头注里互相引用，让下一个读到的人知道这是已知盲区而非新发现。
+  至此 **32 个判据拿到正向证据**；剩余未验 3 个全部有充分理由：
+  `artifact_soak_fresh`（真实场景反复验证）、`homepage` / `tray_window`（需活实例或桌面会话）。
 - **`check_ps1_syntax` / `check_hooks_enabled` / `check_issue_forms` 端到端验证成功（round 85）—— 剩余未验仅 4 个**：
   ① **`check_ps1_syntax`**：造一个未闭合字符串的 `.ps1`，判红 `tests/check_evil85.ps1:3`
      `The string is missing the terminator: '.`，并附本地自检命令（`Parser::ParseFile`）。
