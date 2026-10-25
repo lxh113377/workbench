@@ -51,6 +51,10 @@ func TestEncodedLessonsSurviveRender(t *testing.T) {
 			"字段缺失",   // ⑥：规格必须写清字段缺失/为 null 时怎么办
 			"浅克隆",    // ⑦：依赖 git 历史的判据必须处理浅克隆取空
 		}},
+		{"quality-hygiene", []string{
+			"重新入索引", // ⑥：写完必须重新入索引
+			"先暂存后写", // ⑥：反向失误的形态（内容合规但没进提交，门禁不判红）
+		}},
 		{"review-five-axis", []string{
 			"合并结论", "门禁建议", // 交付面承诺：报告须含合并结论与门禁建议
 		}},

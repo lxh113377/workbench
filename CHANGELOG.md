@@ -2486,6 +2486,18 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **模板新增 `quality-hygiene` ⑥：写完必须重新入索引，并核对提交内容与预期一致**（本会话实测教训）：
+  实测形态（round 159）：我把 CHANGELOG 条目写在 `git add` **之后**，条目于是躺在**工作区**、提交里
+  **根本没有它** —— 直到把 `git show HEAD:<file>` 与工作区版本**逐字对照**才发现。
+  「先暂存后写」就是这条的**反向失误**，而且**门禁不会判红**：内容本身完全合规，只是没进提交；
+  这也是它值得写成模板条款的原因（机器判据天然看不见「该进提交的没进」）。
+  做法写进条款：写完**重新入索引**（`git add`）+ 用 `git status` 看**工作区-索引差**、
+  `git show --stat` 看**真的进了什么**，而不是假定「我写了 = 它进去了」。
+  两个契约测试同步扩：`encoded_lessons_contract_test.go` 新增 `quality-hygiene` 行（片段
+  `重新入索引`、`先暂存后写`）；**链上交付契约** `lesson_delivery_contract_test.go` 也把它加入表
+  —— 证明这条要求不只在正文里，而是真的出现在 `RootTask` 与 `Successor` 两条入口的 `Task.Prompt` 里。
+  **变异证明**：删掉这条 ⑥（并把 ⑤ 行尾的 `"+` 收回 `",`，否则是无效变异）⇒ **两个契约测试同时判红**
+  （`TestEncodedLessonsSurviveRender` + `TestLessonsReachTaskPromptThroughChain`）；还原后两文件**字节一致**、基线 GREEN。
 - **新增 `tests/check_artifact_page_fresh.ps1`：产物页面与源码**逐字一致**（补上 round 163 登记的那处判据面缺口）**：
   **缺口**：此前产物与源码的页面差异**只按锚点存在性**判定（`check_homepage` 查 home-entries / 无 home-badge /
   有 --ui-probe），**样式不在任何产物时效判据面内** ⇒ round 163 删掉 `--accent-soft` 后产物未重建、
