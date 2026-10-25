@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -46,16 +47,26 @@ func runUIProbeCLI(args []string) int {
 			}
 		case "--port":
 			if i+1 < len(args) {
-				if v, err := parseIntArg(args[i+1]); err == nil {
-					port = v
+				v, err := parseIntArg(args[i+1])
+				// 非法值必须**报错退出**（rc=2，见本文件头注的退出码约定），不许静默沿用默认端口：
+				// 静默沿用会让「--port 写错」看起来像「参数生效了」，排查时找不到入口。
+				// 0 也拒绝：端口 0 会让内核随机分配，与本探针「固定端口、可复现」的设计相悖。
+				if err != nil || v <= 0 || v > 65535 {
+					fmt.Fprintln(os.Stderr, "ui-probe: 无效端口: "+args[i+1])
+					return 2
 				}
+				port = v
 				i++
 			}
 		case "--seconds":
 			if i+1 < len(args) {
-				if v, err := parseIntArg(args[i+1]); err == nil {
-					seconds = v
+				v, err := parseIntArg(args[i+1])
+				// 同上：非法/非正秒数一律报错退出，不许静默沿用 120 秒默认值。
+				if err != nil || v <= 0 {
+					fmt.Fprintln(os.Stderr, "ui-probe: 无效秒数: "+args[i+1])
+					return 2
 				}
+				seconds = v
 				i++
 			}
 		case "--expect-idle":
@@ -155,12 +166,15 @@ func runUIProbeCLI(args []string) int {
 	return 0
 }
 
-// parseIntArg 是仅接受十进制整数的解析（拒绝 "12abc" 这类半数字）。
+// parseIntArg 是仅接受十进制整数的解析：**整串**必须是十进制整数（两侧空白先剥掉）。
+//
+// 为什么不用 fmt.Sscanf("%d")（2026-10-25 round 156 实测缺陷）：Sscanf 只取**前导**整数、
+// 忽略尾部残留，于是 "12abc"→12、"1e3"→1、"12.5"→12 全都静默成功，最刺眼的是
+// "0x10"→**0**（端口静默变成「内核随机分配」）—— 与上一行承诺的「拒绝半数字」正好相反，
+// 而本函数当时**零测试**。strconv.Atoi 按整串解析，四类残留一律报错。
+//
+// 边界（按 2026-10-25 实测写，不按直觉写）：Atoi 接受**可选符号**，故 "-5" 与 "+5" 都照常返回；
+// 「端口/秒数不许非正」是调用点的职责（见 --port / --seconds 分支），不在本层夹带语义。
 func parseIntArg(s string) (int, error) {
-	var v int
-	var err error
-	if _, err = fmt.Sscanf(strings.TrimSpace(s), "%d", &v); err != nil {
-		return 0, err
-	}
-	return v, nil
+	return strconv.Atoi(strings.TrimSpace(s))
 }
