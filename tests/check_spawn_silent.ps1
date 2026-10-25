@@ -97,8 +97,14 @@ foreach ($f3 in $files) {
 		while (-not $seg.Contains("}") -and ($m2 + 1) -lt $ls3.Count) { $m2++; $seg = $seg + " " + $ls3[$m2].Trim() }
 		$flat = $seg.Replace(" ", "").Replace([string][char]9, "")
 		$hasHide = $flat.Contains("HideWindow:true")
-		$hasFlag = $flat.Contains("0x08000000") -or $flat.Contains("CREATE_NO_WINDOW")
-		if (-not $hasFlag) { foreach ($cn in $flagConsts.Keys) { if ($flat.Contains($cn)) { $hasFlag = $true; break } } }
+		# 去注释后判 flag（2026-10-25 round 172 实测自伤）：
+		# 首版直接在片段上 Contains(CREATE_NO_WINDOW)，而唯一那行**尾注释里就有 CREATE_NO_WINDOW** ——
+		# 把定义改成 CreationFlags: 0 后闸仍 PASS（变异证明当场暴露 SILENT）。
+		# 这与 round 158 死代码闸「把注释当引用」是同一个失效模式；注释不是实现，必须先剥掉。
+		$flatNoComment = $flat
+		if ($flatNoComment.Contains("//")) { $flatNoComment = $flatNoComment.Split("//")[0] }
+		$hasFlag = $flatNoComment.Contains("0x08000000")
+		if (-not $hasFlag) { foreach ($cn in $flagConsts.Keys) { if ($flatNoComment.Contains($cn)) { $hasFlag = $true; break } } }
 		if (-not ($hasHide -and $hasFlag)) {
 			$rel2 = $f3.FullName.Replace($Root, "").Replace([char]92, [char]47).TrimStart([char]47)
 			$violations += ($rel2 + ":" + ($k + 1) + ": SysProcAttr 未同时隐藏窗口与禁建控制台 hide=" + $hasHide + " flag=" + $hasFlag + "  " + $seg.Trim())
