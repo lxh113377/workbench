@@ -16,6 +16,21 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **修两处「Stop 下用 `2>$null` 抑制外部命令 stderr」的致命误判（同一 PowerShell 语义，两处活体）**：
+  **三条对照实测（round 202，每条都是执行程序量的，不是查资料）**：在 `$ErrorActionPreference=Stop` 下让 `& git show HEAD:<不存在>` 触发 fatal ——
+  ① 裸 `2>$null` ⇒ 脚本当场终止（后续行不执行）；② 改成 `2>&1` ⇒ **同样终止**（NativeCommandError 在 `&` 那一刻就抛，与重定向流向无关）；
+  ③ 包 `try/catch` ⇒ 被捕获、脚本继续（实测 `caught=yes`）。结论：**只有 try/catch 有效**，前两种都是「看着像修好了」的假修法。
+  **受害的两处（都是「按名字读 HEAD 对象 ⇒ 可能 fatal」的活路径）**：
+  · `check_untracked_go.ps1` 的 `Get-HeadTestCount`：`git show HEAD:<file>` 一旦 fatal 就**整道闸崩掉**（round 190 我实际撞过一次，
+    当时只加 `--diff-filter=M` 治了标、没修根因 —— 该读法在别的入口（如手工传入清单）仍会炸）；现补 `try/catch` 并把原因写进注释。
+  · `check_spawn_silent.ps1` 的 HEAD 复核：`git show (`HEAD:workbench/` + $gitRel)` 对**登记时还没入库的债务件**必 fatal ⇒ 本应 `continue` 跳过这件，
+    实为整道闸崩。注：当前 `$known` 是空表 ⇒ 这条路暂不可达，此改属**纵深防御**（不谎称修了活跃缺陷）。
+  **写法纪律**：两处都用**单点字面替换**（needle 恰命中 1 次、不含换行），改后复验 CRLF 计数不变、BOM 保留、`git diff --numstat` 每文件恰 1/1 ——
+  此前我在同一批文件上用过 split/join 手术并因 EOL 判断错误吞掉过 5 行代码，已回退改用该法。
+  **登记为下轮候选**：全仓 `2>$null` 共 27 处（17 处是 `& git` 直调），绝大多数是 `rev-parse`（几乎不写 stderr、实际安全）；
+  判据若按「`& git` + `2>$null`」宽判会把这 11+ 处安全用法一起判红 ⇒ 噪声化。窄口径应为「按名字读对象（`show HEAD:`/`cat-file`）且未被 try 包裹」，
+  本轮已把现存 2 处清零，该判据待下轮落地。
+
 - **修 `internal/engine.truncateRunes` 的预算越界（同名不同契约漂移，两份五轴报告都登记未改的那条）**：
   实测两包各有一份同名函数且**契约不同**：engine 版是 `string(r[:n]) + 省略号` ⇒ 输出恒比声称的上界**多 1 个字符**
   （n=1 给 2、n=2 给 3），而 autonomy 版是 `string(rs[:n-1]) + 省略号` 并有 `n<=1` 守卫 ⇒ 恒 ≤ n。

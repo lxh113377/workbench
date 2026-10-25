@@ -154,7 +154,7 @@ if ($knownStale.Count -gt 0) {
       if ($LASTEXITCODE -ne 0) { continue }
       $repoRootForGit = ([string]$repoRootForGit).Trim()
       $gitRel = $k.Replace([string][char]92, [string][char]47)
-      $headRaw = & git -C $repoRootForGit show ('HEAD:workbench/' + $gitRel) 2>$null
+      $headRaw = $null; try { $headRaw = & git -C $repoRootForGit show ('HEAD:workbench/' + $gitRel) 2>$null } catch { continue } # Stop 下 2>$null 抑制不了终止错误（round 202 实测）
       if ($LASTEXITCODE -ne 0) { continue }
       $hl = @($headRaw)
       for ($hi = 0; $hi -lt $hl.Count; $hi++) {

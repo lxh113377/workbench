@@ -54,7 +54,7 @@ function Get-TestCount([string[]]$rels) {
 #   旧写法用 git ls-files 取**路径**再读**工作区内容** ⇒ 对「已跟踪但有未提交改动」的文件，数的是工作区版本，
 #   却被当成「提交的测试函数」，差额（只在本地跑的测试）因此被低估。现：脏文件从 HEAD blob 数，干净文件读工作区（等价且快）。
 $dirtyTracked = @(git -C $root diff --name-only --diff-filter=M HEAD -- "*.go" | Where-Object { $_ })  # 只取 HEAD 里存在且被改的；暂存新增件 git show HEAD: 必炸 fatal（2026-10-26 round 185 实测红）
-function Get-HeadTestCount([string[]]$rels) { $n = 0; foreach ($r in $rels) { $t = (& git -C $root show ("HEAD:" + $r) 2>$null | Out-String); if ($t) { $n += ([regex]::Matches($t, "(?m)^func Test" + [char]92 + "w+")).Count } }; return $n }
+function Get-HeadTestCount([string[]]$rels) { $n = 0; foreach ($r in $rels) { $t = ""; try { $t = (& git -C $root show ("HEAD:" + $r) 2>$null | Out-String) } catch { $t = "" }; if ($t) { $n += ([regex]::Matches($t, "(?m)^func Test" + [char]92 + "w+")).Count } }; return $n } # try/catch 必备：Stop 下 2>$null 抑制不了 NativeCommandError（round 202 实测）
 $cleanTracked = @($tracked | Where-Object { $dirtyTracked -notcontains $_ })
 $committed = (Get-TestCount $cleanTracked) + (Get-HeadTestCount $dirtyTracked)
 $worktree = (Get-TestCount @($tracked | Where-Object { Test-Path -LiteralPath (Join-Path $root $_) })) + (Get-TestCount $untracked)
