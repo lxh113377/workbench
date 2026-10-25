@@ -16,6 +16,29 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **修 `internal/web/hub.go` 的真实崩溃：SSE 取消订阅与 backlog 回放竞态 ⇒ panic: send on closed channel（CI 纯净检出门禁抓到）**：
+  **不是假想的竞态，是 CI 实测**：`49ed86f` 的 repo-gates 作业里 `check_snapshot_build.ps1` 跑 `go test ./...` 崩在
+  `hub.go:37`（`(*Hub).Subscribe.func1()`），`FAIL workbench/internal/web`。而 `vet + test (race)` 作业是**绿的** ——
+  同一份代码两种结论，差别在 race 作业按包并行、纯净检出作业整树跑，调度窗口不同 ⇒ **这条路径 race 检测没覆盖到**。
+  **根因（读代码即得，无需猜）**：`Subscribe` 起的回放 goroutine 往 `ch` 发送但**完全不持锁**；`cancel` 在 `h.mu` 内
+  `delete + close(ch)`。两者无同步关系 ⇒ 取消落在"回放在途"的窗口即向已关闭通道发送。同一个 `close` 对 `Emit`
+  是安全的（Emit 持锁且先 delete 再 close），**唯独漏了回放这条路**。
+  **对 7×24 无人值守进程的后果**：panic 发生在后台 goroutine，没有任何 recover 兜得住 ⇒ **整个进程退出**；
+  触发条件是"浏览器关掉 SSE 页面而 ring 里还有几十条待回放"——日常操作，不是理论场景。
+  **修法（不变式而非补丁）**：所有对客户端通道的发送都必须在 `h.mu` 内进行。回放改为逐条 `Lock → 查 h.clients[ch]
+  是否仍在册 → 带 default 的非阻塞发送 → Unlock`，已取消或缓冲满即停。关键是**发送仍带 default**，所以不会出现
+  「持锁等慢客户端」——那正是 round 185-186 用超时判据钉住的 Emit 非阻塞契约，本轮修复必须不破坏它。
+  **新增 `hub_closed_channel_contract_test.go`（先红后绿）**：4000 轮「订阅→消费几条→立即取消」，panic 会直接崩测试
+  进程即判红；另加反向对照「正常消费完再取消也必须关闭通道」（防修复把正常路径改坏，SSE 靠 open=false 退出）。
+  **验证（三重 + 变异，全实跑）**：修前该测试 **rc=1 且 panic 行与 CI 同一处 `hub.go:37`**（复现成功）；修后 GREEN；
+  `-race -count=3` 无 DATA RACE；既有 Emit 非阻塞契约两条仍 GREEN；web 包全量、全仓 `go test ./...`、`vet ./...`、
+  `build ./...` 全 rc=0。**变异**：把块整体回退成无锁版 ⇒ 立刻复现 `send on closed channel`（判据有效非摆设），
+  还原后 GREEN 且字节一致。块行数守卫（须恰 20 行）当场拦下我一次错误的尾行匹配（`trim()` 与带 tab 比较混用，
+  会让 splice 吞掉 67 行）—— 同族「守卫先于写盘」第 N 次救场。
+  **顺带查实并更正一个长期口径误解**：`hub.go` 的 `git ls-files --eol` 显示 `i/lf w/crlf attr/text eol=lf` ——
+  入库本是 LF，是**工作副本**被 checkout 成 CRLF。实测：`gofmt -w` 把它归一为 LF 后 `git diff` **无任何差异**，
+  即"归一不产生假 diff"，属性口径本来就对；真正需要盯的是我这轮恢复 `.git/config` 时写入的 `core.autocrlf=true`
+  （历轮记录里没有这条，属我新增设置）—— 它正是工作副本变 CRLF 的来源，已如实登记，后续编辑一律以 EOL 断言把关。
 - **修掉聚合器另一半洗绿：check_all 的 28 处段内「if ($LASTEXITCODE -eq 2){…; 置 LASTEXITCODE=0}」让 Section 函数读到 0，
   把「门禁跑了但证据不足」也判成 PASS —— 与段内那句「不计 PASS」自相矛盾**（round 214-215 实测确证）：
   **实验用的不是我重打的 mock，而是从 check_all.ps1 抽出的真实 Section 函数**（避免"实验体与产品不同构"这一族）：

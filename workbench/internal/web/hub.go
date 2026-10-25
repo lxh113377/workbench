@@ -31,11 +31,22 @@ func (h *Hub) Subscribe() (chan model.Event, func()) {
 	h.clients[ch] = struct{}{}
 	backlog := append([]model.Event(nil), h.ring...)
 	h.mu.Unlock()
+	// 回放必须在 h.mu 内进行：Emit 持锁发送、cancel 持锁 close，三者互斥才保证
+	//「不向已关闭通道发送」。发送一律带 default（非阻塞），故不会出现「持锁等慢客户端」
+	//——那正是 round 185-186 用超时判据钉住的 Emit 非阻塞契约。
 	go func() {
 		for _, ev := range backlog {
-			select {
-			case ch <- ev:
-			default:
+			h.mu.Lock()
+			_, alive := h.clients[ch] // 已取消 ⇒ 通道可能已 close，必须停手
+			if alive {
+				select {
+				case ch <- ev:
+				default:
+					alive = false // 缓冲满：丢剩余回放，绝不持锁空等
+				}
+			}
+			h.mu.Unlock()
+			if !alive {
 				return
 			}
 		}
