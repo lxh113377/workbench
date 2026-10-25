@@ -16,6 +16,32 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **同一数字解析缺陷类的第 2、3 处（含一处**不可逆删除**风险）：`prune.go` 与 `pool_cli.go`**：
+  承 round 156（`ui_probe.go` 的 `parseIntArg` 用 `Sscanf` 接受半数字），本轮把同类写法在本包内排查完，
+  又找到两处，后果一处比一处重：
+  · `prune.go` 的保留天数用 `fmt.Sscan(args[i], &v)` —— 实测 `"3abc"`→3、`"3.5"`→3，最意外的是
+  `"0x10"`→**16**（十六进制被当合法值）。这三个数字是**保留天数**，配合 `--apply` 是不可逆删除：
+  解错一天，删的就是另一个年龄的数据。
+  · `pool_cli.go` 的 `--model-pool log [N]` 用 `fmt.Sscanf(args[1], "%d", &n)` 且**返回值被丢弃** ——
+  `"5abc"` 静默当 5、`"abc"` 静默沿用 30，而 `"0x10"` 在 `%d` 下解析成 **0** ⇒ `LogTail(0)` 打印 0 行、
+  rc=0：用户以为拿到了日志，实际是**静默空操作**。
+  修法：两处统一调用 round 156 修好的 `parseIntArg`（同包，单一实现），并在调用点**报错返回**
+  （`prune` → rc=1；`pool` → rc=1，符合其头注「1 命令错误」）。`prune` 的测试刻意**不跑 `--apply`**：
+  本包 `DSHHome = <root>/runtime/dsh-home`、root 不由 `--data` 决定，测试里做真实删除可能碰到工作区外的副本；
+  删除语义的正确性由 `internal/retention` 既有的 3 个测试覆盖。
+  新增 `prune_cli_test.go`（坏天数 8 种 × 3 个开关 ⇒ rc=1；默认 dry-run 与显式 `--dry-run` 等价；
+  拼错的开关 `--aply` 必须 rc=1 —— 否则「已回收」会被误报成「未回收」；JSON 字段名 `dryRun`/`taskDirsOptIn` 契约）
+  与 `scan_family_guard_test.go`（**家族守卫**：本包 .go 的非注释行禁止再出现 `fmt.Sscan`/`fmt.Sscanf`）。
+  **本轮的守卫自己坏过两次，都被变异证明抓出（如实记）**：
+  ① 首版针写成 `"fmt.S"`+`"can"` ＝ `fmt.Scan` —— 它**不是** `fmt.Sscan`/`fmt.Sscanf` 的子串
+  （`S` 之后是 `s` 不是 `c`），变异 B 让守卫 **SILENT**：守卫只挡了从未出现过的写法、漏掉真正出事的两种；
+  ② 修好针后 B 仍 SILENT —— 根因是我用 charCode 构造 Go 源码时把**表达式** `string(rune(10))` 拼成了
+  **字面字符串** `"string(rune(10))"`，于是 `strings.Split` 只得到「整文件一块」、再被首个 `//` 截断，
+  针永远到不了（文件级诊断看得见针、行级永远不报）。改为 `nl := string(rune(10))` 变量后：
+  变异 A ⇒ RED（`TestPruneCLIRejectsBadDayFlags` + 守卫同时判红）、变异 B ⇒ RED（守卫）、还原 ⇒ GREEN 且字节一致。
+  教训两条：**(a) 「禁止型/检查型判据」本身也需要变异证明**——它最容易只挡住想象出来的写法；
+  **(b) 用 charCode 规避转义时要分清「表达式」与「字面量」**，本仓「多层字符串改写」家族又添一例。
+  验证：`go vet ./cmd/workbench/` rc=0；4 个相关测试 rc=0；受影响 11 项门禁全 PASS；数字未变（43/27/43/29）。
 - **修一处「注释承诺与实现相反」的 CLI 解析缺陷 + 让它自述的 rc=2 真正可达（`ui_probe.go`）**：
   起因：`cmd/workbench` 是本仓覆盖率最低的包（读数文件里 `coverage` 记为 11.1%），本轮按「无同名测试
   的文件」逐个看，在 `ui_probe.go` 读到 `parseIntArg` 注释写着「**拒绝 "12abc" 这类半数字**」。

@@ -83,7 +83,16 @@ func runModelPoolCLI(args []string) int {
 	case "log":
 		n := 30
 		if len(args) > 1 {
-			fmt.Sscanf(args[1], "%d", &n)
+			// 必须整串解析**且检查错误**（2026-10-25 round 157 实测缺陷）：此前是
+			// fmt.Sscanf(args[1], "%d", &n) 且**返回值被丢弃** —— "5abc" 静默当 5，
+			// "abc" 静默沿用默认 30，"0x10" 在 %d 下解析成 **0** ⇒ LogTail(0) 打印 0 行、rc=0，
+			// 用户以为拿到了日志，实际是静默空操作。
+			v, err := parseIntArg(args[1])
+			if err != nil || v <= 0 {
+				fmt.Fprintln(os.Stderr, "无效的条数: "+args[1])
+				return 1
+			}
+			n = v
 		}
 		lines := svc.LogTail(n)
 		for _, l := range lines {

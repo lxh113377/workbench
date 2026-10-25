@@ -61,8 +61,12 @@ func runPruneCLI(args []string) int {
 			return 0
 		case (a == "--dsh-home-days" || a == "--workspace-days" || a == "--task-dir-days") && i+1 < len(args):
 			i++
-			var v int
-			if _, err := fmt.Sscan(args[i], &v); err != nil || v <= 0 {
+			// 必须用**整串**解析（2026-10-25 round 157 实测缺陷）：此前用 fmt.Sscan(args[i], &v)，
+			// 它对尾部残留一律不报错 —— "3abc"→3、"3.5"→3，最意外的是 "0x10"→**16**（十六进制被当成合法值）。
+			// 这三个数字是**保留天数**，且 --apply 不可逆：解错一天，删的就是另一个年龄的数据。
+			// 统一走本包 parseIntArg（与 --port/--seconds 同一实现，避免第二套语义）。
+			v, err := parseIntArg(args[i])
+			if err != nil || v <= 0 {
 				fmt.Fprintln(os.Stderr, "无效的天数: "+args[i])
 				return 1
 			}
