@@ -15,6 +15,11 @@
 #
 # 清零条件：HEAD 上的漂移修复后（并行会话提交其格式化），删除对应行。
 #
+# 【2026-10-25 round 159：条目 23 → 21】删死代码时对受影响的 .go 跑了 gofmt，顺手清掉了两条长期在册的
+#   格式债（internal/engine/stall_reason.go、internal/gov/lifecycle.go）。HEAD（172abce）已不再漂移 ⇒
+#   按上闸的失效检测，这两条必须从本表删除 —— 否则等于让门禁对这两个文件的**将来漂移**永久失明。
+#   注：本轮 CI 在 172abce 上判红，原因正是「豁免失效」这条（代码没问题，是账本没跟着缩）。
+#
 # 本轮账（2026-10-22 18:5x，HEAD=7375eca 实测）：33 个文件 HEAD 漂移 + 工作区皆 M（在途），
 # 另 2 个 shortcut 件同在途。全部为并行会话在途，本会话不代改（避免覆盖竞争）。
 
@@ -31,10 +36,8 @@ workbench/internal/engine/interp_probe_test.go
 workbench/internal/engine/plan_helpers.go
 workbench/internal/engine/replan.go
 workbench/internal/engine/replan_test.go
-workbench/internal/engine/stall_reason.go
 workbench/internal/executor/ratelimit_test.go
 workbench/internal/gov/engine.go
-workbench/internal/gov/lifecycle.go
 workbench/internal/retention/danger.go
 workbench/internal/single/instance.go
 workbench/internal/supervisor/metrics_csv_test.go
