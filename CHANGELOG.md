@@ -1,4 +1,4 @@
-���# Changelog
+﻿# Changelog
 
 > 本项目所有值得一提的变更都记在这里。
 > 格式遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，
@@ -2594,6 +2594,23 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **模板新增两条有实测证据的过程约束：`quality-verify` ⑪（文本类判据先剥注释 + 专用变异形态）与
+  `quality-hygiene` ⑦（提交必须用显式 pathspec）**，并同步扩两个契约表：
+  · **verify ⑪**：文本/源码类判据一律**先剥注释再判**；变异验证要**专门试一种形态** —— 把真值改坏、
+  但**注释里保留原词**。本仓同一条教训出现两次：① 死代码门禁把函数自己文档注释里的函数名算成「引用」
+  ⇒ 凡有文档注释的未导出函数对它全部隐形（同树同时刻 0 vs 16）；② round 172 新写的 spawn 闸直接在代码片段上
+  `Contains(CREATE_NO_WINDOW)`，而那唯一一行的**尾注释里就有这个词** ⇒ 把定义改成 `CreationFlags: 0` 后仍 PASS（SILENT）。
+  · **hygiene ⑦**：提交必须用**显式 pathspec** 限定范围；**不要**指望 `--no-verify` 收窄范围 —— 它只跳过 hook，
+  **提交的仍是整个暂存区**。2026-10-25 实测踩过：为让 pre-commit 让路而用 `--no-verify`，结果把另一会话
+  **14 个已暂存测试件**一并写进 HEAD（含 2 个 gofmt 漂移件）⇒ CI 判红，只能按本仓机制登记债务并更正口径。
+  另记同族形态：`git add` **之后**才做的编辑不会进索引，提交前必须用 `git show HEAD:<file>` 逐字对照 ——
+  本仓已两次同型（round 159 的 CHANGELOG 条目、round 172 的判据修复本体）。
+  两个契约表同步扩：模板渲染契约与**链上交付契约**各 +4 片段（新片段：`先剥注释` / `保留原词` / `显式 pathspec` / `整个暂存区`），
+  即两条条款都**真的进入** `RootTask` 与 `Successor` 两条入口的 `Task.Prompt`。
+  **双向变异证明**：删 verify ⑪ ⇒ 两个契约测试同时判红；删 hygiene ⑦ ⇒ 同样双红；还原后**字节一致**。
+  （过程如实记：M1 第一次把「上一行锚点」取成了 ⑨ 的尾行 ⇒ 得到 INVALID(compile)，判定器正确拒绝把它当判红；
+  换成 ⑩ 真正的尾行后才判红。）
+
 - **架构收敛：把「不闪黑框」这条保证的 12 处定义 / 5 种名字收敛成唯一一处**（执行本仓《判据面与缺陷族》报告 §6.2 的建议）：
   新增 `internal/winhide` 包（`SysProcAttr()`：Windows 侧 `HideWindow: true, CreationFlags: 0x08000000`，非 Windows 侧 nil），
   把 `dshprofile` / `web` / `tray` / `shortcut` / `verify` / `executor` / `browser` / `cmd/workbench` 的调用点全部改走它，

@@ -72,11 +72,36 @@ for ($i = 1; $i -lt $released.Count; $i++) {
   if ($cmp -ge 0) { $fails += ("版本段未降序: " + $x.Ver + " 之后是 " + $y.Ver) }
 }
 
+
+# 4) 头字节（2026-10-25 round 173 补，实测既存缺陷）：必须以**恰好一个** UTF-8 BOM 开头、紧随 "# "，
+#    且**第一行**不得含替换字符 U+FFFD。为什么补：HEAD 里曾长期带 3 个 U+FFFD（第一行渲染成三个 ? 再跟 # Changelog），
+#    而当时没有任何判据看头字节 —— check_multi_bom 只数 BOM 个数、本闸只看段标题，于是它一路绿着进了很多次提交。
+$head = [IO.File]::ReadAllBytes($Path)
+$bomCount = 0
+for ($i = 0; ($i + 2) -lt $head.Length; $i += 3) {
+	if ($head[$i] -eq 0xEF -and $head[$i + 1] -eq 0xBB -and $head[$i + 2] -eq 0xBF) { $bomCount++ } else { break }
+}
+if ($bomCount -ne 1) {
+	$fails += ("开头必须是**恰好一个** UTF-8 BOM，实测 " + $bomCount + " 个")
+} elseif ($head.Length -lt 5 -or $head[3] -ne 0x23 -or $head[4] -ne 0x20) {
+	$show = ""
+	for ($i = 0; $i -lt [Math]::Min(6, $head.Length); $i++) { $show += ("{0:x2} " -f $head[$i]) }
+    $fails += ("BOM 之后必须紧跟井号加空格（0x23 0x20），实测前 6 字节: " + $show)
+} else {
+	$lineEnd = $head.Length
+	for ($i = 3; $i -lt $head.Length; $i++) { if ($head[$i] -eq 0x0A) { $lineEnd = $i; break } }
+	for ($i = 3; ($i + 2) -lt $lineEnd; $i++) {
+		if ($head[$i] -eq 0xEF -and $head[$i + 1] -eq 0xBF -and $head[$i + 2] -eq 0xBD) {
+			$fails += "第一行含替换字符 U+FFFD（编码损坏残留）"
+			break
+		}
+	}
+}
 if ($fails.Count -gt 0) {
   Write-Host ("FAIL: CHANGELOG 结构不合规（" + $Path + "）") -ForegroundColor Red
   foreach ($f in $fails) { Write-Host ("  - " + $f) }
   Write-Host "规则见本脚本头部注释与 CONTRIBUTING.md「发布流程」。"
   exit 1
 }
-if (-not $Quiet) { Write-Host ("CHANGELOG 结构合规：" + $released.Count + " 个已发布段 + Unreleased 居首") }
+if (-not $Quiet) { Write-Host ("CHANGELOG 结构合规（头字节 OK）：" + $released.Count + " 个已发布段 + Unreleased 居首") }
 exit 0
