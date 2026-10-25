@@ -42,12 +42,27 @@ param(
 # 教训：包的能力描述会随测试补齐而失效，阈值必须定期按实测重校，不能一次设定管到底。
 )
 $ErrorActionPreference = "Stop"
+
+# 分段时间（2026-10-25 round 166，纯观测、不改行为）：构建链此前只报总时长，
+# 无法归因到段。加这一段的起因：实测 go vet 1.2s / go test -count=1 39.8s / go build 3s，
+# 三者相加远小于整链 97.7s —— 说明大头在我没量的地方（覆盖插桩、真探针启停、各判据）。
+$chainStart = Get-Date
+$script:stepT0 = Get-Date
+$script:stepName = "（链起点）"
+function Mark([string]$next) {
+  $now = Get-Date
+  $el = [math]::Round(($now - $script:stepT0).TotalSeconds, 1)
+  Write-Host ("    [计时] " + $script:stepName + " = " + $el + " s") -ForegroundColor DarkGray
+  $script:stepT0 = $now
+  $script:stepName = $next
+}
 $root = Split-Path -Parent $PSScriptRoot
 $wb = Join-Path $root "workbench"
 $dist = Join-Path $root "dist"
 $build = Join-Path $wb "build"
 New-Item -ItemType Directory -Force -Path $dist | Out-Null
 
+Mark "1/6 图标"
 Write-Host "==> 1/6 生成图标" -ForegroundColor Cyan
 $makeIcon = Join-Path $PSScriptRoot "make-icon.ps1"
 if (Test-Path $makeIcon) {
@@ -57,6 +72,7 @@ if (Test-Path $makeIcon) {
   Write-Warning "    make-icon.ps1 不存在，跳过图标生成（EXE 仍可用）"
 }
 
+Mark "2/6 资源（无 app.rc 时几乎为 0）"
 Write-Host "==> 2/6 编译资源（图标 + 版本信息）" -ForegroundColor Cyan
 # 缺件分级（2026-10-21 实测修复）：app.rc / make-icon.ps1 在本机不存在且从未入库
 # （git ls-files 零命中），而 $ErrorActionPreference="Stop" 会让 cc1 报
@@ -92,6 +108,7 @@ if (Test-Path $rcPath) {
   }
 }
 
+Mark "3/6 vet+gofmt"
 Write-Host "==> 3/6 代码检查（go vet + gofmt）" -ForegroundColor Cyan
 # gofmt 门禁（2026-10-22 补）：本仓长期没有格式门禁，根因是 core.autocrlf 下工作副本全 CRLF、
 # 直接 gofmt -l 会满屏假红（实测 73/286 个文件），谁都只能撤掉。
@@ -104,6 +121,7 @@ Push-Location $wb
 if ($LASTEXITCODE -ne 0) { Pop-Location; throw "go vet 失败" }
 
 if (-not $SkipTests) {
+Mark "4/6 test+覆盖率"
   Write-Host "==> 4/6 运行测试 + 覆盖率门禁" -ForegroundColor Cyan
   $coverOut = (& go test ./... -count=1 -cover 2>&1 | Out-String)
   $testRc = $LASTEXITCODE
@@ -173,9 +191,11 @@ if (-not $SkipTests) {
     Write-Host "    覆盖率门禁已跳过（-SkipCoverGate）" -ForegroundColor Yellow
   }
 } else {
+Mark "4/6 test（跳过）"
   Write-Host "==> 4/6 跳过测试" -ForegroundColor Yellow
 }
 
+Mark "5/6 go build"
 Write-Host "==> 5/6 构建单 EXE" -ForegroundColor Cyan
 $buildTime = Get-Date -Format o
 $env:CGO_ENABLED = "0"
@@ -183,6 +203,7 @@ $env:CGO_ENABLED = "0"
 if ($LASTEXITCODE -ne 0) { Pop-Location; throw "构建失败" }
 Pop-Location
 
+Mark "6/6 校验+链接判据"
 Write-Host "==> 6/6 校验产物" -ForegroundColor Cyan
 $exe = Join-Path $dist "workbench.exe"
 if (-not (Test-Path $exe)) { throw "产物不存在" }
@@ -282,6 +303,7 @@ if (Test-Path $pageChecker) {
 # 只要 EXE 带 Zone.Identifier 备用数据流，Windows 附件管理器就会在双击时弹
 # "无法验证发布者。你确定要运行此软件吗？" 的安全警告 —— 一步人工点击，而且
 # 在无人值守场景会直接把启动卡死。产物必须是本机构建且已解除阻止的干净文件。
+Mark "6.5 MOTW"
 Write-Host "==> 6.5/7 MOTW 门禁（弹安全警告的前提）" -ForegroundColor Cyan
 $zone = Get-Item -LiteralPath $exe -Stream Zone.Identifier -ErrorAction SilentlyContinue
 if ($zone) {
@@ -298,6 +320,7 @@ if ($zone) {
 # 从它启动的进程会继承 Low IL，于是**永远注册不上托盘图标**（NIM_ADD → Access is denied），
 # 而且 Low 进程自己修不了（icacls 返回 1299）。目录属主在 Medium 下可以修，构建脚本
 # 正是 Medium —— 因此把「产物目录必须是 Medium」做成构建门禁，坏标签不带进下一轮。
+Mark "7/7 完整性标签"
 Write-Host "==> 7/7 完整性标签门禁（托盘图标可注册的前提）" -ForegroundColor Cyan
 $labelLines = @(& icacls.exe $dist 2>&1 | Where-Object { "$_" -match 'Mandatory Label' })
 if ($labelLines.Count -gt 0 -and ("$($labelLines -join ' ')") -match 'Low Mandatory Level') {
@@ -313,4 +336,6 @@ if ($labelLines.Count -gt 0 -and ("$($labelLines -join ' ')") -match 'Low Mandat
 }
 
 Write-Host ""
+Mark "7/7 完整性标签"
+Write-Host ("    [计时] 构建链总计 = " + [math]::Round(((Get-Date) - $chainStart).TotalSeconds, 1) + " s") -ForegroundColor Cyan
 Write-Host "构建成功！双击 $exe 或运行 setup\install.ps1 安装快捷方式。" -ForegroundColor Green

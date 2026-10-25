@@ -46,18 +46,32 @@ if (Test-Path -LiteralPath $debtPath) {
 }
 $drift = @()
 $exempt = @()
+$wtDrift = @{}
+$wtTree = Join-Path $tmpdir 'wt'
+New-Item -ItemType Directory -Force $wtTree | Out-Null
 try {
+  # 批量口径（2026-10-25 round 166）：把归一化内容写进**临时树的真实相对路径**，再**单次** gofmt -l 整棵树。
+  # 旧口径是「每文件写一个临时文件 + 每文件起一次 gofmt」—— 本仓 350 个受跟踪 .go 就是 350 次进程启动，
+  # 实测占掉构建链 3/6 段的 41 s（同机 go vet 只要 1.2 s）。语义不变：判的仍是「LF 归一化后是否需格式化」。
   foreach ($rel in $tracked) {
     $abs = Join-Path $Root $rel
     if (-not (Test-Path -LiteralPath $abs)) { continue }
     $lf = ([IO.File]::ReadAllText($abs)) -replace "`r`n", "`n"
-    $tmp = Join-Path $tmpdir (($rel -replace '[\\/]', '__'))
-    [IO.File]::WriteAllText($tmp, $lf)
-    $out = & gofmt -l $tmp 2>$null
-    if ($LASTEXITCODE -ne 0) { Write-Error ("gofmt 执行失败于 " + $rel); exit 2 }
-    if ($out) { $drift += $rel }
+    $dst = Join-Path $wtTree ($rel -replace '[\\/]', [char]92)
+    $dstDir = Split-Path -Parent $dst
+    if ($dstDir -and -not (Test-Path -LiteralPath $dstDir)) { New-Item -ItemType Directory -Force $dstDir | Out-Null }
+    [IO.File]::WriteAllText($dst, $lf)
   }
+  $outTree = @(& gofmt -l $wtTree 2>$null)
+  if ($LASTEXITCODE -ne 0) { Write-Error "gofmt 整树执行失败（临时树 " + $wtTree + "）"; exit 2 }
+  foreach ($line in $outTree) {
+    if (-not $line) { continue }
+    $relTmp = $line.Substring($wtTree.Length).TrimStart([char]92, [char]47) -replace '[\\/]', [char]47
+    $wtDrift[$relTmp] = $true
+  }
+  foreach ($rel in $tracked) { if ($wtDrift.ContainsKey($rel)) { $drift += $rel } }
 } finally {
+  # 临时树随 $tmpdir 一起清（旧版的清理语句同属本区域，被我替换时必须一并保留）
   Remove-Item -Recurse -Force $tmpdir -ErrorAction SilentlyContinue
 }
 
@@ -72,31 +86,68 @@ $gitProbeAll = (& git -C $Root rev-parse --show-toplevel 2>$null)
 $hasGitAll = ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace([string]$gitProbeAll))
 if ($hasGitAll) {
   $rr = ([string]$gitProbeAll).Trim()
-  $td = Join-Path ([IO.Path]::GetTempPath()) ('hwchk-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
-  New-Item -ItemType Directory -Force $td | Out-Null
-  try {
-    # 一次性取 HEAD 文件清单：用 ls-tree（它对不存在的 blob 不写 stderr，规避 Stop 抛错）
-    $headPaths = @(& git -C $rr ls-tree -r --name-only HEAD 2>$null)
-    if ($LASTEXITCODE -ne 0) { $headPaths = @() }
-    foreach ($rel in @($tracked)) {
-      $tf = Join-Path $td (($rel -replace '[\\/]', '__'))
-      # 取内容前先按 HEAD 清单选来源（2026-10-25 实测两轮才修对）：
-      #   第一版写「HEAD 失败就重试 index」，仍判红 —— 本脚本 ErrorActionPreference=Stop，
-      #   native 命令往 stderr 写 fatal 会被当 NativeCommandError 抛出（本仓在册同族坑），
-      #   失败路径根本走不完。正解是不制造失败：先一次性列出 HEAD 里的路径，按存在性选
-      #   HEAD:$rel 或 index 的 :$rel（后者 = 已 stage 但尚未提交的新文件）。
-      # 为什么必须支持 index（顺序死结）：本仓验证流程是「先 git add 让 check_report_figures
-      #   的未跟踪计数反映提交后状态，再提交」。若新文件在 HEAD 取不到就算漂移，就成了
-      #   「必须先提交才能跑绿、提交前又必须跑绿」。判据不退化：index blob 就是即将进 HEAD
-      #   的那份内容，不合规照样判红。
-      $src = $(if ($headPaths -contains $rel) { "HEAD:$rel" } else { ":$rel" })
-      cmd /c "git -C `"$rr`" cat-file blob $src > `"$tf`"" 2>$null
-      if ($LASTEXITCODE -ne 0 -or -not (Test-Path $tf)) { $headDriftAll[$rel] = $true; continue }
-      $o = & gofmt -l $tf 2>$null
-      $headDriftAll[$rel] = [bool]$o
+
+	# 【2026-10-25 round 166 批量改造的核心】干净文件复用工作区结论，不再逐个取 HEAD 副本 + 逐个 gofmt：
+	#   若文件内容与 HEAD blob 逐字节一致，格式结论必然相同 ⇒ headDrift(rel) = wtDrift(rel) 可直接复用。
+	#   旧口径对 350 个受跟踪 .go **每个都**跑一次 cmd/git cat-file 加一次 gofmt（实测这是本门禁 ~41 s 的主体，
+	#   同机 go vet ./... 只要 1.2 s）。脏文件通常个位数（CI 干净检出为 0）⇒ 这一段降到接近零。
+	#   脏集合取两处，宁可多算不可漏算：
+	#     · git status --porcelain（index + 工作区 vs HEAD 的一切变化：M/A/D/R/T/U）
+	#     · git ls-files -v 里首列不是 H 的（assume-unchanged / skip-worktree）—— 这类文件 status 不报，
+	#       但工作区内容可能与 HEAD 不同，必须按脏处理（这正是「宁可多算」的那一类）。
+  $dirty = @{}
+  foreach ($dline in @(& git -C $rr status --porcelain=v1 2>$null)) {
+    if (-not $dline -or $dline.Length -lt 4) { continue }
+    $pp = $dline.Substring(3).Trim()
+    if ($pp.Contains(' -> ')) { $pp = ($pp -split ' -> ')[-1] }
+    $pp = $pp.Trim([char]34)
+    if ($pp) { $dirty[($pp.Replace([char]92, [char]47))] = $true }
+  }
+  foreach ($vline in @(& git -C $rr ls-files -v 2>$null)) {
+    if ($vline -and $vline.Length -gt 2 -and $vline[0] -cne 'H') {
+      $pp = $vline.Substring(2).Trim()
+      if ($pp) { $dirty[($pp.Replace([char]92, [char]47))] = $true }
     }
-  } finally { Remove-Item -Recurse -Force $td -ErrorAction SilentlyContinue }
+  }
+  $needHead = @()
+  foreach ($rel in @($tracked)) {
+    if ($dirty.ContainsKey($rel)) { $needHead += $rel; continue }
+    $headDriftAll[$rel] = $wtDrift.ContainsKey($rel)
+  }
+  if ($needHead.Count -gt 0) {
+    $td = Join-Path ([IO.Path]::GetTempPath()) ('hwchk-' + [guid]::NewGuid().ToString('N').Substring(0, 8))
+    New-Item -ItemType Directory -Force $td | Out-Null
+    $headTree = Join-Path $td 'head'
+    New-Item -ItemType Directory -Force $headTree | Out-Null
+    try {
+      # 一次性取 HEAD 文件清单：用 ls-tree（它对不存在的 blob 不写 stderr，规避 Stop 抛错）
+      $headPaths = @(& git -C $rr ls-tree -r --name-only HEAD 2>$null)
+      if ($LASTEXITCODE -ne 0) { $headPaths = @() }
+      $fetched = @{}
+      foreach ($rel in $needHead) {
+        $src = $(if ($headPaths -contains $rel) { "HEAD:$rel" } else { ":$rel" })
+        $tf = Join-Path $headTree ($rel -replace '[\\/]', [char]92)
+        $tfDir = Split-Path -Parent $tf
+        if ($tfDir -and -not (Test-Path -LiteralPath $tfDir)) { New-Item -ItemType Directory -Force $tfDir | Out-Null }
+        cmd /c "git -C `"$rr`" cat-file blob $src > `"$tf`"" 2>$null
+        if ($LASTEXITCODE -ne 0 -or -not (Test-Path $tf)) { $headDriftAll[$rel] = $true; continue }
+        $fetched[$rel] = $true
+      }
+      if ($fetched.Count -gt 0) {
+        $outH = @(& gofmt -l $headTree 2>$null)
+        if ($LASTEXITCODE -ne 0) { Write-Error "gofmt 整树执行失败（HEAD 临时树）"; exit 2 }
+        $headDriftSet = @{}
+        foreach ($hline in $outH) {
+          if (-not $hline) { continue }
+          $relTmp = $hline.Substring($headTree.Length).TrimStart([char]92, [char]47) -replace '[\\/]', [char]47
+          $headDriftSet[$relTmp] = $true
+        }
+        foreach ($rel in @($fetched.Keys)) { $headDriftAll[$rel] = $headDriftSet.ContainsKey($rel) }
+      }
+    } finally { Remove-Item -Recurse -Force $td -ErrorAction SilentlyContinue }
+  }
 }
+
 # 分类（2026-10-22 四轮校准：全程按 HEAD 判定，因为 CI 判的就是 HEAD）：
 #   exempt     = 登记于债务清单且 HEAD 仍漂移（已知缺陷，点名不计 rc）
 #   fatal      = HEAD 漂移但未登记（CI 会红，计入 rc）
