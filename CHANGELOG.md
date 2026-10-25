@@ -2405,6 +2405,19 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **补齐 4 个「只挂 CI」的门禁进本地全量套件 —— 关掉「本地绿 / CI 红」陷阱**：
+  实测（门禁 × 受理面矩阵）：41 个受跟踪门禁里 12 个只挂单一受理面，其中 **4 个只挂 ci.yml**
+  （`check_changelog` / `check_issue_forms` / `check_noninteractive` / `check_perf`），
+  而本地全量套件 `tests/check_all.ps1` **从不调用**它们 —— 且这三个文档类门禁在 check_all 里
+  **没有任何等价内联逻辑**（按关键词实测：CHANGELOG/issue/非交互 各 0 行命中）。后果是：
+  按文档跑完全量本地套件全绿，推送后仍可能被 CI 判红；而本仓在册有「本地绿 CI 红」这一整族教训。
+  修法：在 check_all 里按既有三态惯例补 4 段（rc=2 ⇒ 改写成 0 并保留 UNVERIFIED 字样；
+  无产物时走 rc=3 SKIP 而不是判红），并写清「为什么补」的注释。实测结果：
+  `check_all` 覆盖数 **37 → 41**，与「受跟踪 41」对齐 —— 即本地全量套件现在引用**全部**受跟踪门禁
+  （部分在缺前置时以 SKIP/UNVERIFIED 呈现，不计 PASS）。
+  验证：`check_ps1_syntax` rc=0（BOM 1 + 纯 CRLF 原样保持）；`check_report_figures` 先如实判红
+  「报告写 37，实测 41」→ 更新报告该行（并注明补齐由来）→ 复跑 rc=0，实测 41/27/41/29 全一致；
+  全量 `check_all` 运行结果见提交说明与读数。
 - **gate-spec 新增 ⑦（依赖 git 历史的判据必须处理浅克隆取空）+ 更正上一轮报告的口径 + 把 G1/G2 降级**：
   ① `quality-gate-spec` 新增 ⑦：判据若依赖 **git 历史**（git log / rev-list / blame 等需要
   **祖先提交**的命令），规格必须写明「取不到历史时怎么办」—— CI 的 checkout 默认

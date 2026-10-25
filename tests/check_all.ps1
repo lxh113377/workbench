@@ -138,6 +138,39 @@ Section '报告待办与 CI 现实一致性（防状态栏滞后误导下游）'
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
 }
 
+# 以下 4 段是「本地补齐 CI 侧判据」（2026-10-25 round 152）：实测这 4 个门禁此前**只挂 CI**，
+# 本地 check_all 从不跑它们 ⇒ 本地全绿后推送仍可能被 CI 判红（本地绿 / CI 红 陷阱）。
+# 它们本身与暂存区/在途文件无关，属本地可判，故补进本套件。
+# 三态口径与 check_perf / check_queue_size 一致：rc=2 = 没测成，改写成 0 并保留 UNVERIFIED 字样。
+Section 'CHANGELOG 结构（锚点与条目形态；本地补齐 CI 侧判据）' {
+  $g = Join-Path $Root 'tests\check_changelog.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED 取不到 CHANGELOG（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
+Section 'issue 模板 config（表单开关与必填项；本地补齐 CI 侧判据）' {
+  $g = Join-Path $Root 'tests\check_issue_forms.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED 取不到 ISSUE_TEMPLATE（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
+Section '非交互约束（不得要求人工交互；本地补齐 CI 侧判据）' {
+  $g = Join-Path $Root 'tests\check_noninteractive.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED 取不到被检文件（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
+Section '性能基线（本地补齐 CI 侧判据；无产物时 SKIP 而非判红）' {
+  $g = Join-Path $Root 'tests\check_perf.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  if (-not (Test-Path $Exe)) { Write-Host ('    SKIP 产物不存在（未构建）: ' + $Exe); $global:LASTEXITCODE = 3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Exe $Exe
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
+
 Section 'PowerShell 脚本编码（含非 ASCII 必须带 UTF-8 BOM）' {
   $g = Join-Path $Root 'tests\check_ps1_encoding.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
