@@ -2655,6 +2655,23 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **新增 `web.Hub.Emit` 非阻塞契约测试（把「注释承诺」升级为「测试守住」），并修掉 round 179 我埋的闸隐患**：
+  · **契约缺口（实测确认）**：引擎在**持锁期间**调 emit（`Start` 从 `defer Unlock` 起罩住整个函数体，`Pause`/`Resume`/停机路径同样锁内 `emitEvent`），
+  而 `Hub.Emit` 注释承诺「非阻塞：慢客户端丢帧而不阻塞引擎」**此前没有任何测试守住**。探针实测（与 Hub 同构的非阻塞 emitter）：
+  `Start()` 全程 2-6 ms、`Phase()` 被阻塞 0-3 ms ⇒ **当下不是性能缺陷**（故本轮不改 Start 的锁范围，也不谎称修了瓶颈）；
+  但一旦有人把丢帧的 `select/default` 改成阻塞发送，引擎的 `mu` 会被**一个卡住的 SSE 客户端拖死**且没有测试会失败。
+  · 新测试 `hub_nonblocking_contract_test.go`（116 行）三条判据全部**走超时判定、绝不允许 hang**：无订阅者立即返回 /
+  慢客户端不阻塞 Emit 且实收 64/1000（=缓冲上限，丢帧生效）/ 快客户端不被饿死（50/50）。
+  **变异证明**：去掉丢帧 `default` ⇒ 判红理由可读「第 65 次 Emit 被慢客户端阻塞…超过 500ms」（第 65 次=缓冲 64 灌满那一刻，方向精确）；还原字节一致。
+  （第一轮变异最初走的是 `panic: test timed out`——灌满循环裸调 Emit 没有超时包，hang 不是可读判红还烧 CI 时间；已改为全部 `emitWithTimeout`。）
+  · **修 round 179 埋的隐患（被本轮新测试当场引爆）**：`check_untracked_go` 的 `$dirtyTracked` 用 `diff --name-only HEAD`，
+  它会列出**暂存的新增件**——对其跑 `git show HEAD:<file>` 必炸 `fatal: exists on disk, but not in HEAD`；
+  `2>$null` 只吞 stderr，`ErrorActionPreference=Stop` 下 NativeCommandError 仍升级为终止错误 ⇒ 门禁 rc=1（本轮暂存新测试后第一次触发）。
+  修复加 `--diff-filter=M`（只取「HEAD 里存在且被改」）；复跑 rc=0，差额仍 26（暂存新增件双侧同数不影响差值；
+  committed 绝对值把暂存新增件计为「已提交」是已知小口径偏差，登记于此不扩大本轮）。
+  · 过程如实记：这个测试文件我先前**连续 4 次片切**（goto/括号残留/多删一行）全出错，最终**整文件重写**一次通过 —— 印证 round 179 教训：
+  结构性改动要么整段重写、要么单行锚点，不要连续片切。
+
 - **模板 `quality-audit` ⑦ 补第二维：工具的**输出显示形式**同样能伪造「找不到」**（round 181 实测 → 本轮编码）：
   2026-10-25 实测：git 默认对非 ASCII 路径做 **quotepath 转义**（中文文件名在输出里变成八进制序列），
   于是拿输出比对中文文件名的自检探针得到**假阴性**——《判据保真度》报告明明在提交里，探针却报 
