@@ -263,6 +263,13 @@ Section '产物时效（soak/A7 判定逻辑必须在产物里；无产物则 UN
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
+Section '产物校验清单一致（SHA256SUMS vs 产物；本地侧，CI 的 build job 另有独立读回）' {
+  $g = Join-Path $Root 'tests\check_artifact_checksum.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Exe $Exe
+  if ($LASTEXITCODE -eq 3) { Write-Host '    SKIP 产物不存在（未构建；不计 PASS 也不判红）' -ForegroundColor Yellow; $global:LASTEXITCODE = 3 }
+}
+
 Section '受理面覆盖（每个 check_*.ps1 必须挂某个受理面，防判据没挂受理面）' {
 
   $g = Join-Path $Root 'tests\check_gate_coverage.ps1'

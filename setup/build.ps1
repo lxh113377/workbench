@@ -242,6 +242,20 @@ $hash = (Get-FileHash $exe -Algorithm SHA256).Hash
 "$hash  workbench.exe" | Set-Content (Join-Path $dist "SHA256SUMS")
 Write-Host "    SHA256: $hash"
 
+# 清单读回自证（2026-10-25 round 154）：CI 的 build job 有独立读回，本地构建链此前没有。
+# 与「子系统校验器不在就内联自证，而不是跳过」同一立场：校验器在就跑它，不在就内联比一次。
+$sumsChecker = Join-Path $PSScriptRoot "..\tests\check_artifact_checksum.ps1"
+if (Test-Path $sumsChecker) {
+  $chkHost3 = if (Get-Command powershell.exe -ErrorAction SilentlyContinue) { "powershell.exe" } else { "pwsh" }
+  & $chkHost3 -NoProfile -ExecutionPolicy Bypass -File $sumsChecker -Exe $exe -Sums (Join-Path $dist "SHA256SUMS") -Quiet
+  if ($LASTEXITCODE -ne 0) { throw "产物与 SHA256SUMS 不一致（rc=$LASTEXITCODE）：清单读回自证失败" }
+  Write-Host "    清单读回自证 OK" -ForegroundColor Green
+} else {
+  $readBack = (Get-FileHash $exe -Algorithm SHA256).Hash
+  if ($readBack -ne $hash) { throw "清单读回自证失败（无校验器，内联比对）: $readBack != $hash" }
+  Write-Host "    清单读回自证 OK（内联）" -ForegroundColor Green
+}
+
 # 网络来源标记（MOTW）门禁（2026-10-19 老大截图："打开文件 - 安全警告 / 无法验证发布者"）：
 # 只要 EXE 带 Zone.Identifier 备用数据流，Windows 附件管理器就会在双击时弹
 # "无法验证发布者。你确定要运行此软件吗？" 的安全警告 —— 一步人工点击，而且
