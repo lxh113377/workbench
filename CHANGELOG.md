@@ -2361,6 +2361,25 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **CI 三个 job 各加 timeout-minutes: 15（补上「全无上限」的止损缺口）**：
+  这是 round 124 报告里登记为「采纳为待办（单独一轮做）」的那一项，本轮落地。
+  此前 ci.yml 三个 job（vet+test race / repo gates / build+coverage）都没有 timeout-minutes，
+  全文出现 0 次 —— 一旦某步真挂起，会一直占着 runner 且没有自动失败。
+  **阈值不是拍数字**：先实测最近 8 次 CI run 的 24 条 job 记录，各 job 中位耗时
+  1.8 / 2.3 / 2.5 分钟、观测最大 2.8 分钟；15 分钟约为最大值 5.4 倍，留冷缓存与 runner
+  抢占余量，又能在真卡死时止损。依据两处实证写进注释：本文件下方已记录的一处 CI 侧永久
+  挂起（Invoke-WebRequest 触发 PS5.1+IE 弹窗等人工按键），以及本地 check_all 在并行会话
+  争抢时从约 3 分钟拖到 44 分钟未跑完（最终被我终止）。
+  刻意不做按 job 差异化设限：三者耗时同一量级（1.4-2.8 分钟），差异不足以支撑三组阈值，
+  而阈值过紧会把偶发的 runner 慢变成假红 —— 假红的代价是门禁被人关掉（round 64 家族）。
+  验证：python yaml 解析结构确认三 job 均 timeout-minutes=15 且 needs 关系未变；
+  受影响 10 项门禁全 PASS（gate_coverage / noninteractive / ps1_syntax / changelog /
+  multi_bom / repo_eol / comment_staleness / doc_refs / gate_links / report_figures）；
+  其中 gate_coverage 特别核过——我注释里写的 check_all 不带 .ps1 后缀，不会被它的
+  正则 [\/]check_[a-z0-9_]+\.ps1 误计为已接线门禁（实测该正则扫描 diff 新增行 0 命中）。
+  另两处即时自纠（都不留到下一轮）：① 我第一版注释写「两处在 CI 侧挂起过的实证」并把
+  「Stop 模式抛错」也算作挂起 —— 读 ci.yml 原文核实只有一处挂起实证，而抛错不是挂起，
+  已改为精确表述；② 第一版写「45+ 分钟」而实测是 44 分钟，按数字必须精确改正。
 - **新增模板链完整性判据：后继 ID 断链会被引擎静默跳过**：
   实测引擎取后继的写法是 if t, exists := g.reg.Get(id); exists && t.Enabled { out = append(out, t) }
   —— 一个拼错或已被删除的后继 ID 不报错、不打日志，链在那一步无声停止延伸。7x24 无人值守下

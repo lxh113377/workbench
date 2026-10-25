@@ -6,6 +6,16 @@ name: CI
 #   2) go test -race —— 竞态检测（需要 mingw gcc；windows-latest 镜像自带）
 #   3) build.ps1     —— 完整构建 + 覆盖率门禁（自带阈值，低于阈值直接失败）
 #   4) 产物校验      —— EXE 存在、大小在合理区间、--version / --diagnose 可执行
+#   5) timeout-minutes —— 三个 job 各 15 分钟（2026-10-25 起）
+#
+# 关于 5）超时上限的取值依据（不是拍数字）：实测最近 8 次 CI run 的 24 条 job 记录，
+# 各 job 耗时中位数 1.8 / 2.3 / 2.5 分钟，观测最大值 2.8 分钟；15 分钟约为最大值的 5.4 倍，
+# 留足冷缓存与 runner 抢占的余量，又能在真卡死时止损。依据有两处实测：本文件下方已记录
+# 一处 CI 侧永久挂起（Invoke-WebRequest 触发 PS5.1+IE 引擎弹窗、等人工按键），而本地
+# check_all 在同机有并行会话争抢时实测从约 3 分钟拖到 44 分钟仍未跑完（最终被我终止）——
+# 没有上限时，这类挂起只会一直占着 runner。
+# 刻意不做「按 job 差异化设限」：三个 job 的耗时同一量级（1.4-2.8 分钟），差异不足以支撑
+# 三组不同阈值，而阈值过紧会让偶发的 runner 慢变成假红 —— 假红的代价是门禁被人关掉。
 
 on:
   push:
@@ -24,6 +34,7 @@ jobs:
   test:
     name: vet + test (race)
     runs-on: windows-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: workbench
@@ -66,6 +77,7 @@ jobs:
   repo-gates:
     name: repo gates (script-level)
     runs-on: windows-latest
+    timeout-minutes: 15
     # 为什么单开一个 job（2026-10-22）：本仓 tests/ 下有 23 个受跟踪门禁脚本，
     # 而 CI 此前只执行其中 4 个 —— 其余（含 check_gofmt / check_gate_links /
     # check_tray_window / check_spawn_silent / check_snapshot_build）**从未被任何自动化执行**。
@@ -140,6 +152,7 @@ jobs:
   build:
     name: build + coverage gate
     runs-on: windows-latest
+    timeout-minutes: 15
     needs: test
     steps:
       - uses: actions/checkout@v4
