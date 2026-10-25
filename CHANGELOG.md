@@ -16,6 +16,50 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **补上体积下界（exeMinBytes）并新增「基线键 ⇔ 判据分支」配对判据 —— 修一处静默失效了三天的门禁**：
+  `tests/check_perf.ps1` 的体积下界判定（1b 段）读 `$bl.exeMinBytes`；基线缺这个键时
+  PowerShell 取到 `$null`，该判定不报错、不打日志，直接走 SKIP 且整条门禁仍 rc=0。
+  git 实证的演变链：`ebd6442`（10-21）立双向判、键=7747072 → `c6fa36e`（10-21「裁剪后重取基线」）
+  把键与 1b 段**一并删掉**，而该提交说明里仍写着 `exeSizeMin PASS（余量 2.23MB）` 的旧读数 →
+  `74ce0ac`（10-22，说明只写「25 个含中文脚本补 BOM」）diff 实为 **+20 行**，把 1b 段带回而
+  无人补键 ⇒ 判据自此永走 SKIP，三天无人发现。
+  **取值与依据**（可复算）：取 3,145,728B（=3MiB），与 ci.yml `Verify artifact` 现存生效的
+  硬编码回退同值 —— 即把那条漂在基线之外的约束收编进基线（正是 `性能基线口径.md` §6 该行原文的
+  要求），**不放松任何现有约束**。构造性地板：同 `-trimpath -s -w -H=windowsgui` 参数的空 main
+  Go 程序实测 1,214,976B + 本包内嵌资源实测合计 213,644B（appCSS 78184 + appJS 74285 +
+  govJS 14539 + poolJS 34123 + favicon 236 + 四页 12277）≈ 1.43MB；历史最小产物 7.39MB、
+  当前 10,310,144B。故 3MiB 既高于物理地板（拦得住截断/空壳），又远低于任何正常产物。
+  实测激活：`CHECK exeSizeMin result=PASS value=10310144 bound=3145728 余量=6.83MB`，rc=0，
+  判定做成数从 1 升到 2。
+  **防复发判据**（`workbench/cmd/workbench/perf_baseline_contract_test.go`，走 go test，无需新脚本）：
+  ① 判据引用基线字段 —— check_perf.ps1 里每个 `$bl.<名>` 都必须在基线 JSON 里有键，且 null 字段
+  必须在 `nullFieldReasons` 登记理由（本仓口径里 null 只表示「确实未实测」）；
+  ② 双向核对 —— `exeMaxBytes`/`exeMinBytes` 既要键非 null 为正，又要在非注释代码里找得到对应
+  分支标记（防 `c6fa36e` 那种「键与段一起删、自洽但功能没了」）。提取用手写扫描而非正则，
+  文件内**零反斜杠零反引号**（沿用本仓在册的「多层字符串改写」教训）；并带受理面哨兵
+  （引用数为 0 或基线键数为 0 即 Fatal，防循环不执行而恒绿）。
+  **三项变异全判红且点名**（临时 worktree，跑完即删、主仓两文件复验字节一致）：
+  M1 删 `exeMinBytes` 键 ⇒ 点名「引用了基线字段 exeMinBytes，但没有这个键 —— 会静默走 SKIP
+  且门禁仍 rc=0」（**正是我要修的形态**）；M2 把 1b 分支标记换成无重叠新名 ⇒ 点名「已找不到
+  "exeSizeMin" 分支 —— 与基线字段 exeMinBytes 失去配对」；M3 把 `handleMax` 改 null 不登记理由 ⇒
+  点名「未登记理由」。还原 ⇒ GREEN 且两文件字节一致。
+  **本轮我在验证工具自身上自纠三处**（都不留到下一轮）：
+  ① M2 第一次是**无效变异**：我把 `exeSizeMin` 改成 `exeSizeMinRenamed`，新串仍**包含**原标记，
+  `Contains` 自然命中 ⇒ 读数显示 SILENT，差点被我写成「判据漏抓」。改成无重叠的 `exeSizeLow`
+  后正确判红。教训：看到「判据没抓到」时，先怀疑**变异样本没真的去掉标记**。
+  ② `errLine` 取「首条匹配行」又抓到 t.Logf 的日志行而非 Errorf 失败行（同族第 3 次），
+  改为只匹配失败文案。
+  ③ 数反斜杠的度量本身写错：`new RegExp(charCode(92)+'+')` 是正则 `\+`＝**数加号**，
+  报出「5 个反斜杠」而真值是 0；改为直接扫 char 92。
+  另记一次写入通道事故（本册在册家族）：Go 字符串字面量里的 `\n` 被写入通道换成真换行，
+  导致 `string literal not terminated`；处置是包级 `const nl = string(rune(10))` 且文件内零反斜杠
+  （顺带踩到「常量放进了第一个函数内、第二个函数看不见 ⇒ undefined: nl」，已移到包级）。
+
+  一处**未修正的过期陈述**（我刻意不改）：`docs/benchmark/WorkBench-开源对标报告-2026-10-25.md`
+  §7.3 仍写着「`exeSizeMin` 仍 SKIP（基线 `exeMinBytes=null`）」—— 本轮之后该句已不成立。
+  那是**并行会话的在途报告**，按「不碰他人在途文件」的既定纪律我没有改它；权威口径已在
+  `性能基线口径.md` §6 该行更新为已闭合（含演变链与取值依据），并留此条以便该报告的作者
+  或下一轮按自己的口径刷新。
 - **helper 一致判据从 1 组扩到 7 组 + 修 check_gofmt 的顺序死结 + 更正我把 fold 误分类（round 124）**：
   承接上一条 toast 审计：判据不该只管撞见的那一个。文件 `git mv` 改名
   toast_duration_contract_test.go -> **helper_identity_contract_test.go**（保留历史），cases 覆盖

@@ -10,42 +10,81 @@
     "fileVersion": "1.0.0.0",
     "lastWriteTime": "2026-10-20T16:36:03+08:00"
   },
-
   "exeMaxBytes": 20971520,
-  "homeP95Ms": 250.0,
-  "residentMBMax": 64.0,
+  "exeMinBytes": 3145728,
+  "homeP95Ms": 250,
+  "residentMBMax": 64,
   "handleMax": 512,
-
   "taskDurationSecMax": null,
   "readyMsMax": null,
   "idleGrowthMBPerHourMax": null,
-
   "measured": {
     "exeBytes": 14199296,
     "homePageBytes": 1363,
     "homeLatencyRounds": [
-      { "run": 0, "launch": "Win32_Process.Create", "n": 25, "minMs": 8.69, "p50Ms": 9.89, "p95Ms": 23.62, "maxMs": 26.44, "residentMB": 35.86, "privateMB": 47.0, "handles": 132, "note": "预热 5 次 + 60ms 间隔；该轮 WorkingSet 明显高于后续轮（同机不同启动方式读数不可混用，故基线以 r1-r3 为准）" },
-      { "run": "r1", "n": 60, "p50Ms": 1.57, "p95Ms": 77.53, "maxMs": 87.14, "residentMBMax": 12.41, "privateMBMax": 47.31, "handleMax": 139, "threadMax": 8, "note": "同机其它会话抢占 CPU/磁盘的干扰轮：前 38 个样本 1.2-2.6ms，后 22 个样本 16-87ms" },
-      { "run": "r2", "n": 60, "p50Ms": 0.98, "p95Ms": 1.2, "maxMs": 1.33, "residentMBMax": 12.41, "privateMBMax": 47.34, "handleMax": 139, "threadMax": 9 },
-      { "run": "r3", "n": 60, "p50Ms": 0.97, "p95Ms": 1.18, "maxMs": 1.22, "residentMBMax": 12.41, "privateMBMax": 47.35, "handleMax": 139, "threadMax": 9 }
+      {
+        "run": 0,
+        "launch": "Win32_Process.Create",
+        "n": 25,
+        "minMs": 8.69,
+        "p50Ms": 9.89,
+        "p95Ms": 23.62,
+        "maxMs": 26.44,
+        "residentMB": 35.86,
+        "privateMB": 47,
+        "handles": 132,
+        "note": "预热 5 次 + 60ms 间隔；该轮 WorkingSet 明显高于后续轮（同机不同启动方式读数不可混用，故基线以 r1-r3 为准）"
+      },
+      {
+        "run": "r1",
+        "n": 60,
+        "p50Ms": 1.57,
+        "p95Ms": 77.53,
+        "maxMs": 87.14,
+        "residentMBMax": 12.41,
+        "privateMBMax": 47.31,
+        "handleMax": 139,
+        "threadMax": 8,
+        "note": "同机其它会话抢占 CPU/磁盘的干扰轮：前 38 个样本 1.2-2.6ms，后 22 个样本 16-87ms"
+      },
+      {
+        "run": "r2",
+        "n": 60,
+        "p50Ms": 0.98,
+        "p95Ms": 1.2,
+        "maxMs": 1.33,
+        "residentMBMax": 12.41,
+        "privateMBMax": 47.34,
+        "handleMax": 139,
+        "threadMax": 9
+      },
+      {
+        "run": "r3",
+        "n": 60,
+        "p50Ms": 0.97,
+        "p95Ms": 1.18,
+        "maxMs": 1.22,
+        "residentMBMax": 12.41,
+        "privateMBMax": 47.35,
+        "handleMax": 139,
+        "threadMax": 9
+      }
     ],
     "resourceSeriesStable": true,
     "resourceSeriesNote": "每轮 8 次采样 × 4s（约 32s 窗口）：WorkingSet 恒 12.41MB、句柄恒 139、线程 7-9 —— 短窗口内无增长，但不构成泄漏结论（见 idleGrowthMBPerHourMax=null）"
   },
-
   "ceilingDerivation": {
     "exeMaxBytes": "实测 14,199,296B × 1.48 取整到 20MiB（=20,971,520B）。目的：拦「体积翻倍级膨胀」（依赖/静态资源误入产物），不拦小幅增长",
     "homeP95Ms": "干净轮实测 P95 = 1.18-1.20ms，干扰轮 P95 = 77.53ms（同机单点读数）。取 250ms = 干扰轮 max 87ms 的 ~2.9 倍余量：本机口径无法直接当 CI 口径（runner 机型/防扫描不同），故这条上界只保证「量级塌方」（首页变秒级）判红，不宣称能抓 2x 退化",
     "residentMBMax": "探针实例实测 12.41MB 常驻 / 47.35MB 私有；对标报告 §3.5 的生产实例手工读数 28.9MB（本次未复测）。取 64MB 同时覆盖三者",
-    "handleMax": "探针实例实测恒 139；对标报告 §3.5 生产实例手工读数 464（本次未复测）。取 512 覆盖两个口径"
+    "handleMax": "探针实例实测恒 139；对标报告 §3.5 生产实例手工读数 464（本次未复测）。取 512 覆盖两个口径",
+    "exeMinBytes": "取 3,145,728B（=3MiB），与 ci.yml \"Verify artifact\" 步骤现存生效的下界同值 —— 本字段把那条硬编码下界收编进基线（口径.md §6 待办的原文要求），不放松任何现有约束。构造性依据（2026-10-25 实测，可复算）：同 -trimpath/-s -w/-H=windowsgui 参数的空 main Go 程序 = 1,214,976B，加本包内嵌资源实测合计 213,644B（appCSS 78184 + appJS 74285 + govJS 14539 + poolJS 34123 + favicon 236 + 四页 12277），物理地板约 1.43MB；历史最小产物 7.39MB（docs/archive/2026-10 验收报告）、当前 10,310,144B。故 3MB 既能挡住截断/空壳（<1.43MB 物理不可能），又不会因正常优化误红。"
   },
-
   "nullFieldReasons": {
     "taskDurationSecMax": "需要外部模型网关凭据与实际额度，CI 内不可复现且会消耗额度；对标报告 §3.5 的 65-148s 来自 docs/验收报告.md 历史记录，非本会话实测，不搬进基线",
     "readyMsMax": "本会话只测了 HTTP 轮询首次成功（<0.25s 即就绪），未单独计时「进程创建 → 面板可服务」的端到端冷启动耗时，缺可信读数故留 null",
     "idleGrowthMBPerHourMax": "需要 ≥1 小时连续长跑（tests/soak_*.ps1 那条通路）；本次取证窗口每轮只有约 32s 的资源采样，外推「每小时增长」属编造，故留 null"
   },
-
   "provenance": {
     "artifactHashMismatch": "dist/SHA256SUMS 记的是 C81CA500727B5679FDB3B27F109A6B20A407F26F3800A00E9A533F9C9BFCBFA1，与本体会件实测 BEC437CE…F66DA1 不一致 —— 产物重建后未刷新校验清单（对标报告 §3.8 预警的「文档一致性风险」已发生）。本基线不引用 SHA256SUMS",
     "staleReportReadings": "对标报告 §3.5（2026-10-18）读数 首页 710B/11ms、EXE 7.74MB、内存 28.9MB、句柄 464；本会话实测（2026-10-20，探针口径）首页 1363B、EXE 14,199,296B、常驻 12.41MB、句柄 139。差异含口径差异（探针 ≠ 生产实例）与真实增长（EXE 体积 +83%），逐条见 性能基线口径.md §4",
