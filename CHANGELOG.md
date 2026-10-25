@@ -2486,6 +2486,31 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **跑官方构建链重建产物（本地全量由 1 FAIL 复绿），并登记一处「刻意不改」的版本降级**：
+  起因：round 159 删死代码后，本地 `check_all` 唯一 FAIL 是「产物时效」—— 该门禁比较
+  `dist\workbench.exe` 的构建时间与 4 个 soak/A7 判据源码（含我改过的 `cmd/workbench/acceptance.go`）
+  在 HEAD 的最新提交时间，源码一变产物即「过期」。实测确认**当前无 workbench 实例在跑**
+  （`Get-Process` 计数 0）⇒ 重建安全，遂跑与 CI 同一条链：`setup/build.ps1 -Version 1.1.0`。
+  **构建实测（本机，2026-10-25）**：`BUILD_RC=0`、**98.5 s**；覆盖率门禁通过
+  （**avg 74.04% / min=workbench/cmd/workbench 17.1%**，对比 round 155 的 73.23% / 11.1% —— 
+  即最近两轮 CLI 侧修复抬高了薄包的覆盖）；产物 **9.79 MB**、`SHA256=CB02E6F9…C9C5`；
+  2/6 资源段、3/6 vet+gofmt、6/6 校验产物全过；**子系统 GUI（无控制台窗口）**；
+  **首页契约四项全 PASS**（新锚点 / 无旧锚点 / 含 --ui-probe / **真探针 HTTP 首页 len=1289**）；
+  **清单读回自证 OK**（round 154 新增的那步在链上被执行）；MOTW 无网络来源标记；完整性标签非 Low。
+  随后本地全量：**`check_all` rc=0 / PASS=42 / FAIL=0 / 229.8 s**（上轮那处「产物时效」FAIL 随之消除）。
+  **一处「刻意不改」并登记的版本降级（实测而非推测）**：产物的 PE `FileVersion` 恒为 **1.0.0.0**，
+  而 `-Version 1.1.0` 只注入 `main.version`（`--version` 的输出）。原因是 build.ps1 的 2/6 段有
+  **声明过的降级分支**：`workbench/build/app.rc` 从未入库、本机也**没有 windres**，
+  于是改走「用 git 跟踪的静态 syso」这条分支 —— 该件在库（`workbench/cmd/workbench/rsrc_windows_amd64.syso`，
+  12116 B，含 `VS_VERSION_INFO` 与版本串 1.0.0.0），图标与 FileVersion 因此保持静态值。
+  **我刻意没有改这条链**：要让它跟随 `-Version`，必须先新建并入库 `app.rc`，而本机无 windres
+  ⇒ 改动在本机**不可验证**，按本项目纪律不做不可验证的改动。已作为待办登记，前置条件是
+  「先把 app.rc 入库 **且** 验证机具备 windres」，届时 build.ps1 的 L65 分支会自动接管。
+  **一处我自己的测量失误（如实记）**：我最初去查 `workbench/app.rc` 与 `workbench/rsrc_*.syso`，
+  得出「资源件不在库、产物将丢图标与版本」的结论；核对 build.ps1 里的 `$build`/`$sysoDst` 定义后
+  才发现真实路径是 `workbench/build/app.rc` 与 `workbench/cmd/workbench/rsrc_windows_amd64.syso`，
+  前者缺、后者**在库且有效**。**结论在写进任何交付物之前被自己推翻**（本会话这类「查错路径/口径」
+  已有多次，处置一律是先核对代码里的真实定义，再下结论）。
 - **日志体积信息化门禁 + 两处实测否掉我自己的候选修复（本轮不改那段代码）**：
   起因：查 7×24 无人值守下的**磁盘无界增长**风险 —— 内存有硬护栏（MemLimitMB），磁盘没有。
   实测现状（2026-10-25）：`dist\workbench-output\logs` 共 **13.37MB**（`audit.jsonl` 6.91MB /
