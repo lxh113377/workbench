@@ -10,6 +10,7 @@ import (
 	"strings"
 	"syscall"
 	"unsafe"
+	"workbench/internal/winhide"
 )
 
 // integrity_windows.go — 托盘图标的「完整性级别」诊断与自愈。
@@ -121,7 +122,7 @@ func exeDir() string {
 // integrityLabel 返回路径上的完整性标签行（icacls 输出里的 "Mandatory Label\..." 段）。
 func integrityLabel(path string) string {
 	cmd := exec.Command("icacls", path)
-	cmd.SysProcAttr = hiddenProcAttr()
+	cmd.SysProcAttr = winhide.SysProcAttr()
 	out, err := cmd.Output()
 	if err != nil {
 		return ""
@@ -148,7 +149,7 @@ func raiseToMedium(dir string) error {
 		return os.ErrInvalid
 	}
 	cmd := exec.Command("icacls", dir, "/setintegritylevel", "(OI)(CI)M")
-	cmd.SysProcAttr = hiddenProcAttr()
+	cmd.SysProcAttr = winhide.SysProcAttr()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return &labelError{dir: dir, out: strings.TrimSpace(string(out)), err: err}

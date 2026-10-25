@@ -5,7 +5,7 @@ package browser
 import (
 	"fmt"
 	"os/exec"
-	"syscall"
+	"workbench/internal/winhide"
 )
 
 // Open 用 Edge 的 --app 模式打开（无地址栏，接近原生窗口）；Edge 缺失时回落默认浏览器。
@@ -23,7 +23,7 @@ func Open(url string) error {
 		cmd := exec.Command(edge, "--app="+url, "--window-size=1280,880")
 		// 隐藏属性：Edge 自身是 GUI 进程，HideWindow 主要作用于它可能分配的
 		// 控制台/启动提示；配合 CREATE_NO_WINDOW 保证不闪壳窗口。
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000} // CREATE_NO_WINDOW
+		cmd.SysProcAttr = winhide.SysProcAttr()
 		if err := cmd.Start(); err == nil {
 			go func() { _ = cmd.Wait() }()
 			return nil
@@ -48,7 +48,7 @@ func findEdge() string {
 func fallback(url string) error {
 	// 回落路径同样隐藏（rundll32 会短暂分配控制台）。
 	cmd := exec.Command("rundll32", "url.dll,FileProtocolHandler", url)
-	cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
+	cmd.SysProcAttr = winhide.SysProcAttr()
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("打开浏览器失败: %w", err)
 	}

@@ -4,7 +4,7 @@ package executor
 
 // 现场：linkDir 用 `exec.Command("cmd", "/c", "mklink", "/J", dst, src)` 建目录链接。
 // cmd.exe 是 CONSOLE(3) 子系统程序，而这里**没有设置任何窗口隐藏标志**
-// （对比：同一文件里连 DSH 主进程都用 jobSysProcAttr() 带 HideWindow + CREATE_NO_WINDOW）。
+// （对比：同一文件里连 DSH 主进程都用 winhide.SysProcAttr() 带 HideWindow + CREATE_NO_WINDOW）。
 //
 // 后果：linkDir 在**每个任务**做准备时都会执行（executor.go:179 挂 profiles junction），
 // 于是每跑一个任务就可能闪一次控制台窗口 —— 老大桌面会周期性被闪。

@@ -26,6 +26,7 @@ import (
 
 	"workbench/internal/artifact"
 	"workbench/internal/model"
+	"workbench/internal/winhide"
 )
 
 // Outcome 是一条命令的执行结果。
@@ -161,7 +162,7 @@ func runOne(ctx context.Context, workDir string, c artifact.Check, opt Options) 
 	// 显式切断 stdin：Go 的默认值是 os.DevNull，但这里写出来是为了让
 	// 「子进程读不到任何人工输入」成为可见的契约，而不是依赖库默认行为。
 	cmd.Stdin = nil
-	cmd.SysProcAttr = hiddenCmdAttr()
+	cmd.SysProcAttr = winhide.SysProcAttr()
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &limitedWriter{w: &stdout, max: opt.MaxOutputBytes}
 	cmd.Stderr = &limitedWriter{w: &stderr, max: opt.MaxOutputBytes}

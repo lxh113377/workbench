@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"workbench/internal/config"
+	"workbench/internal/winhide"
 )
 
 // ProfileName 是工作台专用 profile 名（OFM sealed 白名单要求，不可改）。
@@ -324,7 +325,7 @@ func linkOFM(layout config.Layout, info *Info) error {
 	_ = os.RemoveAll(link)
 	if runtime.GOOS == "windows" {
 		cmd := exec.Command("cmd", "/c", "mklink", "/J", link, target)
-		cmd.SysProcAttr = hiddenProcAttr()
+		cmd.SysProcAttr = winhide.SysProcAttr()
 		if out, err := cmd.CombinedOutput(); err != nil {
 			// junction 失败时退化为整目录复制，保证可用性优先
 			if cpErr := copyDir(target, link); cpErr != nil {

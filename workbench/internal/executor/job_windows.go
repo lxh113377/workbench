@@ -15,11 +15,6 @@ var (
 	procCloseHandle      = kernel32.NewProc("CloseHandle")
 )
 
-// jobSysProcAttr 让子进程独立于父进程的 Ctrl+C，但仍可被 Job Object 整树回收。
-func jobSysProcAttr() *syscall.SysProcAttr {
-	return &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000}
-}
-
 // job 包装一个 Windows Job Object，用于可靠地杀掉整棵子进程树
 // （Electron 主进程 + 其 renderer/utility 子孙）。
 type job struct {

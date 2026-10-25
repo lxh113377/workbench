@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"workbench/internal/winhide"
 )
 
 const psScript = `$ErrorActionPreference = "Stop"
@@ -74,7 +75,7 @@ func Create() error {
 	tmp.Close()
 
 	cmd := exec.Command("powershell.exe", "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", scriptPath, exe, workDir)
-	cmd.SysProcAttr = hiddenAttr()
+	cmd.SysProcAttr = winhide.SysProcAttr()
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("创建快捷方式失败: %v (%s)", err, truncate(string(out), 400))

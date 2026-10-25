@@ -4,7 +4,7 @@ package main
 
 import (
 	"os/exec"
-	"syscall"
+	"workbench/internal/winhide"
 )
 
 // hiddenTestCmd 构造一个不会弹窗的测试子进程命令（Windows 实现）。
@@ -18,10 +18,7 @@ import (
 // 而本包门禁要求容器内 vet 全绿，故按平台各给一份实现（对调用方零改动）。
 func hiddenTestCmd(name string, args ...string) *exec.Cmd {
 	cmd := exec.Command(name, args...)
-	cmd.SysProcAttr = &syscall.SysProcAttr{
-		HideWindow:    true,
-		CreationFlags: 0x08000000, // CREATE_NO_WINDOW
-	}
+	cmd.SysProcAttr = winhide.SysProcAttr()
 	cmd.Env = headlessTestEnv()
 	return cmd
 }

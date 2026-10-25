@@ -7,12 +7,13 @@ package executor
 // linkDir 在**每个任务**做准备时都会执行（挂 profiles junction），
 // 于是每跑一个任务就可能闪一次控制台窗口。
 //
-// 对比：同一包里连 DSH 主进程（executor.go）都用 jobSysProcAttr()
+// 对比：同一包里连 DSH 主进程（executor.go）都用 winhide.SysProcAttr()
 // 带 HideWindow + CREATE_NO_WINDOW；唯独这处裸奔。
 //
 // 本助手把这些标志收敛到一处，避免再次「某个 spawn 点忘了加」。
 import (
 	"os/exec"
+	"workbench/internal/winhide"
 )
 
 const createNoWindowFlag = 0x08000000 // CREATE_NO_WINDOW
@@ -27,7 +28,7 @@ const createNoWindowFlag = 0x08000000 // CREATE_NO_WINDOW
 // 平台差异由 sysproc_windows.go / sysproc_other.go 提供。
 func hiddenCmdWith(name string, args ...string) *exec.Cmd {
 	cmd := exec.Command(name, args...)
-	cmd.SysProcAttr = hiddenSysProcAttr()
+	cmd.SysProcAttr = winhide.SysProcAttr()
 	return cmd
 }
 

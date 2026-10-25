@@ -12,7 +12,9 @@ if ([string]::IsNullOrWhiteSpace($Root)) { $Root = Join-Path (Split-Path -Parent
 if (-not (Test-Path $Root)) { Write-Error ("root not found: " + $Root); exit 2 }
 $DQ = [char]34
 $consoleBins = @("cmd", "reg", "powershell.exe", "pwsh", "wmic")
-$hiddenMarkers = @("HideWindow", "hiddenProcAttr", "hiddenAttr", "hiddenSysProcAttr", "jobSysProcAttr", "CreateNoWindow", "0x08000000", "hiddenCmd")
+# 标记表（2026-10-25 round 172）：新增 winhide.SysProcAttr —— 7 个旧助手名已收敛到 internal/winhide，
+# 若不把新名加进来，「控制台二进制的 spawn」那一维会因为找不到隐藏标记而**假红**。
+$hiddenMarkers = @("HideWindow", "hiddenProcAttr", "hiddenAttr", "hiddenSysProcAttr", "jobSysProcAttr", "winhide.SysProcAttr", "CreateNoWindow", "0x08000000", "hiddenCmd")
 $files = Get-ChildItem $Root -Recurse -Filter "*.go" -ErrorAction SilentlyContinue | Where-Object { $_.Name -notlike "*_test.go" }
 # 已知缺陷豁免（显式登记，非静默跳过）：键为仓库相对路径（不带前导 /）。
 # 语义：命中豁免的违规仍**逐条打印**（KNOWN 行）并计数，但不计入 rc；

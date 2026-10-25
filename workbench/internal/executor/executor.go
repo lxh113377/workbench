@@ -23,6 +23,7 @@ import (
 	"workbench/internal/dshprofile"
 	"workbench/internal/model"
 	"workbench/internal/ratelimit"
+	"workbench/internal/winhide"
 )
 
 // Event 是 DSH --json 输出的一行事件（保留原始字段，便于无损落盘）。
@@ -248,7 +249,7 @@ func linkDir(src, dst string) error {
 		// 必须用 hiddenCmd 而不是裸 exec.Command（2026-10-19 现场修复）：
 		// cmd.exe 是 CONSOLE(3) 子系统程序，不隐藏就会**每个任务闪一次控制台窗口** ——
 		// linkDir 在每个任务准备阶段都会执行（挂 profiles junction）。
-		// 同一文件里 DSH 主进程早已用 jobSysProcAttr() 带 HideWindow + CREATE_NO_WINDOW，
+		// 同一文件里 DSH 主进程早已用 winhide.SysProcAttr() 带 HideWindow + CREATE_NO_WINDOW，
 		// 唯独这处裸奔。现在统一收敛到 hiddenCmd。
 		cmd := hiddenCmd("cmd", "/c", "mklink", "/J", dst, src)
 		if out, err := cmd.CombinedOutput(); err != nil {
@@ -330,7 +331,7 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 		return nil, fmt.Errorf("准备任务隔离环境失败: %w", homeErr)
 	}
 	cmd.Env = r.environmentWithHome(taskHome)
-	cmd.SysProcAttr = jobSysProcAttr()
+	cmd.SysProcAttr = winhide.SysProcAttr()
 
 	eventsPath := filepath.Join(taskDir, "events.jsonl")
 	eventsFile, ferr := os.OpenFile(eventsPath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
