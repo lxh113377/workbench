@@ -2405,6 +2405,31 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **新增五轴审查报告《门禁浅克隆与空输入失效面》—— 两处假设被实测推翻，并含一次自我推翻**：
+  `docs/门禁浅克隆与空输入失效面-五轴审查-2026-10-25.md`（含合并结论 + 门禁建议 G1-G4）。
+  起因：侦察发现 41 个受跟踪门禁里 **9 个用 git 历史**，而 CI 三个 job 全部 `fetch-depth: 1`
+  （浅克隆）—— 于是查「门禁会不会因取不到历史而静默判绿」。
+  **H1（浅克隆假绿）被推翻**：用 `git clone --depth 1 --no-local file://<root>`（**完全离线**）
+  造出提交数为 1 的浅克隆，对 5 个 git 历史门禁在完整树与浅克隆各跑一遍：rc 全一致，且浅克隆下
+  仍在真干活（`check_doc_refs` 74 份活文档/103 处引用、`check_multi_bom` 1739 个受跟踪文本、
+  `check_gate_coverage` 41 门禁/4 受理面、`check_gofmt` 354 个 .go、`check_stdlib_only` 全项）。
+  机理：它们用的是 `git ls-files`（索引层）/ `cat-file` / `HEAD:<path>` 回退，浅克隆只缺**祖先提交**。
+  `check_artifact_soak_fresh` 在浅克隆里 correctly 变 rc=2 UNVERIFIED（不是判绿）。
+  **H2（CI 无人守 .ps1 的 BOM 缺失）被推翻**：`check_multi_bom` 头注明写它只判 ≥2 个 BOM、
+  刻意把「有没有 BOM」交给 `check_ps1_encoding`；后者实测受跟踪 + 在 ci.yml + 判据覆盖
+  「受跟踪 .ps1/.psm1 含非 ASCII 必须带 UTF-8 BOM」。两者职责不重叠，不是漏洞。
+  **我自己在报告初稿里写的第 4 条断言也被实测推翻**：初稿 §3 写「4 个读外部数据件的门禁在输入
+  缺失时都走 rc=2」；在干净克隆（天然无未跟踪件、无 `gate-readings.jsonl`）实测 rc 为
+  **0 / 0 / 0 / 1**，一个都不是 2。已在 §3 逐条更正，并写明「为什么 0/1 才是对的」：
+  `check_untracked_go` 在干净树里差额本就 0、`check_skip_disclosure` 核心判定在受跟踪列表上、
+  `check_readings_trend` 缺基线只告警不升 rc，而 `check_report_figures` 判**工作区**，
+  干净树未跟踪数为 0 与报告写的本地值 29 不符 ⇒ 判红 —— 其头注 L27-30 明写「本件属本地判据、
+  **不挂 CI repo-gates**（挂了会在干净检出上永远红）」，实测 ci.yml 确无它（本地 check_all 有）。
+  由此多出一条：**干净克隆同时是「判据分级」的验证器**（在干净树里判红的门禁必须不挂 CI），
+  记为建议 G4。
+  建议：G1 浅克隆一致性判据（复用 `check_snapshot_build` 的克隆范式）、G2 先固化「依赖 git 的
+  门禁名单」再建 G1、G3 给 `check_ps1_eol`/`check_staged_bom` 输出加「CI 下为空转」说明、
+  G4 干净树分级校验。**本轮只出报告不改代码**（按「逐点攻破」，建判据留给下一轮）。
 - **两条新模板条款把本轮实测教训固化：`quality-gate-spec` ⑥（判据读外部数据件时的字段缺失语义）+ `quality-verify` ⑨（变异样本必须自证真的改掉了目标）**：
   ① gate-spec 新增 ⑥：判据若读外部数据件（基线 JSON、配置、清单）的字段，规格必须写清
   「字段缺失/为 null 时怎么办」，并配一条**静态配对检查**。条款里直接带上实测依据：
