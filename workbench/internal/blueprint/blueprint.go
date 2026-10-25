@@ -190,12 +190,28 @@ func InterpreterAllowed(cmd string) bool {
 	return false
 }
 
+// truncate 把字符串限制到最多 n 个字符（rune），含省略号：绝不切碎中文，也不产出残缺 UTF-8。
+//
+// 契约与 internal/autonomy、internal/engine 的同名件对齐（round 197 已把那两份钉成同一预算契约），
+// 本份此前是第三份漂移版，三处不同：① n<0 直接 panic（真 Go 实测 slice bounds out of range [:-1]）；
+// ② 输出恒比预算多 1 个字符（r[:n] 之后又加省略号 ⇒ 声称 3000 实际 3001）；③ 不幂等（截过的
+// 结果再截会再多一个省略号，而失败证据与摘要文案会被多层包装反复截。
+// 实测差异（本轮跑的，不是推的）：旧版在全部三个真实预算上都比声称上限多 1 个字符（n=3000 出 3001、
+// n=200 出 201、n=40 出 41）⇒ 这是**行为变更**而非等价重写：新版才是守预算的那一版；旧版 n=0 则输出
+// 「…」这一个字符（零预算不该有任何输出）。下游依赖检查：本包对 truncate 结果的用途是拼 prompt / error
+// 无任何长度或逐字断言（实测见 plan_test.go），故少 1 个字符不影响行为语义。
 func truncate(s string, n int) string {
+	if n <= 0 {
+		return ""
+	}
 	r := []rune(s)
 	if len(r) <= n {
 		return s
 	}
-	return string(r[:n]) + "…"
+	if n == 1 {
+		return string(r[:1])
+	}
+	return string(r[:n-1]) + "…"
 }
 
 // compile-time 引用，保持 model 包在本文件可见（At 字段口径统一）。
