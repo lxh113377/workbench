@@ -1,0 +1,25 @@
+# 死代码债务基线（2026-10-25 round 158 建立；与 gofmt-debt / css-token-debt 同构）
+# 语义：登记在册的死代码每次运行打印 KNOWN、不计入 rc；清掉一处（删掉或补调用点）后从本文件删掉该行，
+#       门禁自动收紧 —— 基线里已不再死的条目会判红（失效豁免必须删），防基线腐化成垃圾桶。
+# 口径：本门禁 2026-10-25 修正两处致命缺陷后才真正生效（详见 tests/check_deadcode.ps1 头注）：
+#   ① 引用计数曾把函数自己的文档注释算成引用 ⇒ 只有「零文档」的函数才会被报出来；
+#   ② 抽取曾用不区分大小写的 -match ⇒ 导出函数（537 个）也进候选。
+#   同树同时刻实测：修正前 0 处、修正后 16 处。其中 workspace_guard.go 已在本轮**删除**：
+#   零引用 + 其断言与 internal/workspace 的测试重复（ResolveWriteSymlinkEscape / IsWithinBoundaries /
+#   AuditAppendReadTail）+ 自身含两处「SKIP 记成 PASS」（symlink 不可用、无数据根），故不进本表。
+# 本表 15 条 = 待逐轮清理的真债：删掉、补调用点、或注释说明为何保留（接口实现/反射间接使用）。
+workbench/cmd/workbench/acceptance.go  sourceRoot
+workbench/internal/engine/artifacts.go  itoaEngine
+workbench/internal/engine/artifacts.go  proseOutsideArtifacts
+workbench/internal/engine/helpers.go  filepathExt
+workbench/internal/engine/helpers.go  truncateForAudit
+workbench/internal/engine/plan_stage.go  degradedPlan
+workbench/internal/engine/ratelimit.go  poolCooldownUntil
+workbench/internal/engine/repair_schedule.go  workspaceDir
+workbench/internal/engine/stall_reason.go  stallText
+workbench/internal/gov/lifecycle.go  nextStage
+workbench/internal/modelpool/probe.go  scanLines
+workbench/internal/retention/retention.go  sortedNames
+workbench/internal/web/metrics_prom.go  promLabeledCounts
+workbench/internal/web/pool_api.go  poolJSON
+workbench/internal/web/pool_page_render.go  indexByte
