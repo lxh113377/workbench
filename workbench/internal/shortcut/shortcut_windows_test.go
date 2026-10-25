@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 // TestIsCanonicalExe 守护「快捷方式只指向正式安装位置」这条安全约束。
@@ -102,18 +103,30 @@ func TestTruncateBounds(t *testing.T) {
 		n    int
 		want string
 	}{
-		{"", 0, ""},          // 空串：任何 n 都原样返回
-		{"abc", 5, "abc"},    // 短于上限：原样
-		{"abc", 3, "abc"},    // 恰好等于上限：不截（len<=n 语义）
-		{"abcdef", 3, "abc"}, // 超长：截到 n
-		{"长字符串测试", 3, "长"},   // 多字节按字节截：一个汉字 = 3 字节，n=3 恰好切出一个
-		{"长字符串测试", 6, "长字"},  // n=6 = 两个汉字（每字 3 字节）
+		{"", 0, ""},             // 空串：任何 n 都原样返回
+		{"abc", 5, "abc"},       // 短于上限：原样
+		{"abc", 3, "abc"},       // 恰好等于上限：不截（len<=n 语义）
+		{"abcdef", 3, "abc"},    // 超长：截到 n
+		{"长字符串测试", 3, "长字符"},    // rune 语义：前 3 个字符（旧实现按字节切会产出残缺 UTF-8）
+		{"长字符串测试", 6, "长字符串测试"}, // n=6 = 全部字符：不截
 	}
 	for _, c := range cases {
 		if got := truncate(c.in, c.n); got != c.want {
 			t.Fatalf("truncate(%q,%d) = %q, want %q", c.in, c.n, got, c.want)
 		}
 	}
+	// 核心回归（round 187）：中文错误串截到字节边界附近时，结果必须是**合法 UTF-8**。
+	// 旧实现按字节切会产出残缺序列（探针实测 utf8.Valid=false、末字节 229），
+	// 随后进 fmt.Errorf → JSON/SSE 被替换成 U+FFFD，面板上就是乱码问号。
+	zh := strings.Repeat("创建快捷方式失败", 200)
+	res := truncate(zh, 400)
+	if !utf8.ValidString(res) {
+		t.Fatalf("截断结果不是合法 UTF-8（末字节 %d）—— 会污染 JSON/SSE 变成 U+FFFD", res[len(res)-1])
+	}
+	if got := utf8.RuneCountInString(res); got != 400 {
+		t.Fatalf("应截到 400 个字符，实际 %d", got)
+	}
+
 	// 幂等性：截断结果再截必须不变（否则错误信息会在多层包装里被反复切）
 	once := truncate("abcdefghij", 4)
 	if twice := truncate(once, 4); twice != once {

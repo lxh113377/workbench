@@ -104,11 +104,26 @@ func isCanonicalExe(exe string) bool {
 	return false
 }
 
+// truncate 把字符串限制到最多 n 个**字符**（rune），不产生残缺 UTF-8 序列。
+//
+// 为什么不用字节切片（2026-10-26 round 187 实测修正）：本函数只用于**错误信息**
+// （创建快捷方式失败 / 回读校验未通过两处，都是把 powershell 的输出截到 400）。
+// 旧实现按字节切：中文 PowerShell 错误（本程序面向 zh-CN 机器，几乎必然含中文）被
+// 从 rune 中间切断，产出非法 UTF-8 —— 探针实测 "utf8.Valid=false、末字节 229"。
+// 该串随后进 fmt.Errorf → JSON/SSE，Go 会把非法字节替换成 U+FFFD：面板上就是乱码问号。
+// 同族后果本会话刚处理过一次（CHANGELOG 第一行带 3 个 U+FFFD 且无任何判据发现）。
+//
+// 语义保持不变的部分：不加省略号、且**幂等**（截过的串再截不变）—— 现有测试钉住这两点，
+// 因为错误信息会在多层包装里被反复截，加省略号会让长度越截越短、破坏幂等。
 func truncate(s string, n int) string {
-	if len(s) <= n {
+	if n <= 0 {
+		return ""
+	}
+	r := []rune(s)
+	if len(r) <= n {
 		return s
 	}
-	return s[:n]
+	return string(r[:n])
 }
 
 // Guard 判断当前 EXE 是否位于正式安装位置（同目录有 runtime/ 或 workbench-output/）。
