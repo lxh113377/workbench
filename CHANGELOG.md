@@ -16,6 +16,19 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **修两处「固定名 TEMP 路径」隐患，并把该口径做成判据（扩进 `check_noninteractive.ps1` 第 4 条）**：
+  **实测范围**：全仓 `tests`/`setup` 里拼 `$env:TEMP` 的地方共 28 处，其中**固定名（无唯一化）2 处** ——
+  `tests/aggregate/agg_e2e.ps1:11` 的根目录 `wb-agg-e2e` 与 `tests/keepalive.ps1:186` 的日志文件 `wb-keepalive-out.log`。
+  **危害（本仓在册族）**：`keepalive.ps1` 由计划任务**每分钟**拉起 ⇒ 与下一次运行重叠时**两个进程写同一个文件**；
+  `agg_e2e` 的固定根还会**跨运行残留**（上一次的产物被下一次看见）。同族先例是本仓《门禁快照并发互删》那份报告。
+  **修法**：`agg_e2e` 每次运行取新 guid 的根并在跑完清理；`keepalive` 每次拉起用 `wb-keepalive-out-<pid>-<HHmmss>.log`，
+  并顺手清理 1 小时前的陈旧件（否则每分钟一个文件无限堆积）。两条都保留原 EOL 与 BOM（写前后各测一次）。
+  **判据**：`check_noninteractive.ps1` 加第 4 条 —— 同一行出现 `$env:TEMP` 拼**字面常量名**且没有任何唯一化手段（guid / Get-Random / $PID / Get-Date）即违规；
+  同行判的理由是实测两处真隐患都在同一行完成拼接，跨行构造宁可放宽也不制造噪声。真仓扫描 **442 个脚本 0 处违规**（零误报）。
+  **双向变异**：在 worktree 往 `tests/check_changelog.ps1` 注入 `Join-Path $env:TEMP "wb-fixed-name-probe"` ⇒ 判红并点名 `:110`；
+  删掉探针 ⇒ 复绿。（第一版判据用**双引号**写针，PowerShell 会把 `"$env:TEMP"` 与 `"$PID"` **插值**成真实路径/数字 ⇒ 搜的根本不是字面量，
+  变异当场暴露为不判红；改成单引号针后才成立。另有一次变异失败是我的 worktree 夹具用了**改动前的闸副本**。）
+
 - **更正（2026-10-25 round 172 同轮）：上一条把并行会话 14 个暂存测试件一并提交进了 HEAD。**
   成因：`.githooks/pre-commit` 会被他人在途件挡住（它们 gofmt 漂移），我用了 `--no-verify` 想绕开；
   但 `--no-verify` 只跳过 hook，**并不能把「提交整个索引」改成「只提交我的文件」** —— 于是 14 个第三方暂存件被一并写入。

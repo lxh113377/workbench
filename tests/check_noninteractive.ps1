@@ -11,6 +11,7 @@
 #   2) 注册计划任务的命令行缺 -NonInteractive
 #   3) 出现交互构造：Read-Host / Get-Credential / PromptForChoice / ShouldContinue /
 #      Out-GridView / -Confirm（未显式 $false）
+#   4) 固定名 TEMP 路径（重叠运行会互写/互删；2026-10-25 round 174 补）
 #
 # 用法: powershell -File tests\check_noninteractive.ps1 [-Root <repoRoot>] [-Quiet]
 # 退出码: 0=合规 / 1=不合规 / 2=根目录不存在
@@ -129,6 +130,23 @@ foreach ($f in $files) {
     if ($t -match "-Confirm" -and $t -notmatch "-Confirm\s*:\s*\`$false") {
       $viol += ("{0}:{1}  显式 -Confirm 会弹确认提示（无人值守应改 -Confirm:`$false）" -f $rel, ($i+1))
     }
+
+			# 4) 固定名 TEMP 路径（2026-10-25 round 174 补）：无人值守下同一脚本会被**重叠运行**
+			#    （计划任务每分钟拉起、并行会话同时跑门禁），固定名会被两个进程互写/互删 —— 本仓在册族
+			#    （门禁快照并发互删、keepalive 每分钟拉起）。判据：同一行出现 $env:TEMP 拼**字面常量名**，
+			#    且该行没有任何唯一化手段（guid / Get-Random / $PID / 时间戳）。
+			#    为何同行判：实测本仓 2 处真隐患都在同一行完成拼接；跨行构造若误报，宁可放宽也不制造噪声。
+			if ($t.IndexOf('$env:TEMP', [StringComparison]::Ordinal) -ge 0) {
+				$uniq = ($t.IndexOf('guid', [StringComparison]::OrdinalIgnoreCase) -ge 0) -or
+				        ($t.IndexOf('Get-Random', [StringComparison]::Ordinal) -ge 0) -or
+				        ($t.IndexOf('$PID', [StringComparison]::OrdinalIgnoreCase) -ge 0) -or
+				        ($t.IndexOf('Get-Date', [StringComparison]::Ordinal) -ge 0)
+				# 字面量拼接的两种形态：Join-Path ... + 引号常量名；或 $env:TEMP 后紧跟分隔符（[char]92 = 反斜杠）
+				$literal = (($t.IndexOf('Join-Path', [StringComparison]::Ordinal) -ge 0) -and ($t.IndexOf([char]34, [StringComparison]::Ordinal) -ge 0)) -or ($t.IndexOf(("$env:TEMP" + [char]92), [StringComparison]::Ordinal) -ge 0)
+				if ($literal -and -not $uniq) {
+					$viol += ("{0}:{1}  固定名 TEMP 路径（重叠运行会互写/互删；应加 guid / 随机 / pid / 时间戳）" -f $rel, ($i+1))
+				}
+			}
   }
 }
 

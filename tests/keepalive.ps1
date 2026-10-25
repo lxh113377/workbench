@@ -183,7 +183,13 @@ do {
         }
         if (-not $launched) {
             # 自带逻辑：stdio 必须重定向，否则子进程继承管道，父 powershell 会挂起等它退出（实测踩过）
-            $nullOut = Join-Path $env:TEMP "wb-keepalive-out.log"
+            # 每次拉起用**唯一**日志名（2026-10-25 round 174）：本脚本由计划任务每分钟拉起，
+            # 固定名 %TEMP%\wb-keepalive-out.log 会在重叠运行时被两个进程同时写（本仓在册族）。
+            # 同时清理 1 小时前的陈旧件，避免每分钟一个文件无限堆积。
+            foreach ($old in @(Get-ChildItem -LiteralPath $env:TEMP -Filter "wb-keepalive-out-*.log" -ErrorAction SilentlyContinue)) {
+                if ($old.LastWriteTime -lt (Get-Date).AddHours(-1)) { Remove-Item -LiteralPath $old.FullName -Force -ErrorAction SilentlyContinue }
+            }
+            $nullOut = Join-Path $env:TEMP ("wb-keepalive-out-" + $PID + "-$((Get-Date -Format 'HHmmss')).log")
             Start-Process -FilePath $Exe -ArgumentList "--silent" -WindowStyle Hidden -RedirectStandardOutput $nullOut -RedirectStandardError "$nullOut.err"
         }
         # 运行时热修：源码在 Lead 写入口未改，这里每次拉起后重放修正
