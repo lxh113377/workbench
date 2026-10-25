@@ -2642,6 +2642,20 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **模板新增两条有实测证据的过程约束：`quality-verify` ⑫（计数类判据的作用域必须与语言可见性规则一致）与
+  `quality-hygiene` ⑧（改既有文件前先实测 BOM/EOL：写前测、写后量）**，两个契约表同步扩（渲染契约 + **链上交付契约**各 +4 片段），
+  并证明两条都真的进入 `RootTask` 与 `Successor` 的 `Task.Prompt`。模板教训累计 **7 条**。
+  · **verify ⑫**：引用次数/出现次数这类计数**不能做全局同名计数**，作用域必须与语言的可见性规则一致。
+  证据是本仓同一条判据出现**两种**假阴性：注释被当引用（round 158）+ 跨包同名被当引用（round 177 ——
+  `engine/helpers.go` 的 `baseName` 全仓零调用却判活，因为 verify 里的同名定义+调用把计数抬到 3）；
+  改成按包限定（`package|name`）后，同一棵树当场报出那个真死函数。
+  · **hygiene ⑧**：改写既有文件前先**实测**它的 BOM / 换行口径 / 编码，**不要按惯例假定**；写盘后按字节复验。
+  本仓 2026-10-25 连续踩了 4 次：① `gofmt-debt.txt` 的 BOM 被剥（该带的丢了）；② `check_issue_forms.ps1` 按 CRLF 切一个 **LF** 文件
+  ⇒ 整个文件被当成一行；③ `CHANGELOG` 实际 **LF 为主**却按 CRLF 切 ⇒ 找不到锚点、插不进去；④ `engine/helpers.go` **没有 BOM** 却按「有 3 字节 BOM」切，
+  头部 `package` 变 `kage`（go vet 当场报 `expected package, found kage`）。
+  **双向变异证明**：删 verify ⑫ ⇒ 两个契约测试**同时判红**；删 hygiene ⑧ ⇒ 同样双红；还原后**字节一致**。
+  （顺带记：本轮我在自己的检查代码里把变量名撞成数组导致一次异常，写盘已完成的判断靠**查盘上状态**而不是重跑 —— 避免重复插入。）
+
 - **产物资产时效判据升级到 AST 口径：全部内嵌资产块（13 块）都必须逐字在产物里**（落实 round 175 登记的正确做法）：
   新增 `workbench/internal/web/asset_artifact_contract_test.go` —— 用 **`go/parser`** 解析本包源码，取 `const/var` 里
   `*ast.BasicLit` 且 `Kind == token.STRING`、**以反引号开头**（字节 96）且 ≥200 字节的 raw literal，名字取声明名，
