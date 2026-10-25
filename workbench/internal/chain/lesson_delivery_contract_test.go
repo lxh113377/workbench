@@ -27,7 +27,7 @@ func TestLessonsReachTaskPromptThroughChain(t *testing.T) {
 		frags []string
 	}{
 		{"quality-audit", []string{"运行时真值", "复验编码", "权威定义处", "否定性结论"}},
-		{"quality-verify", []string{"复现率", "变异实验自身", "真的改掉了目标", "双向变异证明", "去掉缺陷必须判绿", "先剥注释", "保留原词", "可见性规则", "按包限定计数"}},
+		{"quality-verify", []string{"复现率", "变异实验自身", "真的改掉了目标", "双向变异证明", "去掉缺陷必须判绿", "先剥注释", "保留原词", "可见性规则", "按包限定计数", "修订版本", "声明什么口径"}},
 		{"quality-gate-spec", []string{"静态配对检查", "浅克隆"}},
 		{"quality-hygiene", []string{"重新入索引", "先暂存后写", "显式 pathspec", "整个暂存区", "不要按惯例假定", "写前测、写后量"}},
 		{"review-five-axis", []string{"合并结论", "门禁建议"}},
