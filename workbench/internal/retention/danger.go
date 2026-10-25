@@ -41,7 +41,7 @@ func refuseDangerousPath(abs string) error {
 		}
 	}
 	// 2b) 盘根的字符串形态（覆盖跨平台输入，如 Linux 上测 "C:\\"）。
-	if len(key) == 2 && key[1] == ':' && ((key[0] >= 'a' && key[0] <= 'z')) {
+	if len(key) == 2 && key[1] == ':' && (key[0] >= 'a' && key[0] <= 'z') {
 		return fmt.Errorf("拒绝操作盘根: %s", clean)
 	}
 	// 3) 已知系统目录（Windows 与 Unix 各一组，归一后小写比较）。

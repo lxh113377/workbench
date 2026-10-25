@@ -24,26 +24,17 @@
 # 另 2 个 shortcut 件同在途。全部为并行会话在途，本会话不代改（避免覆盖竞争）。
 
 tests/docker-autonomy/fakedsh/main.go
-tests/docker/httpget/main.go
-workbench/cmd/workbench/acceptance_test.go
 workbench/cmd/workbench/plan_selftest_dispatch_test.go
 workbench/internal/artifact/artifact.go
 workbench/internal/artifact/protocol_test.go
 workbench/internal/autonomy/planner.go
-workbench/internal/blueprint/plan.go
 workbench/internal/config/config.go
-workbench/internal/engine/interp_probe_test.go
 workbench/internal/engine/plan_helpers.go
 workbench/internal/engine/replan.go
 workbench/internal/engine/replan_test.go
 workbench/internal/executor/ratelimit_test.go
-workbench/internal/gov/engine.go
-workbench/internal/retention/danger.go
 workbench/internal/single/instance.go
-workbench/internal/supervisor/metrics_csv_test.go
 workbench/internal/tray/tray_window_style_test.go
-workbench/internal/web/export.go
-workbench/internal/workspace/deadlock_test.go
 #
 # 【2026-10-25 round 172 登记】下面两个文件是**并行会话的在途测试件**，其内容因一次提交事故（见 CHANGELOG）
 #   进入了 HEAD，且暂存/HEAD 版本 gofmt 漂移。按本仓纪律**不代改他人在途件**（gofmt 会重排其注释结构 =
