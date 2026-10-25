@@ -2626,6 +2626,25 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **产物资产时效判据升级到 AST 口径：全部内嵌资产块（13 块）都必须逐字在产物里**（落实 round 175 登记的正确做法）：
+  新增 `workbench/internal/web/asset_artifact_contract_test.go` —— 用 **`go/parser`** 解析本包源码，取 `const/var` 里
+  `*ast.BasicLit` 且 `Kind == token.STRING`、**以反引号开头**（字节 96）且 ≥200 字节的 raw literal，名字取声明名，
+  再断言每个块逐字出现在 `dist/workbench.exe` 里。结构信息来自**语法树**而不是数反引号 ⇒ round 175 那三类噪声原理上不可能再出现。
+  **实测清单（`-v` 输出）**：**13 块 / 约 214 KB** —— appCSS 78,139、appJS 74,285、poolJS 34,123、govJS 14,539、
+  modelPoolPage 7,660、indexPage 1,151、adminPage 2,060、governancePage 1,406，另加 `contentTypesXML`/`docRelsXML`/`rootRelsXML`（docx 模板）
+  与 `faviconSVG` —— 13 块**全部**当前就在产物里（说明上次重建后没人改过资产）。
+  两个受理面哨兵：块数 < 5 或合计 < 100 KB 即判红（防「抽取口径失效却静默通过」）；产物不存在 ⇒ `t.Skip`（干净 clone 的 go test 阶段不误判为红），
+  并可用 `WB_ASSET_ARTIFACT` 覆盖产物路径（已用它验证 SKIP 分支）。
+  **接线**：`setup/build.ps1` 在产物写出后、紧邻既有 PS 资产闸处调用 `go test ./internal/web/ -run TestAssetsPresentInArtifact`，
+  并在**判据文件缺失时直接 throw**（判据面不许出现静默空洞）。实测链条 `BUILD_RC=0`、打印「内嵌资产全量逐字一致 OK（AST 口径，13 块）」、构建链 57.1 s。
+  为什么两道判据并存（不合并）：PS 那道是**快速子集**（只比 CSS 一块、秒级、不需要编译），Go 这道是**全量**（需工具链）；两者在链条里的位置与成本都不同。
+  **变异证明**：往 `appJS` 的 raw literal 里插一个字节、不重建 ⇒ 测试判红并点名 `appJS (assets_script.go, 74286 字节)` 与首个差异位置；
+  还原后 **rc=0 且字节一致**。
+  **更正 round 175 登记里的第 ③ 条理由**：那条写「`const/var 名字 = 反引号` 口径会扫进非资产 raw string（`runKey` 1337 字节注册表命令串）」——
+  本轮实测把它推翻了：`runKey` 实际是**单行 46 字符**的字面量（`const runKey = ` + 反引号 + `HKCU`...Run`），≥200 字节的门槛本就把它排除；
+  那个「1337 字节块」是**我自己 ③ 号口径实现的配对 bug** 造出来的伪块，不是该口径的真实属性。真正站得住的理由是 ① 与 ②（struct tag / 游离反引号让「数反引号」失准）。
+  （同一条纪律：口径的结论必须由**正确实现**的实测支撑，否则会把「我的 bug」写成「那一类方法的缺陷」。）
+
 - **模板新增两条有实测证据的过程约束：`quality-verify` ⑪（文本类判据先剥注释 + 专用变异形态）与
   `quality-hygiene` ⑦（提交必须用显式 pathspec）**，并同步扩两个契约表：
   · **verify ⑪**：文本/源码类判据一律**先剥注释再判**；变异验证要**专门试一种形态** —— 把真值改坏、

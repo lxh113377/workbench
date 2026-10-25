@@ -305,6 +305,23 @@ if (Test-Path $pageChecker) {
   Write-Host "    产物页面与源码逐字一致 OK（内联）" -ForegroundColor Green
 }
 
+# 内嵌资产全量检查（2026-10-25 round 176，落实 round 175 登记的正确做法）：
+#   PS 那道闸是**快速子集**（只比 CSS 一块，秒级、不编译）；这里用 Go 版 AST 判据覆盖**全部内嵌资产块**
+#   （实测 13 块：8 个 CSS/JS/HTML + 4 个 docx XML 模板 + favicon SVG，约 214 KB）。
+#   为什么必须放这里：该判据要读**刚构建出的产物**，而 4/6 段的 go test 发生在产物之前 ——
+#   放 4/6 只会拿上一次的旧产物判，语义错位。
+#   用 go/parser 取 raw literal 的真实位置（不数反引号）：round 175 实测三条「数反引号」口径全部假阳性。
+$assetTest = Join-Path $wb "internal\web\asset_artifact_contract_test.go"
+if (-not (Test-Path $assetTest)) {
+	throw ("产物资产判据缺失：" + $assetTest + "（判据应受版本控制；缺失=判据面出现空洞，不许静默跳过）")
+}
+Push-Location $wb
+& go test ./internal/web/ -run 'TestAssetsPresentInArtifact' -count=1 2>&1 | Out-Null
+$assetRc = $LASTEXITCODE
+Pop-Location
+if ($assetRc -ne 0) { throw ("产物与内嵌资产不一致（rc=" + $assetRc + "）：完整报告见 go test ./internal/web/ -run TestAssetsPresentInArtifact -v") }
+Write-Host "    内嵌资产全量逐字一致 OK（AST 口径，13 块）" -ForegroundColor Green
+
 # 网络来源标记（MOTW）门禁（2026-10-19 老大截图："打开文件 - 安全警告 / 无法验证发布者"）：
 # 只要 EXE 带 Zone.Identifier 备用数据流，Windows 附件管理器就会在双击时弹
 # "无法验证发布者。你确定要运行此软件吗？" 的安全警告 —— 一步人工点击，而且
