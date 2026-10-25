@@ -39,7 +39,6 @@ const appCSS = `
   --dim-2:#7189a4;      /* ≈ 4.6:1，仍过 AA */
   /* ——— 信号色：电光青为主（原暖橙 #ff6a3d → 电青 #22d3ee），紫为副信号 ——— */
   --accent:#22d3ee;
-  --accent-soft:rgba(var(--accent-rgb),.14);
   --accent-2:#4ade80;    /* 成功/运行（青绿） */
   --accent-3:#a78bfa;    /* 副信号：紫（科技感的第二个记忆色） */
   --warn:#ffc53d;
