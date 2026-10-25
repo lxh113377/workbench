@@ -108,7 +108,14 @@ func shouldRepair(task *model.Task, rep *model.VerifyReport, cfg config.Config) 
 	return task.RepairRounds < rounds
 }
 
-// truncateRunes 按 rune 截断（避免中文被切碎）。
+// truncateRunes 按 rune 截断到**至多 n 个字符**（含省略号）：绝不切碎中文，也不产出残缺 UTF-8。
+//
+// 契约修正（2026-10-26 round 197 实测）：旧实现是 string(r[:n]) + 省略号 ⇒ 截断结果恒比预算**多出 1 个字符**
+// （n=2 时给 3 个）。调用面全是预算语义（事件 reason 200/160/120、报告里的 stderr/stdout 尾部 1200），
+// 越界 1 个不是崩溃、但会让「声称的上界」失真 —— 与《判据保真度》登记的第 ⑫ 修订版同族（口径要说得出数）。
+// 现语义与 internal/autonomy 的同名函数逐字一致：n<=1 时不加省略号，否则取前 n-1 个字符 + 省略号。
+// 两包各自保留私有副本（跨包收敛为公共件仍是登记项），但**行为契约由两包各自的测试钉住**，
+// 漂移会在两侧同时判红（同名不同契约正是本仓在册缺陷族）。
 func truncateRunes(s string, n int) string {
 	if n <= 0 {
 		return ""
@@ -117,5 +124,8 @@ func truncateRunes(s string, n int) string {
 	if len(r) <= n {
 		return s
 	}
-	return string(r[:n]) + "…"
+	if n <= 1 {
+		return string(r[:n])
+	}
+	return string(r[:n-1]) + "…"
 }
