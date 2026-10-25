@@ -29,17 +29,32 @@ $goFiles = @($raw -split ([char]0) | Where-Object { $_ -ne "" })
 if ($goFiles.Count -eq 0) { Write-Host "UNVERIFIED: 未取到受跟踪的 .go" -ForegroundColor Red; exit 2 }
 
 # 2) 语料只取**非注释行**（修正 ①）。_test.go 也要算：它们本来就是合法引用方。
-$corpus = ""
+# 语料：受跟踪 .go 的**非注释行**（注释会污染引用计数：函数自己的文档注释以函数名开头）。
+# 2026-10-25 round 167 性能改造：旧写法是 `$corpus += $ln + [char]10` 在循环里拼大字符串
+# （O(n²)：每次 += 都复制整份语料，实测这是本门禁 38 s 的两大来源之一）。改为数组 join。
+$corpusLines = New-Object System.Collections.Generic.List[string]
 foreach ($rel in $goFiles) {
-  $path = Join-Path $root $rel
-  if (-not (Test-Path -LiteralPath $path)) { continue }
-  foreach ($ln in @([IO.File]::ReadAllLines($path))) {
-    $t = $ln.TrimStart()
-    if ($t.StartsWith("//") -or $t.StartsWith("/*") -or $t.StartsWith("*")) { continue }
-    $corpus += $ln + [char]10
-  }
+	$path = Join-Path $root $rel
+	if (-not (Test-Path -LiteralPath $path)) { continue }
+	foreach ($ln in @([IO.File]::ReadAllLines($path))) {
+		$t = $ln.TrimStart()
+		if ($t.StartsWith("//") -or $t.StartsWith("/*") -or $t.StartsWith("*")) { continue }
+		$corpusLines.Add($ln)
+	}
 }
+# 与旧口径逐字一致：行间以换行连接，末尾也留一个换行（旧写法每行都补 [char]10）。
+$corpus = ($corpusLines -join [string][char]10) + [string][char]10
 if ($corpus.Length -eq 0) { Write-Host "UNVERIFIED: 语料为空" -ForegroundColor Red; exit 2 }
+
+# 引用计数表：语料**一次分词**建 name -> 次数，候选只查表。
+# 为什么等价：候选名是 ASCII 字母开头的 Go 标识符；「\bname\b 的出现次数」与
+# 「最大标识符串恰好等于 name 的个数」对 ASCII 名一一对应（前后若有词字符则本身不构成边界）。
+# 非 ASCII 名（Go 允许，但本仓没有）走原正则路径作安全阀，语义不退化。
+$refCount = @{}
+foreach ($tok in [regex]::Matches($corpus, "[A-Za-z_][A-Za-z0-9_]*")) {
+	$k = $tok.Value
+	if ($refCount.ContainsKey($k)) { $refCount[$k] = $refCount[$k] + 1 } else { $refCount[$k] = 1 }
+}
 
 # 3) 抽取**未导出**函数/方法（手写解析：不以任何大小写敏感开关为凭）
 $dead = @()
@@ -65,8 +80,13 @@ foreach ($rel in $goFiles) {
     if ($name.Length -eq 0) { continue }
     $c0 = [int][char]$name[0]
     if ($c0 -lt 97 -or $c0 -gt 122) { continue }
-    $pat = [char]92 + "b" + [regex]::Escape($name) + [char]92 + "b"
-    $n = ([regex]::Matches($corpus, $pat)).Count
+		if ($name -match "^[A-Za-z0-9_]+$") {
+			$n = $(if ($refCount.ContainsKey($name)) { $refCount[$name] } else { 0 })
+		} else {
+			# 安全阀：非 ASCII 名走原路径（旧口径的 .NET 词边界是 Unicode 感知的）。
+			$pat = [char]92 + "b" + [regex]::Escape($name) + [char]92 + "b"
+			$n = ([regex]::Matches($corpus, $pat)).Count
+		}
     if ($n -le 1) { $dead += [pscustomobject]@{ rel = $rel; name = $name; line = ($i + 1) } }
   }
 }
