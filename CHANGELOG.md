@@ -16,6 +16,33 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **修「不闪黑框」家族的漏点，并把缺失维度并入现有闸（不新增第 45 道判据）**：
+  **起因是一轮可测量的新审计**：本会话被「同一保证被复制多份后漂移」咬了两次（`headless` 三份），
+  故做了**跨包同名实现漂移扫描**：1184 个函数定义 → 1026 个不同名 → **跨包同名且实现不一致 77 组**；
+  再用「体 ≤16 行 + 词集相似度 ≥0.5」细化到 **12 对**，其中最可疑的是 `hiddenProcAttr` 一族 ——
+  `hiddenProcAttr` / `hiddenAttr` / `hiddenSysProcAttr` / `hiddenCmdAttr` / `job_windows` …
+  **7 个不同名字**，其中一处注释自己就写着「这类『每个 spawn 点各写一份』的重复正是漏掉第四处的原因，
+  长期应统一到一个公共包」。
+  **量出真漏点**：全仓 11 处 `SysProcAttr{...}` 字面量里，**`internal/browser/browser_windows.go:26`
+  （Edge 启动路径）只有 `HideWindow: true`、没有 `CreationFlags`** —— 而它上方注释恰好写着
+  「配合 CREATE_NO_WINDOW 保证不闪壳窗口」（**注释承诺 ≠ 实现**，本会话同族第 N 次）；同文件的回落路径
+  L51 是带的。**已修**（补 `CreationFlags: 0x08000000`，只增加隐藏、无行为风险）。
+  **先查有没有现成判据**：仓里已有 `tests/check_spawn_silent.ps1`，但它只扫「已知控制台二进制
+  （cmd/reg/powershell/pwsh/wmic）的 spawn」且只要求「±几行窗口内出现任一隐藏标记」
+  ⇒ **① GUI 目标不在判据面内；② 只写 HideWindow 的站点照样算合规**。
+  故**刻意不新增第 45 道闸**（避免判据繁殖，也不动体检报告图数），而是把缺失的那一维**并入现有闸**：
+  受跟踪口径下每个 `SysProcAttr{...}` 字面量必须**同时**满足 `HideWindow: true` 与 CREATE_NO_WINDOW
+  （写 `0x08000000` 字面量，或取**定义处即该值**的常量名 —— 数据驱动，允许改名）；`!windows` 与
+  `_other.go` 豁免。真仓两份计数：`SysProcAttr literal sites 9（豁免 12 个非 Windows 文件）`、
+  `CONSOLE spawn points 6`。
+  **变异证明**：去掉那处 `CreationFlags` ⇒ 闸判红并点名
+  `browser_windows.go:26 SysProcAttr 未同时隐藏窗口与禁建控制台 hide=True flag=False`；
+  还原后字节一致、rc=0。
+  **我的判据第一版带假阴性，被变异证明当场抓出**：常量表最初把「任何含 `0x08000000` 与 `=` 的行」上的
+  **所有**标识符（含 `HideWindow`、`cmd`）都收进表，于是漏掉 flag 的站点靠 `Contains('HideWindow')`
+  就通过了 —— 变异后仍 PASS（SILENT）。改成只认「常量定义行」后变异正确判红。
+  **教训：判据的取值来源必须窄而准**（与 round 169「口径要窄」同源）。
+  我自建的独立闸 `check_console_silent.ps1` 已**删除**（逻辑并入既有闸，未入库，受跟踪门禁仍 44）。
 - **判据面审计（44 道受跟踪门禁 × 本会话已证实的两种失效模式）+ 修一处口径缺陷（`check_issue_forms.ps1`）**：
   **审计方法**：把本会话证实过的两种失效模式 —— ①「把注释当代码计数」（round 158 死代码门禁）、
   ②「`-match` 大小写不敏感被当成大小写敏感用」（round 158 同门禁的第二处缺陷）—— 拿去扫全部 44 道门禁，

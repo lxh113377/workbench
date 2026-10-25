@@ -59,6 +59,52 @@ foreach ($f in $files) {
     }
   }
 }
+
+# ---- 第二维（2026-10-25 round 170 并入）：SysProcAttr 字面量必须**同时**隐藏窗口与禁建控制台 ----
+# 为什么必须并入而不是只看「控制台二进制」：
+#   ① 旧判据只扫 $consoleBins 那五个名前缀的 spawn，**GUI 目标不在面内** ——
+#      实测 internal/browser/browser_windows.go 的 Edge 启动点漏了 CreationFlags 就没被这道闸看见；
+#   ② 旧判据只要求「窗口内出现任一隐藏标记」，因此 `&syscall.SysProcAttr{HideWindow: true}`（只有 HideWindow）
+#      照样算合规 —— 而 GUI 子系统进程里起子进程仍可能闪壳窗口，那正是它注释里承诺要防的。
+# 口径：受跟踪口径下的每个 `&syscall.SysProcAttr{...}` 字面量（多行也算）必须同时满足 HideWindow:true 与
+#   CreationFlags 取 CREATE_NO_WINDOW（0x08000000 字面量，或**定义处即该值**的常量名）。
+#   豁免：`//go:build !windows` 与 `_other.go`（那里的 SysProcAttr 本就无窗口语义）。
+#   常量名用「去空白后形如 <name>=0x08000000 的常量定义行」数据驱动求得 ——
+#   第一版把「任何含 0x08000000 与 = 的行」上的所有词都收进表，漏 flag 的站点靠 Contains(HideWindow)
+#   就被放过（变异证明当场暴露 SILENT）；取值来源必须窄而准。
+$flagConsts = @{}
+foreach ($f2 in $files) {
+	foreach ($ln2 in @(Get-Content $f2.FullName -ErrorAction SilentlyContinue)) {
+		$flatLn = $ln2.Replace(" ", "").Replace([string][char]9, "").Replace([string][char]13, "")
+		if ($flatLn.StartsWith("//") -or $flatLn.Contains("SysProcAttr")) { continue }
+		if ($flatLn.Contains("0x08000000") -and $flatLn.Contains("=")) {
+			$left = $flatLn.Split("=")[0].Replace("const", "")
+			if ($left -match "^[A-Za-z_][A-Za-z0-9_]*$") { $flagConsts[$left] = $true }
+		}
+	}
+}
+$attrSites = 0; $attrExempt = 0
+foreach ($f3 in $files) {
+	$text3 = [IO.File]::ReadAllText($f3.FullName)
+	if ($text3.Contains("!windows") -or $f3.Name.EndsWith("_other.go")) { $attrExempt++; continue }
+	$ls3 = @(Get-Content $f3.FullName -ErrorAction SilentlyContinue)
+	for ($k = 0; $k -lt $ls3.Count; $k++) {
+		if (-not $ls3[$k].Contains("&syscall.SysProcAttr{")) { continue }
+		$attrSites++
+		$seg = $ls3[$k]; $m2 = $k
+		while (-not $seg.Contains("}") -and ($m2 + 1) -lt $ls3.Count) { $m2++; $seg = $seg + " " + $ls3[$m2].Trim() }
+		$flat = $seg.Replace(" ", "").Replace([string][char]9, "")
+		$hasHide = $flat.Contains("HideWindow:true")
+		$hasFlag = $flat.Contains("0x08000000") -or $flat.Contains("CREATE_NO_WINDOW")
+		if (-not $hasFlag) { foreach ($cn in $flagConsts.Keys) { if ($flat.Contains($cn)) { $hasFlag = $true; break } } }
+		if (-not ($hasHide -and $hasFlag)) {
+			$rel2 = $f3.FullName.Replace($Root, "").Replace([char]92, [char]47).TrimStart([char]47)
+			$violations += ($rel2 + ":" + ($k + 1) + ": SysProcAttr 未同时隐藏窗口与禁建控制台 hide=" + $hasHide + " flag=" + $hasFlag + "  " + $seg.Trim())
+		}
+	}
+}
+if ($attrSites -eq 0) { Write-Error "UNVERIFIED: 一处 SysProcAttr 字面量都没扫到（判据在比空气）"; exit 2 }
+Write-Host ("  SysProcAttr literal sites checked: " + $attrSites + " (豁免 " + $attrExempt + " 个非 Windows 文件)")
 Write-Host ("  CONSOLE spawn points checked: " + $checked)
 # 三态：KNOWN（已登记豁免，逐条点名但不计入 rc）/ FAIL（未登记，计入 rc）/ PASS（零违规零豁免）
 $fatal = @()

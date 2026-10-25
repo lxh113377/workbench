@@ -23,7 +23,7 @@ func Open(url string) error {
 		cmd := exec.Command(edge, "--app="+url, "--window-size=1280,880")
 		// 隐藏属性：Edge 自身是 GUI 进程，HideWindow 主要作用于它可能分配的
 		// 控制台/启动提示；配合 CREATE_NO_WINDOW 保证不闪壳窗口。
-		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
+		cmd.SysProcAttr = &syscall.SysProcAttr{HideWindow: true, CreationFlags: 0x08000000} // CREATE_NO_WINDOW
 		if err := cmd.Start(); err == nil {
 			go func() { _ = cmd.Wait() }()
 			return nil
