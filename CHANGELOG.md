@@ -2361,6 +2361,32 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **quality-verify 新增要求⑦「变异实验自身要有受理面检查」并当场被它抓到两次**：
+  上轮我把这条教训记进了 CHANGELOG，却没编码进模板 —— 正是我自己反对的「只留在文档里」。
+  新⑦要求：判红之前必须确认是判据判的，而不是实验把被测物弄崩了；还原按字节捕获/写回并复验
+  字节一致。原⑦顺延为⑧。同步扩上轮建的 encoded_lessons_contract_test.go，断言该片段
+  （"变异实验自身"）真出现在 Render 之后的 prompt 里。
+
+  **本轮我两次踩在这条上，都被它抓住（所以它是真教训，不是我编的规矩）**：
+  ① 第一版变异脚本把 rc=-1（execFileSync 超时，拿不到退出码）标成 SILENT —— 等于把「没测成」
+     当成「判据没抓到」，正好是⑦要防的形状。改成严格四态：RED OK / INVALID(编译错) /
+     SILENT(rc=0 且处于变异态) / UNVERIFIED(拿不到码)，基线不绿直接 ABORT。
+  ② 点名行取的是「首条匹配 contract_test.go:」，抓到的是 t.Logf 的日志行而非 Errorf 的
+     失败行 —— 同族错误第 2 次（上轮变异 C 也犯过）。改为只匹配含「缺片段/字面反斜杠/
+     未替换占位符/受理面」的 Errorf 输出。
+
+  最终精准版结果：基线 GREEN → 抹掉⑦关键词 → **RED OK 且点名**
+  「quality-verify 的渲染结果缺片段 "变异实验自身" —— 该条教训没到达 prompt，等于没写」
+  → 还原 GREEN 且 defaults.go 字节一致。锚点命中数先断言 =1 才动手（防 replace 打歪）。
+  全程在临时 worktree 内（冷缓存导致首轮超时 57s+，热身复测后稳定）。
+
+  另记一次同族的即时自纠：写变异脚本时我用 /\n/ 做 split，正则里的反斜杠被转义层吃掉
+  导致 JS 语法错 —— 这是本仓在册的「多层字符串改写」家族，处置是改成 split/join 与写文件
+  执行，而不是继续在命令行里加转义。
+
+  验证：go build ./internal/templates/ rc=0（拼接语义合法，gofmt clean 不足以证明）；
+  契约测试 rc=0，quality-verify 渲染 1206 → 1794 字、3 条编码教训到位；templates+chain 全量 rc=0；
+  两文件 BOM 0、纯 LF（各自形态）；未跟踪生产 .go = 0；worktree 与脚本已清。
 - **新增 encoded_lessons_contract_test.go：钉住「写进模板的教训必须真的到达 prompt」**：
   这几轮我往 quality-audit 加了要求⑤（测量学四条）与⑥（工具剥 BOM）、往 quality-verify
   加了⑥（时序类判据须给复现率）。但模板文本是 Go 的**多段字符串拼接** —— 少一个加号、多一个
