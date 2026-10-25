@@ -33,7 +33,13 @@ param(
   # 只能在有 Explorer 的真机跑，单测断言只会假绿，故上限本就不高。CI 实测 26.3%，阈值设 23。
   #
   # 维护规则：只许抬不许降；若某包实测跌破阈值，先补测试再谈降阈值（降阈值必须写清理由）。
-  [string[]]$PerPackageCover = @("workbench/internal/engine=65", "workbench/internal/web=34", "workbench/internal/executor=39", "workbench/internal/modelpool=55", "workbench/internal/supervisor=48", "workbench/cmd/workbench=2", "workbench/internal/evaluate=60", "workbench/internal/modelroute=47", "workbench/internal/shortcut=25", "workbench/internal/chain=85", "workbench/internal/judge=78", "workbench/internal/single=68", "workbench/internal/tray=18", "workbench/internal/dshprofile=74")
+# browser 阈值说明（2026-10-25 round 168 立）：该包**此前 0%**（无测试文件 ⇒ 不进门禁分母）。
+# 本轮修「无头判定三份实现漂移」时给它补了首批测试（口径：WB_HEADLESS 取值与 CI 变量），
+# 实测 25.8% —— 未覆盖的部分是 Open/findEdge/fallback 的真实进程启动路径：
+# 起 Edge --app 或 rundll32 会真弹窗口/真起进程，单测里跑它们等于污染桌面，
+# 正是本包要在测试里守的纪律（见 headless_test.go 的 TestOpenDoesNothingWhenHeadless）。
+# 故按本仓「实测-3pp」惯例设 22，后续只许抬不许降。
+  [string[]]$PerPackageCover = @("workbench/internal/engine=65", "workbench/internal/web=34", "workbench/internal/executor=39", "workbench/internal/modelpool=55", "workbench/internal/supervisor=48", "workbench/cmd/workbench=2", "workbench/internal/evaluate=60", "workbench/internal/modelroute=47", "workbench/internal/shortcut=25", "workbench/internal/chain=85", "workbench/internal/judge=78", "workbench/internal/single=68", "workbench/internal/tray=18", "workbench/internal/dshprofile=74", "workbench/internal/browser=22")
 
 # dshprofile 阈值说明（2026-10-21 立、2026-10-23 复核更新）：该包原被判「只能真机跑」
 # （LocateDSH/resolveFromShim 探测、copyDir/linkOFM 复制、hiddenProcAttr 全是 IO 型）。

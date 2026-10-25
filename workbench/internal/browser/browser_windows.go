@@ -4,7 +4,6 @@ package browser
 
 import (
 	"fmt"
-	"os"
 	"os/exec"
 	"syscall"
 )
@@ -31,20 +30,6 @@ func Open(url string) error {
 		}
 	}
 	return fallback(url)
-}
-
-// headless 判断是否处于"无头执行"（不弹任何窗口）。
-//
-// 取值口径：WB_HEADLESS 为 1/true/yes（大小写不敏感）即视为开启。
-// 也接受标准 CI 环境变量，避免 CI 上误弹窗。
-func headless() bool {
-	if v := os.Getenv("WB_HEADLESS"); v != "" {
-		switch v {
-		case "1", "true", "TRUE", "True", "yes", "YES", "on", "ON":
-			return true
-		}
-	}
-	return os.Getenv("CI") != ""
 }
 
 func findEdge() string {
