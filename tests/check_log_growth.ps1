@@ -43,7 +43,7 @@ Write-Host "    说明：本件只产出读数、永不判红；日志不轮转�
 $memDir = Join-Path $Root ".workbuddy\memory"
 if (Test-Path -LiteralPath $memDir) {
   $head = ""
-  $gitProbe = & git -C $Root rev-parse --short HEAD 2>$null
+  $gitProbe = $null; try { $gitProbe = & git -C $Root rev-parse --short HEAD 2>$null } catch { $gitProbe = $null }
   if ($LASTEXITCODE -eq 0 -and $gitProbe) { $head = ([string]$gitProbe).Trim() }
   $row = [pscustomobject]@{
     at      = (Get-Date).ToString("o")

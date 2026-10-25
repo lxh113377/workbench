@@ -16,6 +16,23 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **修一处系统性 UNVERIFIED 塌缩：Write-Error 在 Stop 下本身就是终止错误，令同行或次行的 exit 2 永不可达；
+  本该报 UNVERIFIED(2) 的路径全变成 FAIL(1) —— 共 18 处，实测确证**：
+  三组对照实跑（非查资料）：Write-Error 加 exit 2 ⇒ 子进程 rc=1（exit 没跑到）；换 Write-Host ⇒ rc=2（意图达成）；
+  正常路径 ⇒ rc=0（对照组成立）。仓内惯例一致：Write-Host 配 UNVERIFIED 字样 113 处 vs Write-Error 仅 1 处，
+  故本修法是顺应既有口径，不是新造。
+  我自己的直接证据：round 208 我在 PATH 为空的环境跑门禁看到 gofmt 与 deadcode 闸报 FAIL，当时归因「调用环境
+  问题」并不完整 —— 环境缺 git 或 gofmt 时设计意图正是 UNVERIFIED(2)，只是被 Write-Error 提前终止成 1。
+  同族第二形态一并修：6 处直接在 try 外调 git 并加 2>$null（ls-files 与 rev-parse），fatal 会先杀脚本，令紧随
+  其后的 LASTEXITCODE 降级守卫（含同行 exit 2）恰在它为之而生的场景里不可达。修法统一为 try/catch 包裹
+  （round 205 三组对照已证只有 try/catch 有效，改成重定向到成功流也救不了，因为抛错发生在调用那一刻）。
+  实测坐实：非仓库根跑 check_gofmt 修前 rc=1、修后 rc=2；check_gate_links 同样修前 1、修后 2。
+  验证含对照组：23 道受跟踪门禁在真实仓库实跑，除 check_no_shrink 外全部 0/2/3 正常；该闸 param 有必填
+  -Source 与 -Target，带参实跑 rc=0 ⇒ 那个 BROKEN 是我的调用错（check_all 也只在注释里提到它、并不实跑），
+  不是缺陷。这已是我本轮第 5 个「探针自身有毛病」的实例，全部如实入账。全量 check_all rc=0 / FAILCOUNT=0。
+  改动 11 文件、24 增 24 删（每处都是 1 换 1），并逐文件断言 BOM 与 CRLF/LF 计数完全不变 —— 中途我确实因
+  按行拆分再用 LF 拼接，把 8 个纯 CRLF 文件归一成了 LF，已 git checkout 全量回退、改用整文单点替换重做；
+  条款⑧的血再次应验。另：未跟踪的 safe_merge.ps1 有同型 1 处，属并行会话文件，按纪律不动。
 - **修两处「Stop 下用 `2>$null` 抑制外部命令 stderr」的致命误判（同一 PowerShell 语义，两处活体）**：
   **三条对照实测（round 202，每条都是执行程序量的，不是查资料）**：在 `$ErrorActionPreference=Stop` 下让 `& git show HEAD:<不存在>` 触发 fatal ——
   ① 裸 `2>$null` ⇒ 脚本当场终止（后续行不执行）；② 改成 `2>&1` ⇒ **同样终止**（NativeCommandError 在 `&` 那一刻就抛，与重定向流向无关）；

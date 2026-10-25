@@ -25,7 +25,7 @@ $ErrorActionPreference = "Stop"
 if (-not $Root) { $Root = Split-Path -Parent $PSScriptRoot }
 
 $ciPath = Join-Path $Root '.github\workflows\ci.yml'
-if (-not (Test-Path -LiteralPath $ciPath)) { Write-Error "缺 CI 工作流: $ciPath"; exit 2 }
+if (-not (Test-Path -LiteralPath $ciPath)) { Write-Host "缺 CI 工作流: $ciPath"; exit 2 }
 $ci = [IO.File]::ReadAllText($ciPath)
 
 # 具名制品 -> 在 ci.yml 里的识别特征（只用客观字符串，不做语义推断）

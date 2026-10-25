@@ -15,7 +15,7 @@ param(
   [switch]$Quiet
 )
 $ErrorActionPreference = "Stop"
-if (-not (Test-Path $Exe)) { Write-Error ("not found: " + $Exe); exit 2 }
+if (-not (Test-Path $Exe)) { Write-Host ("not found: " + $Exe); exit 2 }
 
 function Get-PESubsystem([string]$path) {
   $b = [System.IO.File]::ReadAllBytes($path)

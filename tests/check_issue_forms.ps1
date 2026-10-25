@@ -17,7 +17,7 @@ param(
 $ErrorActionPreference = "Stop"
 if (-not $Root) { $Root = Split-Path -Parent $PSScriptRoot }
 $dir = Join-Path $Root ".github\ISSUE_TEMPLATE"
-if (-not (Test-Path -LiteralPath $dir)) { Write-Error ("缺目录: " + $dir); exit 2 }
+if (-not (Test-Path -LiteralPath $dir)) { Write-Host ("缺目录: " + $dir); exit 2 }
 
 $viol = @()
 $forms = @(Get-ChildItem -LiteralPath $dir -Filter *.yml -File | Where-Object { $_.Name -ne "config.yml" })

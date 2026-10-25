@@ -22,11 +22,11 @@ param(
 )
 $ErrorActionPreference = "Stop"
 if (-not $Root) { $Root = Split-Path -Parent $PSScriptRoot }
-if (-not (Test-Path -LiteralPath $Root)) { Write-Error ("根目录不存在: " + $Root); exit 2 }
-if (-not (Get-Command gofmt -ErrorAction SilentlyContinue)) { Write-Error "gofmt 不可用（需 Go 工具链）"; exit 2 }
+if (-not (Test-Path -LiteralPath $Root)) { Write-Host ("根目录不存在: " + $Root); exit 2 }
+if (-not (Get-Command gofmt -ErrorAction SilentlyContinue)) { Write-Host "gofmt 不可用（需 Go 工具链）"; exit 2 }
 
-$tracked = @(& git -C $Root ls-files "*.go" 2>$null)
-if ($LASTEXITCODE -ne 0) { Write-Error "git ls-files 失败（不在 git 仓库内？）"; exit 2 }
+$tracked = @(); try { $tracked = @(& git -C $Root ls-files "*.go" 2>$null) } catch { $tracked = @() }
+if ($LASTEXITCODE -ne 0) { Write-Host "git ls-files 失败（不在 git 仓库内？）"; exit 2 }
 $tracked = @($tracked | ForEach-Object { $_.Trim('"') })
 
 $tmpdir = Join-Path ([IO.Path]::GetTempPath()) ("gofmtgate-" + [guid]::NewGuid().ToString('N').Substring(0, 8))
@@ -63,7 +63,7 @@ try {
     [IO.File]::WriteAllText($dst, $lf)
   }
   $outTree = @(& gofmt -l $wtTree 2>$null)
-  if ($LASTEXITCODE -ne 0) { Write-Error "gofmt 整树执行失败（临时树 " + $wtTree + "）"; exit 2 }
+  if ($LASTEXITCODE -ne 0) { Write-Host "gofmt 整树执行失败（临时树 " + $wtTree + "）"; exit 2 }
   foreach ($line in $outTree) {
     if (-not $line) { continue }
     $relTmp = $line.Substring($wtTree.Length).TrimStart([char]92, [char]47) -replace '[\\/]', [char]47
@@ -82,7 +82,7 @@ try {
 #       ② 仅工作区漂移且该文件在 HEAD 合规 = 并行在途件（提示，不计 rc）
 #       ③ 登记豁免 = 已知缺陷（逐条点名，不计 rc），必要性按 HEAD 判定（见下）
 $headDriftAll = @{}
-$gitProbeAll = (& git -C $Root rev-parse --show-toplevel 2>$null)
+$gitProbeAll = $null; try { $gitProbeAll = (& git -C $Root rev-parse --show-toplevel 2>$null) } catch { $gitProbeAll = $null }
 $hasGitAll = ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace([string]$gitProbeAll))
 if ($hasGitAll) {
   $rr = ([string]$gitProbeAll).Trim()
@@ -135,7 +135,7 @@ if ($hasGitAll) {
       }
       if ($fetched.Count -gt 0) {
         $outH = @(& gofmt -l $headTree 2>$null)
-        if ($LASTEXITCODE -ne 0) { Write-Error "gofmt 整树执行失败（HEAD 临时树）"; exit 2 }
+        if ($LASTEXITCODE -ne 0) { Write-Host "gofmt 整树执行失败（HEAD 临时树）"; exit 2 }
         $headDriftSet = @{}
         foreach ($hline in $outH) {
           if (-not $hline) { continue }
@@ -183,7 +183,7 @@ $drift = @($driftFatal)
 $staleDebt = @()
 if ($debt.Count -gt 0) {
   $headDrift = @{}
-  $gitProbe = (& git -C $Root rev-parse --show-toplevel 2>$null)
+  $gitProbe = $null; try { $gitProbe = (& git -C $Root rev-parse --show-toplevel 2>$null) } catch { $gitProbe = $null }
   $hasGit = ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace([string]$gitProbe))
   if ($hasGit) {
     $repoRootForGit = ([string]$gitProbe).Trim()

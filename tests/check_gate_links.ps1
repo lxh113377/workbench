@@ -23,8 +23,8 @@ param(
 $ErrorActionPreference = "Stop"
 if (-not $Root) { $Root = Split-Path -Parent $PSScriptRoot }
 
-$trackedRaw = @(& git -C $Root ls-files "tests" 2>$null)
-if ($LASTEXITCODE -ne 0) { Write-Error "git ls-files 失败（不在 git 仓库内？）"; exit 2 }
+$trackedRaw = @(); try { $trackedRaw = @(& git -C $Root ls-files "tests" 2>$null) } catch { $trackedRaw = @() }
+if ($LASTEXITCODE -ne 0) { Write-Host "git ls-files 失败（不在 git 仓库内？）"; exit 2 }
 $tracked = @($trackedRaw | ForEach-Object { $_.Trim('"').Replace([char]92, [char]47) })
 $trackedSet = @{}
 foreach ($t in $tracked) { $trackedSet[$t] = $true }

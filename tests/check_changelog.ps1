@@ -24,7 +24,7 @@ if (-not $Path) {
   $root = Split-Path -Parent $PSScriptRoot
   $Path = Join-Path $root "CHANGELOG.md"
 }
-if (-not (Test-Path -LiteralPath $Path)) { Write-Error ("CHANGELOG 不存在: " + $Path); exit 2 }
+if (-not (Test-Path -LiteralPath $Path)) { Write-Host ("CHANGELOG 不存在: " + $Path); exit 2 }
 
 $prefix = "## ["
 $sections = @()

@@ -9,7 +9,7 @@ $ErrorActionPreference = "Stop"
 # 硬编码会让 CI / 干净 clone 检查另一棵树（本轮变异测试实测到的失真）。
 if ([string]::IsNullOrWhiteSpace($Root)) { $Root = Join-Path (Split-Path -Parent $PSScriptRoot) 'workbench' }
 
-if (-not (Test-Path $Root)) { Write-Error ("root not found: " + $Root); exit 2 }
+if (-not (Test-Path $Root)) { Write-Host ("root not found: " + $Root); exit 2 }
 $DQ = [char]34
 $consoleBins = @("cmd", "reg", "powershell.exe", "pwsh", "wmic")
 # 标记表（2026-10-25 round 172）：新增 winhide.SysProcAttr —— 7 个旧助手名已收敛到 internal/winhide，
@@ -111,7 +111,7 @@ foreach ($f3 in $files) {
 		}
 	}
 }
-if ($attrSites -eq 0) { Write-Error "UNVERIFIED: 一处 SysProcAttr 字面量都没扫到（判据在比空气）"; exit 2 }
+if ($attrSites -eq 0) { Write-Host "UNVERIFIED: 一处 SysProcAttr 字面量都没扫到（判据在比空气）"; exit 2 }
 Write-Host ("  SysProcAttr literal sites checked: " + $attrSites + " (豁免 " + $attrExempt + " 个非 Windows 文件)")
 Write-Host ("  CONSOLE spawn points checked: " + $checked)
 # 三态：KNOWN（已登记豁免，逐条点名但不计入 rc）/ FAIL（未登记，计入 rc）/ PASS（零违规零豁免）
@@ -143,14 +143,14 @@ if ($knownStale.Count -gt 0) {
   # 判据基准（2026-10-22 实测踩到）：$Root 是 <repo>/workbench，其下没有 .git，
   # 原判据 `Test-Path (Join-Path $Root '.git')` 恒 false => HEAD 复核整段被跳过
   # => $headViolations 恒空 => 误报「HEAD 也无违规」。改为向 git 询问仓库根。
-  $gitProbe = (& git -C $Root rev-parse --show-toplevel 2>$null)
+  $gitProbe = $null; try { $gitProbe = (& git -C $Root rev-parse --show-toplevel 2>$null) } catch { $gitProbe = $null }
   $hasGit = ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace([string]$gitProbe))
   if ($hasGit) {
     foreach ($k in $knownStale) {
       # 路径基准：$Root 是 <repo>/workbench，而 git 的 blob 路径是从仓库根算的。
       # 直接 -C $Root show 'HEAD:workbench/internal/...' 会找不到（2026-10-22 实测踩到：
       # 判定于是认为「HEAD 无违规」=> 误报豁免失效）。用 git rev-parse 求仓库根再拼。
-      $repoRootForGit = (& git -C $Root rev-parse --show-toplevel 2>$null)
+      $repoRootForGit = $null; try { $repoRootForGit = (& git -C $Root rev-parse --show-toplevel 2>$null) } catch { $repoRootForGit = $null }
       if ($LASTEXITCODE -ne 0) { continue }
       $repoRootForGit = ([string]$repoRootForGit).Trim()
       $gitRel = $k.Replace([string][char]92, [string][char]47)

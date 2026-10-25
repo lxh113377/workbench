@@ -24,7 +24,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 if (-not $Root) { $Root = Split-Path -Parent $PSScriptRoot }
-if (-not (Test-Path -LiteralPath $Root)) { Write-Error ("根目录不存在: " + $Root); exit 2 }
+if (-not (Test-Path -LiteralPath $Root)) { Write-Host ("根目录不存在: " + $Root); exit 2 }
 
 # 历史注记（2026-10-22 立，2026-10-24 改 git ls-files 后不再需要，留档说明为什么）：
 # 原实现用 Get-ChildItem -Recurse 全仓遍历 + 一套目录排除列表（.git/node_modules/
@@ -53,7 +53,7 @@ if (-not $gitExe) {
   }
 }
 if (-not $gitExe) {
-  Write-Error "找不到 git 可执行文件（无法取受跟踪文件列表）"
+  Write-Host "找不到 git 可执行文件（无法取受跟踪文件列表）"
   exit 2
 }
 # 2026-10-24 round 83：扫描范围加入 *.go —— 实测本仓唯一的裸 Invoke-WebRequest 就藏在
@@ -62,7 +62,7 @@ if (-not $gitExe) {
 # 不扩这一条，「PS 脚本缺 -UseBasicParsing」这个判据就有一条稳定的绕过路径。
 $relFiles = @(& $gitExe -C $Root ls-files '*.ps1' '*.psm1' '*.cmd' '*.bat' '*.go')
 if ($LASTEXITCODE -ne 0) {
-  Write-Error "git ls-files 失败"
+  Write-Host "git ls-files 失败"
   exit 2
 }
 $files = @($relFiles | ForEach-Object {

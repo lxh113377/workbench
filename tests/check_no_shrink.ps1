@@ -22,7 +22,7 @@ param(
   [switch]$IgnoreComments
 )
 $ErrorActionPreference = 'Stop'
-if (-not (Test-Path $Source)) { Write-Error ("source not found: " + $Source); exit 2 }
+if (-not (Test-Path $Source)) { Write-Host ("source not found: " + $Source); exit 2 }
 if (-not (Test-Path $Target)) { Write-Host '  target 不存在 => 新建，覆盖安全'; exit 0 }
 
 function NormLines([string]$path) {

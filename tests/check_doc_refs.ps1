@@ -28,7 +28,7 @@ $snapshotPattern = '回执|事故|定损|损坏|清空|迁移|batch-|_upstream|�
 $disclosedMarkers = @('已丢失', '从未入库', '不存在于本仓', '已废弃')
 
 $docsDir = Join-Path $Root 'docs'
-if (-not (Test-Path -LiteralPath $docsDir)) { Write-Error "缺 docs 目录: $docsDir"; exit 2 }
+if (-not (Test-Path -LiteralPath $docsDir)) { Write-Host "缺 docs 目录: $docsDir"; exit 2 }
 
 $mdFiles = @(Get-ChildItem -LiteralPath $docsDir -Recurse -File -ErrorAction SilentlyContinue | Where-Object {
   $_.Extension -eq '.md' -and $_.FullName -notmatch 'skill-audit' -and $_.Name -notmatch $snapshotPattern
