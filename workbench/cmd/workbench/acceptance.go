@@ -567,9 +567,6 @@ func repoRoot() string {
 	return ""
 }
 
-// sourceRoot 返回源码根；为空时表示当前是"仅 EXE 部署"，源码类判据应记 unverified。
-func sourceRoot() string { return repoRoot() }
-
 // readRepoFile 读取仓库相对路径的文件。
 func readRepoFile(rel string) (string, error) {
 	root := repoRoot()

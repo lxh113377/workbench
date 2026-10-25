@@ -73,8 +73,10 @@ const (
 //
 // 现场形态（2026-10-21）：面板 running=6、queued=3，todayDone=0；
 // events.jsonl 里每一轮 turn 都以
-//   {"kind":"error","error":{"message":"no eligible anonymous exit; retry after cooldown",
-//     "code":"EAC_UPSTREAM_FAILED"}}
+//
+//	{"kind":"error","error":{"message":"no eligible anonymous exit; retry after cooldown",
+//	  "code":"EAC_UPSTREAM_FAILED"}}
+//
 // 结束，然后换模型重来 —— 换模型没用，因为拒绝发生在账号/出口池层面，不是模型层面。
 // 这是**外部约束**（上游免费车道配额），代码改不动；但必须让面板说清楚，
 // 否则用户看到的就是"运行中但产出 0"这句无法解释的话。
@@ -83,9 +85,9 @@ const StallUpstreamRejecting = "upstream_rejecting"
 // upstreamFailingStall 判断"跑着但上游系统性拒答"这一形态。
 //
 // 判据（三条同时成立，避免噪音）：
-//  1) 今天确实一条都没完成（TodayDone == 0）—— 有产出就不是停摆；
-//  2) 有任务正在跑（RunningTasks > 0）—— 没在跑属于别的停摆形态；
-//  3) 最近的执行事件里，出现了上游拒绝类错误码。
+//  1. 今天确实一条都没完成（TodayDone == 0）—— 有产出就不是停摆；
+//  2. 有任务正在跑（RunningTasks > 0）—— 没在跑属于别的停摆形态；
+//  3. 最近的执行事件里，出现了上游拒绝类错误码。
 //
 // 实现只读 e.lastErr / 限流状态等**已有**信号，不新增热路径开销：
 // 任务失败时引擎已把错误写进 lastErr（见 failTask），这里直接取用。
@@ -121,9 +123,9 @@ func (e *Engine) upstreamFailingStall(now int64) (StallReason, bool) {
 //	也不知道要等多久 —— 而服务端明明握着两个字段能说清（rateLimit + 队列长度）。
 //
 // 判据（三条同时成立，缺一不报，避免把"刚起队列的正常空窗"喊成故障）：
-//  1) 队列里有任务（QueuedTasks > 0）；
-//  2) 一条都没在跑（RunningTasks == 0）—— 跑着属于别的形态；
-//  3) 整池冷却闸门仍在生效（poolWaitUntil > now）。
+//  1. 队列里有任务（QueuedTasks > 0）；
+//  2. 一条都没在跑（RunningTasks == 0）—— 跑着属于别的形态；
+//  3. 整池冷却闸门仍在生效（poolWaitUntil > now）。
 //
 // 不依赖 TodayDone：这条原因解释的是"为什么此刻 0 个在跑"，不是"今天有没有产出"。
 func (e *Engine) queuedWaitingForLane(now int64) (StallReason, bool) {
@@ -276,16 +278,4 @@ func (e *Engine) StallReason() StallReason {
 	}
 	// 兜底：正在正常供货但有短暂空窗（tick 间隔内），不报停摆以免噪音。
 	return StallReason{}
-}
-
-// stallText 把停摆原因压成一行（托盘/日志用；无停摆返回空串）。
-func (e *Engine) stallText() string {
-	r := e.StallReason()
-	if r.Code == "" {
-		return ""
-	}
-	if strings.TrimSpace(r.Detail) == "" {
-		return r.Text
-	}
-	return r.Text + "（" + r.Detail + "）"
 }

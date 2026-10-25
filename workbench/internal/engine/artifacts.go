@@ -252,40 +252,6 @@ func countWordsEngine(s string) int {
 	return n
 }
 
-// itoaEngine 把整数转十进制字符串。
-func itoaEngine(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	neg := n < 0
-	if neg {
-		n = -n
-	}
-	var b [20]byte
-	i := len(b)
-	for n > 0 {
-		i--
-		b[i] = byte(48 + n%10)
-		n /= 10
-	}
-	if neg {
-		i--
-		b[i] = 45
-	}
-	return string(b[i:])
-}
-
-// proseOutsideArtifacts 返回产物块之外的说明文字（用于字数判据）。
-//
-// 为什么要排除产物块：产物块里的文件正文可能很短（如 hello.md 只有一行），
-// 但它已由 artifact.Parse 校验过结构与完整性，不该被字数门禁again 拦一次。
-func proseOutsideArtifacts(s string) string {
-	if i := strings.Index(s, "<<<ARTIFACTS>>>"); i >= 0 {
-		return s[:i]
-	}
-	return s
-}
-
 // hasMarkdownHeading 判断文本是否含 markdown 标题行（# ~ ###）。
 func hasMarkdownHeading(s string) bool {
 	for _, line := range strings.Split(s, "\\n") {

@@ -1,7 +1,6 @@
 package modelpool
 
 import (
-	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -415,17 +414,4 @@ func gatewayReachable(c *http.Client, base string) bool {
 	}
 	_ = conn.Close()
 	return true
-}
-
-// scanLines 是给状态日志用的行迭代工具（保持纯标准库，不引入外部依赖）。
-func scanLines(r io.Reader) []string {
-	var out []string
-	sc := bufio.NewScanner(r)
-	sc.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
-	for sc.Scan() {
-		if line := strings.TrimSpace(sc.Text()); line != "" {
-			out = append(out, line)
-		}
-	}
-	return out
 }

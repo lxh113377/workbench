@@ -33,11 +33,6 @@ type rateLimitState struct {
 	cooldownEnd int64
 }
 
-// poolCooldownUntil 返回当前整池冷却的截止时刻（毫秒，0 表示未冷却）。
-func (e *Engine) poolCooldownUntil() int64 {
-	return e.poolWaitUntil.Load()
-}
-
 // setPoolCooldown 设置整池冷却闸门（带指数退避）。
 //
 // 语义：把闸门推到 max(现有闸门, now+秒数)，因此多次并发限流不会互相缩短等待；

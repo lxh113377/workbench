@@ -237,35 +237,6 @@ func promLabelKey(k string) string {
 	return k
 }
 
-// promLabeledCounts 把「标签值 → 计数」渲染成升序样本行（键按标签值排序，输出可复现）。
-func promLabeledCounts(f *promFamily, baseline []string, counts map[string]int64) {
-	keys := make([]string, 0, len(counts))
-	seen := map[string]bool{}
-	for _, k := range baseline {
-		e := promEscapeLabelValue(k)
-		if seen[e] {
-			continue
-		}
-		seen[e] = true
-		keys = append(keys, k)
-		if _, ok := counts[k]; !ok {
-			counts[k] = 0
-		}
-	}
-	for k := range counts {
-		e := promEscapeLabelValue(k)
-		if seen[e] {
-			continue
-		}
-		seen[e] = true
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		f.add([][2]string{{"label", k}}, "")
-	}
-}
-
 // ── 采集 ──────────────────────────────────────────────────────────
 
 // promDomainSnapshot 是一次抓取读到的领域侧事实。

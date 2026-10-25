@@ -154,19 +154,6 @@ func (e *Engine) buildPlan(ctx context.Context, task *model.Task, cfg config.Con
 	return st
 }
 
-// degradedPlan 生成"退化直执行"的占位方案（不让任务因为方案层不可用而卡死）。
-//
-// Degraded=true 会被写进任务的 plan 文件与决策日志 —— 这是"方案层真的跑了吗"
-// 这个问题的可查证据，而不是一句口头承诺。
-func degradedPlan(reason string, round int) *blueprint.Blueprint {
-	return &blueprint.Blueprint{
-		Approach: "按原始任务直接执行（方案层不可用：" + reason + "）",
-		Degraded: true,
-		Round:    round,
-		At:       model.Now(),
-	}
-}
-
 // planDir 返回方案落盘目录（任务目录下的 plans/）。
 func (e *Engine) planFile(taskID, name string) string {
 	return filepath.Join(e.layout.TaskDir(taskID), "plans", name)

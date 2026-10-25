@@ -1,7 +1,6 @@
 package web
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/url"
 	"strings"
@@ -317,13 +316,4 @@ func (s *Server) handlePoolLog(w http.ResponseWriter, r *http.Request) {
 	}
 	tail := atoiDefault(r.URL.Query().Get("tail"), 200)
 	ok(w, map[string]any{"lines": s.pool.LogTail(tail)})
-}
-
-// poolJSON 是调试用的 JSON 序列化（保持与服务端一致）。
-func poolJSON(v any) string {
-	b, err := json.Marshal(v)
-	if err != nil {
-		return "{}"
-	}
-	return string(b)
 }

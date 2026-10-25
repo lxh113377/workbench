@@ -2,10 +2,10 @@ package gov
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"time"
-	"math"
 )
 
 // TimeLayout 是治理记录统一使用的天数日期格式。
@@ -35,17 +35,6 @@ func ParseRFC3339(s string) (time.Time, bool) {
 		return time.Time{}, false
 	}
 	return t, true
-}
-
-// nextStage 返回阶段的下一个阶段；归档为终态返回 false。
-func nextStage(s ContractStage) (ContractStage, bool) {
-	stages := AllStages()
-	for i, st := range stages {
-		if st == s && i+1 < len(stages) {
-			return stages[i+1], true
-		}
-	}
-	return "", false
 }
 
 // CanTransition 判定阶段迁移是否合法，返回 (是否合法, 归因)。

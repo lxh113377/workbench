@@ -22,7 +22,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"time"
 )
@@ -401,16 +400,6 @@ func (e Estimate) Format() string {
 		s += fmt.Sprintf("，照此速度约 %.0f 天达到 1GB", e.DaysToGB)
 	}
 	return s
-}
-
-// sortedNames 返回排序后的目录名（测试与日志用）。
-func sortedNames(entries []os.DirEntry) []string {
-	names := make([]string, 0, len(entries))
-	for _, e := range entries {
-		names = append(names, e.Name())
-	}
-	sort.Strings(names)
-	return names
 }
 
 var _ = strings.TrimSpace

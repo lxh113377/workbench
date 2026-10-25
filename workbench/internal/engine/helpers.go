@@ -9,7 +9,6 @@ import (
 
 	"workbench/internal/config"
 	"workbench/internal/logging"
-	"workbench/internal/model"
 	"workbench/internal/retry"
 )
 
@@ -80,26 +79,11 @@ func ctxCancelText(err error) string {
 	return ""
 }
 
-// filepathExt / baseName 是 filepath.Ext / filepath.Base 的薄封装，
-// 让纯函数测试不必关心路径分隔符在 Windows 上的差异。
-func filepathExt(p string) string {
-	if i := strings.LastIndexAny(p, "/\\"); i >= 0 {
-		p = p[i+1:]
-	}
-	if i := strings.LastIndex(p, "."); i >= 0 {
-		return p[i:]
-	}
-	return ""
-}
-
 func baseName(p string) string {
 	if i := strings.LastIndexAny(p, "/\\"); i >= 0 {
 		return p[i+1:]
 	}
 	return p
 }
-
-// truncateForAudit 截断审计文本并回退到合法 UTF-8。
-func truncateForAudit(s string, n int) string { return model.Truncate(s, n) }
 
 var _ = fmt.Sprintf

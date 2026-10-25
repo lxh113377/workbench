@@ -46,16 +46,6 @@ func indexPlaceholder(s string) int {
 	return -1
 }
 
-// indexByte 返回字节 b 首次出现的下标（找不到返回 -1）。
-func indexByte(s string, b byte) int {
-	for i := 0; i < len(s); i++ {
-		if s[i] == b {
-			return i
-		}
-	}
-	return -1
-}
-
 // handlePoolJS 输出模型池前端脚本。
 func (s *Server) handlePoolJS(w http.ResponseWriter, r *http.Request) {
 	serveAsset(w, r, "application/javascript; charset=utf-8", poolJS)

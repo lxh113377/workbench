@@ -3,7 +3,6 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 
 	"workbench/internal/config"
 	"workbench/internal/model"
@@ -63,15 +62,6 @@ func mustJSONBytes(v any) []byte {
 		return []byte("{}")
 	}
 	return b
-}
-
-// workspaceDir 返回任务的产出目录（考虑 WorkRoot 覆盖）。
-func workspaceDir(task *model.Task, taskDir string) string {
-	workDir := filepath.Join(taskDir, "workspace")
-	if task.WorkRoot != "" {
-		workDir = task.WorkRoot
-	}
-	return workDir
 }
 
 // jsonMarshalIndent 是 encoding/json 的薄封装：统一 2 空格缩进，便于人读。
