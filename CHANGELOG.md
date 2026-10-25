@@ -2390,7 +2390,7 @@
   才拿到真实结论。教训：**变异实验自身也要有受理面检查** —— 判红要先确认是判据判的，
   不是实验把被测物弄崩了。主仓始终 clean，污染只在临时 worktree（已删）。
   验证：新判据 rc=0（appCSS 474/474 配平、78184 字节）；自检 rc=0；web 包全量 rc=0；go vet rc=0；
-  gofmt clean；BOM 0；全量 check_all 见下条。
+  gofmt clean；BOM 0；全量 check_all 35 PASS / 1 FAIL —— 唯一 FAIL 是 check_report_figures，其快照早于本次提交
   报告 §5.7：docs/三份内嵌JS同名helper分叉-五轴审查-2026-10-25.md
 - **补上一处更严重的空白：全仓没有任何判据解析过内嵌 JS（新增 node --check 判据）**：
   三份内嵌脚本是 Go raw string —— 括号失配、少分号时 go build / go vet / go test 全绿、CI 全绿，
