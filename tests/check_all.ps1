@@ -112,6 +112,14 @@ Section '纯净检出编译（防提交编译不过的快照）' {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Repo $Root
 }
 
+# 交叉编译门禁（2026-10-26 round 222 新增）：本仓 CI 的 vet/test/build 全在 windows 跑，
+# 而带 //go:build !windows 的文件在 windows 上根本编译不到 —— 实测这类缺陷让 Autonomy E2E 连红 6 个提交。
+Section '交叉编译（防只有本机平台能编译）' {
+  $g = Join-Path $Root 'tests\check_crossbuild.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Repo $Root
+}
+
 Section '服务化长驻实例·空闲态内存（三态 rc=2 不计 PASS）' {
   $g = Join-Path $Root 'tests\check_resident_longrun.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }

@@ -16,6 +16,26 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **新增交叉编译门禁 `tests/check_crossbuild.ps1`（45 号判据），并挂上两面受理（CI repo-gates 26→27、本地 `check_all` 44→45）**：
+  **补的是上轮登记的真缺口**：本仓 CI 的 vet/test/build 全在 windows-latest 跑，唯一覆盖别平台的 Autonomy E2E
+  又**只跑 go build**（不跑 vet ⇒ 连 `_test.go` 都不编译）。于是带 `//go:build !windows` 的文件里的编译错误在
+  windows 上**永远编译不到** —— 上一轮那两处未用 import 就是这么让 E2E 连红 6 个提交的。
+  **判据**：对 `GOOS=linux/darwin/windows` 各跑 `go build ./...` 与 `go vet ./...`（`CGO_ENABLED=0`）。build 管生产代码、
+  `vet` 额外编译测试文件 —— **两条都要，只跑一条就漏一半**（E2E 只跑 build，所以两个缺 tag 的测试文件它根本抓不到）。
+  **三态设计（本轮自证有效）**：`0=三平台可编译 / 1=任一失败 / 2=找不到 go 或模块目录不存在`。负对照实测：无 go 的
+  环境下这道闸返回 **rc=2 并打出 UNVERIFIED**，而不是把「没法判」冒充成「有问题」（那是 round 215 修的那族语义）。
+  **双向变异证明（在能跑 go 的通道里做，不是在 run_code 里）**：基线对照组 rc=0（证明实验方法有效）→ 往
+  `browser_other.go` 注入一个未用 `"strings"`（就是本轮真实缺陷形态）⇒ **rc=1，且点名 linux/build 与 darwin/build、
+  不点 windows/build** —— 这三平台差异化点名本身就是「本机盲区」的直接证据 → 还原 rc=0、SHA 与原始一致。
+  **两个我自己的缺陷当场抓住**：① `go` 的完整路径存进变量再 `& $go` 会踩 `CantActivateDocumentInPipeline` ⇒ 改用房内一致的
+  命令名调用；② PowerShell 里 `(...; try{…} finally{…})` 不能当表达式用 ⇒ 首次写成嵌套语句导致语法错，最终整文件重写为
+  平铺结构（守条款⑧：结构性改动要么整文件重写、要么单行锚点，不做连续片切）。
+  **成本如实更正**：先前注释写「热缓存 5.1s」，CI/冷缓存实测 **23.3s**（逐项 3/2.2/8.4/4.1/2.9/2.7s）⇒ 注释里两个口径
+  都写明，并以冷缓存为准（不拿对自己有利的数字口径冒充事实）。
+  **顺带把报告数字对齐**（`check_report_figures` 报 5 处不符，全部由本轮新增引起）：表格 L11/L12/L14 与结论行 L84 从
+  44/26/44 改为 **45/27/45**；按 `quality-hygiene` ⑨ 第二维，句内的历史快照（「round 164 起：44 个…」）**保留不改写**，
+  另加「**round 222 更正**」带日期说明。另确认 `check_report_figures` 的口径本就刻意把「磁盘已存在但未入库」计入
+  （避免 round 50 那类鸡生蛋窗口），所以它报 45 是对的；`check_gate_links` 现在报「未入库断链」也是对的 —— 随本提交入库即解。
 - **修非 Windows 平台的三处编译/行为缺陷（CI 的 Autonomy E2E 连红 6 个提交后定位到根因）**：
   **定位过程值得记**：`Autonomy Container E2E` 从 `ac4df00` 起连续 6 次 `failure`，都卡在同一步 `Cross-build static Linux binary`。
   `gh run view --log` 尾部只有 cleanup 与 warning，看不到错误 —— 我把日志整段 grep `error|fail|docker|build` 才挖出被折叠的真实两行：
