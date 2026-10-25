@@ -401,16 +401,15 @@ Section '门禁引用完整性（受跟踪脚本的引用不得断链）' {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g
 }
 
-if ($Source -ne '' -or $Target -ne '') {
-  Section '覆盖安全（禁止整文件覆盖丢改动）' {
-    $g = Join-Path $Root 'tests\check_no_shrink.ps1'
-    if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
-    if ($Source -eq '' -or $Target -eq '') { Write-Host '    SKIP 需同时给 -Source 与 -Target'; $global:LASTEXITCODE =  3; return }
-    & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Source $Source -Target $Target
-  }
-} else {
-  Write-Host '==> 覆盖安全（未指定 Source/Target，跳过）' -ForegroundColor DarkGray
-  Write-Host '    SKIP 本段不计入 PASS；合并前请显式带 -Source/-Target 再跑' -ForegroundColor Yellow
+# 覆盖安全：无 -Source/-Target 时的跳过判断交给 Section 体内（它已写「SKIP 需同时给 -Source 与 -Target」
+# 并置 LASTEXITCODE=3 后 return），**不在外面另写 if/else**：实测原先的 else 分支自己 Write-Host 一句
+# SKIP，绕过 Section() ⇒ 不累加 $skips ⇒ 汇总「PRECHECK: pass-with-gaps」只报了别的段的缺口，把这一段
+# 的未验状态整成一笔不存在的账（2026-10-26 逐段配对实测：45 段只有 44 条判决，缺的就是这段）。
+Section '覆盖安全（禁止整文件覆盖丢改动）' {
+  $g = Join-Path $Root 'tests\check_no_shrink.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  if ($Source -eq '' -or $Target -eq '') { Write-Host '    SKIP 需同时给 -Source 与 -Target'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Source $Source -Target $Target
 }
 
 Write-Host '========================================'
