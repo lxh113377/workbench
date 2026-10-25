@@ -2361,6 +2361,27 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **新增模板链完整性判据：后继 ID 断链会被引擎静默跳过**：
+  实测引擎取后继的写法是 if t, exists := g.reg.Get(id); exists && t.Enabled { out = append(out, t) }
+  —— 一个拼错或已被删除的后继 ID 不报错、不打日志，链在那一步无声停止延伸。7x24 无人值守下
+  表现就是"某类任务再也不往后走了"，而所有测试与门禁都是绿的。既有守卫只有 chain_test.go 里
+  4 个抽查用例，覆盖不到 29 条模板的全部 11 条边；实测受跟踪与 29 个未跟踪测试里都没有链完整性断言。
+  新增 templates/chain_link_contract_test.go 遍历 Defaults() 的字段真值（不解析 Go 源码，
+  按 quality-audit 要求⑤），断言三类客观错：断链、自环、同一后继列表内重复 ID
+  （重复会被算作两个后继、白占 fanout 名额）。当前真值实测全为 0（29 模板 / 11 条边）。
+  刻意不断言有向环（A→B→A 跨轮交替是有意义的链形态）与域一致性（链设计可能刻意跨域）——
+  把设计选择写成缺陷是另一种误报。受理面哨兵：Defaults() 为空或后继边总数为 0 即 Fatal，
+  防"循环不执行而恒绿"。
+  三项变异全判红且点名（临时 worktree，跑完即删、主仓 defaults.go 复验 clean）：
+  A 把 quality-audit 的后继改成 quality-gate-spec-typo => 点名"不存在 —— 引擎会静默跳过该边"；
+  B 把自己列为后继 => 点名自环；C 同列表写两个相同 ID => 点名重复白占 fanout；
+  还原 => GREEN 且字节一致。变异脚本按本轮刚编码的⑦做四态判定（RED OK/INVALID/SILENT/
+  UNVERIFIED），且只取 Errorf 点名行 —— 上一轮我因取首条匹配行拿到 Logf 而误读，这次已避开。
+  另记一次工具层事实（本轮第 3 次撞同类）：写 CHANGELOG 临时稿时 tools.write 报
+  "file no longer exists — re-read the file, then retry" —— 因为我前几轮删过同名文件，
+  观测层留了删除记录、同名重建被拦。处置是换文件名，而不是绕开工具或硬写。
+  验证：go vet rc=0；判据 rc=0（日志"链完整性 OK：29 条模板、11 条后继边"）；
+  新文件 BOM 0 纯 LF、无反引号无裸反斜杠；worktree 与临时脚本全清、未跟踪生产 .go 0。
 - **quality-verify 新增要求⑦「变异实验自身要有受理面检查」并当场被它抓到两次**：
   上轮我把这条教训记进了 CHANGELOG，却没编码进模板 —— 正是我自己反对的「只留在文档里」。
   新⑦要求：判红之前必须确认是判据判的，而不是实验把被测物弄崩了；还原按字节捕获/写回并复验
