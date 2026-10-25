@@ -256,6 +256,28 @@ if (Test-Path $sumsChecker) {
   Write-Host "    清单读回自证 OK（内联）" -ForegroundColor Green
 }
 
+# 产物页面与源码一致（2026-10-25 round 164）：CSS 正文（Go raw string 块）必须逐字内嵌在 EXE 里。
+# 为什么放在构建链上：CI 的 repo-gates job 跑在 build 之前、那里没有产物；只有这里既刚产出又必须为真。
+# 与前两处同一立场：校验器在就跑它并采信其 rc，不在就内联自证一次，绝不静默跳过。
+$pageChecker = Join-Path $PSScriptRoot ("..\tests\check_artifact_page_fresh.ps1")
+if (Test-Path $pageChecker) {
+  & $chkHost3 -NoProfile -ExecutionPolicy Bypass -File $pageChecker -Exe $exe -Quiet
+  if ($LASTEXITCODE -ne 0) { throw ("产物页面与源码不一致（rc=" + $LASTEXITCODE + "）：新产物本不该出现此情况，检查 CSS 提取口径" ) }
+  Write-Host "    产物页面与源码逐字一致 OK" -ForegroundColor Green
+} else {
+  $cssSrc = [IO.File]::ReadAllBytes((Join-Path $wb "internal\web\assets_css.go"))
+  $bt = [byte][char]96
+  $f0 = [Array]::IndexOf($cssSrc, $bt)
+  $l0 = [Array]::LastIndexOf($cssSrc, $bt)
+  $css = New-Object byte[] ($l0 - $f0 - 1)
+  [Array]::Copy($cssSrc, $f0 + 1, $css, 0, $css.Length)
+  $enc = [Text.Encoding]::GetEncoding(28591)
+  if (-not $enc.GetString([IO.File]::ReadAllBytes($exe)).Contains($enc.GetString($css))) {
+    throw ("产物页面与源码不一致（无校验器，内联比对）：CSS " + $css.Length + " 字节未逐字出现在产物里")
+  }
+  Write-Host "    产物页面与源码逐字一致 OK（内联）" -ForegroundColor Green
+}
+
 # 网络来源标记（MOTW）门禁（2026-10-19 老大截图："打开文件 - 安全警告 / 无法验证发布者"）：
 # 只要 EXE 带 Zone.Identifier 备用数据流，Windows 附件管理器就会在双击时弹
 # "无法验证发布者。你确定要运行此软件吗？" 的安全警告 —— 一步人工点击，而且

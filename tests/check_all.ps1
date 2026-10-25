@@ -276,6 +276,13 @@ Section '产物校验清单一致（SHA256SUMS vs 产物；本地侧，CI 的 bu
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Exe $Exe
   if ($LASTEXITCODE -eq 3) { Write-Host '    SKIP 产物不存在（未构建；不计 PASS 也不判红）' -ForegroundColor Yellow; $global:LASTEXITCODE = 3 }
 }
+Section '产物页面与源码一致（CSS 正文逐字比对；样式改动不进产物会判红）' {
+  $g = Join-Path $Root ("tests\check_artifact_page_fresh.ps1")
+  if (-not (Test-Path $g)) { Write-Host "    SKIP 门禁脚本不存在"; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Exe $Exe
+  if ($LASTEXITCODE -eq 3) { Write-Host "    SKIP 产物不存在（未构建；不计 PASS 也不判红）" -ForegroundColor Yellow; $global:LASTEXITCODE = 3 }
+  if ($LASTEXITCODE -eq 2) { Write-Host "    UNVERIFIED（不计 PASS）" -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
+}
 
 Section '受理面覆盖（每个 check_*.ps1 必须挂某个受理面，防判据没挂受理面）' {
 
