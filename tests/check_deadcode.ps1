@@ -17,7 +17,7 @@
 #
 # 已知假阳性豁免（刻意不动）：接口实现方法（名字可能在接口契约里）；被 json/reflect/unsafe 间接使用的（静态不可判）。
 #
-# 用法: powershell -File testscheck_deadcode.ps1 [-Quiet]   （反斜杠仅在用法示例里）
+# 用法: powershell -File tests/check_deadcode.ps1 [-Quiet]   （反斜杠仅在用法示例里）
 # 退出码: 0=无新增死代码 / 1=有新增或基线失效 / 2=UNVERIFIED（取不到源码）
 param([switch]$Quiet)
 $ErrorActionPreference = "Stop"
@@ -32,15 +32,37 @@ if ($goFiles.Count -eq 0) { Write-Host "UNVERIFIED: 未取到受跟踪的 .go" -
 # 语料：受跟踪 .go 的**非注释行**（注释会污染引用计数：函数自己的文档注释以函数名开头）。
 # 2026-10-25 round 167 性能改造：旧写法是 `$corpus += $ln + [char]10` 在循环里拼大字符串
 # （O(n²)：每次 += 都复制整份语料，实测这是本门禁 38 s 的两大来源之一）。改为数组 join。
+# 引用计数表（2026-10-25 round 177 修正第二处假阴性）：
+#   旧口径是**全局** name -> 计数，死亡判据 $n -le 1。但 Go 的**未导出**标识符只可能被**本包**引用 ——
+#   另一包里的同名函数会被算成引用，于是「同名的死函数」对该门禁隐形。
+#   实测（本轮）：engine/helpers.go:82 的 baseName 全仓**零调用**（唯一调用点是 verify 自己那份），
+#   而旧口径因 verify/verify.go:232 同名定义 + 调用把计数抬到 3 => 判活。
+#   现改为按 package 限定计数：key = 「包名|标识符」。包名从文件里第一个 package 行取。
+$refCount = @{}      # 全局（非 ASCII 名安全阀仍用它）
+$refByPkg = @{}      # 包限定计数（判死用这个）
 $corpusLines = New-Object System.Collections.Generic.List[string]
 foreach ($rel in $goFiles) {
-	$path = Join-Path $root $rel
-	if (-not (Test-Path -LiteralPath $path)) { continue }
-	foreach ($ln in @([IO.File]::ReadAllLines($path))) {
-		$t = $ln.TrimStart()
-		if ($t.StartsWith("//") -or $t.StartsWith("/*") -or $t.StartsWith("*")) { continue }
-		$corpusLines.Add($ln)
-	}
+  $path = Join-Path $root $rel
+  if (-not (Test-Path -LiteralPath $path)) { continue }
+  $pkg = ""
+  foreach ($ln in @([IO.File]::ReadAllLines($path))) {
+    if ($pkg -eq "") {
+      $tp = $ln.TrimStart()
+      if ($tp.StartsWith("package ")) {
+        $rest2 = $tp.Substring(8).Trim()
+        $pkg = @($rest2 -split "[^A-Za-z0-9_]")[0]
+      }
+    }
+    $t = $ln.TrimStart()
+    if ($t.StartsWith("//") -or $t.StartsWith("/*") -or $t.StartsWith("*")) { continue }
+    $corpusLines.Add($ln)
+    # 行内分词（与全局表同一套 token 语义），按包累加
+    foreach ($tok in [regex]::Matches($ln, "[A-Za-z_][A-Za-z0-9_]*")) {
+      $k = $tok.Value
+      $pk = $pkg + "|" + $k
+      if ($refByPkg.ContainsKey($pk)) { $refByPkg[$pk] = $refByPkg[$pk] + 1 } else { $refByPkg[$pk] = 1 }
+    }
+  }
 }
 # 与旧口径逐字一致：行间以换行连接，末尾也留一个换行（旧写法每行都补 [char]10）。
 $corpus = ($corpusLines -join [string][char]10) + [string][char]10
@@ -64,6 +86,11 @@ foreach ($rel in $goFiles) {
   # 缺这条守卫会让门禁直接抛错（实测：worktree 里删除文件后 baseline 变 RED，而非给出读数）。
   if (-not (Test-Path -LiteralPath (Join-Path $root $rel))) { continue }
   $lines = @([IO.File]::ReadAllLines((Join-Path $root $rel)))
+    $pkgName = ""
+    foreach ($pl in $lines) {
+      $tp = $pl.TrimStart()
+      if ($tp.StartsWith("package ")) { $pkgName = @($tp.Substring(8).Trim() -split "[^A-Za-z0-9_]")[0]; break }
+    }
   for ($i = 0; $i -lt $lines.Count; $i++) {
     $l = $lines[$i]
     if (-not $l.StartsWith("func ")) { continue }
@@ -81,7 +108,8 @@ foreach ($rel in $goFiles) {
     $c0 = [int][char]$name[0]
     if ($c0 -lt 97 -or $c0 -gt 122) { continue }
 		if ($name -match "^[A-Za-z0-9_]+$") {
-			$n = $(if ($refCount.ContainsKey($name)) { $refCount[$name] } else { 0 })
+			$pk = $pkgName + "|" + $name
+			$n = $(if ($refByPkg.ContainsKey($pk)) { $refByPkg[$pk] } else { 0 })
 		} else {
 			# 安全阀：非 ASCII 名走原路径（旧口径的 .NET 词边界是 Unicode 感知的）。
 			$pat = [char]92 + "b" + [regex]::Escape($name) + [char]92 + "b"

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"workbench/internal/config"
@@ -77,13 +76,6 @@ func ctxCancelText(err error) string {
 		return "用户取消（执行上下文已取消）"
 	}
 	return ""
-}
-
-func baseName(p string) string {
-	if i := strings.LastIndexAny(p, "/\\"); i >= 0 {
-		return p[i+1:]
-	}
-	return p
 }
 
 var _ = fmt.Sprintf

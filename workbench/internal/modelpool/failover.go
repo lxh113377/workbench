@@ -112,7 +112,7 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 			}
 			f.mgr.AppendSwitch(transitionRecord{
 				TaskID: task.ID, From: from, To: id,
-				Reason: "模型失败自动切换（" + firstNonEmpty(errText(lastErr), kindOf(lastRes), "unknown") + "）",
+				Reason: "模型失败自动切换（" + firstNonEmpty(errTextBounded(lastErr), kindOf(lastRes), "unknown") + "）",
 			})
 		}
 		f.sch.Acquire(id)
@@ -211,7 +211,7 @@ func judge(res *executor.Result, err error) (bool, string, string) {
 	// 若先走空产出分支会被覆盖成 bad_exit（现场：限流被误判为任务问题，
 	// 于是引擎换 8 个模型打空整池）。
 	if res.ErrorKind != "" && res.ErrorKind != string(executor.KindNone) {
-		return false, res.ErrorKind, firstNonEmpty(errText(nil), res.LastError)
+		return false, res.ErrorKind, firstNonEmpty(errTextBounded(nil), res.LastError)
 	}
 	if strings.TrimSpace(res.FinalText) == "" {
 		return false, string(executor.KindExit), "任务无最终答案"
@@ -267,7 +267,10 @@ func isMissingCredential(err error) bool {
 	return strings.Contains(msg, "missing_credential") || strings.Contains(msg, "unauthorized") || strings.Contains(msg, "401")
 }
 
-func errText(err error) string {
+// errTextBounded 与 engine/main 里的 errText **不同契约**：这里刻意**截断到 200 字符**（状态/原因字串有长度界）。
+// 2026-10-25 round 177：本函数原名 errText —— 与另两个包里「返回完整 err.Error()」的同名函数契约不同，
+// 属「同名不同契约」漂移（本仓在册族）。改名让契约写在名字上，行为一字未改。
+func errTextBounded(err error) string {
 	if err == nil {
 		return ""
 	}

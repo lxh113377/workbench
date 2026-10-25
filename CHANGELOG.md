@@ -16,6 +16,22 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **死代码门禁的**第二处**假阴性（跨包同名把死函数洗活）修正 —— 并用修正后的闸抓到并删掉一个真死函数**：
+  修法：原判据是**全局** name -> 计数（死亡条件 `$n -le 1`），而 Go 的**未导出**标识符**只可能被本包引用** ⇒
+  另一包的同名函数会被算成引用，于是「同名的死函数」对本门禁隐形。改为按 `package` 限定计数（key = `包名|标识符`，包名取文件里第一处 `package` 行）。
+  **实测（本轮）**：修正后闸立刻报 `workbench/internal/engine/helpers.go:82 baseName` —— 该函数**全仓零调用**
+  （唯一调用点 `verify/verify.go:217` 调的是 verify **自己那份** `baseName`）；旧口径下它被 verify 的同名定义+调用把计数抬到 3 ⇒ 判活。
+  已删除该函数（7 行 + 顺带去掉因此变为未使用的 `strings` 导入），闸随即 **rc=0** ⇒ **双向证明（判红 → 判绿）**成立。
+  这是该门禁的**第二种**假阴性模式：round 158 修的是「注释被当引用」，本轮修的是「跨包同名被当引用」，两者都已写进闸的头部注记。
+  **第二处登记项一并处理：同名不同契约的漂移**。`internal/modelpool/failover.go` 的 `errText` 与 `engine`/`main` 里的同名函数
+  **契约不同**（它刻意 `trim(err.Error(), 200)` 截断，另两个返回完整文本）⇒ 改名 **`errTextBounded`**（**行为一字未改**，只让契约写在名字上），
+  并补**两枚方向相反的守卫测试**：`modelpool/errtext_contract_test.go` 钉「必须截断到 200」、
+  `engine/errtext_contract_test.go` 钉「必须返回完整文本」⇒ 将来谁「顺手统一」都会被当场判红。
+  **变异证明**：把 `errTextBounded` 的截断去掉 ⇒ modelpool 契约测试判红；还原后 rc=0 且**字节一致**。
+  **过程如实记**：我在删 `baseName` 时按「文件有 3 字节 BOM」切了前 3 字节，而该文件**没有 BOM** ⇒ 头部变成 `kage`（`package` 少 `pac`），
+  `go vet` 当场报 `expected package, found kage` 并被我立刻精确补回；教训与前几轮同族：**写盘前先测文件的 BOM/EOL，不要假定**。
+  顺带修掉闸头部用法行的笔误（`testscheck_deadcode.ps1` → `tests/check_deadcode.ps1`）。
+
 - **登记一次本轮实测否掉的判据扩容（不动代码）+ 顺带重建产物**：
   **动机**：`check_artifact_page_fresh.ps1` 此前**只判 CSS 那一块** —— 我给 `internal/web` 手工量了内嵌资产，
   发现共 **8 块 / 约 213 KB**（appCSS 78,139 / appJS 74,285 / poolJS 34,123 / govJS 14,539 / modelPoolPage 7,660 /
