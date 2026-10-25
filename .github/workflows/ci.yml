@@ -113,7 +113,9 @@ jobs:
             'tests/check_skip_disclosure.ps1',
             'tests/check_ignored_error.ps1',
             'tests/check_dead_css_tokens.ps1',
-            'tests/check_staged_bom.ps1',
+            # 注：提交前的索引 BOM 闸（staged BOM）刻意不入本清单 —— CI 是干净检出、
+            # 暂存区恒为空，它在那里只会 exit 0 而不判任何东西（出现在清单里就等于
+            # 「看起来有覆盖、实际没在判」）。它的受理面是 .githooks/pre-commit（真跑）。
             'tests/check_css_rgb_pair.ps1',
             'tests/check_repo_eol.ps1',
             'tests/check_multi_bom.ps1',
