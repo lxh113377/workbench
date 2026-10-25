@@ -55,6 +55,21 @@ foreach ($f in $forms) {
     if ($t -match "^      required: true") { $cur.required = $true }
   }
 
+	# 键名大小写（2026-10-25 round 169 补，口径缺陷修复）：GitHub 的 issue form schema 里**键名全小写**，
+	# 写成 Type: / Required: True 这类变体，GitHub 会**静默忽略** —— 正是本闸开头写的那个危害
+	# （「模板存在但 GitHub 不显示/渲染残缺」）。而旧口径全程用 -match（不区分大小写）解析 YAML 键，
+	# **看不见**这种写法：它会把变体键当合格键接受。
+	# 处置**不是**把解析换成 -cmatch —— 那样变体键会「不成块 ⇒ 被跳过」，等于从「误判合格」变成
+	# 「静默不判」；正确做法是把「键名大小写不符」**显式判为违规**并点名键与应为的小写形式。
+	foreach ($ln in $lines) {
+		if ($ln -match "^\s*(-\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*:") {
+			$key = $Matches[2]
+			if ($key -cne $key.ToLower()) {
+				$viol += ("{0}: 键名大小写不符（{1}）—— GitHub schema 要求全小写，应为 {2}；写成大写会被静默忽略" -f $f.Name, $key, $key.ToLower())
+			}
+		}
+	}
+
   foreach ($req in @("name","description","body")) {
     if (-not $top[$req]) { $viol += ("{0}: 缺顶层 {1}（GitHub 会整表不显示）" -f $f.Name, $req) }
   }
