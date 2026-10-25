@@ -16,6 +16,25 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **修非 Windows 平台的三处编译/行为缺陷（CI 的 Autonomy E2E 连红 6 个提交后定位到根因）**：
+  **定位过程值得记**：`Autonomy Container E2E` 从 `ac4df00` 起连续 6 次 `failure`，都卡在同一步 `Cross-build static Linux binary`。
+  `gh run view --log` 尾部只有 cleanup 与 warning，看不到错误 —— 我把日志整段 grep `error|fail|docker|build` 才挖出被折叠的真实两行：
+  `browser_other.go:7:2: "os" imported and not used` 与 `job_other.go:5:8: "syscall" imported and not used`。
+  **为什么本地一直查不出来**：这些文件带 `//go:build !windows`，Windows 上 `go build ./...` 直接排除它们 ⇒ 本机全绿而 linux 交叉编译红。
+  补上本机三平台交叉编译判据（`GOOS=linux/darwin/windows go build ./...` + `go vet ./...`）后当场复现，修完 6/6 rc=0。
+  **顺带挖出更深的一处（比未用 import 严重）**：`job_other.go` 的 `kill()` 是**空实现**，注释却写「退化为直接 kill 进程」——
+  而 `executor.go` 的超时 / 卡死 / 取消三条路径**只调 `job.kill()`、没有任何其他杀进程调用**（实扫 0 处），
+  错误文案还声称「已判定卡死并回收进程」。即在非 Windows 上子进程根本没被杀，而日志谎称杀了。修法：按 `osProcess` 里已有的
+  `pid` 实现 `syscall.Kill(pid, SIGKILL)`，并把注释改成诚实的能力边界（只能杀进程本身，杀不到子进程树）。
+  另两个只有 `go vet` 才暴露的问题（CI 的 build 步骤不含测试文件 ⇒ 不挡 CI，但 `go test ./...` 在 linux 编译不过）：
+  `integrity_error_contract_test.go` 引用 windows 专有的 `labelError`（定义在 `integrity_windows.go`）、
+  `linkdir_silent_test.go` 引用 `SysProcAttr.HideWindow`，两个文件都**缺 build tag** ⇒ 补 `//go:build windows`。
+  补完必须回头验证 tag **没把 windows 上的测试跑哑**：用文件里的真实函数名实跑，6 个全 PASS（我第一次 `-run IntegrityError`
+  `Linkdir` 报 no tests to run，是**我猜错了测试函数名**，不是 tag 失效 —— 判据失败先查自己的调用再查被测物。
+  **验证**：三平台 `go build ./...` 与 `go vet ./...` 全 rc=0（`linux`/`darwin` 从 rc=1 转 0，`windows` 未受影响）；
+  `gofmt -l` 四文件 clean；受影响 4 包（browser/executor/tray/winhide）原生测试 rc=0；全仓 `go test ./...` rc=0。
+  **登记为门禁缺口**：本仓 CI 的 vet/test/build 全在 windows 上跑，唯一覆盖 linux 的是那道 E2E —— 说明
+  「交叉编译」缺一道独立的、跑得快的本地/CI 判据；否则这类缺陷只会在最贵的那条流水线上、且以折叠日志的形式暴露。
 - **清掉 gofmt 债务名册里 9 个「只改 1-2 行」的文件并同步删豁免（门禁自报豁免数 23 → 14 个）**：
   **为什么这是真收益**：每一条在册豁免 = 门禁对该文件**永久失明**（以后它怎么漂都不判红）。这 9 个漂移量只有 1-2 行，
   清掉就把失明面从 24 缩到 15 —— 是本目标里少数「删东西反而让判据变强」的动作。

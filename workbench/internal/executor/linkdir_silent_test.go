@@ -1,3 +1,8 @@
+//go:build windows
+
+// 只判 Windows：本测试引用 SysProcAttr.HideWindow（windows 专有字段），
+// 缺 tag 时 GOOS=linux/darwin 下 go vet 与 go test 编译不过（round 222 CI 交叉编译实测）。
+
 package executor
 
 // linkdir_silent_test.go 守护「建 junction 不得弹控制台窗口」（2026-10-19 现场）。

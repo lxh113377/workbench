@@ -1,3 +1,8 @@
+//go:build windows
+
+// 只判 Windows：本测试引用 labelError（定义在 integrity_windows.go），
+// 缺 tag 时 GOOS=linux/darwin 下 go vet 与 go test 编译不过（round 222 CI 交叉编译实测）。
+
 package tray
 
 // integrity_error_contract_test.go -- 完整性标签错误的可读性与可溯源判据（2026-10-22 补）。
