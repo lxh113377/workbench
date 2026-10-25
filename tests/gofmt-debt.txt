@@ -1,4 +1,4 @@
-﻿# gofmt 格式债务登记（2026-10-22 建立）
+﻿��# gofmt 格式债务登记（2026-10-22 建立）
 #
 # 语义：登记在此的文件仍会被 check_gofmt.ps1 **点名并计数**，但不计入 rc。
 # 有豁免时门禁输出三态，绝不打纯 PASS。
@@ -44,3 +44,10 @@ workbench/internal/supervisor/metrics_csv_test.go
 workbench/internal/tray/tray_window_style_test.go
 workbench/internal/web/export.go
 workbench/internal/workspace/deadlock_test.go
+#
+# 【2026-10-25 round 172 登记】下面两个文件是**并行会话的在途测试件**，其内容因一次提交事故（见 CHANGELOG）
+#   进入了 HEAD，且暂存/HEAD 版本 gofmt 漂移。按本仓纪律**不代改他人在途件**（gofmt 会重排其注释结构 =
+#   代写他人代码），故按既有机制**显式登记**：每次运行打印 KNOWN、不计 rc。
+#   清零条件：该会话把这两个文件 gofmt 后（其漂移在 HEAD 消失），本门禁会判「失效豁免」并要求删除本两行。
+workbench/internal/web/home_contract_test.go
+workbench/internal/web/subnav_contract_test.go
