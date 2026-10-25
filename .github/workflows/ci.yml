@@ -129,7 +129,8 @@ jobs:
             'tests/check_tray_window.ps1',
             'tests/check_spawn_silent.ps1',
             'tests/check_snapshot_build.ps1',
-            'tests/check_crossbuild.ps1'
+            'tests/check_crossbuild.ps1',
+            'tests/check_agg_bypass.ps1'
           )
           $failed = @()
           foreach ($g in $gates) {

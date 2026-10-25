@@ -120,6 +120,14 @@ Section '交叉编译（防只有本机平台能编译）' {
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Repo $Root
 }
 
+# 聚合器旁路判决（2026-10-26 round 226 实测缺口：某段在 Section() 外自己打 SKIP ⇒ 计数器不累加，
+# 汇总「pass-with-gaps」把 2 段未验只记成 1 段；语法闸与运行时计数都抓不到，只能扫源码）
+Section '聚合器旁路判决（防未验状态静默核销）' {
+  $g = Join-Path $Root 'tests\check_agg_bypass.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Root $Root
+}
+
 Section '服务化长驻实例·空闲态内存（三态 rc=2 不计 PASS）' {
   $g = Join-Path $Root 'tests\check_resident_longrun.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
