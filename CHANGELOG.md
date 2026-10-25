@@ -2405,6 +2405,29 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **gate-spec 新增 ⑦（依赖 git 历史的判据必须处理浅克隆取空）+ 更正上一轮报告的口径 + 把 G1/G2 降级**：
+  ① `quality-gate-spec` 新增 ⑦：判据若依赖 **git 历史**（git log / rev-list / blame 等需要
+  **祖先提交**的命令），规格必须写明「取不到历史时怎么办」—— CI 的 checkout 默认
+  `fetch-depth: 1`（浅克隆），此时 `git log -1 -- <paths>` 可能返回空，**那不是「没有改动」，
+  而是「看不到祖先提交」**，必须走 UNVERIFIED，不许当空集判绿；并写明降级后**由谁容忍 rc=2**
+  （实测形态：`check_artifact_soak_fresh.ps1` 取空即 Unverified，`ci.yml` 该步骤
+  `Write-Warning` 后 `exit 0`）。条款还写明一个实测踩点：**别把「打印给用户看的 git 自查命令」
+  当成依赖** —— 静态扫描会把 Write-Host 里的提示串误判成依赖，这类检测只会制造噪声。
+  契约测试同步：gate-spec 期望片段 2→3（总 14 条 / 4 模板）；变验证：把「浅克隆」改成不含原串的
+  「薄克隆」⇒ RED 且点名「quality-gate-spec 的渲染结果缺片段 "浅克隆"」；还原 ⇒ GREEN 且字节一致。
+  ② **更正上一轮报告的口径（该报告第二次自我推翻）**：初稿写「41 个受跟踪门禁里 **9 个**用 git 历史」，
+  那是**整文件正则（含注释）**的结果。按「只看非注释代码行」重测的真实分类见报告 §1.1：
+  真依赖**祖先提交**的只有 **1 个**（`check_artifact_soak_fresh.ps1` L84 的
+  `git log -1 --format=%ct -- <4 路径>`）；5-6 个只用 HEAD 作用域 API（`cat-file`/`HEAD:<path>`/
+  `git archive HEAD`/`checkout-index`，浅克隆安全）；`check_doc_refs.ps1` 的 `git log --all`
+  只在**头注释**里（运行期零 git 调用）；`check_snapshot_build.ps1` 的 `git log` 只在
+  **Write-Host 提示串**里（真调用是 HEAD 作用域的 archive/checkout-index）。
+  ③ **G1/G2 因此降级（不采纳）**：静态检测「是否依赖 git 历史」无法区分**真调用**与**提示串** ——
+  `check_snapshot_build.ps1` L91 就是反例，任何朴素扫描器都会误判。按本仓在册立场
+  （`check_ps1_encoding` 作者拒绝「头注语义必须与实现一致」的同类判断，理由同样是会制造噪声），
+  **会误报的模糊检查不该建**。④ **风险链其实已被现有设计闭合**（实测）：那唯一一个真依赖祖先提交的
+  门禁取空时走 `Unverified`（L97），而 `ci.yml` L228 **显式容忍 rc=2** ⇒ 浅克隆下最坏是
+  「没测成」，**既非假绿也非假红**。于是落地方式从「加运行期判据」改为「设计期约束」（即上面的 ⑦）。
 - **新增五轴审查报告《门禁浅克隆与空输入失效面》—— 两处假设被实测推翻，并含一次自我推翻**：
   `docs/门禁浅克隆与空输入失效面-五轴审查-2026-10-25.md`（含合并结论 + 门禁建议 G1-G4）。
   起因：侦察发现 41 个受跟踪门禁里 **9 个用 git 历史**，而 CI 三个 job 全部 `fetch-depth: 1`

@@ -45,6 +45,7 @@ func TestEncodedLessonsSurviveRender(t *testing.T) {
 		{"quality-gate-spec", []string{
 			"静态配对检查", // ⑥：判据读外部数据件时必须配静态配对检查
 			"字段缺失",   // ⑥：规格必须写清字段缺失/为 null 时怎么办
+			"浅克隆",    // ⑦：依赖 git 历史的判据必须处理浅克隆取空
 		}},
 		{"review-five-axis", []string{
 			"合并结论", "门禁建议", // 交付面承诺：报告须含合并结论与门禁建议
