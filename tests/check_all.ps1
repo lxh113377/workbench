@@ -185,6 +185,13 @@ Section '门禁读数趋势（informational：有数据就报，无数据 UNVERI
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（尚无读数落盘）' -ForegroundColor Yellow; $global:LASTEXITCODE = 0 }
 }
 
+Section '日志体积（信息化：只产出读数、永不判红；7×24 磁盘增长可见性）' {
+  $g = Join-Path $Root 'tests\check_log_growth.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Root $Root
+  if ($LASTEXITCODE -eq 2) { Write-Host '    SKIP 无日志目录（未运行/未构建）' -ForegroundColor Yellow; $global:LASTEXITCODE = 3 }
+}
+
 Section '未跟踪 Go 文件（本地判据：CI 干净检出恒 PASS，不接 repo-gates）' {
   $g = Join-Path $Root 'tests\check_untracked_go.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }

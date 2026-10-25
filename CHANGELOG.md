@@ -2405,6 +2405,27 @@
   布局手段）；变异 Z1 恢复 14px → CAUGHT、Z2 删表格卡片化 → CAUGHT。
 
 ### Added
+- **日志体积信息化门禁 + 两处实测否掉我自己的候选修复（本轮不改那段代码）**：
+  起因：查 7×24 无人值守下的**磁盘无界增长**风险 —— 内存有硬护栏（MemLimitMB），磁盘没有。
+  实测现状（2026-10-25）：`dist\workbench-output\logs` 共 **13.37MB**（`audit.jsonl` 6.91MB /
+  `workbench.jsonl` 5.40MB / `governance.jsonl` 0.64MB / `metrics.csv` 0.41MB），且三个 jsonl
+  **都没有轮转**（全仓搜过：无 rotate/上限实现）。
+  **刻意不做上限/轮转**：`audit.jsonl` 与 `decisions.jsonl` 是本仓的**取证面**（engine.go 就写过
+  「audit.jsonl 一夜涨到 2.3MB」当症状），删旧记录等于毁证据 —— 比占盘更坏。正确的第一步是
+  **让增长可见**：新增 `tests/check_log_growth.ps1`（信息化：永不判红；无日志目录 ⇒ rc=2
+  UNVERIFIED），把体积写成读数落到与其他门禁同一份 `.workbuddy/memory/gate-readings.jsonl`
+  （`gate: "log_growth"`，实测已追加成功），交给既有的趋势门禁做时间序列。接线 `check_all`
+  一段（覆盖 42 → 43）。
+  **两处候选修复被实测否掉（如实记录，避免后续重复劳动）**：
+  ① `config.JSONLWriter.Append` 每记录 open/close，我怀疑是性能问题 —— 写临时基准实测
+  **91,083 ns/op（19 allocs/op）**，按审计写入量级换算为「每天不到 1 秒」，**不显著 ⇒ 不改**
+  （不为了改而改；探针用完即删）。
+  ② `logging.Close` 与并发写之间我怀疑会让落盘出现**半行 JSON**（撕裂）—— 写探针实测
+  40 轮 × 4 goroutine × 200 行并发 Close：**无撕裂行、`-race` 无告警**（Windows/Go 下写已关闭
+  fd 是整体失败而非部分写入，且 `os.File` 内部已串行化 Close/Write）⇒ **不改**。
+  数字同步：`check_report_figures` 先如实报出 3 处不符（42 → 43），按读数更新后 rc=0
+  （实测 43/27/43/29）；`check_gate_coverage` / `check_gate_links` 在**先暂存后跑**（round 154
+  的教训：它们按索引/干净检出语义读内容）下 rc=0。
 - **补上「产物与校验清单一致」的本地侧判据 + 更正 `口径.md` 里一条双重过期的缺口行**：
   ① 背景：`docs/benchmark/性能基线口径.md` §6 把「`dist/SHA256SUMS` 已过期」（清单 C81CA500… vs
   产物 BEC437CE…）登记为未覆盖缺口。实测复核发现这条**已双重过期**：用 node crypto 复算，
