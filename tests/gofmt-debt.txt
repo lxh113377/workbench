@@ -23,22 +23,8 @@
 # 本轮账（2026-10-22 18:5x，HEAD=7375eca 实测）：33 个文件 HEAD 漂移 + 工作区皆 M（在途），
 # 另 2 个 shortcut 件同在途。全部为并行会话在途，本会话不代改（避免覆盖竞争）。
 
-tests/docker-autonomy/fakedsh/main.go
-workbench/cmd/workbench/plan_selftest_dispatch_test.go
-workbench/internal/artifact/artifact.go
-workbench/internal/artifact/protocol_test.go
-workbench/internal/autonomy/planner.go
-workbench/internal/config/config.go
-workbench/internal/engine/plan_helpers.go
-workbench/internal/engine/replan.go
-workbench/internal/engine/replan_test.go
-workbench/internal/executor/ratelimit_test.go
-workbench/internal/single/instance.go
-workbench/internal/tray/tray_window_style_test.go
 #
 # 【2026-10-25 round 172 登记】下面两个文件是**并行会话的在途测试件**，其内容因一次提交事故（见 CHANGELOG）
 #   进入了 HEAD，且暂存/HEAD 版本 gofmt 漂移。按本仓纪律**不代改他人在途件**（gofmt 会重排其注释结构 =
 #   代写他人代码），故按既有机制**显式登记**：每次运行打印 KNOWN、不计 rc。
 #   清零条件：该会话把这两个文件 gofmt 后（其漂移在 HEAD 消失），本门禁会判「失效豁免」并要求删除本两行。
-workbench/internal/web/home_contract_test.go
-workbench/internal/web/subnav_contract_test.go

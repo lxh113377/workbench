@@ -650,5 +650,3 @@ func SafePath(p string) (string, error) {
 	}
 	return clean, nil
 }
-
-

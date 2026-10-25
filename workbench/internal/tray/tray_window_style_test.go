@@ -12,10 +12,11 @@ import (
 // TestTrayWindowUsesToolWindowStyle 守护「托盘消息窗口不得出现在任务视图/Alt-Tab」。
 //
 // 现场（2026-10-20 老大："我这里看到的是什么,关不掉"）：
-//   任务视图右侧堆了十几张同名"个人 AI 工作台"空白卡片，关不掉也点不开 ——
-//   它们是每个 workbench 实例的**托盘消息窗口**。因为 CreateWindowExW 的 exStyle
-//   传的是 0（没有 WS_EX_TOOLWINDOW），Shell 把它当普通应用窗口收录，
-//   实例强杀后卡片还留在任务视图缓存里。
+//
+//	任务视图右侧堆了十几张同名"个人 AI 工作台"空白卡片，关不掉也点不开 ——
+//	它们是每个 workbench 实例的**托盘消息窗口**。因为 CreateWindowExW 的 exStyle
+//	传的是 0（没有 WS_EX_TOOLWINDOW），Shell 把它当普通应用窗口收录，
+//	实例强杀后卡片还留在任务视图缓存里。
 //
 // 判据：源码里创建托盘窗口必须带 WS_EX_TOOLWINDOW；窗口创建后必须 SWP_HIDEWINDOW。
 // 这是静态+运行期双重守护：源码文本判据防回退，运行期判据（本文件末尾）防"编译进去了但没生效"。

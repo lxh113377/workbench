@@ -499,9 +499,9 @@ func normTitle(s string) string {
 //     每轮规划产出同一条标题，评估器按"无新颖度"拒绝，形成 3 秒热循环。
 //
 // 语义保证（三条，都有单测守护）：
-//   1) 焦点段**必须完整保留**（阶段信息是标题的唯一区分点，裁掉即等于没规划）；
-//   2) 目标前缀按 rune 预算自适应收缩（超出预算时截断并补省略号）；
-//   3) 结果按 rune 计不超过 MaxTitleRunes。
+//  1. 焦点段**必须完整保留**（阶段信息是标题的唯一区分点，裁掉即等于没规划）；
+//  2. 目标前缀按 rune 预算自适应收缩（超出预算时截断并补省略号）；
+//  3. 结果按 rune 计不超过 MaxTitleRunes。
 func composeTitle(goalTitle, focus string) string {
 	goalTitle = strings.TrimSpace(goalTitle)
 	focus = strings.TrimSpace(focus)

@@ -5,7 +5,9 @@ import (
 )
 
 // TestClassifyRateLimit 覆盖现场真实故障：429 的 stderr 形如
-//   dsh: RATE_LIMIT: too many requests; retry later
+//
+//	dsh: RATE_LIMIT: too many requests; retry later
+//
 // 旧实现先被 "upstream"/"timeout" 之外的 "dsh:" 兜底规则吃掉，判成
 // boot_failed（不可重试）→ 引擎立刻换模型 → 整池各挨一次 429 → 加剧限流。
 func TestClassifyRateLimit(t *testing.T) {

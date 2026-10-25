@@ -41,9 +41,10 @@ func cloneTaskWithPrompt(task *model.Task, prompt string) *model.Task {
 //  3. 返工轮次：告诉方案模型"这是第几轮了"，避免它以为还是首轮。
 //
 // 为什么不能只传 FailReason 一句话：
-//   方案模型要判断"是方案错了还是实现错了"，只给它一句"验收未通过"它只能瞎猜。
-//   实测（2026-10-21）repairPrompt 里带 stderr 的那几轮返工成功率明显更高 ——
-//   同样的原则适用到方案层。
+//
+//	方案模型要判断"是方案错了还是实现错了"，只给它一句"验收未通过"它只能瞎猜。
+//	实测（2026-10-21）repairPrompt 里带 stderr 的那几轮返工成功率明显更高 ——
+//	同样的原则适用到方案层。
 func planFailureContext(task *model.Task, cfg config.Config) string {
 	if task == nil {
 		return ""
@@ -93,8 +94,9 @@ func planFailureContext(task *model.Task, cfg config.Config) string {
 //  4. 其余 -> true。
 //
 // 为什么重新规划要排在返工之后（ReplanRounds 默认 2 < RepairRounds 3）：
-//   改方案 = 推翻重来，成本高于"同一方案再修一次"。先用完便宜的手段，
-//   再动贵的 —— 这条顺序也被 repair.go 的注释与默认值共同约束。
+//
+//	改方案 = 推翻重来，成本高于"同一方案再修一次"。先用完便宜的手段，
+//	再动贵的 —— 这条顺序也被 repair.go 的注释与默认值共同约束。
 func shouldReplan(task *model.Task, bp *blueprint.Blueprint, cfg config.Config) bool {
 	if task == nil || !cfg.Plan.Enabled {
 		return false

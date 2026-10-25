@@ -73,15 +73,15 @@ func TestIndexPageButtonHasLoadingAndStateFeedback(t *testing.T) {
 // 目标要求 1：自动加载 + 自动响应 + 自动触发，且必须有防重入与失败收敛。
 func TestHomeScriptIsAutomaticAndGuarded(t *testing.T) {
 	for _, need := range []string{
-		"paint('busy')",                       // 自动加载：脚本一执行即进入加载态
-		"setInterval(ping, 4000)",             // 自动响应：轮询引擎阶段
+		"paint('busy')",                               // 自动加载：脚本一执行即进入加载态
+		"setInterval(ping, 4000)",                     // 自动响应：轮询引擎阶段
 		"btn.addEventListener('click', clickHandler)", // 手动兜底（走开关语义，不再是「永远只能启动」）
-		"const pauseHome = async ()",             // 运行态点击 → 暂停
-		"const resumeHome = async ()",            // 暂停态点击 → 继续（乐观更新，不等轮询）
-		"setTimeout(() => {",                  // 自动触发：开屏自动点一次
-		"inflight",                            // 防重入
-		"fails >= 3",                          // 连续失败收敛到 error 态
-		"PHASES[state] || PHASES.error",       // 未知状态兜底
+		"const pauseHome = async ()",                  // 运行态点击 → 暂停
+		"const resumeHome = async ()",                 // 暂停态点击 → 继续（乐观更新，不等轮询）
+		"setTimeout(() => {",                          // 自动触发：开屏自动点一次
+		"inflight",                                    // 防重入
+		"fails >= 3",                                  // 连续失败收敛到 error 态
+		"PHASES[state] || PHASES.error",               // 未知状态兜底
 	} {
 		if !strings.Contains(appJS, need) {
 			t.Fatalf("首页脚本缺少自动行为/防护 %q", need)

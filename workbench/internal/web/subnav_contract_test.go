@@ -42,11 +42,11 @@ func TestSubpagesAreMutuallyReachable(t *testing.T) {
 // 非法 hash 必须回落 overview（不能出现半个页面激活）。
 func TestPanelScriptSupportsHashDeepLink(t *testing.T) {
 	for _, need := range []string{
-		"location.hash",                                  // 读写 hash
-		"window.addEventListener('hashchange'",           // 返回/前进的收敛入口
-		"activateTab(",                                   // 唯一的激活函数
-		"TAB_NAMES.indexOf(name) < 0",                    // 非法页签名回落
-		"pendingHash",                                    // 自己写 hash 的那次不重复渲染
+		"location.hash",                        // 读写 hash
+		"window.addEventListener('hashchange'", // 返回/前进的收敛入口
+		"activateTab(",                         // 唯一的激活函数
+		"TAB_NAMES.indexOf(name) < 0",          // 非法页签名回落
+		"pendingHash",                          // 自己写 hash 的那次不重复渲染
 		"activateTab((location.hash || '').replace(/^#/, ''), { hash: false })", // 首次加载按 hash 收敛
 	} {
 		if !strings.Contains(appJS, need) {
@@ -67,7 +67,6 @@ func TestPanelScriptSupportsHashDeepLink(t *testing.T) {
 		t.Fatal("TAB_NAMES 白名单必须来自页面上的 .tab 元素，硬编码会与实际页签漂移")
 	}
 }
-
 
 // TestAdminTabsStaySimplified 钉住 2026-10-20 的信息架构简化结果。
 //

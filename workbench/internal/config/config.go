@@ -138,7 +138,8 @@ type PoolConfig struct {
 // PlanConfig 控制「双角色闭环」：思考模型只出方案，agent 模型负责执行。
 //
 // 立规原话（老大 2026-10-21）：
-//   「思考模型只出方案，agent 模型负责执行，不然只出方案没有执行落地的模型无法闭环」
+//
+//	「思考模型只出方案，agent 模型负责执行，不然只出方案没有执行落地的模型无法闭环」
 //
 // 为什么这必须是配置项而不是硬编码常量：
 //  1. 方案模型与执行模型是**两次独立调用**，各自要能被单独指向（思考用大模型、
@@ -295,7 +296,7 @@ type Config struct {
 	Pool          PoolConfig       `json:"pool"`
 	// Plan 是「双角色闭环」配置：思考模型只出方案，agent 模型负责执行。
 	// 零值 + 旧 schema 会由 NormalizePlan 迁移成"开启"（见其注释）。
-	Plan          PlanConfig       `json:"plan"`
+	Plan PlanConfig `json:"plan"`
 	// Workspace 是「AI 开发工作目录」配置（可选外部目录模式）。
 	// 零值/缺省 = 项目模式（与改造前行为完全一致）。
 	Workspace workspace.Config `json:"workspace"`

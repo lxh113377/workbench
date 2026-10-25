@@ -58,9 +58,10 @@ func currentPlan(taskID string, e *Engine) *blueprint.Blueprint {
 //   - 原 Prompt 保持不变（重新规划要基于原始需求，而不是上一轮的返工 prompt）。
 //
 // 为什么要把 Prompt 还原成原始需求：
-//   返工环会把 task.Prompt 换成"返工说明 + 上一版全文"。若带着它重新规划，
-//   方案模型看到的是"修这个实现"，而不是"重新设计这件事" —— 前提就错了。
-//   原始需求从 tasks/<id>/prompt.md 读回（store 在创建任务时落的）。
+//
+//	返工环会把 task.Prompt 换成"返工说明 + 上一版全文"。若带着它重新规划，
+//	方案模型看到的是"修这个实现"，而不是"重新设计这件事" —— 前提就错了。
+//	原始需求从 tasks/<id>/prompt.md 读回（store 在创建任务时落的）。
 func (e *Engine) scheduleReplan(task *model.Task, rep *model.VerifyReport, cfg config.Config) {
 	if task == nil {
 		return
