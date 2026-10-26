@@ -584,30 +584,24 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 22（同会话，2026-10-26 18:50-19:10）—— T18②③ live 验证完成 + 新登记 T18⑤
+## round 23（同会话，2026-10-26 19:15-19:35）—— T18⑤ 落地：no_artifact 成为一等类别（live 未取得）
 
-### 权威读数（台账与模型状态，不是引擎日志）
-```
-model-status.jsonl：
-  switch dots-studio → kilo-auto（no_artifact）
-  failure kilo-auto/free state=degraded reason=no_artifact: 回答不含产物块（不符合 ARTIFACTS 协议）
-  switch kilo-auto → liquid/lfm-2.5-2.6b（no_artifact）
-  failure liquid/lfm-2.5-2.6b state=degraded reason=no_artifact: …
-attempts.jsonl：
-  kind=unknown action=retry delayMs=4616 elapsedMs=524023 error="执行失败: no_artifact"
-```
-⇒ 三条结论实测成立：① failover 当场拒绝「只吐过程独白」的执行回答并连续换车道；
-② 协议不合规归因到车道（degraded + no_artifact），修前这种回答会被当成功并写进 lastOK；
-③ 引擎不再当交付，改为 retry（退避 4.6 s）。
+### 改动（提交 `da40550`，三文件 + 两测）
+- `executor`：新增 `KindNoArtifact = "no_artifact"`（与 bad_exit 分层：后者「没有最终答案」，本类「有答案但不符合产物协议」），并入 `Retryable()`。
+- `retry`：新增 `NoArtifact`，加入 `ParseKind` 与 `Retryable()` —— 修前它被收敛成 `Unknown`，台账只写 `kind=unknown`。
+- `modelpool`：`noArtifactKind` 改为 `string(executor.KindNoArtifact)`（类别字符串单一来源，杜绝两处漂移）。
+- 测试：`retry/noartifact_kind_test.go`（可解析 / trim / 可重试 / 既有 timeout 与 missing_credential 口径未坏）；
+  `modelpool` 新增断言（单一来源 + 对外契约字符串）。
 
-### 新发现的观察缺口（T18⑤）
-- `workbench.jsonl` 里 `no_artifact` 出现 **0 次**：引擎「尝试结束」把该次尝试落成 `kind=bad_exit`、`reason=""`（台账 `kind=unknown`）。
-- 危害：只看引擎日志的人会以为「无最终答案」，真相是「有答案但无产物块」⇒ 修法方向：让 `no_artifact` 贯通引擎失败分类与「尝试结束」字段。
+### live 验证未取得（如实标）
+- 本轮窗口（19:21-19:25）引擎只走到 `stalled`（早回收 2m6.085s）与 `boot_failed`，没出现「执行阶段 + 会吐字但无产物块」的组合 ⇒ 台账仍未见 `kind":"no_artifact"`。
+- **顺带查清的运行事实**：19:25:15 出现 `尝试结束 context canceled` → **`引擎已停止`**，`state.json phase=stopped`；
+  原因不是崩溃，而是本次把 `maxTasksPerGoal=1`：首个任务的尝试重试耗尽即达预算，引擎主动停循环并取消在飞尝试。
+  ⇒ 验证方法改为：**放大任务预算（≥3）** 或把候选链首定向固定到会吐字的车道。这也解释了此前几轮同类 `context canceled`（我曾误记为自己的 `--quit`）。
 
-### 运行边界（已完成）
-- 引擎 `--quit`（family=0）；`\WorkBenchKeepAlive` `/ENABLE`（Ready）；配置从备份 `config.json.bak-pre-t18verify-*` 还原 + 重新 select `D:\workdesktop`；
-- 仓库未被写入（`git status` 仍是会话前 18 项；`docs/health-check.md` 不存在 —— 本任务的成品仍未产出，如实记）。
+### 提交 · 部署 · 边界（#40）
+- `da40550` 已推送；干净 worktree 构建 `BUILD_RC=0`（79.8 s）；**dist 与 agent 两处 hash 相同**且 == `SHA256SUMS` = `AC0837B1…D176`、`vcs.revision=da40550`；全仓 `go test ./...` rc=0。
+- 运行边界已复原：`\WorkBenchKeepAlive` `/ENABLE`（Ready）、配置从备份 `config.json.bak-pre-t18e-*` 还原 + 重新 select、worktree 已移除、family=0。
 
-### 我自己的错（本轮 1 次，属「查证方式」）
-- 先用 `Select-String no_artifact` 搜**引擎日志**得到 count=0，一度以为判据又没生效；改用**权威台账**（`attempts.jsonl` + `model-status.jsonl`）才发现判据确实生效。
-  整改：查「某判据是否生效」时优先读**该判据直接写入的台账**，引擎日志只作旁证；两者不一致时按台账定性、把日志缺口登记成待办（本轮即 T18⑤）。
+### 我自己的错（本轮 0 次）
+本轮无新增自身错误（沿用：脚本 ASCII 引号、外部写盘后先 read 再 edit、查判据优先读台账）。
