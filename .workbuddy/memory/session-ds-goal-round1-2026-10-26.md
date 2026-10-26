@@ -262,3 +262,34 @@ round 3 加进白名单的 `frontend` 同理。修法：补两套工程阶梯
 
 ### 我自己的错（本轮 0 次）
 本轮无新增自身错误（唯一未完成项是演示目录回收被句柄占用阻塞，已登记 T11）。
+## round 9（同会话，2026-10-26 13:45-14:10）—— T10 第一步落地 + 运行通道取证（T12）
+
+### 做成了什么
+- **T10 第一步（提交 985d78c，已部署）**：把「失败必须可归因」这条补齐 ——
+  ① `internal/executor/pure.go` 新增 `persistStderrTail`（非空才写、只留尾部 8 KB、写失败不阻塞执行）；
+  ② `executor.go` 的 Result 加 `StderrPath`，在四条收尾路径（卡死/超时/取消/正常结束）的汇合点统一落盘 stderr；
+  ③ `engine.go` 的「尝试结束」日志补 `reason`（stderr 摘要或执行器错误，截 300 字）与 `stderrPath`；
+  ④ 新增 `internal/executor/stderr_persist_test.go`（非空才写 / 同目录 / 只留尾部 / 空输入不建文件）。
+  部署：干净 worktree 构建 BUILD_RC=0（72.8 s）→ dist 与 D:\workbench-agent 两处 hash == SHA256SUMS = 559210AF…2509、vcs.revision=985d78c。
+  为什么先做这一步：round 8 真跑的 bad_exit 47,603 ms 事后**翻遍任务目录与日志都答不出原因**（stderr 只活在内存里）。
+- **T12（新登记，已取证）**：round 8/9 两次真跑都在 ~3 分钟内被**环境作业对象回收**，且不留停机痕
+  （无 panic/自愈/停机记录；面板 refused；`state.json` 停在 running；任务永远 running）。
+  结论：不是「产品静默死亡」，而是**我的观察通道不合法** —— 从本 harness 的 shell 用 Start-Process 拉起的长驻进程绑在宿主作业对象上，
+  发起调用的 shell 一结束即整树回收。要真正观察长驻运行，必须走计划任务 / 独立会话 / 老大手动启动。
+- **T11 更新（降级）**：演示目录 D:\wb-demo-ws 已成功回收 —— 句柄随被回收的进程树消失而释放，
+  故 T11 与环境回收同源的概率高，保留为待确认观察项，不作确证缺陷。
+
+### 未完成（如实标）
+- **T10 的端到端捕获未完成**：本轮复现时引擎在尝试进行中被环境回收，`stderr.txt` 未被写出 ——
+  这一步必须在**合法观察通道**下重做（T12 之后）；T10 第二步（定位并修 bad_exit 根因）因此待做。
+
+### 运行边界与回滚（已完成）
+- 演示期设置（autoStart=true / maxTasksPerGoal=3 / concurrency=1 / chain=false + 演示工作空间）已从备份
+  `config.json.bak-pre-demo-20261026-131852` 还原，并重新 `--workspace select D:\workdesktop`（审计新增 op=select）；
+  `workbench` 进程数 0；演示目录已回收。
+
+### 我自己的错（本轮 2 次）
+1. 让轮询用 `"msg":"尝试结束"` 匹配，命中 round 8 的**旧日志行**就提前 break ⇒ 第一次"等失败"实际等了 0 秒就结束
+   （读数假象）。整改：只匹配**新版才有的字段**（`"reason":`）并核对时间戳。
+2. 两次用 `tools.edit` 在同一文件上连续改时，误以为「先 read 再连续 edit」总成立 —— 有一处因版本失配被拒；
+   本轮后半改用「数组拼行 + 精确 old_string」逐条落地，并把失败当作版本失配信号而非重试信号。
