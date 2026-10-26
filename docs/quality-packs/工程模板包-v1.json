@@ -1,0 +1,184 @@
+[
+  {
+    "id": "quality-frontend-audit",
+    "name": "前端工程质量审查",
+    "domain": "frontend",
+    "description": "对 HTML/CSS/JS 与 React/Vue、TS 的前端面做质量审查，产出可直接贴 PR 的报告",
+    "promptTemplate": "请对「{topic}」做一次前端工程质量审查，产出**可直接贴进 PR** 的报告。要求：① 逐层过一遍：HTML 语义与可访问性（标签语义、ARIA、键盘可达、对比度、缩放）、CSS 体系（设计令牌是否唯一来源、死样式、响应式断点、打印样式）、JavaScript/TypeScript 正确性（事件与定时器清理、内存泄漏、异步竞态、类型与接口契约、错误处理是否静默）、组件框架层（React/Vue 的 props/状态/渲染副作用、列表 key、事件绑定与卸载清理）；② 每个发现给 文件:行号 + 一句后果 + 最小改法，按 **P0 阻塞 / P1 应改 / P2 建议** 分级；③ 必须与**构建产物对照**：源码已改而产物未重建属于判红项（同源漂移）；④ 无问题的层也要写明「本层未发现问题」并说明检查了什么；⑤ 没读代码证实的一律标「存疑」，不许写成事实；⑥ 结尾给**合并结论**（可合并 / 改后可合并 / 需重写）与**门禁建议**（哪些发现应变成机器判据）。上下文：\n{context}",
+    "params": {
+      "modelTier": "balanced",
+      "maxMinutes": 30,
+      "outputFormat": "md",
+      "webAllowed": false,
+      "tags": [
+        "前端",
+        "审查",
+        "PR"
+      ]
+    },
+    "outputSpec": {
+      "format": "md",
+      "sections": [
+        "可访问性与语义",
+        "样式体系",
+        "脚本与类型",
+        "合并结论与门禁建议"
+      ],
+      "minWords": 800,
+      "minBytes": 2400
+    },
+    "priorityWeight": 4,
+    "valuePrior": 88,
+    "costPrior": 50,
+    "cooldownMinutes": 60,
+    "diversityGroup": "frontend",
+    "chain": {
+      "successorTemplates": [
+        "quality-frontend-buildperf",
+        "quality-gate-spec"
+      ],
+      "maxDepth": 5,
+      "fanout": 2
+    },
+    "enabled": true,
+    "builtin": false,
+    "createdAt": 0,
+    "updatedAt": 0
+  },
+  {
+    "id": "quality-frontend-buildperf",
+    "name": "构建与性能调优",
+    "domain": "frontend",
+    "description": "先量后改的前端构建与运行期性能调优，产出可执行、可复算的改进清单",
+    "promptTemplate": "请对「{topic}」做一次**构建与性能调优**，产出可执行的改进清单。要求：① 先量后改 —— 先给可复算的基线读数（产物体积与构成、构建时长分段、首屏关键路径、内存与分配热点），写清测量命令与取样次数；② 只认**受控 A/B**（同机、同轮交替、输出差异必须为 0 才可宣称等价），单点样本不许下结论；③ 每项优化给「改前 → 改后 + 证明方式」，并标注收益是否稳定（含反例样本）；④ 严格区分**构建期**与**运行期**，不把二者混为一谈；⑤ 不引入新依赖，除非同时给出替换收益与回滚方式；⑥ 结束时给出「不做」的项与触发条件。上下文：\n{context}",
+    "params": {
+      "modelTier": "balanced",
+      "maxMinutes": 30,
+      "outputFormat": "md",
+      "webAllowed": false,
+      "tags": [
+        "构建",
+        "性能",
+        "度量"
+      ]
+    },
+    "outputSpec": {
+      "format": "md",
+      "sections": [
+        "基线读数",
+        "瓶颈归因",
+        "优化清单",
+        "验证与回滚"
+      ],
+      "minWords": 700,
+      "minBytes": 2200
+    },
+    "priorityWeight": 4,
+    "valuePrior": 85,
+    "costPrior": 55,
+    "cooldownMinutes": 60,
+    "diversityGroup": "frontend",
+    "chain": {
+      "successorTemplates": [
+        "quality-verify"
+      ],
+      "maxDepth": 5,
+      "fanout": 2
+    },
+    "enabled": true,
+    "builtin": false,
+    "createdAt": 0,
+    "updatedAt": 0
+  },
+  {
+    "id": "quality-error-fix",
+    "name": "报错定位与最小修复",
+    "domain": "code",
+    "description": "从真实报错栈定位最小根因并修复，附可复现验证与防回归判据",
+    "promptTemplate": "请定位并修复与「{topic}」相关的**真实报错**。要求：① 先复现并给出原始输出 —— 命令、错误栈全文、退出码，不许转述或摘要；② 列 2-3 个根因假设，用**最小实验**逐个排除，写清每个实验的判据与结果；③ 只做**最小改动**（一步一改），改完必须复验：同一命令重跑 + **反向变异**证明判据会判红；④ 若根因属于「静默失败」（吞错、无日志、rc=0 却无产出），必须同时补上可观测面（日志 + 事件 + 可复算字段）；⑤ 结尾给「根因一句话 + 防回归的机器判据」；⑥ 修不动的（需要外部凭据、平台能力缺口）如实标出并给下一步。上下文：\n{context}",
+    "params": {
+      "modelTier": "balanced",
+      "maxMinutes": 30,
+      "outputFormat": "md",
+      "webAllowed": false,
+      "tags": [
+        "报错",
+        "根因",
+        "修复"
+      ]
+    },
+    "outputSpec": {
+      "format": "md",
+      "sections": [
+        "复现与原始输出",
+        "根因假设与实验",
+        "最小修复",
+        "复验与防回归"
+      ],
+      "minWords": 600,
+      "minBytes": 1800
+    },
+    "priorityWeight": 5,
+    "valuePrior": 92,
+    "costPrior": 60,
+    "cooldownMinutes": 60,
+    "diversityGroup": "code",
+    "chain": {
+      "successorTemplates": [
+        "quality-gate-spec"
+      ],
+      "maxDepth": 5,
+      "fanout": 2
+    },
+    "enabled": true,
+    "builtin": false,
+    "createdAt": 0,
+    "updatedAt": 0
+  },
+  {
+    "id": "quality-arch-design",
+    "name": "可扩展高可用架构设计",
+    "domain": "quality",
+    "description": "为指定对象设计可扩展、高可用架构，并落成小步可验收的改造清单",
+    "promptTemplate": "请为「{topic}」设计**可扩展、高可用**的软件架构，并给出可落地的改造步骤。要求：① 先写约束与失效模式（单点、背压、超时与重试、幂等、状态落盘与崩溃恢复、观测面）；② 给分层与边界（模块职责、依赖方向、扩展点、不变量），并说明现有结构与它的差距；③ 给至少两条可选路径与取舍（不谈成本，只说最优），标明推荐项与理由；④ 落成**小步改造清单**：每步限定在少量文件内的改动 + 验收判据 + 回滚方式，禁止一步跨多个子系统；⑤ 明确哪些是「现在不做」并给出触发条件；⑥ 结论要能被下游直接照做，不要停留在原则。上下文：\n{context}",
+    "params": {
+      "modelTier": "balanced",
+      "maxMinutes": 30,
+      "outputFormat": "md",
+      "webAllowed": false,
+      "tags": [
+        "架构",
+        "可扩展",
+        "高可用"
+      ]
+    },
+    "outputSpec": {
+      "format": "md",
+      "sections": [
+        "约束与失效模式",
+        "分层与边界",
+        "路径取舍",
+        "小步改造清单",
+        "现在不做"
+      ],
+      "minWords": 900,
+      "minBytes": 2600
+    },
+    "priorityWeight": 4,
+    "valuePrior": 86,
+    "costPrior": 55,
+    "cooldownMinutes": 60,
+    "diversityGroup": "quality",
+    "chain": {
+      "successorTemplates": [
+        "quality-gate-spec"
+      ],
+      "maxDepth": 5,
+      "fanout": 2
+    },
+    "enabled": true,
+    "builtin": false,
+    "createdAt": 0,
+    "updatedAt": 0
+  }
+]

@@ -50,6 +50,16 @@ var topicsByDomain = map[string][]string{
 		"工作空间项目的错误处理与静默失败面",
 		"工作空间项目的判据与门禁覆盖面",
 	},
+	// frontend 领域 2026-10-26 补（与 docs/quality-packs/工程模板包-v1.json 同步）：
+	// 模板包里「前端工程质量审查 / 构建与性能调优」两条的 domain=frontend；缺池就会重演
+	// round 1 的静默回落（见 internal/chain/pack_domain_pool_contract_test.go 的修前 FAIL 输出）。
+	"frontend": {
+		"当前工作目录下的前端资产（HTML/CSS/JS/TS）",
+		"工作空间项目的构建链路与产物体积",
+		"工作空间项目的设计令牌与样式体系",
+		"工作空间项目的交互脚本与可访问性",
+		"工作空间项目的首屏与运行时性能",
+	},
 }
 
 // RootTask 从模板池生成一条种子任务。

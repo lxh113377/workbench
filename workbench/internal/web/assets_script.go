@@ -60,7 +60,7 @@ const appJS = `(() => {
   const STATE_TEXT = {candidate:'候选',evaluating:'评估中',rejected:'已拒',approved:'已批',queued:'排队',running:'执行中',done:'已完成',failed:'失败',timeout:'超时',cancelled:'已取消',interrupted:'中断'};
   const kpi = (l, v) => '<div class="kpi"><div class="v">' + esc(v) + '</div><div class="l">' + esc(l) + '</div></div>';
   // 领域列中文化：表格不再裸显 code/content 这类内部枚举（老大不是技术人员，行话回潮判红）。
-  const DOMAIN_TEXT = { content: '内容创作', code: '代码生成', knowledge: '知识整理', data: '数据处理', solution: '方案撰写', report: '报告生成', quality: '工程质量' };
+  const DOMAIN_TEXT = { content: '内容创作', code: '代码生成', knowledge: '知识整理', data: '数据处理', solution: '方案撰写', report: '报告生成', quality: '工程质量', frontend: '前端工程' };
   const domainText = (d) => DOMAIN_TEXT[d] || d || '-';
   const fmtTime = (ms) => ms ? new Date(ms).toLocaleString('zh-CN', {hour12:false}) : '—';
   const fmtMin = (ms) => ms ? (ms/60000).toFixed(1) + ' 分钟' : '—';

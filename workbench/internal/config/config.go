@@ -401,7 +401,7 @@ func DefaultAutonomyConfig() AutonomyConfig {
 			// quality 于 2026-10-26 加入（round 1 实测缺陷：内置集合里没有它，配置里写 "quality" 会被
 			// normalizeAutonomy 静默剔除 —— 于是「自主任务聚焦工作空间项目的工程质量」这条目标在配置层永远无法成立）。
 			// 维护规则：**新增模板域必须同步这里**，否则用户写进 config.json 也会被剔除（现在至少会留 Warnings）。
-			AllowedDomains:    []string{"content", "code", "knowledge", "data", "solution", "report", "quality"},
+			AllowedDomains:    []string{"content", "code", "knowledge", "data", "solution", "report", "quality", "frontend"},
 			MaxTaskWords:      3000,
 			MaxDraftsPerRound: 2,
 		},
