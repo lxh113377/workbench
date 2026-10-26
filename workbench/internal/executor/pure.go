@@ -330,6 +330,18 @@ func LatestOutputMtimeMs(dir string) int64 {
 	return latest
 }
 
+// ArtifactMarker 是本仓产物协议的起始标记（引擎侧 appendProtocol 给出，artifact.Parse 也认它）。
+const ArtifactMarker = "<<<ARTIFACTS>>>"
+
+// HasArtifactBlock 判定一段最终文本是否带产物块（纯函数，供执行器给结果打标）。
+//
+// 为什么需要（round 20 实测的下一步 T18）：实测执行阶段「尝试成功」（kind=ok）但最终文本只是过程独白，
+// 引擎的产物闸门随后判「产出过短且无产物块」⇒ 任务未完成。把「有没有产物块」作为**结果字段**上报，
+// failover 才能把「协议不合规」当成一次可切换的失败，而不是把首个吐字的模型当成功就此收工。
+func HasArtifactBlock(text string) bool {
+	return strings.Contains(text, ArtifactMarker)
+}
+
 // IsSubstantiveEvent 判定一条事件是否算「实质进展」。
 //
 // 为什么需要（2026-10-26 round 14 实测）：DSH 子进程一启动就吐 status 握手帧（turn_start / step_start），

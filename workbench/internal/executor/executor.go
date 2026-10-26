@@ -74,6 +74,9 @@ type Result struct {
 	Stalled    bool
 	// EarlyStall 标记「启动后零进展」的提前回收：与 Stalled 同 kind，但原因不同，便于归因（round 14 · T15）。
 	EarlyStall bool
+	// ArtifactBlock 标记最终文本里带不带本仓产物协议块（`<<<ARTIFACTS>>>`）。
+	// 用途：failover 对「提示词要求产物的任务」把「无产物块」当成可切换的失败（round 21 · T18）。
+	ArtifactBlock bool
 	// lastProgress 只在**实质进展**时前进（握手 status 帧不算），供 IsEarlyStall 判「从未起步」。
 	lastProgress atomic.Int64
 	// StallDecidedMs 是看门狗**判定时刻**距启动的毫秒数（0 表示未判定）。
@@ -498,6 +501,9 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	// 2026-10-26 round 9（T10）：四条收尾路径（卡死/超时/取消/正常结束）都在这里汇合，
 	// stderr 必须在此刻落盘 —— 否则 bad_exit 的判定依据随内存一起消失（见 pure.go persistStderrTail）。
 	res.StderrPath = persistStderrTail(eventsPath, stderrBuf.String())
+	// 给结果打「产物块」标记：必须在 FinalText 定稿之后、且在看门狗/超时等失败分支之前 ——
+	// 那些分支也要带着这个标记回去，failover 才判得准（round 21 · T18）。
+	res.ArtifactBlock = HasArtifactBlock(res.FinalText)
 
 	if res.Stalled {
 		res.ErrorKind = string(KindStalled)

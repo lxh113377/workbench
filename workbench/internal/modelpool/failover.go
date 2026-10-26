@@ -123,7 +123,8 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 		f.sch.Acquire(id)
 		res, err := f.inner.Run(ctx, task, id)
 		f.sch.Release(id)
-		ok, kind, detail := judge(res, err)
+		// 任务提示词里带了 ARTIFACTS 协议块 ⇒ 本次尝试必须交出产物块才算成功（T18）。
+		ok, kind, detail := judge(res, err, task != nil && RequiresArtifacts(task.Prompt))
 		if ok {
 			f.mgr.MarkSuccess(id, elapsedMs(res))
 			return res, err
@@ -196,7 +197,7 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 //
 // 与引擎 runOne 的判定保持一致：超时、空产出、错误都算失败；错误类别优先取
 // 执行器给出的 ErrorKind，其次按错误对象兜底。
-func judge(res *executor.Result, err error) (bool, string, string) {
+func judge(res *executor.Result, err error, requireArtifacts bool) (bool, string, string) {
 	if err != nil {
 		kind := string(executor.KindUnknown)
 		if res != nil && res.ErrorKind != "" {
@@ -221,6 +222,12 @@ func judge(res *executor.Result, err error) (bool, string, string) {
 	if strings.TrimSpace(res.FinalText) == "" {
 		return false, string(executor.KindExit), "任务无最终答案"
 	}
+	// 要求产物的任务：只有「吐了字」还不够，必须真带产物块（round 21 · T18）。
+	// 实测形态：某车道 kind=ok 但最终文本是过程独白（含它自己的 <dots_function_call> 协议），
+	// 引擎闸门随后判未完成 —— 修前 failover 已把它当成功返回，后面的产物门就成了事后诸葛。
+	if requireArtifacts && !res.ArtifactBlock {
+		return false, noArtifactKind, "回答不含产物块（不符合 ARTIFACTS 协议）"
+	}
 	return true, "", ""
 }
 
@@ -237,6 +244,10 @@ func modelAttributable(kind string) bool {
 	// 恰恰是正确处置（同池其他车道的网络路径不同）。
 	// 与 bad_exit 相反：bad_exit 是任务/提示词层面的问题，不该记模型头上。
 	case string(executor.KindTransport), string(executor.KindStreamCut):
+		return true
+	// 协议不合规也归因到**车道能力**（round 21 · T18）：实测某车道只会吐自有 <dots_function_call> 协议，
+	// 不认本仓 <<<ARTIFACTS>>>；把它当"任务问题"会让整池继续把它排在候选前列，任务永远交不出成品。
+	case noArtifactKind:
 		return true
 	}
 	// unreachable / bad_endpoint 是探测层的分类，同样归因到模型端点。

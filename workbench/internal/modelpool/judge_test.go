@@ -20,7 +20,7 @@ func TestJudgePrefersStructuredErrorKind(t *testing.T) {
 		LastError: "RATE_LIMIT: too many requests",
 		FinalText: "",
 	}
-	ok, kind, detail := judge(res, nil)
+	ok, kind, detail := judge(res, nil, false)
 	if ok {
 		t.Fatal("429 不应判成功")
 	}
@@ -34,7 +34,7 @@ func TestJudgePrefersStructuredErrorKind(t *testing.T) {
 
 // TestJudgeEmptyOutputWithoutErrorKind 保证"真的没出话"仍归 bad_exit。
 func TestJudgeEmptyOutputWithoutErrorKind(t *testing.T) {
-	ok, kind, _ := judge(&executor.Result{FinalText: ""}, nil)
+	ok, kind, _ := judge(&executor.Result{FinalText: ""}, nil, false)
 	if ok {
 		t.Fatal("空产出不应判成功")
 	}
@@ -45,7 +45,7 @@ func TestJudgeEmptyOutputWithoutErrorKind(t *testing.T) {
 
 // TestJudgeSuccess 保证正常产出不被误判。
 func TestJudgeSuccess(t *testing.T) {
-	ok, kind, _ := judge(&executor.Result{FinalText: "正文"}, nil)
+	ok, kind, _ := judge(&executor.Result{FinalText: "正文"}, nil, false)
 	if !ok || kind != "" {
 		t.Fatalf("正常产出应判成功: ok=%v kind=%q", ok, kind)
 	}
