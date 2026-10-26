@@ -859,7 +859,9 @@ func (e *Engine) supplyCandidates(ctx context.Context, cfg config.Config) {
 		task.Scores = scores
 		if !evaluate.Approve(scores) {
 			task.State = model.StateRejected
-			_ = e.store.Create(task)
+			if err := e.store.Create(task); err != nil {
+				e.log.Warn("落盘被拒任务失败（面板与持久态会不一致）", "taskId", task.ID, "err", err.Error())
+			}
 			e.emitEvent(model.Event{Type: "task", At: model.Now(), TaskID: task.ID, Data: task, Msg: "任务被评估拒绝"})
 			continue
 		}
@@ -1356,7 +1358,9 @@ func (e *Engine) extendChain(ctx context.Context, parent *model.Task, critique *
 		draft.Scores = scores
 		if !evaluate.Approve(scores) {
 			draft.State = model.StateRejected
-			_ = e.store.Create(draft)
+			if err := e.store.Create(draft); err != nil {
+				e.log.Warn("落盘被拒后继任务失败（面板与持久态会不一致）", "taskId", draft.ID, "err", err.Error())
+			}
 			e.emitEvent(model.Event{Type: "task", At: model.Now(), TaskID: draft.ID, Data: draft, Msg: "后继任务被评估拒绝"})
 			continue
 		}
