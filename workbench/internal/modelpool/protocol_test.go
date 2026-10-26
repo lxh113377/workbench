@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"workbench/internal/executor"
+	"workbench/internal/model"
 )
 
 // TestRequiresArtifacts 钉住「要不要产物块」的判据：只看提示词里有没有协议块。
@@ -57,6 +58,26 @@ func TestJudgeArtifactRequirement(t *testing.T) {
 }
 
 // TestModelAttributableNoArtifact 钉住「协议不合规可归因到车道」。
+// TestRequireArtifactsFor 钉住两条判据的组合口径（执行器上报优先，提示词自描述兜底）。
+//
+// 由来（round 21 实测）：协议由**执行器**拼进 prompt，`task.Prompt` 里没有 `<<<ARTIFACTS>>>`，
+// 只按提示词判时 `no_artifact` 一次都没触发（count=0）—— 所以执行器上报必须是第一判据。
+func TestRequireArtifactsFor(t *testing.T) {
+	withFlag := &executor.Result{}
+	withFlag.ArtifactsRequired.Store(true)
+	if !requireArtifactsFor(withFlag, nil) {
+		t.Fatal("执行器上报要求产物时应判 true")
+	}
+	if !requireArtifactsFor(&executor.Result{}, &model.Task{Prompt: "…<<<ARTIFACTS>>>…"}) {
+		t.Fatal("提示词自描述兜底应判 true")
+	}
+	if requireArtifactsFor(&executor.Result{}, &model.Task{Prompt: "只输出一个 JSON 对象"}) {
+		t.Fatal("两条判据都不成立时应判 false")
+	}
+	if requireArtifactsFor(nil, nil) {
+		t.Fatal("nil 结果与 nil 任务应判 false")
+	}
+}
 func TestModelAttributableNoArtifact(t *testing.T) {
 	if !modelAttributable(noArtifactKind) {
 		t.Fatal("协议不合规应归因到车道（否则永远排在前列、任务交不出成品）")

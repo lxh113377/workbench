@@ -123,8 +123,9 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 		f.sch.Acquire(id)
 		res, err := f.inner.Run(ctx, task, id)
 		f.sch.Release(id)
-		// 任务提示词里带了 ARTIFACTS 协议块 ⇒ 本次尝试必须交出产物块才算成功（T18）。
-		ok, kind, detail := judge(res, err, task != nil && RequiresArtifacts(task.Prompt))
+		// 本次尝试是否要求产物：**执行器上报**为准（协议是它拼进 prompt 的），
+		// task.Prompt 里带协议块只作兜底（将来若改由上层拼，判据仍成立）——round 21 · T18②③。
+		ok, kind, detail := judge(res, err, requireArtifactsFor(res, task))
 		if ok {
 			f.mgr.MarkSuccess(id, elapsedMs(res))
 			return res, err

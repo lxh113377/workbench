@@ -86,6 +86,12 @@ type Result struct {
 	Touch          func()
 	// SawThinking 标记本轮是否出现过 thinking 帧：用于自适应放宽卡死阈值。
 	SawThinking atomic.Bool
+	// ArtifactsRequired 标记本轮提示词里**真的追加了产物协议**（AppendProtocol 开关 + 拼 prompt 的那一方才知道）。
+	//
+	// 为什么要用执行器上报而不是让上层扫 task.Prompt：协议是**执行器**拼进去的（见下面写 stdin 的那段），
+	// task.Prompt 里根本没有 `<<<ARTIFACTS>>>`。round 21 实测：按 task.Prompt 判据时 no_artifact 一次都没触发。
+	// 用 atomic 是为了与 SawThinking 同口径 —— 该字段在写 prompt 的 goroutine 里置位，收尾方在另一 goroutine 读。
+	ArtifactsRequired atomic.Bool
 }
 
 func (r *Result) markStalled() { r.Stalled = true }
@@ -465,6 +471,8 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 		prompt := task.Prompt
 		if r.cfg.AppendProtocol {
 			prompt += "\n" + artifact.ProtocolInstruction
+			// 让上层（failover）知道「本轮要求产物」：只有拼 prompt 的这里才有这个事实。
+			res.ArtifactsRequired.Store(true)
 		}
 		_, werr := io.WriteString(stdin, prompt)
 		if werr != nil {
