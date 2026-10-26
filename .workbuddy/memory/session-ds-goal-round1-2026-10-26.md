@@ -584,36 +584,29 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 27–29（同会话，2026-10-26 21:20-22:20）—— T15-④：台账取证两件套（执行 + 方案），live 已验证
+## round 30（同会话，2026-10-26 22:26-22:45）—— 双判据 live 一次拿下（方法：关掉方案阶段）
 
-### round 27：主件落地（提交 `9ed8e5a`，CI+E2E success）
-- `store.AttemptRecord` 新增 `stderrPath` / `producedRunes`（omitempty）。
-- 引擎新增纯函数 `attemptEvidence(res)`（nil 安全、按 rune 计数，与 `countWordsEngine` 同口径），
-  并接到**执行路径**的失败与 done 两处落账点。
-- 测试：`engine/attempt_evidence_test.go`（nil 安全 / rune 计数 / 空产出）+ `store/attempt_evidence_test.go`
-  （落盘→回读一致 + 人直接读 JSONL 也能看到两个键 + 零值形态）。
-
-### round 28：部署 + 未观察到（如实记）
-- 部署 @9ed8e5a（dist 与 agent 同 hash `4C5F1A29…4B10`）；窗口内只产出一条**方案**阶段记录，
-  而当时方案路径未接线 ⇒ 取证字段未出现，live 未观察到。**顺带发现**：方案台账也应带这两件套。
-
-### round 29：补齐方案路径 + live 验证（提交 `dcc4207`）
-- `planStage` 新增 `StderrPath`/`ProducedRunes`，在 `e.runner.Run` 返回后**先取证再判失败**（三条失败路径都带读数）；
-  引擎两处方案台账（done / degraded）一并带上。
-- 部署 @dcc4207（dist 与 agent 同 hash `3DB3B5F8…F9FC`）。
-- **live 读数**：
+### 方法与读数
+- 实验设置：`plan.enabled=false`（退回单次调用，任务直接进执行）⇒ 执行失败秒级出现；keepalive 临时停用、`maxTasksPerGoal=3`、`concurrency=1`。
+- **T15-④ 执行路径 live**：
 ```
-{"at":1793023983626,"taskId":"task-7640cf5cb12e10ed","attempt":0,"model":"recursive/flint-v1.0:free",
- "kind":"plan","action":"degraded","elapsedMs":3382,"error":"方案模型无输出",
- "stderrPath":"D:\\workbench-agent\\workbench-output\\tasks\\task-7640cf5cb12e10ed-plan-r0\\stderr.txt"}
+{"at":1793025528598,"taskId":"task-283acf54c6cbd028","attempt":0,"model":"stealth/glyph-cluster",
+ "kind":"no_artifact","action":"fail","elapsedMs":182952,"error":"执行失败: no_artifact","producedRunes":61}
 ```
-  ⇒ `stderrPath` 随台账落盘；`producedRunes` 缺省=0 = 零产出（与「方案模型无输出」一致）。
-  执行路径字段由单测覆盖，live 读数留待下次执行失败窗口复核。
+  ⇒ `producedRunes=61` = 说了 61 字但不含产物块（设计要区分的形态）；`stderrPath` 缺省 = 本轮无 stderr。
+- **T18⑦ live**：`dots-studio… state=down consec=1 cd_left_s=582`、`liquid… state=down consec=1 cd_left_s=591`（kilo-auto consec=3 / 2388 s 为历史累计）
+  ⇒ 一次 `no_artifact` 即 `down` + 冷却 ≈600 s（修前只 `degraded` / 3 次 / 120 s）—— round 26 写下的判据成立。
+- 链式切换记录：`dots-studio → kilo-auto → liquid`，`reason="模型失败自动切换（no_artifact）"`。
 
-### 运行边界（已完成）
-- round 28 的残留先清理：引擎 `--quit`、keepalive `/ENABLE`、配置从备份还原 + 重新 select、worktree 移除；
-- round 29 收尾同样复核：family=0、keepalive **Ready**、HEAD == origin/master == `dcc4207`、仓库 18 项未变、`docs/health-check.md` 仍不存在（成品未产出，如实记）。
+### 方法学要点（写进报告，可复用）
+- 要验「执行阶段」机制 ⇒ 先把方案阶段关掉；要验「方案阶段」机制 ⇒ 反之。
+
+### 运行边界与一条如实记录的缺陷
+- 引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、worktree 无残留、仓库 18 项未变、`docs/health-check.md` 仍不存在。
+- **发现**：备份 `config.json.bak-pre-t15verify-20261026-222811` 里混进了**上一轮实验**的值（`autoStart=true`、`maxTasksPerGoal=1`），
+  若只靠「从备份还原」会把实验配置当基线。**整改**：改为**显式写回基线 + 复核最终值**；
+  本次复核：`plan.enabled=true / autoStart=false / maxTasksPerGoal=12 / concurrency=2 / chain=true / ws=external/D:\workdesktop`。
 
 ### 我自己的错（本轮 1 次）
-- round 28 起把「执行路径已接线」当成「live 也能看到」，没先看窗口里出现的记录属于哪条路径 ⇒ 白等一个窗口。
-  整改：**接线后先按「窗口里最常出现的是哪条路径」核对**，必要时把同族路径一次性接齐再部署（round 29 即如此）。
+- 同上：把「备份」默认当成「纯基线」——备份是上一轮实验**之前**拍的，但上一轮实验本身可能没完全复原（round 28 的 bounded 值留在里面）。
+  整改：**基线一律显式写回并复核**，不依赖备份内容；备份只用于「改坏了能回滚」。
