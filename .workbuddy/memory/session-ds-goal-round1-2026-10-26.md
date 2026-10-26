@@ -233,3 +233,32 @@ round 3 加进白名单的 `frontend` 同理。修法：补两套工程阶梯
 
 ### 我自己的错（本轮 0 次）
 本轮无新增自身错误。
+## round 8（同会话，2026-10-26 13:18-13:35）—— 运行期取证：自动任务真的跑起来了
+
+### 为什么本轮要真跑
+前七轮把「工作空间/模板/目标/阶梯/白名单/审计」都配齐并做了离线自检，但**从来没真跑过一次自动任务**。
+本轮做**有界运行取证**：演示工程 + 临时把 `autoStart=true / maxTasksPerGoal=1 / concurrency=1 / chain=false`，
+取证后全部还原。
+
+### 取证读数（原日志）
+- `引擎已启动 concurrency=1 phase=running autonomy=自主：提升工作空间项目的全栈工程质量（阶段 0，进度 0%）`
+- `自主任务已生成 taskId=task-1792992244076-8f30 title=提升工作空间项目的全栈工程质量 · 体检 domain=quality
+   rationale=目标处于第 0 阶段，按领域推进阶梯执行「体检」`（T9 阶梯在运行期生效）
+- 子会话事件 `{"type":"session","cwd":"D:\\wb-demo-ws"}` + `sessions/--D-wb-demo-ws--/`
+  ⇒ **执行器 cwd = 被选中工作空间**（「聚焦被选中文件夹」的运行期铁证）
+- `尝试开始 model=deepseek-ai/deepseek-v4.1-flash` → `尝试结束 kind=bad_exit elapsedMs=47603` → 故障转移 `z-ai/glm-5.3`
+
+### 新登记
+- **T10（P0，待修）**：计划阶段 `bad_exit`（round 1 误启动时同样形态 ⇒ 可复现的车道故障）。后果：任务能生成、cwd 正确，
+  但拿不到模型产出 ⇒ 永不产出成果物、进不了验收与链式衍生。这是「自动任务真正提升质量」当前唯一拦路虎。
+- **T11（存疑，待复现）**：引擎退出后 `DSH Desktop.exe`（cmdline 含 wb-demo-ws）仍持有工作目录句柄，
+  `DeleteDirectory` 连续 4 次失败 ⇒ 与「DSH 子进程随主进程退出而回收」的架构声明不符；也可能是我 `--quit` 时
+  那个 glm 长尝试的子进程仍在合法运行。演示目录 `D:\wb-demo-ws`（仓外 4 个小文件）待占用释放后回收。
+
+### 运行边界与回滚（已完成）
+- 演示期设置：`autoStart=true / maxTasksPerGoal=1 / concurrency=1 / chain=false`，工作空间指向 `D:\wb-demo-ws`；
+- 取证后：config 从备份 `config.json.bak-pre-demo-20261026-131852` 还原，并重新 `--workspace select D:\workdesktop`
+  （审计新增 `op=select`，T7 修复生效）；`workbench` 进程数 0；`autoStart/maxTasks/并发/链` 均回到原值。
+
+### 我自己的错（本轮 0 次）
+本轮无新增自身错误（唯一未完成项是演示目录回收被句柄占用阻塞，已登记 T11）。
