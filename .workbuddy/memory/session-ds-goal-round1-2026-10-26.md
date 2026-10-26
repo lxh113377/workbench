@@ -38,6 +38,21 @@ T3（加前端/构建/性能域模板）必须**等 defaults.go 在途件提交�
 3. T3 前端/构建/性能/报错修复 2–3 条模板 + 条数/头注释同步。
 4. T4 `normalizeWorkspace` 静默降级上报 + reset 清 stale root。
 
+## 部署与线上验证（#40 三件套：提交 → 部署 → 线上验证）
+
+- **提交**：`a6be398`（报告 + 本回执）、`a1d0dcd`（chain.go + 契约测试 + 报告状态同步），均已推送 origin/master。
+- **部署**：从**干净 worktree**（`git worktree add --detach xtmp/rel-a1d0dcd a1d0dcd`）跑 `setup/build.ps1` ⇒ `BUILD_RC=0`，
+  链内 7 段全过（首页契约 / 产物页面逐字一致 / 内嵌资产 13 块逐字一致 / MOTW / 完整性标签），总计 70.8 s。
+  产物 `dist/workbench.exe` SHA256=`63DBD8D533CF17DF4A0032B6C6EB5F8D3AA5B81882F788F6A02F85463C8B64ED`（9.83 MB）；
+  旧产物备份 `dist/workbench.exe.bak-pre-t2-20261026-112201`；worktree 已 remove（不留残件）。
+  **为什么用 worktree 而非主工作区构建**：主工作区有并行会话未提交的 `templates/defaults.go` 等 3 件（在途件），
+  在主工作区构建会把**未提交内容**打进产物；干净 worktree 保证「产物 == HEAD」。
+- **线上验证**：① 部署后 `Get-FileHash` == `SHA256SUMS` 逐字一致；② `go version -m dist/workbench.exe` →
+  `vcs.revision=a1d0dcd3a297…` **等于 HEAD**（`vcs.modified=true` 是本仓常态：上一版产物 aa8ebde 同样为 true，已交叉核对）；
+  ③ `--version` rc=0；④ `tests/check_artifact_page_fresh.ps1` → PASS（CSS 块 78,139 B 与源码逐字一致）。
+- **CI**：`a6be398` → CI run 40263271042 = success（4m08s）+ Autonomy Container E2E 40263271011 = success；
+  `a1d0dcd` → CI run 40263452098 = **success** + Autonomy Container E2E 40263452089 = success。
+
 ## 未测成（如实标）
 - 靶子目录归属未定（须配置权威确认）；未做「未知参数当启动」的全仓调用点扫描；未跑 `tests/check_all.ps1`
   （零代码改动，跑它只会把**并行会话在途件**的结论挂到本轮头上）。
