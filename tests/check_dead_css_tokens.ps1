@@ -1,4 +1,4 @@
-﻿# check_dead_css_tokens.ps1 -- CSS 设计令牌不得「定义了却没人 var() 用」（round 93 起，round 99 重写判据）
+﻿# check_dead_css_tokens.ps1 -- CSS 死令牌 + 动画名双向对账（round 93 起；round 99 重写判据；round 253 加动画名）
 #
 # 判据口径的演进（每一步都是实测逼出来的，不是设计时想清楚的）：
 #   round 93 首版：数令牌名在语料里的**出现次数**，<=1 判死。
@@ -16,9 +16,9 @@
 #   但不计 rc；新增死令牌才判红。锚点不进基线（它不是债）。
 #
 # 用法: powershell -File tests/check_dead_css_tokens.ps1 [-Quiet]
-# 退出码: 0=无新增死令牌 / 1=有新死令牌 / 2=UNVERIFIED（取不到文件）
+# 退出码: 0=无新增死令牌且动画名双向对齐 / 1=有新死令牌或未对齐的动画名 / 2=UNVERIFIED（取不到文件或一条 @keyframes 都没解析到）
 #
-# 单一来源前提（2026-10-24 实测，防未来漂移）：本门禁只解析 assets_css.go 的 :root 块，
+# 单一来源前提（2026-10-24 实测；round 253 复核动画面）：令牌「定义」以 assets_css.go 的 :root 块为准，
 #   语料虽扫 web 包全部 .go，但令牌「定义」以 :root 为准。这一前提是成立的前提是 ——
 #   生产代码里 CSS :root 块**仅此一处**（已用 ':root{' 精确匹配核实：assets_css.go x1，
 #   其余命中都是脚本里的 PowerShell 变量 $root，不是 CSS 块）。若将来新增第二个 :root
@@ -149,12 +149,68 @@ if ($newDead.Count -gt 0) {
   Write-Host '  修法：① 用起来（var(--xxx) 替换对应硬编码）；② 删定义；③ 确要保留请登记基线并注明理由。' -ForegroundColor Yellow
   exit 1
 }
+# ---------- 动画名双向对账（round 253 扩展；与令牌同源的那类病：名义存在、实际失效）----------
+# 为什么加：@keyframes 名与 animation 引用必须双向对齐。引用了不存在的名字时**浏览器静默忽略**，
+# 页面看不出任何异常（不报错、不告警、控制台干净）；定义了却没人引用则是死代码。这正是本仓最怕的
+# 「隐身失败」类 —— 而此前没有任何闸覆盖动画名（受跟踪闸里 keyframes 字样命中 0）。
+# 判据面与令牌口径**分离**：只用生产 .go（排除 _test.go），否则测试里的断言字符串能把死动画救活。
+$animCorpus = ''
+foreach ($af in (Get-ChildItem -LiteralPath $webDir -Filter '*.go' -File)) {
+  if ($af.Name.EndsWith('_test.go')) { continue }
+  $akept = @()
+  foreach ($aln in ([IO.File]::ReadAllText($af.FullName) -split [string][char]10)) {
+    if ($aln.Trim().StartsWith('//')) { continue }
+    $akept += $aln
+  }
+  $animCorpus += (Strip-Block ($akept -join ([string][char]10))) + [string][char]10
+}
+$kfDefs = @()
+foreach ($dm in [regex]::Matches($animCorpus, '@keyframes\s+([A-Za-z_][A-Za-z0-9_-]*)')) {
+  $dn = $dm.Groups[1].Value
+  # 结构判定一律大小写敏感（CSS 动画名区分大小写；默认的 -contains 是忽略大小写的）
+  if ($kfDefs -cnotcontains $dn) { $kfDefs += $dn }
+}
+# 防「零定义 ⇒ 双向空集全绿」的空转：解析面一旦漂移（改了 keyframes 写法/换文件），这里必须先红。
+if ($kfDefs.Count -eq 0) { Write-Host 'UNVERIFIED: 一条 @keyframes 都没解析到（动画对账会空转）' -ForegroundColor Red; exit 2 }
+$kfx = @('none', 'infinite', 'alternate', 'alternate-reverse', 'reverse', 'normal', 'forwards', 'backwards', 'both', 'running', 'paused', 'ease', 'ease-in', 'ease-out', 'ease-in-ease', 'ease-in-out', 'linear', 'step-start', 'step-end', 'initial', 'inherit', 'unset', 'auto')
+$kfRefs = @()
+# 关键：按**整段**匹配到 ; 或 } 为止，不按行切 —— 实测 assets_css.go:144 的 animation 值以逗号结尾
+# 跨行续写（L145 才是 bloom 那段）。逐行正则会把续行的动画名整段丢掉，我第一版就是这么造出两个假死动画的。
+foreach ($rm in [regex]::Matches($animCorpus, 'animation(?:-name)?\s*:\s*([^;}{]*)')) {
+  foreach ($seg in ($rm.Groups[1].Value -split ',')) {
+    foreach ($tk in ($seg.Trim() -split '\s+')) {
+      if ($tk -cnotmatch '^[A-Za-z_][A-Za-z0-9_-]*$') { continue }
+      if ($kfx -ccontains $tk) { continue }
+      if ($kfRefs -cnotcontains $tk) { $kfRefs += $tk }
+    }
+  }
+}
+$kfUndef = @($kfRefs | Where-Object { $kfDefs -cnotcontains $_ })
+$kfUnused = @($kfDefs | Where-Object { $kfRefs -cnotcontains $_ })
+if ($kfUndef.Count -gt 0) {
+  Write-Host ('动画名对账未通过：' + $kfUndef.Count + ' 个 animation 引用了不存在的 @keyframes') -ForegroundColor Red
+  foreach ($u in $kfUndef) { Write-Host ('  - 引用未定义: ' + $u) -ForegroundColor Red }
+  Write-Host '  危害：浏览器对未知动画名静默忽略 —— 不报错、不告警、控制台干净，只有动效没了。' -ForegroundColor Yellow
+  exit 1
+}
+if ($kfUnused.Count -gt 0) {
+  Write-Host ('动画名对账未通过：' + $kfUnused.Count + ' 个 @keyframes 定义了却没人引用') -ForegroundColor Red
+  foreach ($u in $kfUnused) { Write-Host ('  - 死动画: ' + $u) -ForegroundColor Red }
+  Write-Host '  修法：接回去用起来，或删掉定义（留着会让后续读者以为有这套动效）。' -ForegroundColor Yellow
+  exit 1
+}
+
 if (-not $Quiet) {
   $sum = $usedN + $anchorN + $dead.Count
   if ($dead.Count -gt 0) {
     Write-Host ('死令牌门禁通过（带已知缺陷）：' + $tokens.Count + ' 个令牌里 ' + $usedN + ' 个在用、' + $dead.Count + ' 个死（全部已登记基线）、' + $anchorN + ' 个是配对锚点（承重不判死）｜校验和 ' + $sum + '/' + $tokens.Count) -ForegroundColor Yellow
   } else {
-    Write-Host ('死令牌门禁通过：' + $tokens.Count + ' 个令牌里 ' + $usedN + ' 个在用、' + $anchorN + ' 个配对锚点，零新增死令牌｜校验和 ' + $sum + '/' + $tokens.Count) -ForegroundColor Green
+    Write-Host ('死令牌门禁通过：' + $tokens.Count + ' 个令牌里 ' + $usedN + ' 个在用、' + $anchorN + ' 个配对锚点，零新增死令牌｜动画名双向对账：定义 ' + $kfDefs.Count + ' / 引用 ' + $kfRefs.Count + '（未定义 0、死动画 0）｜校验和 ' + $sum + '/' + $tokens.Count) -ForegroundColor Green
   }
 }
+
 exit 0
+
+
+
+
