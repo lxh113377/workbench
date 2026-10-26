@@ -85,6 +85,33 @@ func ResolveTimeout(taskTimeoutMin, defaultTimeoutMin int) time.Duration {
 	return 30 * time.Minute
 }
 
+// stderrTailLimit 是落盘 stderr 的字节上限（只留尾部：失败原因通常在最末几行）。
+const stderrTailLimit = 8 << 10
+
+// persistStderrTail 把子进程 stderr 写入 events.jsonl 同目录的 stderr.txt，返回落盘路径。
+//
+// 为什么需要（2026-10-26 round 9 · T10 实测）：bad_exit 的**判定依据就是 stderr**
+// （executor.classify 全靠它），可它此前只活在内存里 —— 分类用完即丢，任务目录里只剩
+// events.jsonl + overlay.yml，于是「为什么失败」在产物里无据可查（round 8 真跑一次自动任务，
+// bad_exit 47,603 ms，事后翻遍任务目录与日志都答不出原因）。
+// 本仓在册教训：失败必须可归因；7×24 无人值守下丢掉失败原因等于把缺陷锁死。
+//
+// 口径：非空才写；只留尾部 stderrTailLimit 字节；写失败**不阻塞执行**（观测面失败不改变判定）。
+func persistStderrTail(eventsPath, stderr string) string {
+	s := strings.TrimSpace(stderr)
+	if s == "" || strings.TrimSpace(eventsPath) == "" {
+		return ""
+	}
+	if len(s) > stderrTailLimit {
+		s = s[len(s)-stderrTailLimit:]
+	}
+	p := filepath.Join(filepath.Dir(eventsPath), "stderr.txt")
+	if err := os.WriteFile(p, []byte(s+"\n"), 0o644); err != nil {
+		return ""
+	}
+	return p
+}
+
 // stderrSummary 取 stderr 尾部摘要（用于日志与任务错误字段）。
 func stderrSummary(stderr string, max int) string {
 	s := strings.TrimSpace(stderr)

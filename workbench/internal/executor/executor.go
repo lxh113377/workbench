@@ -68,6 +68,8 @@ type Result struct {
 	ToolCalls  int
 	Thinking   strings.Builder
 	EventsPath string
+	// StderrPath 是本轮子进程 stderr 的落盘位置（有内容才非空；由来见 persistStderrTail）。
+	StderrPath string
 	LastError  string
 	Stalled    bool
 	Touch      func()
@@ -477,6 +479,9 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	waitErr := cmd.Wait()
 	res.Elapsed = time.Since(started)
 	res.ExitCode = cmd.ProcessState.ExitCode()
+	// 2026-10-26 round 9（T10）：四条收尾路径（卡死/超时/取消/正常结束）都在这里汇合，
+	// stderr 必须在此刻落盘 —— 否则 bad_exit 的判定依据随内存一起消失（见 pure.go persistStderrTail）。
+	res.StderrPath = persistStderrTail(eventsPath, stderrBuf.String())
 
 	if res.Stalled {
 		res.ErrorKind = string(KindStalled)

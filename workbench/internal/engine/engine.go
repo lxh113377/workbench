@@ -252,9 +252,22 @@ func (e *Engine) attachAttemptLogging() {
 					kind = res.ErrorKind
 				}
 			}
+			// 失败原因必须随日志走（2026-10-26 round 9 · T10）：此前只记 kind/elapsed，
+			// 一次真跑的 bad_exit 事后完全无法归因 —— 现在把 stderr 摘要（或执行器错误）一并落进日志，
+			// 并指向已落盘的 stderr.txt。日志是 7×24 无人值守下唯一的事实来源。
+			reason := ""
+			stderrPath := ""
+			if res != nil {
+				stderrPath = res.StderrPath
+				reason = model.Truncate(res.LastError, 300)
+			}
+			if strings.TrimSpace(reason) == "" && err != nil {
+				reason = model.Truncate(err.Error(), 300)
+			}
 			e.log.Info("尝试结束", logging.Redact([]any{
 				"taskId", task.ID, "model", modelID, "kind", kind,
 				"elapsedMs", elapsed, "stalled", stalled,
+				"reason", reason, "stderrPath", stderrPath,
 			})...)
 		}},
 	)
