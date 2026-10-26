@@ -202,3 +202,34 @@ T8 依赖的 `workbench/internal/templates/defaults.go` 第六轮开局仍未提
 ### 我自己的错（本轮 1 次）
 - 补丁注释先按推算写「17 条边」（旧 11 + 新增 5），**实测是 16**；立刻改用实测值，并在任务卡写明「以本文件输出为准」。
   教训：**能跑一次拿真值，就不要靠推算**（本仓在册同款教训）。
+## round 7（同会话，2026-10-26 13:0x-13:2x）—— T9：自主阶梯不再静默回退内容阶梯
+
+### 为什么本轮不开 T8
+T8 依赖的 `defaults.go` **第七轮开局仍未提交**（mtime 10:54，停滞 >2.5h）；补丁与任务卡已在 round 6 就绪并验证。
+本轮转去修更靠前的语义缺口：**自主任务到底会做什么**。
+
+### 缺陷与修法（T9）
+`internal/autonomy/planner.go` 的 `domainLadder` 只覆盖 content/code/knowledge/data/solution/report，
+`ladderFor` 对未知领域**静默回退 content 阶梯** ⇒ `domain=quality` 的自主目标落到
+「立框架：产出该主题的总纲与核心观点清单」（`--autonomy plan` 实测原文），与工程质量无关；
+round 3 加进白名单的 `frontend` 同理。修法：补两套工程阶梯
+（quality：体检→立项→小步修→判据固化→复盘；frontend：体检→基线→小步改→一致性→复盘）。
+
+### 判据（先红后绿 + 机器对账）
+新增 `internal/autonomy/planner_ladder_contract_test.go`：
+① 白名单域 ↔ 阶梯机器对账（防空转：白名单空 / 表空 / 步数 <3 均判红）；
+② 行为探针（quality/frontend 第一步 ≠ content 第一步，且阶梯里含工程动作词）。
+修前 FAIL 原文两条（缺阶梯 / 仍回退 content 阶梯），修后 PASS。
+
+### 提交 · 部署 · 线上验证（#40）
+- `9fb6095` 已推送；干净 worktree @9fb6095 构建 `BUILD_RC=0`（71.2 s）；部署到 `dist\` 与 `D:\workbench-agent\`，
+  两处 hash == `SHA256SUMS` = `BDCB9496…64C4`；`vcs.revision=9fb6095`；全仓 `go test ./...` rc=0；worktree 已移除。
+- **live 取证**：`--autonomy plan` 现输出「标题：提升工作空间项目的全栈工程质量 · **体检**」、
+  「当前阶段性目标（第 1 阶段）：**体检：按五轴（正确性/可读性/架构/安全/性能）扫当前工作目录的项目，列出带 文件:行号 的真实缺陷**」。
+
+### 剩余
+- T8 本体（应用 round 6 的已验证补丁）—— 等 `defaults.go` 在途件提交。
+- 引擎仍未启动（沿用 round 2 决定与回滚口径）；其闭环已由 round 6 的离线自检（11/0、12/0、pass:true）证明健康。
+
+### 我自己的错（本轮 0 次）
+本轮无新增自身错误。
