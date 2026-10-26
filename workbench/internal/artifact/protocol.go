@@ -34,7 +34,15 @@ const ProtocolInstruction = "" +
 	"   **原样**证明文件真的存在（引号必须保留，不要改写、不要加转义、不要加方括号）：\n" +
 	"\n" +
 	"   pwsh -NoProfile -Command \"if (Test-Path a.md) { exit 0 } else { exit 1 }\"\n" +
-	"5. 单个文件不超过 2MB，文件数不超过 20。\n"
+	"5. 单个文件不超过 2MB，文件数不超过 20。\n" +
+	// 第 6 条是 round 24 live 实测补的（T18④）：会吐字的车道（dots-studio / kilo-auto / liquid）都在输出
+	// **自己的**工具调用语法，而不是产物块 —— 现场形态：<dots_function_call><exec>…、
+	// <|tool_call_start|>[ls(path='/workdesktop')]<|tool_call_end|>。工作台不执行这些语法，
+	// 于是整个回答被判 no_artifact/未完成。这里把「不执行自有语法、只认 ARTIFACTS 块」写成硬性要求。
+	"6. 不要输出你自己的工具调用语法（实测出现过 <dots_function_call>…</dots_function_call>、\n" +
+	"   <|tool_call_start|>…<|tool_call_end|>、裸 function_call 之类）：工作台**不会执行**它们，\n" +
+	"   它们只会让整个回答被判为不合格并要求返工。要交付文件，只能按上面的 ARTIFACTS 块写；\n" +
+	"   没有产物块 = 没有交付。\n"
 
 // FENCE 是三个反引号，即 Markdown 代码围栏。
 // 用常量拼接而不是字面量：Go raw string 会被三个反引号截断；
