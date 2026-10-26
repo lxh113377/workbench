@@ -293,3 +293,35 @@ round 3 加进白名单的 `frontend` 同理。修法：补两套工程阶梯
    （读数假象）。整改：只匹配**新版才有的字段**（`"reason":`）并核对时间戳。
 2. 两次用 `tools.edit` 在同一文件上连续改时，误以为「先 read 再连续 edit」总成立 —— 有一处因版本失配被拒；
    本轮后半改用「数组拼行 + 精确 old_string」逐条落地，并把失败当作版本失配信号而非重试信号。
+## round 11（同会话，2026-10-26 14:15-15:00）—— 终止取证：exit code -1、stderr 全空（T13）
+
+### 本轮做了什么
+- 用**控制台子系统**重新构建诊断二进制（去掉 `-H=windowsgui`，子系统=3）并把 stdout/stderr 重定向到文件，
+  再用 .NET 探针 `WaitForExit` 取退出码 —— 这才拿到「进程消失」背后的真实读数。
+- 三次实验读数：现场 GUI 版最后日志 ≈ start+181 s；控制台版 `diag-err.txt`/`diag-out.txt` **均 0 字节**；
+  .NET 探针 **`exitCode=-1` / `elapsedSec=308` / stderr 空**。
+
+### 已排除（都有实测依据）
+1. **不是 Go panic**：panic 会向 stderr 打栈，而控制台构建下 stderr 为 0 字节。
+2. **不是自愈重启**：无「资源自愈触发 / 自愈停机」日志，`state.json` 停在 running、`stoppedAt=0`。
+3. **不是并行轮次会话的清扫**：`gate-readings.jsonl` 最后写入 11:18:07，此后 3.5 h 无活动。
+4. **不是「我的 shell 作业对象回收整树」**：经 WMI/CIM + cmd 启动（父进程 WmiPrvSE/cmd）同样 ~3–5 分钟死亡。
+
+### 未取得可信读数（如实标）
+- 中性长进程对照实验**没跑起来**（探针日志为空，匹配到的 “Start-Sleep 1200” 进程其实是我自己的工具壳）
+  ⇒ 「环境是否回收任意长驻进程」仍未定论，本轮不据此下任何结论。
+- 因此 **T10 第二步（用 stderr.txt 定位 bad_exit 根因）仍被阻塞**：引擎活不过一次尝试收尾。
+
+### 新登记 T13（P0）
+**谁在 ~3–5 分钟处终止 workbench？** 形态 = 外部强制终止或无声 exit（退出码 -1、零 stderr、零 app 级记录）。
+下一步判据：① 与 AI 工具链无关的通道（计划任务/独立会话）跑通中性对照 ≥10 min；② 秒级定点 + 死亡时刻进程表快照；
+③ app 加「退出即留痕」（任何 exit 路径写 `process_exit` + 退出码）；④ 若确认外部终止，T10 的复现必须换到作业对象之外且非本工具链的通道。
+
+### 运行边界与回滚（已完成）
+- 诊断工件（`runtime\tmp\wb-diag.exe`、diag 数据根）与演示工作空间 `D:\wb-demo-ws` 均已回收；
+- live 配置已从备份 `config.json.bak-pre-t10b-20261026-141804` 还原并重新 `--workspace select D:\workdesktop`
+  ⇒ `autoStart=false / maxTasks=12 / concurrency=2 / chain=true / external D:\workdesktop`；`workbench` 与 `wb-diag` 进程数均为 0。
+
+### 我自己的错（本轮 1 次）
+- 中性对照实验的**启动通道**没验证就启动：探针日志为空却继续轮询 10 分钟，最后匹配到的进程其实是我自己的工具壳 ——
+  这是一次「读数对象不是我假设的那个」的假实验。整改：**实验启动后先验「被测对象存在且身份正确」**，再进入等待。
