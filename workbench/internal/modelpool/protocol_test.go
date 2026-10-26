@@ -90,6 +90,21 @@ func TestRequireArtifactsFor(t *testing.T) {
 	if requireArtifactsFor(nil, nil) {
 		t.Fatal("nil 结果与 nil 任务应判 false")
 	}
+	// 方案阶段豁免（round 24 实测回归）：执行器对**所有**阶段都拼产物协议，因此它上报的 ArtifactsRequired
+	// 在方案阶段也是 true；若不以阶段判据豁免，方案阶段返回的合法 JSON 会被判成 no_artifact。
+	if requireArtifactsFor(withFlag, &model.Task{Phase: model.PhasePlan}) {
+		t.Fatal("方案阶段不得要求产物块（合法 JSON 曾被误判 no_artifact）")
+	}
+	if requireArtifactsFor(&executor.Result{}, &model.Task{Phase: model.PhasePlan, Prompt: "…<<<ARTIFACTS>>>…"}) {
+		t.Fatal("方案阶段即便提示词里出现协议文本也不得要求产物块")
+	}
+	// 执行阶段（Phase 为空）仍要求产物块：回归修复不得把正判据一起豁免掉。
+	if !requireArtifactsFor(withFlag, &model.Task{}) {
+		t.Fatal("执行阶段应要求产物块")
+	}
+	if !requireArtifactsFor(&executor.Result{}, &model.Task{Prompt: "…<<<ARTIFACTS>>>…"}) {
+		t.Fatal("执行阶段提示词自描述兜底应判 true")
+	}
 }
 func TestModelAttributableNoArtifact(t *testing.T) {
 	if !modelAttributable(noArtifactKind) {

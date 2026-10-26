@@ -122,9 +122,11 @@ func (e *Engine) buildPlan(ctx context.Context, task *model.Task, cfg config.Con
 	}
 	// 方案任务走独立 id，避免与真实任务目录冲突（执行器按 id 建目录）。
 	sub := &model.Task{
-		ID:         task.ID + "-plan-r" + fmt.Sprint(round),
-		Title:      "方案：" + task.Title,
-		Prompt:     prompt,
+		ID:     task.ID + "-plan-r" + fmt.Sprint(round),
+		Title:  "方案：" + task.Title,
+		Prompt: prompt,
+		// 显式标记方案阶段：产物判据据此豁免（执行器仍会拼产物协议，见 model.PhasePlan 注释）。
+		Phase:      model.PhasePlan,
 		TimeoutMin: minutes,
 		// WorkRoot 继承父任务：否则 project 模式会为方案调用多建一个空沙箱
 		// （与 judge 那次同类，现场实测 40 秒内 26 个空沙箱）。

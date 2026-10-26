@@ -165,16 +165,25 @@ type ChainSpec struct {
 }
 
 // Task 是一个可执行任务实例。
+// PhasePlan 是方案阶段的阶段标记值：只输出 JSON 计划，不要求产物协议块。
+const PhasePlan = "plan"
+
 type Task struct {
 	// WorkRoot 是 external（用户目录）模式下该任务的真实工作目录。
 	// 项目模式下留空，执行器在数据根的沙箱里跑。
-	WorkRoot   string    `json:"workRoot,omitempty"`
-	ID         string    `json:"id"`
-	ChainID    string    `json:"chainId"`
-	SessionID  string    `json:"sessionId"`
-	TemplateID string    `json:"templateId"`
-	Title      string    `json:"title"`
-	Prompt     string    `json:"prompt"`
+	WorkRoot   string `json:"workRoot,omitempty"`
+	ID         string `json:"id"`
+	ChainID    string `json:"chainId"`
+	SessionID  string `json:"sessionId"`
+	TemplateID string `json:"templateId"`
+	Title      string `json:"title"`
+	Prompt     string `json:"prompt"`
+	// Phase 是阶段标记：空 = 执行阶段（按产物协议交付）；PhasePlan = 方案阶段（只输出 JSON 计划）。
+	//
+	// 为什么单列字段（2026-10-26 round 24 实测回归）：产物判据原先只看「执行器有没有把协议拼进 prompt」，
+	// 而执行器对**所有**阶段都拼协议 ⇒ 方案阶段返回的合法 JSON 被误判成 no_artifact（实测方案调用失败）。
+	// 用显式阶段标记，而不是猜 id 后缀或标题前缀。
+	Phase      string    `json:"phase,omitempty"`
 	Domain     string    `json:"domain"`
 	Tags       []string  `json:"tags"`
 	Priority   int       `json:"priority"`

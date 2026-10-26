@@ -22,6 +22,12 @@ func RequiresArtifacts(prompt string) bool {
 // 只按提示词判时 `no_artifact` 一次都没触发（实测 count=0）。执行器上报（`Result.ArtifactsRequired`）才是第一判据；
 // 保留提示词判据是为了将来协议改由上层拼时不失配。
 func requireArtifactsFor(res *executor.Result, task *model.Task) bool {
+	// 方案阶段永远不要求产物块 —— 这条必须放在最前面（round 24 实测回归）：
+	// 执行器对**所有**阶段都会把产物协议拼进 prompt，于是它上报的 ArtifactsRequired 在方案阶段也是 true，
+	// 结果方案阶段返回的合法 JSON 被判成 no_artifact（实测 `方案调用失败: 执行失败: no_artifact`）。
+	if task != nil && task.Phase == model.PhasePlan {
+		return false
+	}
 	if res != nil && res.ArtifactsRequired.Load() {
 		return true
 	}
