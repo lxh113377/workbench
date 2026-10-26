@@ -412,3 +412,36 @@ round 3 加进白名单的 `frontend` 同理。修法：补两套工程阶梯
    整改：脚本里一律用 ASCII 引号；中文只出现在注释/字符串内容里，且先小样验证。
 2. 两次在 `gofmt -w` / 脚本写盘之后直接 `edit`，被 FS 版本守卫拒绝（版本失配）—— 这是**守卫在正常工作**；
    整改：**任何 gofmt/脚本写盘之后，先重新 read 再 edit**。
+## round 15（同会话，2026-10-26 16:05-16:25）—— T15-②：探测不再抹掉执行侧失败
+
+### 缺陷（有账本数据）
+`ApplyProbe` 的 StateHealthy 分支原先无条件 `ConsecFail = 0; Success++; CooldownTo = 0; LastErr = ""` ——
+探测只证明「端点可达」，却被当成「模型会产出」。实测健康账本：`deepseek-ai/deepseek-v4.1-flash`
+`succ=17 fail=3 **consec=0** cooldownTo=0 state=healthy`；同一时刻 status 日志是 `probe: from degraded to healthy` +
+`本轮探测 36 个：可用 36 / 下线 0` ⇒ 每轮探测把执行侧刚记下的失败擦掉，首路由永远落在这个零产出模型上。
+
+### 修法（两文件 + 一测）
+- 新增 `internal/modelpool/exec_health.go`：`isExecutionFailureKind(kind)` —— 结构性故障（unreachable / missing_credential /
+  bad_endpoint…）可由探测恢复；执行侧失败（stalled / bad_exit / timeout / upstream_failed）只能由**执行成功**清除。
+- `manager.go` 的 `ApplyProbe` healthy 分支据此分流；可达性信息（ProbeOK / LatencyMs / State）照旧更新。
+- 新增 `probe_execution_failure_test.go`：正例（stalled 失败后探测成功不得清零/解冷却）+ 对照组（unreachable 仍必须被探测恢复）。
+
+### 真跑读数（keepalive 临时停用，观察后已复原）
+```
+before: deepseek succ=17 fail=3 consec=0 cooldownTo=0
+（其间一轮探测：可用 36 / 下线 0）
+after : deepseek succ=18 fail=4 consec=1 cooldownTo=0 state=healthy
+16:20:25 z-ai/glm-5.3        → 16:21:54 stalled（~149 s 早回收）→ 轮换 openai/gpt-oss-20b
+16:22:34 openai/gpt-oss-20b  → bad_exit → 轮换 z-ai/glm-5.3-flash
+```
+⇒ 连续失败不再被探测清零；**本次任务首个模型是 glm-5.3 而非 deepseek**（首路由不再永远落在零产出模型上）；T15-① 早回收继续生效。
+
+### 提交 · 部署 · 线上验证（#40）
+- `0169915` 已推送；干净 worktree 构建 `BUILD_RC=0`（72.4 s）；部署到 dist 与 D:\workbench-agent，
+  两处 hash == `SHA256SUMS` = `A3273538…7EB6`、`vcs.revision=0169915`；全仓 `go test ./...` rc=0；
+  modelpool 三测 PASS（含既有 `TestApplyProbeStateMachine`——结构性恢复语义未被改坏）。
+- 运行边界已复原：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、
+  agent 配置从备份 `config.json.bak-pre-t15c-20261026-161655` 还原并重新 select `D:\workdesktop`。
+
+### 我自己的错（本轮 0 次）
+本轮无新增自身错误（沿用上轮教训：脚本只写 ASCII 引号；外部写盘后先 read 再 edit）。
