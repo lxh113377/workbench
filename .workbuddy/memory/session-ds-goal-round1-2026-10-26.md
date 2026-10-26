@@ -534,3 +534,32 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 ### 我自己的错（本轮 1 次）
 - 写报告编辑程序时，代码块里有 4 行 JS 字符串**漏了收尾引号** ⇒ 解析期报 `Expected ',', got 'string literal'`（零执行、零副作用）。
   整改：含代码块的字符串数组一律「逐行都带收尾引号」，并在提交前用 `join` 先跑一次生成。
+## round 19（同会话，2026-10-26 17:30-17:45）—— 里程碑：计划阶段第一次产出（kind=ok + 1728 tokens）
+
+### 因果链（round 17/18 的排除动作 → 本轮产出）
+把 15 条上游额度耗尽的 dead lane 判 down 后，调度器终于走到能出产出的车道：
+```
+17:36:29 combo:auto-free → boot_failed（egress 不服务该模型）
+17:36:34 dots-studio/dots-3-note-preview:free
+17:36:55 kind=ok elapsedMs=12423     ← 19 轮来第一次成功（此前全是 bad_exit / stalled）
+17:36:55 nvidia/nemotron-3-super-120b-a12b:free → boot_failed（Provider returned error）
+17:36:58 z-ai/glm-5.3 → 17:39:18 stalled（早回收 2m0.729s）→ openai/gpt-oss-20b（运行中，观察窗结束）
+```
+
+### 产出实物
+- `status step_end` 带**真实 token 用量**：input=1148 / output=580 / total=1728 / reasoning=95 —— **首次非零 token**；
+- `final` = 合规方案 JSON，落盘 `plans/blueprint-0.json`（2,272 B）：交付 `docs/health-check.md`、7 步（探查 + 五轴 + 汇总）、
+  验收 `pwsh -NoProfile -Command "if (Test-Path docs/health-check.md) { exit 0 } else { exit 1 }"`（expectExit 0）；
+- `attempts.jsonl` 记 `kind=plan, action=done, elapsedMs=268396`（方案：模型方案｜交付 1｜步骤 7｜验收 1）。
+
+### 尚未达成（如实标）
+执行阶段仍零产出（`docs/health-check.md` 不存在）。新登记 **T17**：
+① 执行阶段优先复用刚成功的方案模型；② `boot_failed`（egress 不服务该模型 / Provider returned error）并入健康判定；
+③ 执行阶段 ARTIFACTS 协议与「约 1000 字」对弱车道偏重，评估分档降载。
+
+### 运行边界与回滚（已完成）
+- 引擎 `--quit`（family=0）；`\WorkBenchKeepAlive` `/ENABLE`；配置从备份 `config.json.bak-pre-t17-*` 还原并重新 select `D:\workdesktop`；
+- 任务未写入仓库（`git status` 仍是会话前那 18 项，无新增）。
+
+### 我自己的错（本轮 0 次）
+本轮无新增自身错误。
