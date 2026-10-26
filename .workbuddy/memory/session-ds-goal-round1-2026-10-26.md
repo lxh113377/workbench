@@ -472,3 +472,36 @@ after : deepseek succ=18 fail=4 consec=1 cooldownTo=0 state=healthy
 ### 我自己的错（本轮 1 次）
 - 追加测试时用了「文件末尾三行」当锚点 ⇒ `old_string` 命中 2 处被守卫拦下（**守卫在正常工作**）。
   整改：锚点取**该函数独有的一行**（`IsSubstantiveEvent = %v` 那行）；教训是「锚点要唯一，不要用通用收尾形状」。
+## round 17（同会话，2026-10-26 16:52-17:10）—— T16：找到「零产出」直接成因（上游额度耗尽被当健康）
+
+### 三条独立证据咬合
+1. **子会话缓存（DSH 遥测）**：`tokenUsage.totals = uncachedInputTokens=0; outputTokens=0`、`contextPressure.surfaceTokens=623`、
+   `turnBoundary.lastStepBoundary=start` ⇒ **一个 token 都没产出**，且 prompt 很小（否定了「提示词过大」猜想）。
+2. **`our-free-model/availability.json`**（16:42:06 探测，egress CN）：**1 个 region-blocked + 7 个 throttled**（detail 全为 Free usage limit reached）。
+3. **代码**：`probeSpecs` 只把 `unavailable / region-blocked / deprecated` 判为不可用 ⇒ **throttled 被当成健康**，
+   调度器继续把额度耗尽的免费车道当可用 ⇒ 每个尝试白烧 120–150 s 且必然零产出。
+
+### 修法（两文件 + 一测）
+- 新增 `internal/modelpool/upstream_verdict.go`：`upstreamVerdictState(verdict)` 纯函数 ——
+  `unavailable/region-blocked/deprecated` ⇒ down(`model_unavailable`)；**`throttled/rate-limited/quota-exceeded` ⇒ down(`model_throttled`)**；其余不判。
+- `service.go` 的 `probeSpecs` 改调该纯函数；新增 11 条边界单测（含大小写/空格不敏感、「上游无判定不得判 down」）。
+- 恢复路径保留：throttled 判 down 后仍走既有周期探测与冷却，上游恢复即回调度队列。
+
+### 真跑读数（部署后真跑，keepalive 临时停用，观察后已复原）
+```
+pool.json 健康度分布：8 down / 28 healthy      （修前：36/36 healthy）
+model-status.jsonl：本轮探测 36 个：可用 28 / 下线 8
+  例：deepseek-v4.1-flash-free | healthy→down | 上游判定该模型额度耗尽/被限流（throttled）
+```
+
+### 遗留限制（如实标 · 新登记 T16-②）
+availability 的键是 OFM 车道 id（`*-free`），池里 36 条路由用另一套 id（如 `deepseek-ai/deepseek-v4.1-flash`）⇒ 本轮仅 **8 个 id 对得上**，
+其余 28 条「healthy」里可能仍有上游耗尽的孪生 id。下一步：两套 id 空间做**显式同族合并**。
+
+### 提交 · 部署 · 线上验证（#40）
+- `7e0300d` 已推送；干净 worktree 构建 `BUILD_RC=0`（79.5 s）；部署到 dist 与 D:\workbench-agent，
+  hash == `SHA256SUMS` = `0474D42E…00F3`、`vcs.revision=7e0300d`；全仓 `go test ./...` rc=0；modelpool 全包 ok。
+- 运行边界已复原：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`、配置从备份还原 + 重新 select、worktree 已移除。
+
+### 我自己的错（本轮 0 次）
+本轮无新增自身错误。
