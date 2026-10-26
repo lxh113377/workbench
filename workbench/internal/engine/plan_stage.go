@@ -44,6 +44,11 @@ type planStage struct {
 	Err error
 	// ElapsedMs 是规划耗时。
 	ElapsedMs int64
+	// StderrPath / ProducedRunes 是方案阶段的「失败取证」两件套（T15-④ 的第二本站）：
+	//   空/0 = 规划模型没吐任何东西；非 0 = 吐了但解析失败。台账据此把两类失败分开，
+	//   不必再翻任务目录去猜（对齐执行阶段的同名台账字段）。
+	StderrPath    string
+	ProducedRunes int
 }
 
 // usable 判断这次规划是否可用于编排执行。
@@ -135,6 +140,8 @@ func (e *Engine) buildPlan(ctx context.Context, task *model.Task, cfg config.Con
 	started := time.Now()
 	res, err := e.runner.Run(ctx, sub, modelID)
 	st.ElapsedMs = time.Since(started).Milliseconds()
+	// 先取证再判失败：三条失败路径（调用失败 / 空输出 / 解析失败）都要带着这份读数回去。
+	st.StderrPath, st.ProducedRunes = attemptEvidence(res)
 	if err != nil {
 		st.Err = fmt.Errorf("方案调用失败: %w", err)
 		return st

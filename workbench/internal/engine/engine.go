@@ -1011,7 +1011,8 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 				e.store.AppendAttempt(store.AttemptRecord{
 					TaskID: task.ID, Attempt: attempt, Model: pst.Model, Kind: "plan",
 					Action: "done", ElapsedMs: pst.ElapsedMs,
-					Error: "方案：" + pst.Blueprint.SummaryLine(),
+					Error:      "方案：" + pst.Blueprint.SummaryLine(),
+					StderrPath: pst.StderrPath, ProducedRunes: pst.ProducedRunes,
 				})
 				// 方案结果写回任务：面板要能看出"方案层真的跑过、用的是哪个思考模型"，
 				// 否则"思考模型只出方案"就是一句无法验证的口号。
@@ -1040,6 +1041,8 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 				e.store.AppendAttempt(store.AttemptRecord{
 					TaskID: task.ID, Attempt: attempt, Model: pst.Model, Kind: "plan",
 					Action: "degraded", ElapsedMs: pst.ElapsedMs, Error: reason,
+					// 方案阶段的取证两件套：`producedRunes=0` = 模型没吐字；>0 = 吐了但方案 JSON 解析失败。
+					StderrPath: pst.StderrPath, ProducedRunes: pst.ProducedRunes,
 				})
 				_, _ = e.store.Update(task.ID, func(t *model.Task) error {
 					t.PlanDegraded = true
