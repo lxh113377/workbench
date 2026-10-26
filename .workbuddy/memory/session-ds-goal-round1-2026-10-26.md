@@ -382,3 +382,33 @@ round 3 加进白名单的 `frontend` 同理。修法：补两套工程阶梯
 
 ### 我自己的错（本轮 0 次）
 本轮无新增自身错误。
+## round 14（同会话，2026-10-26 15:35-16:00）—— T15：首进展预算从「空转」到实测生效
+
+### 做了什么（先测后改 → 实测驱动修正 → 再实测）
+1. 第一版 `51474ee`：首进展预算 base/3 夹 [30,120] 秒 + `IsEarlyStall`（只看「有没有过第一次事件/产出」）。
+   真跑一次 ⇒ **一次都没触发**（尝试跑满 317 s+；另一次实测 463,151 ms）。
+2. 定位：`consume` 对**每条**事件都刷新活跃度，而 DSH 子进程一启动就吐 `status` 握手帧 ⇒「从未有过事件」永远不成立
+   —— 本仓在册的「判据空转」族（判据在跑，受理面被握手帧吃掉）。
+3. 第二版 `b40be85`：新增 `IsSubstantiveEvent`（final/text/thinking/tool_call/error 算；status 带 usage 或
+   phase=turn_end/step_end 算；握手不算），首进展判定改用独立信号 `lastProgress`。
+4. 再实测（keepalive 临时停用、同一目标）：
+   `15:54:32 尝试开始 deepseek-ai/deepseek-v4.1-flash` → `15:57:05 尝试结束 kind=stalled elapsedMs=152799`、
+   `reason="启动后零进展（首进展预算 120 s 内既无事件也无产出），已提前回收并轮换下一个模型"` → `15:57:05 尝试开始 z-ai/glm-5.3`。
+   对比 452,399 / 463,151 ms ⇒ **≈3× 提速 + 立即轮换 + 失败自带原因**。
+
+### 未解释的残差（如实标）
+预算 120 s、实测 152.8 s，多出 ~33 s；ticker 仅 5 s 粒度不足以解释。候选：external 工作空间下的 workspace mtime 信号、
+或看门狗 goroutine 调度延迟 —— 未逐帧分解，登记 **T15-③**，不下结论。
+
+### 提交 · 部署 · 线上验证（#40）
+- `51474ee`（第一版）与 `b40be85`（第二版）均已推送；@b40be85 干净 worktree 构建 `BUILD_RC=0`（76.5 s），
+  部署到 `dist` 与 `D:\workbench-agent`，两处 hash == `SHA256SUMS` = `B37441D9…FEE5`、`vcs.revision=b40be85`。
+- 单测：executor 三测 PASS（`TestFirstProgressSecondsClamps` / `TestIsEarlyStall` / `TestIsSubstantiveEvent`）。
+- 运行边界已复原：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、
+  agent 配置从备份 `config.json.bak-pre-t15live-20261026-154206` 还原并重新 select `D:\workdesktop`。
+
+### 我自己的错（本轮 2 次）
+1. 用「智能引号」（U+201C/U+201D）写 PowerShell 字符串 ⇒ 解析器把全角引号当引号，整段脚本 parse error（零执行）。
+   整改：脚本里一律用 ASCII 引号；中文只出现在注释/字符串内容里，且先小样验证。
+2. 两次在 `gofmt -w` / 脚本写盘之后直接 `edit`，被 FS 版本守卫拒绝（版本失配）—— 这是**守卫在正常工作**；
+   整改：**任何 gofmt/脚本写盘之后，先重新 read 再 edit**。
