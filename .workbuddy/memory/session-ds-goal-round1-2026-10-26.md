@@ -56,3 +56,28 @@ T3（加前端/构建/性能域模板）必须**等 defaults.go 在途件提交�
 ## 未测成（如实标）
 - 靶子目录归属未定（须配置权威确认）；未做「未知参数当启动」的全仓调用点扫描；未跑 `tests/check_all.ps1`
   （零代码改动，跑它只会把**并行会话在途件**的结论挂到本轮头上）。
+## round 2（同会话，2026-10-26 11:25-11:55）
+
+### 做了什么（全部有读数）
+1. **T1 工作空间真正选中**：把运行时部署到**仓外** `D:\workbench-agent`（只复制 `workbench.exe` + `SHA256SUMS`，不搬旧数据根），
+   `--workspace select D:\workdesktop` 成功 ⇒ `config.json` 的 `workspace={mode:external,root:D:\workdesktop}`、
+   `--workspace status` = `mode=external / root=D:\workdesktop`、`workspace-audit.jsonl` 2 条 `allowed=true`。
+   为什么必须搬到仓外：`Validate` 拒绝「exe 自身目录及其父目录」（`workspace.go:396-402`），而工作台 exe 在 `dist\` ⇒ 选 `D:\workdesktop` 必被拒。
+2. **T5 自主目标对准质量域**：`--autonomy goal "提升工作空间项目的全栈工程质量" "<意图>" quality` ⇒ `goal-1792985630633-c697fc83`（domain=quality）。
+3. **发现并修掉 P0（T6，提交 `7028221`）**：自主白名单被 `DefaultAutonomyConfig().AllowedDomains` 的**硬编码领域集合**钳制且**静默剔除** ——
+   写进 config.json 的 `quality` 在一次 exe 运行后即消失（备份 3792 B 含 / 现盘 3773 B 不含），`--autonomy plan` 报「草案被边界拒绝」
+   ⇒ 自主链路产不出任何质量域任务。修法 3 处 + 新测试（内置集合补 quality / 剔除走 `addWarning` / 译名表加 `quality=工程质量`）。
+   修后实测：`--autonomy plan` 出 quality 草稿、同一 exe 再跑 quality 仍在、`--diagnose` 出现剔除告警一行。
+4. **提交 · 部署 · 线上验证**：`7028221` 已推送；干净 worktree @7028221 构建 `BUILD_RC=0`（80.4 s），
+   部署到 `dist\` 与 `D:\workbench-agent\`，两处 hash == `SHA256SUMS` = `4862AB62…A6C12`；
+   `go version -m` vcs.revision=`7028221`；`--version` rc=0；`go test ./internal/web/`（含「产物与源码逐字一致」契约）ok。
+5. **未启动引擎**：上一实例由老大 `--quit` 停于 2026-10-25 00:09（`userQuit=true`），且本机同时有两个 DSH 会话共用同一免费模型池；
+   启动是一行命令（`D:\workbench-agent\workbench.exe --silent`）、回滚 `--quit`，留待明确需要时再做。
+
+### 本轮新登记的待做
+- **T7**：CLI `--workspace select` 直写 `cstore.Update`、不经 `Manager.SetConfig` ⇒ **不落 select 审计记录**（面板路径会落）。
+- **T4**：`normalizeWorkspace` 静默降级 external→project 仍未上报（本轮未动）。
+- **T3**：前端/构建/性能/报错修复模板 —— 仍受阻于并行会话在途的 `templates/defaults.go`（本轮结束时其状态未变）。
+
+### 我自己的错（本轮 1 次）
+- 把尚未创建的目录当 workdir 传参 ⇒ `spawn … ENOENT`（整条命令未执行、无副作用）；整改：**先建目录，再以它为 workdir 运行**。
