@@ -41,6 +41,12 @@ func PlanPrompt(goalIntent, taskTitle, taskPrompt string, minWords int, lastFail
 	b.WriteString(fmt.Sprint(MaxSteps))
 	b.WriteString(" 条，每条都要有可判定的完成标准。\n")
 	b.WriteString("5. 禁止写【省略】【其余同上】这类占位。\n")
+	// 第 6 条由 round 31 的定向实验导出：方案阶段实测**同样**频繁出现自有工具调用语法
+	// （`<|tool_call_start|>[bash(command='ls -la', timeout=30)]`、`<dots_function_call>…`），
+	// 结果反复落成「方案 JSON 解析失败」，任务被迫退化直执行。
+	// 工作台不执行这些语法，也不会把它们当作方案 —— 必须在提示词里说清楚。
+	b.WriteString("6. 不要输出你自己的工具调用语法（实测出现过 `<|tool_call_start|>[bash(...)]`、`<dots_function_call>…`）：\n")
+	b.WriteString("   工作台**不会执行**它们，方案只会被判为不可用。方案只能是一个 JSON 对象（见下方 schema）。\n")
 
 	b.WriteString("\n## 输出 schema\n")
 	b.WriteString("{\n")
