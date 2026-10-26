@@ -208,6 +208,14 @@ func runApp(args []string) error {
 		logger = logging.Nop()
 	}
 	defer func() { _ = logger.Close() }()
+	// 配置修正告警必须在启动时说清楚（2026-10-26 round 4）。
+	// Config.Warnings 记录的正是「external 工作目录因缺合法绝对根被回落 project」这类**静默降级**
+	//（被选中的工作目录无声失效、任务回到数据根沙箱）；而此前全仓没有任何调用方读它 ——
+	// 本仓 config.go addWarning 上方自己写着「若没有人读 Warnings，跨字段校验就仍然不可见」。
+	// 这里补上唯一的一处启动期读取点：写结构化日志（也随 --diagnose 的 config 段可见）。
+	for _, w := range cstore.Get().Warnings {
+		logger.Warn("配置修正", "warning", w)
+	}
 	hub := web.NewHub(300)
 	eng, err := engine.New(layout, cstore, st, reg, hub)
 	if err != nil {

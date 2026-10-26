@@ -876,8 +876,20 @@ func (c *Config) normalizeWorkspace() {
 	if c.Workspace.Mode == workspace.ModeExternal {
 		root := c.Workspace.Root
 		if root == "" || !filepath.IsAbs(root) {
+			// 2026-10-26（round 4 实测缺陷）：此处原为**静默**降级 —— 被选中的工作目录被无声丢掉，
+			// 任务回到数据根沙箱、workspace context 不再注入（engine.workspaceContextText 仅在
+			// external 时返回非空），而配置里只剩一个 stale root（round 1 现场即如此：
+			// mode=project 却留着 root=D:\workdesktop\ws-agent-target，读起来像「已选中」）。
+			// 处置：按本仓既有机制登记 Warnings（addWarning：钳制静默、Warnings 让被钳过可观测），
+			// 该字段随 --diagnose 的 config 段直接可见，可用于自动化与下游排查。
+			shown := root
+			if shown == "" {
+				shown = "（空）"
+			}
 			c.Workspace.Mode = workspace.ModeProject
 			c.Workspace.Root = ""
+			c.addWarning("workspace.mode",
+				"external 缺少合法绝对根（原值 "+shown+"）已回落 project 模式；被选中的工作目录不再生效")
 		}
 	}
 }
