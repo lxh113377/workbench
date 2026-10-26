@@ -32,6 +32,11 @@ type AttemptRecord struct {
 	DelayMs   int64  `json:"delayMs"`   // 本次失败后计划等待（毫秒）
 	ElapsedMs int64  `json:"elapsedMs"` // 本次执行耗时
 	Error     string `json:"error,omitempty"`
+	// StderrPath / ProducedRunes 是「失败取证」两件套（T15-④，round 27）：
+	//   前者 = 本轮子进程 stderr 的落盘位置（空 = 没吐 stderr），后者 = 最终回答的字符数（0 = 零产出）。
+	// 动机：只靠 `error` 摘要排查时仍要翻任务目录；写进台账就能一眼分辨「子进程报错」与「模型空产出」。
+	StderrPath    string `json:"stderrPath,omitempty"`
+	ProducedRunes int    `json:"producedRunes,omitempty"`
 }
 
 // AuditRecord 是一条审计记录，写入 audit.jsonl 后不可变。
