@@ -584,19 +584,31 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-- `final.md`（304 B）= 模型自有协议 `<dots_function_call><exec><command>ls -la</command>`（不认 `<<<ARTIFACTS>>>`）；
-- 日志「方案层不可用，退化直执行 → 产出过短且无产物块，判定为未完成」；
-- `attempts.jsonl`：`kind=plan action=degraded`（kimi-k2.6 方案 JSON 解析失败）、`kind=done action=done`（dots，321,692 ms）。
+## round 21（同会话，2026-10-26 18:10-18:45）—— T18②③：产物块成为一等成功信号（含现场修正）
 
-### 新登记 T18（把「产出合格产物」变成一等信号）
-① `verify.json.pass=true` 作为正向健康信号（`MarkArtifactOK`）；② 「无产物块/产出过短」作为**协议不合规**（模型可归因失败）；
-③ `preferFirst` 改为优先「协议合规已验证」的车道；④ 教会或排除只会自有协议的车道（可保留其方案阶段资格）。
+### 第一版（`b25f360`）真跑 ⇒ 判据一次都没触发
+- 判据取 `task.Prompt` 里有没有 `<<<ARTIFACTS>>>`；但**协议是执行器拼进 prompt 的**
+  （`executor.go` 写 stdin 那段 `prompt += 换行 + artifact.ProtocolInstruction`），`task.Prompt` 里没有它。
+- 真跑读数：执行阶段 `kind=ok` 6,311 ms、`no_artifact count=0` ⇒ 又一次「判据空转」（判据在跑、受理面不存在）。
 
-### 提交 · 部署 · 线上验证（#40）
-- `f8217e6` 已推送；干净 worktree 构建 `BUILD_RC=0`（77 s）；部署 dist 与 D:\workbench-agent，hash == `SHA256SUMS` = `8BA5E782…9684`；
-  全仓 `go test ./...` rc=0；modelpool 全包 ok。
-- 运行边界已复原：引擎 `--quit`、`\WorkBenchKeepAlive` `/ENABLE`、配置从备份还原 + 重新 select、worktree 已移除。
+### 第二版（`95bace5`）
+- executor：Result 新增 `ArtifactsRequired atomic.Bool`（与 `SawThinking` 同口径），在**追加协议那一处**置位；
+  另新增常量 `ArtifactMarker` + 纯函数 `HasArtifactBlock`，Result 新增 `ArtifactBlock`（FinalText 定稿后、失败分支前打标）。
+- modelpool：`requireArtifactsFor(res, task)`（**执行器上报优先** + 提示词兜底）；`judge` 要求产物却无产物块 ⇒ 判 `no_artifact`；
+  `modelAttributable(no_artifact)=true`（协议不合规归因到车道能力）。
+- 测试：`TestHasArtifactBlock`（4 条）、`TestRequiresArtifacts`（3 条）、`TestJudgeArtifactRequirement`（4 条）、
+  `TestModelAttributableNoArtifact`、`TestRequireArtifactsFor`（4 条）；既有 `judge_test.go` 三处补形参。
 
-### 我自己的错（本轮 1 次）
-- 一条 `Select-String` 的模式里混进了多余引号 ⇒ PowerShell 解析报错（零执行）。整改：模式串只用一种引号、避免嵌套；
-  复杂过滤改成「先 ConvertFrom-Json 再取字段」。
+### live 验证状态（如实标：未完成，顺延 round 22）
+- `95bace5` 部署后真跑 7 分钟：执行阶段一直**连续 boot_failed 换车道**（combo:auto-free/auto-main/auto-vision 皆「egress 不服务该模型」），
+  窗口内没走到「会吐字但不带产物块」的车道 ⇒ `no_artifact` 仍未观察到（这次的 0 是「没机会触发」而非「判据不成立」，单测已覆盖该分支）。
+- 下一轮第一件事：把观察窗拉到出现会吐字车道为止，或把候选链首**定向固定**到一条会吐字的车道做定向验证。
+
+### 提交 · 部署 · 边界（#40）
+- `b25f360` 与 `95bace5` 均已推送；各自干净 worktree 构建 `BUILD_RC=0`（81.7 s / 71.2 s），部署 dist 与 agent，
+  `95bace5` hash == `SHA256SUMS` = `186B0149…76BD`、`vcs.revision=95bace5`；全仓 `go test ./...` rc=0。
+- 运行边界已复原：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`、配置从备份还原 + 重新 select、两个 worktree 已移除。
+
+### 我自己的错（本轮 1 次，「判据空转」自查）
+- 第一版把判据建在 `task.Prompt` 上，没先核对「这段协议到底是谁拼进去的」⇒ 真跑一次零触发。
+  整改（写进流程）：**新增判据落盘前先问「受理面在哪、谁写这段数据」**，并用一次真跑确认 count≥1 才算生效。
