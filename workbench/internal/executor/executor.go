@@ -74,7 +74,9 @@ type Result struct {
 	Stalled    bool
 	// EarlyStall 标记「启动后零进展」的提前回收：与 Stalled 同 kind，但原因不同，便于归因（round 14 · T15）。
 	EarlyStall bool
-	Touch      func()
+	// lastProgress 只在**实质进展**时前进（握手 status 帧不算），供 IsEarlyStall 判「从未起步」。
+	lastProgress atomic.Int64
+	Touch        func()
 	// SawThinking 标记本轮是否出现过 thinking 帧：用于自适应放宽卡死阈值。
 	SawThinking atomic.Bool
 }
@@ -384,6 +386,8 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	// 启动时刻同时充当「事件信号的初始值」：IsEarlyStall 靠它区分「从未有过事件」与「有过事件但久未刷新」。
 	startMs := started.UnixMilli()
 	lastActive.Store(startMs)
+	// 实质进展从 0 起算：IsEarlyStall 用「从未有过实质进展」作为零进展判据。
+	res.lastProgress.Store(0)
 	res.Touch = func() { lastActive.Store(time.Now().UnixMilli()) }
 	go func() {
 		defer wg.Done()
@@ -419,7 +423,7 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 				//   IsEarlyStall —— 启动后**零进展**（没事件、没产出）：早回收早轮换（round 14 · T15）；
 				//   IsStalled    —— 双信号取较新者，按「最近一次进展距今」判（容忍静默写盘的长任务）。
 				nowMs := time.Now().UnixMilli()
-				early := IsEarlyStall(startMs, lastActive.Load(), workDir, r.cfg.StallSeconds, nowMs)
+				early := IsEarlyStall(startMs, res.lastProgress.Load(), workDir, r.cfg.StallSeconds, nowMs)
 				if early || IsStalled(lastActive.Load(), workDir, r.cfg.StallSeconds, res.SawThinking.Load(), nowMs) {
 					res.EarlyStall = early
 					res.markStalled()
@@ -574,6 +578,11 @@ func (r *Runner) consume(reader io.Reader, eventsFile *os.File, res *Result, clo
 		ev.Raw = append(ev.Raw[:0], line...)
 		if res.Touch != nil {
 			res.Touch()
+		}
+		// 只有**实质进展**才算「起步」：握手 status 帧（turn_start/step_start）不刷新它，
+		// 否则「启动后零进展」判定会被握手帧永久掩盖（round 14 实测）。
+		if IsSubstantiveEvent(ev) {
+			res.lastProgress.Store(time.Now().UnixMilli())
 		}
 		switch ev.Type {
 		case "session":

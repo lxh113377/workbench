@@ -330,6 +330,31 @@ func LatestOutputMtimeMs(dir string) int64 {
 	return latest
 }
 
+// IsSubstantiveEvent 判定一条事件是否算「实质进展」。
+//
+// 为什么需要（2026-10-26 round 14 实测）：DSH 子进程一启动就吐 status 握手帧（turn_start / step_start），
+// 而 consume 对**每条**事件都刷新活跃度 ⇒ 若「零进展」判定用活跃度信号，它永远不成立：
+// 实测首进展预算 120 s 的改动在真跑中一次都没触发（尝试跑满 317 s+ 仍在跑），因为握手帧早已把 lastActive 推过 startMs。
+// 所以必须区分「子进程活着」（握手）与「模型真的产出了东西」（实质进展）。
+//
+// 口径：final/text/thinking/tool_call/error 算；status 里带 usage（一次真实模型步）或 phase 落在
+// turn_end/step_end 算；其余 status（turn_start/step_start 等握手）不算。
+func IsSubstantiveEvent(ev Event) bool {
+	switch ev.Type {
+	case "final", "text", "thinking", "tool_call", "error":
+		return true
+	case "status":
+		if ev.Usage != nil {
+			return true
+		}
+		switch ev.Phase {
+		case "turn_end", "step_end":
+			return true
+		}
+	}
+	return false
+}
+
 // effectiveMaxBytes 计算单任务事件流上限（MB → bytes，带下限保护）。
 func effectiveMaxBytes(maxOutputMB int) int64 {
 	if maxOutputMB < 1 {

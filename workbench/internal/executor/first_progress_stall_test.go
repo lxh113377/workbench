@@ -54,3 +54,33 @@ func TestIsEarlyStall(t *testing.T) {
 		t.Error("已有产出文件时不该按零进展判")
 	}
 }
+
+// TestIsSubstantiveEvent 钉住「握手帧不算实质进展」这条口径。
+//
+// 为什么必须钉（round 14 实测）：DSH 子进程一启动就吐 status 握手帧，而 consume 对每条事件都刷新活跃度，
+// 于是「启动后零进展」的提前回收一次都没触发（尝试跑满 317 s+）。把「哪类事件才算起步」写成判据，
+// 才能防止它再次退化回「握手即进展」。
+func TestIsSubstantiveEvent(t *testing.T) {
+	cases := []struct {
+		name string
+		ev   Event
+		want bool
+	}{
+		{"turn_start 握手", Event{Type: "status", Phase: "turn_start"}, false},
+		{"step_start 握手", Event{Type: "status", Phase: "step_start"}, false},
+		{"step_end", Event{Type: "status", Phase: "step_end"}, true},
+		{"status 带 usage", Event{Type: "status", Phase: "step_start", Usage: &Usage{OutputTokens: 1}}, true},
+		{"text", Event{Type: "text", Text: "x"}, true},
+		{"thinking", Event{Type: "thinking", Text: "x"}, true},
+		{"final", Event{Type: "final", Text: "x"}, true},
+		{"tool_call", Event{Type: "tool_call"}, true},
+		{"error", Event{Type: "error"}, true},
+		{"session", Event{Type: "session"}, false},
+		{"未知类型", Event{Type: "weird"}, false},
+	}
+	for _, c := range cases {
+		if got := IsSubstantiveEvent(c.ev); got != c.want {
+			t.Errorf("%s: IsSubstantiveEvent = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
