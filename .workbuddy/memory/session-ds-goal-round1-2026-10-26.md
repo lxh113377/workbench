@@ -584,27 +584,31 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 31（同会话，2026-10-26 22:50-23:10）—— T18⑥ 定向实验：方案正向产出仍未取得（如实标）
+## round 32（同会话，2026-10-26 23:12-23:30）—— T18④-2：方案提示词也禁用自有工具语法（确定性验证）
 
-### 实验设计
-把 `plan.plannerModels` 钉到实测会吐字的车道（`dots-studio/dots-3-note-preview:free`、`kilo-auto/free`），
-`maxTasksPerGoal=1`、`concurrency=1`、keepalive 临时停用 —— 把「方案能否再产出」从抽奖变成定向验证。
-（实现细节：`plan.plannerModels` 在 config.json 里被 omitempty 省略 ⇒ 需 `Add-Member` 才能写；已记入脚本 `runtime\tmp\t18f-experiment.ps1`。）
+### 改动（一文件 + 一测，提交 `7cce46b`）
+- `blueprint.PlanPrompt` 新增第 6 条硬性要求：点名实测语法（`<|tool_call_start|>[bash(...)]`、`<dots_function_call>…`），
+  写明「工作台**不会执行**它们、方案只会被判不可用」，并强调「方案只能是一个 JSON 对象（见 schema）」。
+- 新增 `TestPlanPromptForbidsOwnToolCalls`：钉住关键要素 + 两条既有契约（第 1 条不得缺失、第 6 条必须排在第 5 条之后）。
 
-### 结果：窗口内 `kind=plan action=done` = 0
+### 确定性 live 验证（新手法）
+- 引擎在发起方案调用前把**渲染后的提示词**落盘到 `tasks/<id>/plans/prompt-plan-*.md` ⇒ 直接读它即可证明要求已进提示词：
 ```
-dots-studio… | 方案 JSON 解析失败（原始输出前 200 字：<|tool_call_start|>[bash(command='ls -la'), bash(comman…）
-dots-studio… | 方案模型无输出
-liquid/lfm-2.5-2.6b:free | 方案 JSON 解析失败（<|tool_call_start|>[bash(command='ls -la', timeout=30)]…）
-moonshotai/kimi-k2.6 / cohere/north-mini-code:free / xingchen-agi/… | rate_limited requeue（车道级）
+file：…\tasks\task-d8ec2e5901a47807\plans\prompt-plan-0.md（1807 B）
+hasClause6=True   hasNoExec=True   hasJSONOnly=True
+5. 禁止写【省略】【其余同上】这类占位。
+6. 不要输出你自己的工具调用语法（实测出现过 `<|tool_call_start|>[bash(...)]`、`<dots_function_call>…`）：
+   工作台**不会执行**它们，方案只会被判为不可用。方案只能是一个 JSON 对象（见下方 schema）。
 ```
-⇒ 被点名车道要么空输出、要么吐**自有工具语法**；卡点在「模型愿不愿照做」，与目标自述「免费模型能力不足」一致。
-⇒ 派生下一步（T18④-2）：把「禁用自有工具语法」从**产出协议**扩展到**方案提示词**（该形态在方案阶段同样普遍）。
+- 意义：**提示词类改动从此可以与车道行为解耦地验收**（车道照不照做另作模型能力项）。
 
-### 实验边界（显式写回并复核）
-- `plannerModels` 清空、`plan.enabled=true`、`autoStart=false`、`maxTasksPerGoal=12`、`concurrency=2`、`chain=true`、`ws=external/D:\workdesktop`；
-- 引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、无 worktree 残留、仓库 18 项未变、HEAD == origin/master == `84b4f21`。
+### 提交 · 部署 · 边界（#40）
+- `7cce46b` 已推送；干净 worktree 构建 `BUILD_RC=0`（140.8 s）；dist 与 agent 同 hash `0006D887…AB9E`、`vcs.revision=7cce46b`；
+  全仓 `go test ./...` rc=0；blueprint 包全 PASS。
+- 运行边界：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、worktree 已移除、
+  基线**显式写回并复核**（`plan=true / autoStart=false / maxTasks=12 / conc=2 / chain=true / ws=external/D:\workdesktop`）、
+  仓库 18 项未变、`docs/health-check.md` 仍不存在（成品未产出，如实记）。
 
 ### 我自己的错（本轮 1 次）
-- 直接给 `$c.plan.plannerModels` 赋值 ⇒ PowerShell 报「在此对象上找不到属性」（omitempty 字段不在 JSON 里）。
-  整改：**改可选配置字段一律用 `Add-Member -Force`**；写脚本文件跑（不再拼内联字符串），一次成型。
+- 新测试文件把 `testing` 忘在 import 外（只写了 `strings`）⇒ 编译期 `undefined: testing`。
+  整改：**新测试文件一律先写完整 import 块（strings/testing 成对）**；报错自修一次即过。
