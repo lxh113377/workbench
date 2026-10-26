@@ -584,29 +584,27 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 30（同会话，2026-10-26 22:26-22:45）—— 双判据 live 一次拿下（方法：关掉方案阶段）
+## round 31（同会话，2026-10-26 22:50-23:10）—— T18⑥ 定向实验：方案正向产出仍未取得（如实标）
 
-### 方法与读数
-- 实验设置：`plan.enabled=false`（退回单次调用，任务直接进执行）⇒ 执行失败秒级出现；keepalive 临时停用、`maxTasksPerGoal=3`、`concurrency=1`。
-- **T15-④ 执行路径 live**：
+### 实验设计
+把 `plan.plannerModels` 钉到实测会吐字的车道（`dots-studio/dots-3-note-preview:free`、`kilo-auto/free`），
+`maxTasksPerGoal=1`、`concurrency=1`、keepalive 临时停用 —— 把「方案能否再产出」从抽奖变成定向验证。
+（实现细节：`plan.plannerModels` 在 config.json 里被 omitempty 省略 ⇒ 需 `Add-Member` 才能写；已记入脚本 `runtime\tmp\t18f-experiment.ps1`。）
+
+### 结果：窗口内 `kind=plan action=done` = 0
 ```
-{"at":1793025528598,"taskId":"task-283acf54c6cbd028","attempt":0,"model":"stealth/glyph-cluster",
- "kind":"no_artifact","action":"fail","elapsedMs":182952,"error":"执行失败: no_artifact","producedRunes":61}
+dots-studio… | 方案 JSON 解析失败（原始输出前 200 字：<|tool_call_start|>[bash(command='ls -la'), bash(comman…）
+dots-studio… | 方案模型无输出
+liquid/lfm-2.5-2.6b:free | 方案 JSON 解析失败（<|tool_call_start|>[bash(command='ls -la', timeout=30)]…）
+moonshotai/kimi-k2.6 / cohere/north-mini-code:free / xingchen-agi/… | rate_limited requeue（车道级）
 ```
-  ⇒ `producedRunes=61` = 说了 61 字但不含产物块（设计要区分的形态）；`stderrPath` 缺省 = 本轮无 stderr。
-- **T18⑦ live**：`dots-studio… state=down consec=1 cd_left_s=582`、`liquid… state=down consec=1 cd_left_s=591`（kilo-auto consec=3 / 2388 s 为历史累计）
-  ⇒ 一次 `no_artifact` 即 `down` + 冷却 ≈600 s（修前只 `degraded` / 3 次 / 120 s）—— round 26 写下的判据成立。
-- 链式切换记录：`dots-studio → kilo-auto → liquid`，`reason="模型失败自动切换（no_artifact）"`。
+⇒ 被点名车道要么空输出、要么吐**自有工具语法**；卡点在「模型愿不愿照做」，与目标自述「免费模型能力不足」一致。
+⇒ 派生下一步（T18④-2）：把「禁用自有工具语法」从**产出协议**扩展到**方案提示词**（该形态在方案阶段同样普遍）。
 
-### 方法学要点（写进报告，可复用）
-- 要验「执行阶段」机制 ⇒ 先把方案阶段关掉；要验「方案阶段」机制 ⇒ 反之。
-
-### 运行边界与一条如实记录的缺陷
-- 引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、worktree 无残留、仓库 18 项未变、`docs/health-check.md` 仍不存在。
-- **发现**：备份 `config.json.bak-pre-t15verify-20261026-222811` 里混进了**上一轮实验**的值（`autoStart=true`、`maxTasksPerGoal=1`），
-  若只靠「从备份还原」会把实验配置当基线。**整改**：改为**显式写回基线 + 复核最终值**；
-  本次复核：`plan.enabled=true / autoStart=false / maxTasksPerGoal=12 / concurrency=2 / chain=true / ws=external/D:\workdesktop`。
+### 实验边界（显式写回并复核）
+- `plannerModels` 清空、`plan.enabled=true`、`autoStart=false`、`maxTasksPerGoal=12`、`concurrency=2`、`chain=true`、`ws=external/D:\workdesktop`；
+- 引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、无 worktree 残留、仓库 18 项未变、HEAD == origin/master == `84b4f21`。
 
 ### 我自己的错（本轮 1 次）
-- 同上：把「备份」默认当成「纯基线」——备份是上一轮实验**之前**拍的，但上一轮实验本身可能没完全复原（round 28 的 bounded 值留在里面）。
-  整改：**基线一律显式写回并复核**，不依赖备份内容；备份只用于「改坏了能回滚」。
+- 直接给 `$c.plan.plannerModels` 赋值 ⇒ PowerShell 报「在此对象上找不到属性」（omitempty 字段不在 JSON 里）。
+  整改：**改可选配置字段一律用 `Add-Member -Force`**；写脚本文件跑（不再拼内联字符串），一次成型。
