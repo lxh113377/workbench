@@ -16,6 +16,31 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **_ = 吞错这条线收尾：`metrics.csv` 落盘失败与探针 `eng.Stop()` 不再静默；并否决我自己提的第二信号方案（附实测理由）**：
+  **`main.go:377`（每 5 分钟写 `metrics.csv`）**：`trend.go` 的注释写明它是判「资源是否单调上升（泄漏）」的数据源，
+  而 `supervisor/metrics_csv_test.go` 里 `WriteCSV` 的 5 个调用点全部严格判错 —— 生产侧独此一处 `_ =`。静默失败的后果
+  不是少一个文件，而是**下一轮 trend 判读看到「无新增样本」而误报健康**：比写盘失败更坏的正是「没写成功却看不出
+  来」。改为判错后写 `logger.At("metrics").Warn(...)` + `hub.Emit(warn)`，但**不中断 ticker**（下次继续写）。
+  **`ui_probe.go:163`（`_ = eng.Stop()`）**：上一轮我让 `stop()` 在相位落盘失败时返回错误，这一处就成了新出现的静默。
+  改为写 stderr（与它自身 L130/L151 的 `fmt.Fprintln(os.Stderr, ...)` 同构），**退出码保持 0** —— 探针的验收结论不受
+  停机影响。**改前先查会不会破约**（这是我差点自己造出的回归）：`tests/ui/frontend-gate.mjs` 的 verdict 取自
+  `cdp-report.json`，`out = stdout + stderr` 只用于转发打印；`startIsolated()` 只在超时失败时才读 `probe-stderr.txt`
+  作诊断；`design-audit.mjs` 与 `design-shots.mjs` 只取 stdout 拿 pid ⇒ 加 stderr 不影响任何判据路径，才动手。
+  **自己提出又否决的方案（比修两处更有价值）**：上轮待办是给 `check_ignored_error` 找一个不放宽 5 行窗口的第二信号。
+  我试了 `defer X.Stop()` 这一隐身形态（同样丢返回值，但判据只认 `_ =` 前缀）。实测：生产 .go 里零接收者 `defer` 调用
+  168 处，其中函数名在别处存在严格判错点的有 **33 处**；逐个看绝大多数是标准库惯用法（`defer f.Close()`、
+  `defer ticker.Stop()`、`defer resp.Body.Close()`）⇒ 判红就是 33 处假阳性，正是本仓在册的「误报导致门禁被撤」。
+  **所以第二信号不上线**，并记下真正的结论：同名函数不是可机判信号，`defer` 丢错误也不构成两半矛盾；要抓这类缺陷
+  只能靠**具名语义**（落盘后紧接着发成功事件），而那种语义机器读不出来。
+  **诚实边界（不谎称有覆盖）**：这两处都没有可注入失败的 seam（`config.fsRename`/`fsRemove` 是包私有，也不该为一条
+  上报路径改生产结构）⇒ **没有写行为测试**，只验证编译/vet/全仓测试 rc=0、探针契约测试仍 PASS、`_ =` 计数归零。
+  我尝试做一次「退回吞错」的变异，needle 又猜错缩进（写 2 个 tab、实际 3 个）⇒ 守卫在写盘前拦住、未改文件。这是本
+  串里**第三次同一错**：说明「先读该行实际前导空白」还没固化成动作，只停留在条款里。
+  **验证**：`go build ./...` 与 `go vet ./...` rc=0；`go test ./cmd/workbench/` 跑 UIProbe|Probe|Dispatch|Autostart 全绿
+  （含 `TestMainDispatchKeepsUIProbeFlag` PASS）；全仓 `go test ./...` **rc=0 无回归**；`gofmt -l` clean；两文件 BOM/EOL
+  写盘前后一致（`main.go` 裸LF 1229→1235、`ui_probe.go` 179→185，均无 BOM）；`_ = sup.WriteCSV(` 与 `_ = eng.Stop()`
+  残留各 **0**。本轮另修一处自写错：CHANGELOG 正文连续用 JS 单引号与双引号包串、内容含同种引号 ⇒ 宿主解析期报错
+  三次（均无副作用），改成占位符加白名单断言 —— 同一条教训第 33 次，且这次我把「先断言再写入」写进了动作。
 - **修「引擎相位落盘失败却对用户宣布成功」：`Pause`/`Resume`/`stop` 三处吞掉的 `SaveState` 错误改为上报，并新增契约测试；托盘那条入口一并补齐**：
   **缺陷与后果（实测，不是风格）**：`engine.go` 里 `SaveState` 共 7 处 —— L435/L461 严格判错，其余 5 处用 `_ =` 吞掉。
   其中 `Pause()`/`Resume()`/`stop()` 的签名都是 `error`，却在落盘失败时照样 `emitEvent("引擎已暂停/已恢复/已停止")` 并

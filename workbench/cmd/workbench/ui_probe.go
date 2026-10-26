@@ -160,7 +160,12 @@ func runUIProbeCLI(args []string) int {
 	case <-stop:
 	case <-time.After(time.Duration(seconds) * time.Second):
 	}
-	_ = eng.Stop()
+	// Stop 现在会因相位落盘失败返回错误：探针的验收结论不受它影响（页面契约已验完、退出码保持
+	// 原语义），但失败必须可见 —— 否则容器里看到 UI_PROBE_EXIT 会以为干净收尾。写 stderr 不破
+	// 契约：断言方（tests/ui/*.mjs、main_dispatch_test.go）只认 ui-probe.url 文件。
+	if err := eng.Stop(); err != nil {
+		fmt.Fprintln(os.Stderr, "ui-probe: 引擎停机时状态落盘失败: "+err.Error())
+	}
 	srv.Close()
 	fmt.Println("UI_PROBE_EXIT")
 	return 0

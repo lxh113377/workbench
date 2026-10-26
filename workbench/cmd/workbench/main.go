@@ -374,7 +374,13 @@ func runApp(args []string) error {
 		t := time.NewTicker(5 * time.Minute)
 		defer t.Stop()
 		for range t.C {
-			_ = sup.WriteCSV(layout.LogFile("metrics.csv"))
+			// metrics.csv 是「趋势是否单调上升（泄漏）」判据的唯一数据源：这里静默失败会让下一轮
+			// trend 判读看到「无新增样本」而误报健康 —— 比写盘本身更坏的正是「没写成功却看不出来」。
+			// 仍不中断 ticker（下次继续写），但必须留下日志与事件。
+			if err := sup.WriteCSV(layout.LogFile("metrics.csv")); err != nil {
+				logger.At("metrics").Warn("指标采样落盘失败（趋势判据将缺样本）", "err", err.Error())
+				hub.Emit(model.Event{Type: "warn", At: model.Now(), Msg: "指标采样落盘失败: " + err.Error()})
+			}
 		}
 	}()
 
