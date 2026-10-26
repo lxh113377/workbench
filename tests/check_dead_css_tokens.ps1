@@ -128,7 +128,19 @@ if (Test-Path -LiteralPath $debtPath) {
 }
 $newDead = @($dead | Where-Object { ($_ -split '  ')[0] -notin $debt })
 $knownDead = @($dead | Where-Object { ($_ -split '  ')[0] -in $debt })
+$deadKeys = @($dead | ForEach-Object { ($_ -split '  ')[0] })
+$staleDead = @($debt | Where-Object { $_ -notin $deadKeys })
+foreach ($sd in $staleDead) { Write-Host ('  x 失效豁免：' + $sd + '（已不再死，必须从 css-token-debt.txt 删除）') -ForegroundColor Red }
+
+# 失效检测与 check_gofmt / check_deadcode 同构（三份同名册此前只有这份缺它）：登记条目一旦不再死，
+# 留着就等于让门禁对该令牌的**将来复活再死亡**永久失明 —— 比漏报更危险，因为它看起来有基线在管。
 foreach ($kd in $knownDead) { Write-Host ('  KNOWN ' + $kd + '（登记于 css-token-debt.txt，未清）') -ForegroundColor DarkGray }
+
+if ($staleDead.Count -gt 0) {
+  Write-Host ('失效的债务豁免（登记但已不再死，必须从 tests/css-token-debt.txt 删除）：' + $staleDead.Count + ' 处') -ForegroundColor Red
+  Write-Host '  为什么必须删：在册豁免会让该令牌将来的漂移静默放过（门禁对它永久失明）。' -ForegroundColor Yellow
+  exit 1
+}
 
 if ($newDead.Count -gt 0) {
   Write-Host ('死令牌门禁未通过：' + $newDead.Count + ' 个新死令牌（未登记基线）') -ForegroundColor Red
