@@ -514,6 +514,15 @@ func (m *Manager) MarkFailure(id, kind, msg string) {
 				break
 			}
 		}
+		// 能力性失败（协议不合规）**一击即冷却**：它不是偶发抖动，而是「这条车道不认产物协议」——
+		// 反复试它只会重复被判 no_artifact（round 22 实测同一次尝试内连续 3 条车道因此被拒；round 25 窗口内仍以它为主）。
+		// 阈值压到 1，并给比偶发失败更长的冷却，让它尽快退出执行阶段候选、把机会让给可能合规的车道（T18⑦）。
+		if kind == noArtifactKind {
+			maxFail = 1
+			if cooldownSec < 600 {
+				cooldownSec = 600
+			}
+		}
 		// 结构性错误直接长冷却（模型不存在/凭据缺失/端点不可达），
 		// 与「偶发超时」分层，避免风暴式重试把整池拖死。
 		long := kind == "model_unavailable" || kind == "missing_credential" || kind == "unreachable" || kind == "bad_endpoint"
