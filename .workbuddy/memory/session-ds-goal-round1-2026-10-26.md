@@ -349,3 +349,35 @@ round 3 加进白名单的 `frontend` 同理。修法：补两套工程阶梯
 ### 我自己的错（本轮 1 次）
 - round 9/11 把「环境/沙箱回收」当结论写进报告（§1.10/§1.11）；实际是**本仓自己的守护**在按规则干活。
   本轮已在 §1.12 显式更正并列出被推翻的猜想。教训：**本机「神秘现象」先查本仓自己的守护/计划任务**（一条 `schtasks /query` 就能看见）。
+## round 13（同会话，2026-10-26 15:15-15:30）—— 首次未被回收的端到端运行；T10 结案
+
+### 做对了什么（把 T13 的结论用起来）
+观察期临时停用 `\WorkBenchKeepAlive`（`schtasks /Change /DISABLE`，事后已 `/ENABLE` 复原），让引擎活过 300 s 宽限期，
+跑了一次完整的自动任务。同时保持工作空间 = `D:\workdesktop`（忠实于「被选中文件夹」），并把产能相关设置调到最小：
+`autoStart=true / maxTasksPerGoal=1 / concurrency=1 / chain=false`。
+
+### 读数（原日志）
+- 引擎 pid 47976：15:18:04 起、15:25:48 仍在 —— **首次没有被实例守卫回收**（T12 通道验证成立）。
+- 子会话事件 `{"type":"session","cwd":"D:\\workdesktop"}` ⇒ **执行器 cwd = 被选中工作空间（本仓）**。
+- `尝试结束 kind=stalled elapsedMs=452399 stalled=true reason="任务长时间无任何进展，已判定卡死并回收进程" stderrPath=""`。
+- 期间子会话只到 `turn_start/step_start`，**零正文、零文件**；仓库 `git status` 无新增；队列 `tasks=0`。
+
+### T10 结案（根因）
+失败的共因是**模型车道在预算内零产出**：round 8 的 `bad_exit 47,603 ms`（子进程空产出退出）与本轮 `stalled 452,399 ms`
+是同一族的两种结局；两次尝试都落在池中首选路由 `deepseek-ai/deepseek-v4.1-flash`，故障转移后的 `z-ai/glm-5.3` 同样长时间无输出。
+**不是执行器参数错、不是流水线机制坏** —— 同一套机制在 round 6 的离线桩自检里 11/0、12/0、pass:true 全绿。
+
+### 证据面自证
+这次失败之所以「自带原因」，正是 round 9 落地的 `reason` 字段（在那之前，同类失败是翻遍任务目录与日志都答不出原因）。
+
+### 新登记 T15（产能）
+① 计划阶段单独给更短的「首字节/首进展」预算，别把 420 s 烧完；② 首个路由不要总落在实测连续失败的 `deepseek-ai/deepseek-v4.1-flash`（按健康度排序）；
+③ 把「零产出 / 卡死」的可观测字段（`reason` / `stderrPath` / `producedBytes`）固化进 `attempts.jsonl`。
+
+### 运行边界与回滚（已完成）
+- 引擎已 `--quit`（family=0）；`\WorkBenchKeepAlive` 已 `/ENABLE`（Status: Ready）；
+- agent 配置已从备份 `config.json.bak-pre-t10c-20261026-151721` 还原并重新 `--workspace select D:\workdesktop`
+  ⇒ `autoStart=false / maxTasks=12 / concurrency=2 / chain=true / external D:\workdesktop`；仓库未被任务写入。
+
+### 我自己的错（本轮 0 次）
+本轮无新增自身错误。
