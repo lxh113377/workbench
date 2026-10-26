@@ -330,11 +330,12 @@ func (s *Service) probeSpecs(specs []Spec, gw Gateway) []ProbeResult {
 		// 端点通：看 OFM 的逐模型判定（仅对 OFM/免费车道有意义）。
 		if sp.Lane == LaneFree || sp.Lane == LaneKilo || sp.Lane == LaneEAC {
 			if st, ok := ofmAvail[sp.ID]; ok {
-				switch strings.ToLower(strings.TrimSpace(st)) {
-				case "unavailable", "region-blocked", "deprecated":
-					res.State = StateDown
-					res.Kind = "model_unavailable"
-					res.Error = "上游判定该模型不可用（" + st + "）"
+				// 映射收敛到纯函数（可单测）：unavailable/region-blocked/deprecated ⇒ 不可用；
+				// **throttled（额度耗尽/限流）同样判不可用** —— round 17 实测漏洞，见 upstream_verdict.go。
+				if vs, vk, vr := upstreamVerdictState(st); vs != "" {
+					res.State = vs
+					res.Kind = vk
+					res.Error = vr + "（" + st + "）"
 					out = append(out, res)
 					continue
 				}
