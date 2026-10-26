@@ -587,12 +587,17 @@ func (m *Manager) ApplyProbe(results []ProbeResult) ProbeSummary {
 		switch r.State {
 		case StateHealthy:
 			h.ProbeOK++
-			h.ConsecFail = 0
-			h.Success++
 			h.State = StateHealthy
-			h.CooldownTo = 0
-			h.LastErr = ""
-			h.LastErrKind = ""
+			// 探测成功只证明「端点可达」，不等于「模型会产出」（round 15 实测：零产出模型的
+			// 执行侧连续失败每轮被探测抹掉 ⇒ 首个路由永远落在它身上）。执行侧失败只能由
+			// 执行成功（MarkSuccess）清除；结构性故障仍由探测恢复（对照组测试钉住）。
+			if !isExecutionFailureKind(h.LastErrKind) {
+				h.ConsecFail = 0
+				h.Success++
+				h.CooldownTo = 0
+				h.LastErr = ""
+				h.LastErrKind = ""
+			}
 			if r.LatencyMs > 0 {
 				h.LatencyMs = r.LatencyMs
 			}
