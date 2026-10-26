@@ -505,3 +505,32 @@ availability 的键是 OFM 车道 id（`*-free`），池里 36 条路由用另�
 
 ### 我自己的错（本轮 0 次）
 本轮无新增自身错误。
+## round 18（同会话，2026-10-26 17:11-17:25）—— T16-②：上游判定按同族合并
+
+### 缺口（round 17 遗留）
+availability.json 的键是 OFM 车道 id（`*-free`），池里 36 条路由是另一套写法，只按字面相等查 ⇒ 仅 8 条被判到，
+其余 28 条「healthy」里混着同族孪生 id。
+
+### 修法（一文件 + 一测）
+- `modelCore(id)`：归一化到同族核（去 provider 目录前缀、去 `:free`/`-free` 后缀、小写去空格）；
+- `verdictForSpec(specID, avail)`：先精确匹配，再按同族核匹配，**且要求唯一命中**（同核 ≥2 条视为歧义不判）；
+- `probeSpecs` 改调后者；新增 `TestModelCore` / `TestVerdictForSpec`（含保守边界：`flint-v1.0` 不并 `flint-40b`、
+  `glm-5.3` 不并 `glm-5.3-flash`、同核两条不判）。
+
+### 真跑读数（keepalive 临时停用，观察后已复原）
+```
+健康度分布：15 down / 21 healthy        （round 17 修后：8 down / 28 healthy）
+probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
+新增被判定：deepseek-ai/deepseek-v4.1-flash（连续 6 轮吃掉每次尝试的那个）、opencode/deepseek-v4.1-flash-free、
+          opencode/glm-5.3-flash-free、nvidia/nemotron-3.5-lightning:free、nvidia/nemotron-3.5-super-vl:free、
+          reflection/beam-free、z-ai/glm-5.3-flash
+```
+
+### 提交 · 部署 · 线上验证（#40）
+- `8d0704f` 已推送；干净 worktree 构建 `BUILD_RC=0`（67.5 s）；部署到 dist 与 D:\workbench-agent，
+  hash == `SHA256SUMS` = `C6B477A4…2CFD`、`vcs.revision=8d0704f`；全仓 `go test ./...` rc=0；modelpool 全包 ok。
+- 运行边界已复原：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`、配置从备份还原 + 重新 select、worktree 已移除。
+
+### 我自己的错（本轮 1 次）
+- 写报告编辑程序时，代码块里有 4 行 JS 字符串**漏了收尾引号** ⇒ 解析期报 `Expected ',', got 'string literal'`（零执行、零副作用）。
+  整改：含代码块的字符串数组一律「逐行都带收尾引号」，并在提交前用 `join` 先跑一次生成。
