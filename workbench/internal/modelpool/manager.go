@@ -54,6 +54,10 @@ type Manager struct {
 	// 面板/CLI 的切换必须跨进程生效，否则「可配置」是假的 —— 依据 types.go
 	// 里 file.Strategy 的注释与 strategy_persist_test.go 的回归。
 	strategy string
+	// lastOK 是最近一次**执行成功**的模型（含时刻）。
+	// 用途：同一次任务的后续阶段（方案→执行）优先复用刚被证明能产出的模型（T17①）。
+	lastOK   string
+	lastOKAt int64
 }
 
 // NewManager 从磁盘加载（不存在则用 seed 初始化），返回可用实例。
@@ -459,11 +463,27 @@ func (m *Manager) MarkSuccess(id string, latencyMs int64) {
 				h.LatencyMs = (h.LatencyMs*2 + latencyMs) / 3
 			}
 		}
+		m.lastOK = id
+		m.lastOKAt = nowMs()
 		recovered = h.ProbeFail > 0 || h.ConsecFail > 0
 	}
 	m.mu.Unlock()
 	m.persist()
 	_ = recovered
+}
+
+// LastOKModel 返回最近一次**执行成功**的模型（id, 时刻, 是否存在）。
+//
+// 为什么需要（round 19 里程碑的下一步 T17①）：计划阶段在 `dots-studio/…` 上第一次产出成功，
+// 紧接着的执行阶段却按池子的加权顺序从头试最弱车道（nemotron→boot_failed、glm-5.3→早回收），
+// 白烧约 2.5 分钟才可能轮到刚证明可用的那个模型。FailoverRunner 用它把「刚成功的模型」排到链首。
+func (m *Manager) LastOKModel() (string, int64, bool) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+	if m.lastOK == "" {
+		return "", 0, false
+	}
+	return m.lastOK, m.lastOKAt, true
 }
 
 // MarkFailure 记录一次失败：连续失败达到阈值即冷却并禁用调度。

@@ -94,6 +94,11 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 	if len(order) == 0 {
 		return f.inner.Run(ctx, task, modelID)
 	}
+	// 链首优先复用「刚被证明能产出」的模型（T17①）：只在候选链**内部**重排，绝不引入链外模型，
+	// 因此不会把冷却/下线的模型拉回来。
+	if okID, _, ok := f.mgr.LastOKModel(); ok {
+		order = preferFirst(order, okID)
+	}
 
 	var lastRes *executor.Result
 	var lastErr error
