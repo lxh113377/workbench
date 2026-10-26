@@ -584,31 +584,35 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 32（同会话，2026-10-26 23:12-23:30）—— T18④-2：方案提示词也禁用自有工具语法（确定性验证）
+## round 33（同会话，2026-10-26 23:40-2026-10-27 00:05）—— T17② 落地并 live 验证 + 发现探测抵消（T17②-b）
 
-### 改动（一文件 + 一测，提交 `7cce46b`）
-- `blueprint.PlanPrompt` 新增第 6 条硬性要求：点名实测语法（`<|tool_call_start|>[bash(...)]`、`<dots_function_call>…`），
-  写明「工作台**不会执行**它们、方案只会被判不可用」，并强调「方案只能是一个 JSON 对象（见 schema）」。
-- 新增 `TestPlanPromptForbidsOwnToolCalls`：钉住关键要素 + 两条既有契约（第 1 条不得缺失、第 6 条必须排在第 5 条之后）。
+### 改动（两文件 + 一测，提交 `fdcf2b7`）
+- 新增 `bootFailureAttributable(kind, detail)`：只认上游原文 `does not serve`（大小写不敏感）；泛化 `Provider returned error` 不归因（防误杀）。
+- `FailoverRunner` 归因分支新增中间档：命中则按 `model_unavailable` 记（走长冷却分支），不再落 `skip`。
+- `TestBootFailureAttributable`：实测原文 / 大小写 / 泛化错误不归因 / 其他类别不归因 / 空 detail。
 
-### 确定性 live 验证（新手法）
-- 引擎在发起方案调用前把**渲染后的提示词**落盘到 `tasks/<id>/plans/prompt-plan-*.md` ⇒ 直接读它即可证明要求已进提示词：
+### live 读数（`plan.enabled=false` 让执行秒级开跑）
 ```
-file：…\tasks\task-d8ec2e5901a47807\plans\prompt-plan-0.md（1807 B）
-hasClause6=True   hasNoExec=True   hasJSONOnly=True
-5. 禁止写【省略】【其余同上】这类占位。
-6. 不要输出你自己的工具调用语法（实测出现过 `<|tool_call_start|>[bash(...)]`、`<dots_function_call>…`）：
-   工作台**不会执行**它们，方案只会被判为不可用。方案只能是一个 JSON 对象（见下方 schema）。
+pool.json：combo:auto-free/main/vision | state=down | kind=model_unavailable | cd_left≈112/116/120 s
+model-status：{"kind":"failure","model":"combo:auto-vision","state":"down","reason":"连续失败 1 次（阈值 3），冷却 120 秒后自动恢复探测"}
+            （修前：{"kind":"skip",…,"reason":"任务级失败，不计入模型健康度: dsh: SERVER: our free model does not serve …"}）
 ```
-- 意义：**提示词类改动从此可以与车道行为解耦地验收**（车道照不照做另作模型能力项）。
+
+### 随即发现的新缺口（新登记 T17②-b）
+```
+{"kind":"probe","model":"combo:auto-free","from":"down","to":"healthy","reason":"探测状态变化"}
+{"kind":"probe","model":"combo:auto-main","from":"down","to":"healthy","reason":"探测状态变化"}
+{"kind":"probe","model":"combo:auto-vision","from":"down","to":"healthy","reason":"探测状态变化"}
+```
+- 原因：`ApplyProbe` 对**结构性**失败会清状态/冷却（端点可达即恢复的设计）；但「上游不服务该模型」不是端点问题 ⇒ 探测不是有效恢复信号。
+- 后果：归因只维持 ~45 s，下一窗口还要再白试一遍（每个约 4 s + 一次切换）。
+- 下一步（T17②-b）：独立类别 + 纳入「不可由探测恢复」集合 + 更长冷却；恢复只走上游 availability（T16 通道）或真实执行成功。
 
 ### 提交 · 部署 · 边界（#40）
-- `7cce46b` 已推送；干净 worktree 构建 `BUILD_RC=0`（140.8 s）；dist 与 agent 同 hash `0006D887…AB9E`、`vcs.revision=7cce46b`；
-  全仓 `go test ./...` rc=0；blueprint 包全 PASS。
+- `fdcf2b7` 已推送；干净 worktree 构建 `BUILD_RC=0`（102.7 s）；dist 与 agent 同 hash `A152D959…9030`、`vcs.revision=fdcf2b7`；
+  全仓 `go test ./...` rc=0；modelpool 包全 PASS。
 - 运行边界：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、worktree 已移除、
-  基线**显式写回并复核**（`plan=true / autoStart=false / maxTasks=12 / conc=2 / chain=true / ws=external/D:\workdesktop`）、
-  仓库 18 项未变、`docs/health-check.md` 仍不存在（成品未产出，如实记）。
+  基线**显式写回并复核**（`plan=true / autoStart=false / maxTasks=12 / conc=2 / chain=true / ws=external/D:\workdesktop`）、仓库 18 项未变。
 
-### 我自己的错（本轮 1 次）
-- 新测试文件把 `testing` 忘在 import 外（只写了 `strings`）⇒ 编译期 `undefined: testing`。
-  整改：**新测试文件一律先写完整 import 块（strings/testing 成对）**；报错自修一次即过。
+### 我自己的错（本轮 0 次）
+本轮无新增自身错误（沿用：脚本文件化、可选字段 Add-Member、基线显式写回）。
