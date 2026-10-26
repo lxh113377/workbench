@@ -27,3 +27,55 @@ func upstreamVerdictState(verdict string) (State, string, string) {
 	}
 	return "", "", ""
 }
+
+// modelCore 把模型标识归一化到「同族核」：去掉 provider 目录前缀、`:free` / `-free` 后缀，统一小写与去空格。
+//
+// 为什么需要（2026-10-26 round 17 实测的遗留 T16-②）：availability.json 的键是 OFM 车道 id（`*-free`），
+// 而池里的路由 id 是另一套写法 —— 实测同一上游模型会出现三种写法：
+//
+//	ofm:  nemotron-3.5-lightning-free        池: nvidia/nemotron-3.5-lightning:free
+//	ofm:  deepseek-v4.1-flash-free           池: opencode/deepseek-v4.1-flash-free、deepseek-ai/deepseek-v4.1-flash
+//
+// 只按字面相等去查 availability，36 条路由里只有 8 条能被判到（其余 28 条「healthy」里混着同族孪生 id）。
+func modelCore(id string) string {
+	s := strings.ToLower(strings.TrimSpace(id))
+	if i := strings.LastIndex(s, "/"); i >= 0 {
+		s = s[i+1:]
+	}
+	s = strings.TrimSuffix(s, ":free")
+	s = strings.TrimSuffix(s, "-free")
+	return s
+}
+
+// verdictForSpec 为一个池路由找**同族**的上游判定：先精确匹配，再按同族核匹配。
+//
+// 保守口径（宁可不判，也不误杀）：
+//  1. 精确命中直接用；
+//  2. 同族核匹配**必须唯一**（≥2 条同核说明名字有歧义，返回未命中）；
+//  3. 核为空的 id 不参与匹配。
+//
+// 实测它能多判到的别名（availability 8 条 → 池里 14 条）：nvidia/nemotron-3.5-lightning:free、
+// nvidia/nemotron-3.5-super-vl:free、opencode/deepseek-v4.1-flash-free、opencode/glm-5.3-flash-free、
+// reflection/beam-free、z-ai/glm-5.3-flash 等；而 `recursive/flint-v1.0:free`（核 flint-v1.0）**不会**
+// 被误并到 `flint-40b-free`（核 flint-40b）—— 这正是「宁可少判不误杀」的边界。
+func verdictForSpec(specID string, avail map[string]string) (string, bool) {
+	if v, ok := avail[specID]; ok {
+		return v, true
+	}
+	core := modelCore(specID)
+	if core == "" {
+		return "", false
+	}
+	found := ""
+	hits := 0
+	for k, v := range avail {
+		if modelCore(k) == core {
+			found = v
+			hits++
+		}
+	}
+	if hits == 1 {
+		return found, true
+	}
+	return "", false
+}

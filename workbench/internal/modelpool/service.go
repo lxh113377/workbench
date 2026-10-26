@@ -329,7 +329,9 @@ func (s *Service) probeSpecs(specs []Spec, gw Gateway) []ProbeResult {
 		}
 		// 端点通：看 OFM 的逐模型判定（仅对 OFM/免费车道有意义）。
 		if sp.Lane == LaneFree || sp.Lane == LaneKilo || sp.Lane == LaneEAC {
-			if st, ok := ofmAvail[sp.ID]; ok {
+			// 按**同族**查上游判定（精确 + 归一化别名）：round 17 遗留 T16-② —— 只按字面相等查，
+			// 36 条路由里只有 8 条能被判到，其余 28 条的真同族孪生 id 仍会当成健康。
+			if st, ok := verdictForSpec(sp.ID, ofmAvail); ok {
 				// 映射收敛到纯函数（可单测）：unavailable/region-blocked/deprecated ⇒ 不可用；
 				// **throttled（额度耗尽/限流）同样判不可用** —— round 17 实测漏洞，见 upstream_verdict.go。
 				if vs, vk, vr := upstreamVerdictState(st); vs != "" {
