@@ -13,6 +13,7 @@ var domainLabels = map[string]string{
 	"data":      "数据处理",
 	"solution":  "方案撰写",
 	"report":    "报告生成",
+	"quality":   "工程质量",
 }
 
 // domainLabel 取领域的中文显示名；未知枚举原样返回（不吞数据，便于发现新增值）。

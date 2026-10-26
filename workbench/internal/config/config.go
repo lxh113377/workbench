@@ -398,7 +398,10 @@ func DefaultAutonomyConfig() AutonomyConfig {
 			MaxTasksPerGoal: 12, MaxStages: 6, MinQuality: 6, MaxRollbacks: 3, StageEvery: 1,
 		},
 		Bounds: AutonomyBounds{
-			AllowedDomains:    []string{"content", "code", "knowledge", "data", "solution", "report"},
+			// quality 于 2026-10-26 加入（round 1 实测缺陷：内置集合里没有它，配置里写 "quality" 会被
+			// normalizeAutonomy 静默剔除 —— 于是「自主任务聚焦工作空间项目的工程质量」这条目标在配置层永远无法成立）。
+			// 维护规则：**新增模板域必须同步这里**，否则用户写进 config.json 也会被剔除（现在至少会留 Warnings）。
+			AllowedDomains:    []string{"content", "code", "knowledge", "data", "solution", "report", "quality"},
 			MaxTaskWords:      3000,
 			MaxDraftsPerRound: 2,
 		},
@@ -762,21 +765,36 @@ func (c *Config) normalizeAutonomy(d Config, fromSchema int) {
 		a.Budget.StageEvery = dv.Budget.StageEvery
 	}
 
-	// 边界：白名单为空视为"未配置"，用默认六大领域；非法领域逐个剔除，全非法则回默认。
+	// 边界：白名单为空视为"未配置"，用内置领域集合；非法领域逐个剔除，全非法则回默认。
+	//
+	// 2026-10-26（实测缺陷，报告 docs/工作空间聚焦与模板域覆盖-五轴审查-2026-10-26.md §1.6）：
+	// 剔除此前**不登记任何痕** —— 部署实例往 config.json 写入 "quality" 后，仅跑一次 exe
+	// （Store 读盘即 Normalize 并落盘）就被剔除（备份 3792 B 含 / 现盘 3773 B 不含），
+	// 随后 --autonomy plan 报「草案被边界拒绝」、一条质量域任务都产不出来。
+	// 现在按本仓既有机制登记 Warnings（addWarning），剔除这件事看得见；合法领域由
+	// DefaultAutonomyConfig().AllowedDomains 定义，新增模板域必须同步那里。
 	if len(a.Bounds.AllowedDomains) == 0 {
 		a.Bounds.AllowedDomains = append([]string(nil), dv.Bounds.AllowedDomains...)
 	} else {
 		valid := make([]string, 0, len(a.Bounds.AllowedDomains))
 		for _, dm := range a.Bounds.AllowedDomains {
+			known := false
 			for _, ok := range dv.Bounds.AllowedDomains {
 				if dm == ok {
-					valid = append(valid, dm)
+					known = true
 					break
 				}
 			}
+			if known {
+				valid = append(valid, dm)
+				continue
+			}
+			c.addWarning("autonomy.bounds.allowedDomains",
+				"领域 "+dm+" 不在内置领域集合内已剔除；新增领域须先加入 DefaultAutonomyConfig().AllowedDomains")
 		}
 		if len(valid) == 0 {
 			valid = append([]string(nil), dv.Bounds.AllowedDomains...)
+			c.addWarning("autonomy.bounds.allowedDomains", "白名单里的领域全部非法，已整体回落内置领域集合")
 		}
 		a.Bounds.AllowedDomains = valid
 	}
