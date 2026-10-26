@@ -117,3 +117,30 @@ web 译名表加 `frontend=前端工程`（domain_label_test.go 钉住两张表�
 ### 我自己的错（本轮 1 次）
 - 写 Go 测试源码时在 TS 模板串里直接写了 `\n`，被当成**真换行** ⇒ `string literal not terminated`。
   教训：写代码时该写 `\\n` —— 要分清「这一层是谁在解析」（外层模板串 vs 内层语言字面量）。
+## round 4（同会话，2026-10-26 12:1x-12:2x）—— T4：工作空间静默降级不再隐身
+
+### 缺陷与处置
+`normalizeWorkspace`（config.go）在 external 模式缺少合法绝对根时，把模式**静默**改回 project 并清空 Root ——
+「被选中的工作目录」被无声丢掉（任务回到数据根沙箱、workspace context 不再注入），配置里只剩 stale root（round 1 现场即如此）。
+- 修法：降级时登记 `Config.Warnings`（本仓既有机制）；并在 `cmd/workbench/main.go` 补上**全仓唯一一处启动期读取 Warnings 的入口**
+  （`logger.Warn("配置修正", "warning", w)`）—— config.go 自己的注释写着「若没有人读 Warnings，跨字段校验就仍然不可见」，此前确实无人读。
+- **先红后绿**：新增 `internal/config/workspace_downgrade_warning_test.go` 两条（空根/相对路径必须留痕；外加「合法绝对根不得降级、也不得报警」的对照组）。
+  修前 FAIL「空根: 静默降级 —— Warnings 里没有工作目录相关条目：[]」→ 修后 PASS。
+
+### 提交 · 部署 · 线上验证（#40）
+- `6fca25f` 已推送；干净 worktree @6fca25f 构建 `BUILD_RC=0`（86.5 s）；部署到 `dist\` 与 `D:\workbench-agent\`，
+  两处 hash == `SHA256SUMS` = `96B7BE9E…5980`；`vcs.revision=6fca25f`。
+- **运行期取证（真实数据根探针）**：新 exe 放进临时数据根 → 把 workspace 改成 `external + relative/dir` → 跑 `--diagnose`：
+  `"mode": "project"`（已回落）与
+  `"warnings": ["workspace.mode: external 缺少合法绝对根（原值 relative/dir）已回落 project 模式；被选中的工作目录不再生效"]`；
+  探针目录已回收站删除、构建 worktree 已移除。
+- 启动期日志行本身**未做运行期取材**（观察它需要真的拉起引擎：会建快捷方式、拉模型池、可能触发任务），
+  以「编译 + `go test ./cmd/workbench/` ok（33.3 s）+ `--diagnose` 可视面」三面取证，如实标注。
+
+### 剩余（目标仍 active）
+- **T7**：CLI `--workspace select` 不落审计记录（面板路径会落）—— 待做。
+- **T8**：内置模板库（`defaults.go`）的同类扩充 + `TestDefaultsCount`/头注释同步 —— 本轮开局核过在途件仍未提交（mtime 10:54、git status 仍 ` M`），故仍未动。
+- 引擎仍未启动（沿用 round 2 决定与回滚口径）。
+
+### 我自己的错（本轮 0 次）
+本轮无新增自身错误；沿用上一轮的转义教训，写 Go 字面量时显式区分层级。
