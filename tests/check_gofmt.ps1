@@ -194,7 +194,7 @@ if ($debt.Count -gt 0) {
         # 取 HEAD 内容必须走 cmd 重定向写原始字节（2026-10-22 实测三次同族坑）：
         #   - `git show | -join "`n"` 丢最后一个换行（2659 vs 2660）=> gofmt 误判缺结尾换行
         #   - PowerShell 管道还会按出站编码改写内容（CRLF/BOM 同族问题本轮已踩）
-        # cmd 重定向是唯一不��改写层的通道。
+        # cmd 重定向是唯一不经改写层的通道。
         $tf = Join-Path $tdir (($k -replace '[\\/]', '__'))
         cmd /c "git -C `"$repoRootForGit`" cat-file blob HEAD:$k > `"$tf`"" 2>$null
         if ($LASTEXITCODE -ne 0 -or -not (Test-Path $tf)) { $headDrift[$k] = $false; continue }

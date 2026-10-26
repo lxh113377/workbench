@@ -1,4 +1,4 @@
-﻿# check_multi_bom.ps1 -- 受跟踪文本文件不得有多个前导 UTF-8 BOM（2026-10-24 round 45 新增）
+﻿# check_multi_bom.ps1 -- 受跟踪文本文件不得有多重前导 BOM，也不得以 U+FFFD 开头（round 45 新增；round 239 扩展）
 #
 # 为什么需要（round 44 记的待办，本轮兑现）：
 #   我本人跨多轮犯同一个错：改文件时用「读出来 -> replace 去掉一个 BOM -> 再前置一个」，
@@ -17,8 +17,8 @@
 #   2) 逐轮累积，文件开头越来越脏，diff / 搜索 / 渲染都可能受影响。
 #
 # 判据（窄面、可证伪）：
-#   受跟踪的下列文本类型，在 HEAD 中的原始字节若有 >=2 个**连续前导** EF BB BF => 判红。
-#   单 BOM 与无 BOM 都合规（本仓 .md 多为无 BOM、.ps1 必须带 BOM，两类都不该被强迫改）。
+#   受跟踪的下列文本类型，在 HEAD 中的原始字节若有 >=2 个**连续前导** EF BB BF（多重 BOM），或跳过
+#   合法 BOM 后紧接 EF BF BD（前导 U+FFFD）=> 判红。两者都是前缀字节污染，clean 过滤器都不处理。
 #   刻意不扫二进制与未列出类型（.exe/.syso/.pyc 等，BOM 对它们无意义）。
 #
 # 上闸前实况（round 45 实测）：1,277 个受跟踪文本文件 = 无BOM 1210 / 单BOM 67 / 多BOM 0
@@ -87,6 +87,21 @@ function Count-LeadBom([byte[]]$bytes) {
     else { break }
   }
   return $n
+}
+
+function Test-LeadMojibake([byte[]]$bytes) {
+  # 判「前导 U+FFFD」：先跳过合法的前导 BOM，再看紧跟的三字节是否 EF BF BD。
+  # 为什么归本件管：它与多重 BOM 同属「字节层前缀污染、git clean 过滤器不碰、会一路进库」，
+  # 而且危害更具体 —— 它把行首的 # 顶掉，使「StartsWith("#") 跳注释」的结果随 PowerShell 版本而变：
+  # 2026-10-26 实测同一行在 5.1 判 True（culture 敏感）、在 7.6 与 Ordinal 判 False ⇒ 同一个数据件
+  # 本地绿、换引擎红。本仓实例：tests/gofmt-debt.txt 首行被顶掉 # ⇒ pwsh 7 下那行注释被当成一条
+  # 债务登记 ⇒ check_gofmt 触发「失效豁免」判红 rc=1，而 powershell 5.1 下 rc=0。
+  $i = 0
+  while (($i + 2) -lt $bytes.Count) {
+    if ($bytes[$i] -eq 239 -and $bytes[$i + 1] -eq 187 -and $bytes[$i + 2] -eq 191) { $i += 3 } else { break }
+  }
+  if (($i + 2) -ge $bytes.Count) { return $false }
+  return ($bytes[$i] -eq 239 -and $bytes[$i + 1] -eq 191 -and $bytes[$i + 2] -eq 189)
 }
 
 $root = if ($RepoPath) { $RepoPath } else { Split-Path -Parent $PSScriptRoot }
@@ -176,6 +191,7 @@ $batch = [System.Diagnostics.Process]::Start($bp)
 $stdout = $batch.StandardOutput.BaseStream
 
 $bad = @()
+$mojiCount = 0
 $singleCount = 0
 $noneCount = 0
 $checked = 0
@@ -200,6 +216,7 @@ while ($true) {
     if ($take -gt 0) {
       $headBytes = Read-StreamBytes $stdout $take
       $n = Count-LeadBom $headBytes
+      if (Test-LeadMojibake $headBytes) { $bad += ($fname + "  前导U+FFFD（标记字符被顶掉）"); $mojiCount++ }
       $remain = $size - $take
       if ($remain -gt 0) { $null = Read-StreamBytes $stdout $remain }
     }
@@ -234,14 +251,19 @@ if (($checked + $missingCount) -ne $reqFiles.Count) {
 if ($skippedNl -gt 0) {
   Write-Host ('  （跳过 ' + $skippedNl + ' 个文件名含换行的条目 —— batch 协议按行分割，无法安全请求）') -ForegroundColor DarkGray
 }if ($bad.Count -gt 0) {
-  Write-Host ('多 BOM 门禁未通过（' + $bad.Count + ' 个文件有多个前导 BOM，共查 ' + $checked + ' 个）：') -ForegroundColor Red
+  Write-Host ('前缀污染门禁未通过（' + $bad.Count + ' 个文件有多重前导 BOM 或以 U+FFFD 开头，共查 ' + $checked + ' 个）：') -ForegroundColor Red
   foreach ($b in ($bad | Sort-Object)) { Write-Host ('  - ' + $b) -ForegroundColor Red }
-  Write-Host '  成因（本仓踩过）：改文件时「去一个 BOM + 加一个 BOM」，多出的没剥掉，逐轮累积。' -ForegroundColor Yellow
+  Write-Host '  成因（本仓踩过）：① 改文件时「去一个 BOM + 加一个 BOM」多出的没剥掉，逐轮累积；② 编码往返把行首字符换成 U+FFFD，顶掉了 # 等标记字符。' -ForegroundColor Yellow
   Write-Host '  危害：第二个 BOM 会被当作正文首字符（.ps1 双 BOM 会让 PS5.1 报 ParserError）；clean 过滤器不碰 BOM，会一路进库。' -ForegroundColor Yellow
-  Write-Host '  修法：按**连续前导**循环剥净后只前置恰好一个（或直接剥光 —— 无 BOM 也合规）。' -ForegroundColor Yellow
+  Write-Host '  修法：BOM 按**连续前导**循环剥净后只留恰好一个（或剥光）；前导 U+FFFD 直接把那几个字节删掉、把被顶掉的标记字符放回行首。' -ForegroundColor Yellow
   exit 1
 }
 if (-not $Quiet) {
-  Write-Host ('多 BOM 合规：查 ' + $checked + ' 个受跟踪文本文件（单BOM=' + $singleCount + ' 无BOM=' + $noneCount + ' 多BOM=0 缺HEAD ' + $missingCount + ' 个）') -ForegroundColor Green
+  Write-Host ('前缀污染合规（多重 BOM / 前导 U+FFFD）：查 ' + $checked + ' 个受跟踪文本文件（单BOM=' + $singleCount + ' 无BOM=' + $noneCount + ' 多BOM=0 前导U+FFFD=' + $mojiCount + ' 缺HEAD ' + $missingCount + ' 个）') -ForegroundColor Green
 }
 exit 0
+
+
+
+
+
