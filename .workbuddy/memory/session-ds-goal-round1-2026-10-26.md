@@ -584,32 +584,24 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 25（同会话，2026-10-26 20:28-20:50）—— T18④ 落地：协议新增「不许吐自有工具调用语法」
+## round 26（同会话，2026-10-26 21:00-21:15）—— T18⑦ 落地：no_artifact 一击即冷却
 
-### 改动（一文件 + 一测，提交 `5f15d97`）
-- `artifact.ProtocolInstruction` 新增第 6 条硬性要求：点名实测见过的自有语法（`<dots_function_call>`、`<|tool_call_start|>`、
-  裸 `function_call`），明确「工作台不会执行它们、只会判不合格」，并强调「没有产物块 = 没有交付」。
-- 新增 `TestProtocolInstructionForbidsOwnToolCalls`：钉住关键要素 + 「必须是第 6 条硬性要求」而不是散落建议句。
+### 改动（一文件 + 一测，提交 `89889e3`）
+- `Manager.MarkFailure`：`kind == noArtifactKind` 时阈值压到 **1**（一击即冷却）、冷却期抬到 **≥600 s**；类别字符串复用同包常量（单一来源）。
+- 新增 `TestNoArtifactOneStrikeCooldown`：首击即 `down` 且冷却剩余 ≥300 s；**对照组** `timeout` 首击不得直接冷却。
 
-### 依据（三轮 live 形态）
-```
-round 20：<dots_function_call><exec><command>ls -la</command>…（dots-studio，执行阶段）
-round 23：<|tool_call_start|>[ls(path='/workdesktop')]<|tool_call_end|>（poolside，方案阶段）
-round 25：```bash ls -la ``` / find …（gpt-oss-20b，方案阶段 —— 用 bash 块代替方案 JSON）
-```
+### 依据（修前实测形态）
+- round 22：同一次尝试内 `dots-studio → kilo-auto → liquid` 连续 3 条车道被 `no_artifact` 拒绝；
+- round 25 窗口内仍以它为主；修前这些车道只落 `state=degraded`（要累计 3 次才冷却）⇒ 后续尝试反复选中同一批车道。
 
 ### live 效果未观察到（如实标）
-- 窗口内无合规 ARTIFACTS 块：无 `verify.json` / `final.md` / `docs/health-check.md`。
-- 台账近 25 分钟 4 条：`方案 JSON 解析失败`、`方案模型无输出`、`rate_limited requeue` ×2 ⇒ 全是**车道质量问题**，
-  不是我们的判据问题。协议文本已到位，但「模型愿不愿照做」非代码侧单方面可定。
-
-### 新登记 T18⑦
-把 `no_artifact` 改成**一击即冷却**（能力性失败，与偶发超时不同），让反复被拒的车道尽快退出执行阶段候选。
+- 本次窗口（21:03–21:13）台账仅 1 条：`kind=plan action=degraded error=方案模型无输出`；
+- `model-status.jsonl` 无新的 `no_artifact` 失败记录 ⇒ 执行阶段没走到「会吐字但不带产物块」的车道。
+- 下次窗口判据：新记录应为 `state=down` 且冷却剩余 ≫120 s（修前是 `state=degraded`）。
 
 ### 提交 · 部署 · 边界（#40）
-- `5f15d97` 已推送；干净 worktree 构建 `BUILD_RC=0`；**dist 与 agent 两处 hash 相同** = `B211C3ED…E57A`、`vcs.revision=5f15d97`；
-  全仓 `go test ./...` rc=0；artifact 包全 PASS。
-- 运行边界已复原：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、配置从备份 `config.json.bak-pre-t18d-*` 还原 + 重新 select、worktree 已移除。
+- `89889e3` 已推送；干净 worktree 构建 `BUILD_RC=0`；**dist 与 agent 两处 hash 相同** = `6B1475AA…2D1B`、`vcs.revision=89889e3`；全仓 `go test ./...` rc=0。
+- 运行边界已复原：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、配置从备份 `config.json.bak-pre-t18g-*` 还原 + 重新 select、worktree 已移除；仓库未被写入。
 
 ### 我自己的错（本轮 0 次）
-本轮无新增自身错误（沿用：横切判据逐阶段清点、脚本 ASCII 引号、外部写盘后先 read 再 edit）。
+本轮无新增自身错误（沿用：横切判据逐阶段清点、脚本 ASCII 引号、外部写盘后先 read 再 edit、查判据优先读台账）。
