@@ -584,24 +584,36 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 26（同会话，2026-10-26 21:00-21:15）—— T18⑦ 落地：no_artifact 一击即冷却
+## round 27–29（同会话，2026-10-26 21:20-22:20）—— T15-④：台账取证两件套（执行 + 方案），live 已验证
 
-### 改动（一文件 + 一测，提交 `89889e3`）
-- `Manager.MarkFailure`：`kind == noArtifactKind` 时阈值压到 **1**（一击即冷却）、冷却期抬到 **≥600 s**；类别字符串复用同包常量（单一来源）。
-- 新增 `TestNoArtifactOneStrikeCooldown`：首击即 `down` 且冷却剩余 ≥300 s；**对照组** `timeout` 首击不得直接冷却。
+### round 27：主件落地（提交 `9ed8e5a`，CI+E2E success）
+- `store.AttemptRecord` 新增 `stderrPath` / `producedRunes`（omitempty）。
+- 引擎新增纯函数 `attemptEvidence(res)`（nil 安全、按 rune 计数，与 `countWordsEngine` 同口径），
+  并接到**执行路径**的失败与 done 两处落账点。
+- 测试：`engine/attempt_evidence_test.go`（nil 安全 / rune 计数 / 空产出）+ `store/attempt_evidence_test.go`
+  （落盘→回读一致 + 人直接读 JSONL 也能看到两个键 + 零值形态）。
 
-### 依据（修前实测形态）
-- round 22：同一次尝试内 `dots-studio → kilo-auto → liquid` 连续 3 条车道被 `no_artifact` 拒绝；
-- round 25 窗口内仍以它为主；修前这些车道只落 `state=degraded`（要累计 3 次才冷却）⇒ 后续尝试反复选中同一批车道。
+### round 28：部署 + 未观察到（如实记）
+- 部署 @9ed8e5a（dist 与 agent 同 hash `4C5F1A29…4B10`）；窗口内只产出一条**方案**阶段记录，
+  而当时方案路径未接线 ⇒ 取证字段未出现，live 未观察到。**顺带发现**：方案台账也应带这两件套。
 
-### live 效果未观察到（如实标）
-- 本次窗口（21:03–21:13）台账仅 1 条：`kind=plan action=degraded error=方案模型无输出`；
-- `model-status.jsonl` 无新的 `no_artifact` 失败记录 ⇒ 执行阶段没走到「会吐字但不带产物块」的车道。
-- 下次窗口判据：新记录应为 `state=down` 且冷却剩余 ≫120 s（修前是 `state=degraded`）。
+### round 29：补齐方案路径 + live 验证（提交 `dcc4207`）
+- `planStage` 新增 `StderrPath`/`ProducedRunes`，在 `e.runner.Run` 返回后**先取证再判失败**（三条失败路径都带读数）；
+  引擎两处方案台账（done / degraded）一并带上。
+- 部署 @dcc4207（dist 与 agent 同 hash `3DB3B5F8…F9FC`）。
+- **live 读数**：
+```
+{"at":1793023983626,"taskId":"task-7640cf5cb12e10ed","attempt":0,"model":"recursive/flint-v1.0:free",
+ "kind":"plan","action":"degraded","elapsedMs":3382,"error":"方案模型无输出",
+ "stderrPath":"D:\\workbench-agent\\workbench-output\\tasks\\task-7640cf5cb12e10ed-plan-r0\\stderr.txt"}
+```
+  ⇒ `stderrPath` 随台账落盘；`producedRunes` 缺省=0 = 零产出（与「方案模型无输出」一致）。
+  执行路径字段由单测覆盖，live 读数留待下次执行失败窗口复核。
 
-### 提交 · 部署 · 边界（#40）
-- `89889e3` 已推送；干净 worktree 构建 `BUILD_RC=0`；**dist 与 agent 两处 hash 相同** = `6B1475AA…2D1B`、`vcs.revision=89889e3`；全仓 `go test ./...` rc=0。
-- 运行边界已复原：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、配置从备份 `config.json.bak-pre-t18g-*` 还原 + 重新 select、worktree 已移除；仓库未被写入。
+### 运行边界（已完成）
+- round 28 的残留先清理：引擎 `--quit`、keepalive `/ENABLE`、配置从备份还原 + 重新 select、worktree 移除；
+- round 29 收尾同样复核：family=0、keepalive **Ready**、HEAD == origin/master == `dcc4207`、仓库 18 项未变、`docs/health-check.md` 仍不存在（成品未产出，如实记）。
 
-### 我自己的错（本轮 0 次）
-本轮无新增自身错误（沿用：横切判据逐阶段清点、脚本 ASCII 引号、外部写盘后先 read 再 edit、查判据优先读台账）。
+### 我自己的错（本轮 1 次）
+- round 28 起把「执行路径已接线」当成「live 也能看到」，没先看窗口里出现的记录属于哪条路径 ⇒ 白等一个窗口。
+  整改：**接线后先按「窗口里最常出现的是哪条路径」核对**，必要时把同族路径一次性接齐再部署（round 29 即如此）。
