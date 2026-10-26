@@ -518,12 +518,22 @@ func runWorkspaceCLI(args []string) int {
 			fmt.Fprintln(os.Stderr, "写配置失败: "+uerr.Error())
 			return 1
 		}
+		// 应用 + 落 select 审计：必须经 Manager（面板/引擎路径 engine.SelectWorkspaceDir → Manager.SelectExternal 同构）。
+		// 2026-10-26 round 5 实测缺陷：此前 CLI 只写 cstore，审计里没有 op=select
+		// ——「谁在何时把工作目录换成哪个」不可追溯（黑盒判据见 cmd/workbench/workspace_cli_audit_test.go）。
+		if _, serr := mgr.SelectExternal(v.Canonical); serr != nil {
+			fmt.Fprintln(os.Stderr, "应用工作目录失败: "+serr.Error())
+			return 1
+		}
 		fmt.Println("已切换工作目录: " + v.Canonical)
 		return 0
 	case "reset":
+		// 经 Manager 切回 —— 它同时落 op=reset 审计，并保留上次选定的 Root 供再次切回（既定语义）。
+		// 此前 CLI 只写 cstore：审计缺这条，且面板与 CLI 两条路径行为不同构（round 5 实测）。
+		rc := mgr.ResetProject()
 		if _, uerr := cstore.Update(func(c *config.Config) {
 			c.Workspace.Mode = workspace.ModeProject
-			c.Workspace.Since = model.Now()
+			c.Workspace.Since = rc.Since
 		}); uerr != nil {
 			fmt.Fprintln(os.Stderr, "写配置失败: "+uerr.Error())
 			return 1
