@@ -72,6 +72,8 @@ type Result struct {
 	StderrPath string
 	LastError  string
 	Stalled    bool
+	// EarlyStall 标记「启动后零进展」的提前回收：与 Stalled 同 kind，但原因不同，便于归因（round 14 · T15）。
+	EarlyStall bool
 	Touch      func()
 	// SawThinking 标记本轮是否出现过 thinking 帧：用于自适应放宽卡死阈值。
 	SawThinking atomic.Bool
@@ -379,7 +381,9 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	wg.Add(2)
 	// 活跃度：每次收到事件或产出文件都会刷新；超过 stallTimeout 未刷新视为卡死。
 	var lastActive atomic.Int64
-	lastActive.Store(time.Now().UnixMilli())
+	// 启动时刻同时充当「事件信号的初始值」：IsEarlyStall 靠它区分「从未有过事件」与「有过事件但久未刷新」。
+	startMs := started.UnixMilli()
+	lastActive.Store(startMs)
 	res.Touch = func() { lastActive.Store(time.Now().UnixMilli()) }
 	go func() {
 		defer wg.Done()
@@ -411,10 +415,13 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 			case <-watchDone:
 				return
 			case <-t.C:
-				// 判定逻辑收敛到纯函数 IsStalled（双信号：stdout 事件 + 产出文件 mtime），
-				// 看门狗 goroutine 只负责周期调用与善后。这样"取较新者"这条语义
-				// 可以被单测直接覆盖，变异测试也能真正抓到回归。
-				if IsStalled(lastActive.Load(), workDir, r.cfg.StallSeconds, res.SawThinking.Load(), time.Now().UnixMilli()) {
+				// 判定逻辑收敛到两个纯函数（都可被单测直接覆盖）：
+				//   IsEarlyStall —— 启动后**零进展**（没事件、没产出）：早回收早轮换（round 14 · T15）；
+				//   IsStalled    —— 双信号取较新者，按「最近一次进展距今」判（容忍静默写盘的长任务）。
+				nowMs := time.Now().UnixMilli()
+				early := IsEarlyStall(startMs, lastActive.Load(), workDir, r.cfg.StallSeconds, nowMs)
+				if early || IsStalled(lastActive.Load(), workDir, r.cfg.StallSeconds, res.SawThinking.Load(), nowMs) {
+					res.EarlyStall = early
 					res.markStalled()
 					job.kill()
 					// 主动关闭读端，避免 consume 协程卡在 Read 上导致收尾挂起
@@ -485,7 +492,11 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 
 	if res.Stalled {
 		res.ErrorKind = string(KindStalled)
-		res.Err = fmt.Errorf("任务长时间无任何进展，已判定卡死并回收进程")
+		if res.EarlyStall {
+			res.Err = fmt.Errorf("启动后零进展（首进展预算 %d s 内既无事件也无产出），已提前回收并轮换下一个模型", FirstProgressSeconds(r.cfg.StallSeconds))
+		} else {
+			res.Err = fmt.Errorf("任务长时间无任何进展，已判定卡死并回收进程")
+		}
 		job.kill()
 		return res, res.Err
 	}

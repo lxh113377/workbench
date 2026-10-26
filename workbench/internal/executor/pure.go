@@ -228,6 +228,56 @@ func stallLimitFor(baseSeconds int, sawThinking bool) time.Duration {
 	return thinkingStall
 }
 
+// FirstProgressSeconds 是「启动后多久还没有任何进展就提前判卡死」的预算（秒）。
+//
+// 为什么需要（2026-10-26 round 13 实测）：一次自动任务在计划阶段跑了 452,399 ms 才被看门狗判定卡死，
+// 而这 7.5 分钟里子会话只有 turn_start/step_start —— **一步都没有推进**（无事件、无产出文件）。
+// 对「零进展」这种形态，等满 StallSeconds（甚至 thinking 放大后的 840 s）毫无收益：
+// 车道已经放弃，早回收早轮换才有产出机会，也少烧配额。
+//
+// 取值：base/3，夹在 [30, 120] 秒。不引入新配置项（避免为一处判定扩配置面）；
+// 若将来要可调，再加 executor.firstProgressSeconds 并保留同口径默认。
+func FirstProgressSeconds(baseSeconds int) int {
+	base := baseSeconds
+	if base <= 0 {
+		base = 420
+	}
+	v := base / 3
+	if v < 30 {
+		v = 30
+	}
+	if v > 120 {
+		v = 120
+	}
+	return v
+}
+
+// IsEarlyStall 判定「从进程启动到现在一次进展都没有」的卡死。
+//
+// 与 IsStalled 的分工：后者看「最近一次进展距今多久」（容忍静默写盘的长任务）；
+// 本函数只看「有没有过第一次进展」——既无事件（lastEventMs 未超过 startedMs），也无产出文件。
+//
+//   - startedMs：进程启动时刻（毫秒；<=0 表示未知，不判）
+//   - lastEventMs：最近一条 stdout 事件时刻（其初始值就是 startedMs）
+//   - workDir：任务工作目录（探测产出文件 mtime）
+//   - baseSeconds：StallSeconds 配置（据此推导首进展预算）
+//   - nowMs：当前时刻（注入以便测试，不使用 time.Now）
+func IsEarlyStall(startedMs, lastEventMs int64, workDir string, baseSeconds int, nowMs int64) bool {
+	if startedMs <= 0 || nowMs <= 0 {
+		return false
+	}
+	if nowMs-startedMs < int64(FirstProgressSeconds(baseSeconds))*1000 {
+		return false
+	}
+	if lastEventMs > startedMs {
+		return false // 有过事件：交给 IsStalled 按「最近进展」判
+	}
+	if fm := LatestOutputMtimeMs(workDir); fm > startedMs {
+		return false // 有过产出：同上
+	}
+	return true
+}
+
 // IsStalled 是看门狗的活跃度判定（纯函数，双信号取较新者）。
 //
 //   - lastEventMs：最近一条 stdout 事件的时刻（0 表示从未收到）
