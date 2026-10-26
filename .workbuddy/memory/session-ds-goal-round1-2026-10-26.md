@@ -144,3 +144,34 @@ web 译名表加 `frontend=前端工程`（domain_label_test.go 钉住两张表�
 
 ### 我自己的错（本轮 0 次）
 本轮无新增自身错误；沿用上一轮的转义教训，写 Go 字面量时显式区分层级。
+## round 5（同会话，2026-10-26 12:3x-12:4x）—— T7：CLI 与面板的审计同构
+
+### 缺陷与定位
+面板/引擎路径 `engine.SelectWorkspaceDir` 走 `Manager.SelectExternal` / `Manager.ResetProject`，两者都落
+`workspace-audit.jsonl` 的 select / reset 记录；而 CLI 的 `--workspace select|reset` 直写 `cstore.Update`、
+**根本不经过 Manager** ⇒ 审计里只有 validate 行。实测：round 2 在 `D:\workbench-agent` select 成功后审计仍只有
+两条 validate ——「谁在何时把工作目录换成哪个」不可追溯。
+
+### 修法与判据
+- 改 `cmd/workbench/main.go`：select 保留「先落盘 → 再应用」，应用改走 `mgr.SelectExternal`；
+  reset 改走 `mgr.ResetProject`（同时落 `op=reset` 审计，并保留上次选定 Root 供再次切回——既定语义），再按返回的 Since 落盘。
+- **判据是黑盒真二进制**（新增 `cmd/workbench/workspace_cli_audit_test.go`）：临时数据根里构建并运行真实 exe，
+  跑一次 select 与一次 reset，审计文件必须各出现一条记录。
+  **先红后绿**：修前 FAIL 原文只有 `{"at":…,"op":"validate",…}` 一行；修后 PASS。
+  为什么用黑盒：缺陷恰在「CLI 不经过 Manager」这条接线处，单元缝测不到。
+
+### 提交 · 部署 · 线上验证（#40）
+- `ddded86` 已推送；干净 worktree @ddded86 构建 `BUILD_RC=0`（66.6 s）；部署到 `dist\` 与 `D:\workbench-agent\`，
+  两处 hash == `SHA256SUMS` = `FD4AD096…9B8B`；`vcs.revision=ddded86`；`go test ./cmd/workbench/` ok（35.5 s）；worktree 已移除。
+- **live 取证**：用新 exe 在 `D:\workbench-agent` 再选一次 ⇒ 审计新增
+  `{"op":"select","path":"D:\\workdesktop","mode":"external","allowed":true,"reason":"用户选定外部工作目录"}`
+  （此前 select 成功后仍只有 validate 行）。
+
+### 剩余
+- **仅剩 T8**：内置模板库（`defaults.go`）的同类扩充 + `TestDefaultsCount`/头注释同步 —— 在途件五轮开局均未提交（mtime 仍 10:54），明令不碰。
+- 引擎仍未启动（沿用 round 2 决定与回滚口径）。
+
+### 我自己的错（本轮 1 次）
+- 第二次踩同一类转义坑：在 TS 模板串里写 `\"` 想得到 Go 源码里的转义引号，实际得到裸引号 ⇒ Go 语法错
+  （`string literal not terminated`）。整改：**Go 源码里的反引号用字符串插值、内部双引号原样写**，一次通过；
+  教训：要分清「外层模板串也是一个解析器」。
