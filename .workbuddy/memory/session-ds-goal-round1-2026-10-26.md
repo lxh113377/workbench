@@ -445,3 +445,30 @@ after : deepseek succ=18 fail=4 consec=1 cooldownTo=0 state=healthy
 
 ### 我自己的错（本轮 0 次）
 本轮无新增自身错误（沿用上轮教训：脚本只写 ASCII 引号；外部写盘后先 read 再 edit）。
+## round 16（同会话，2026-10-26 16:33-16:50）—— T15-③ 结案：预算被遵守，残差=判定粒度+回收耗时
+
+### 做了什么（插桩 + 真跑）
+- pure.go 新增 `EarlyStallMessage(budget, decided)`：零进展回收文案里同时给出「首进展预算」与「看门狗判定时刻」；
+  executor.go 的 Result 加 `StallDecidedMs`（判定时刻距启动的毫秒数），看门狗触发时写入；新增 `TestEarlyStallMessage` 钉住两个数字。
+- 真跑读数：
+```
+16:39:36 尝试开始 deepseek-ai/deepseek-v4.1-flash
+16:42:01 尝试结束 kind=stalled elapsedMs=144128
+         reason="启动后零进展（首进展预算 2m0s，判定于 2m7.653s 且无任何实质进展），已提前回收并轮换下一个模型"
+```
+
+### 结论
+预算 120 s → 判定于 127.653 s（+7.65 s = 5 s ticker 粒度 + 调度抖动）→ `cmd.Wait` 于 144.128 s 返回
+⇒ **判定→回收完成 16.5 s**（杀 DSH 子进程树 + 关管道 + 等 Wait）。
+即「预算没被遵守」被否定；残差由「判定粒度（≤~8 s）」+「回收耗时（~16–25 s）」构成。
+**新登记 T15-⑤**：把这 16.5 s 挪出关键路径（kill 后异步回收），让下一次轮换更贴近预算。
+
+### 提交 · 部署 · 线上验证（#40）
+- `409571c` 已推送；干净 worktree 构建 `BUILD_RC=0`（75.6 s）；部署到 dist 与 D:\workbench-agent，
+  hash == `SHA256SUMS` = `C3E62F47…D87C`、`vcs.revision=409571c`；全仓 `go test ./...` rc=0；executor 四测 PASS。
+- 运行边界已复原：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、
+  配置从备份 `config.json.bak-pre-t15d-*` 还原并重新 select `D:\workdesktop`；worktree 已移除。
+
+### 我自己的错（本轮 1 次）
+- 追加测试时用了「文件末尾三行」当锚点 ⇒ `old_string` 命中 2 处被守卫拦下（**守卫在正常工作**）。
+  整改：锚点取**该函数独有的一行**（`IsSubstantiveEvent = %v` 那行）；教训是「锚点要唯一，不要用通用收尾形状」。
