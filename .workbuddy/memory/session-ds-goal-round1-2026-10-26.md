@@ -584,24 +584,33 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 23（同会话，2026-10-26 19:15-19:35）—— T18⑤ 落地：no_artifact 成为一等类别（live 未取得）
+## round 24（同会话，2026-10-26 20:00-20:20）—— T18⑤ live 验证 + 修掉自己引入的方案阶段回归
 
-### 改动（提交 `da40550`，三文件 + 两测）
-- `executor`：新增 `KindNoArtifact = "no_artifact"`（与 bad_exit 分层：后者「没有最终答案」，本类「有答案但不符合产物协议」），并入 `Retryable()`。
-- `retry`：新增 `NoArtifact`，加入 `ParseKind` 与 `Retryable()` —— 修前它被收敛成 `Unknown`，台账只写 `kind=unknown`。
-- `modelpool`：`noArtifactKind` 改为 `string(executor.KindNoArtifact)`（类别字符串单一来源，杜绝两处漂移）。
-- 测试：`retry/noartifact_kind_test.go`（可解析 / trim / 可重试 / 既有 timeout 与 missing_credential 口径未坏）；
-  `modelpool` 新增断言（单一来源 + 对外契约字符串）。
+### （1）T18⑤ 生效（权威台账 + 引擎日志）
+```
+attempts.jsonl：{"kind":"no_artifact","action":"fail","elapsedMs":189270,"error":"执行失败: no_artifact"}
+workbench.jsonl：{"level":"ERROR","msg":"任务失败","kind":"no_artifact","error":"执行失败: no_artifact"}
+              no_artifact 在引擎日志里的出现次数：0 → 2
+```
 
-### live 验证未取得（如实标）
-- 本轮窗口（19:21-19:25）引擎只走到 `stalled`（早回收 2m6.085s）与 `boot_failed`，没出现「执行阶段 + 会吐字但无产物块」的组合 ⇒ 台账仍未见 `kind":"no_artifact"`。
-- **顺带查清的运行事实**：19:25:15 出现 `尝试结束 context canceled` → **`引擎已停止`**，`state.json phase=stopped`；
-  原因不是崩溃，而是本次把 `maxTasksPerGoal=1`：首个任务的尝试重试耗尽即达预算，引擎主动停循环并取消在飞尝试。
-  ⇒ 验证方法改为：**放大任务预算（≥3）** 或把候选链首定向固定到会吐字的车道。这也解释了此前几轮同类 `context canceled`（我曾误记为自己的 `--quit`）。
+### （2）发现并修掉自己引入的回归（本仓在册族：新增横切判据未清点受理面）
+- 现象：`attempts.jsonl` 记 `{"kind":"plan","action":"degraded","error":"方案调用失败: 执行失败: no_artifact"}`；
+  引擎日志 `方案层不可用，退化直执行 err=方案调用失败: 执行失败: no_artifact`。
+- 根因：产物判据取「执行器有没有把产物协议拼进 prompt」，而**执行器对所有阶段都拼协议** ⇒ 方案阶段的合法 JSON 被判 no_artifact。
+  即 round 19 里程碑「方案已能产出」的通路被我 round 21 的新判据掐断。
+- 修法（`83778aa`）：`model.Task.Phase` + `model.PhasePlan` 显式阶段标记（不用猜 id 后缀/标题前缀）；
+  `engine/plan_stage.go` 置 `Phase: model.PhasePlan`；`modelpool.requireArtifactsFor` **阶段判据放最前**（方案阶段永不要产物）；
+  新增 4 条测试（方案阶段带 flag / 带协议文本都不判；执行阶段两条正判据不得被一起豁免）。
+
+### 修后验证（时间锚定）
+- 只看部署时刻之后写入的台账：共 1 条记录，`kind=plan action=degraded error=方案模型无输出`；
+  **既无 `no_artifact`、也无 `方案调用失败: 执行失败: no_artifact`** ⇒ 误判消失。
+- 方案阶段正向产出（`action=done`）本轮未复现 —— 该车道返回空输出（车道质量问题），留待下次真跑确认。
 
 ### 提交 · 部署 · 边界（#40）
-- `da40550` 已推送；干净 worktree 构建 `BUILD_RC=0`（79.8 s）；**dist 与 agent 两处 hash 相同**且 == `SHA256SUMS` = `AC0837B1…D176`、`vcs.revision=da40550`；全仓 `go test ./...` rc=0。
-- 运行边界已复原：`\WorkBenchKeepAlive` `/ENABLE`（Ready）、配置从备份 `config.json.bak-pre-t18e-*` 还原 + 重新 select、worktree 已移除、family=0。
+- `83778aa` 已推送；干净 worktree 构建 `BUILD_RC=0`（102.9 s）；**dist 与 agent 两处 hash 相同** = `AA904944…2EA6`、`vcs.revision=83778aa`；全仓 `go test ./...` rc=0。
+- 运行边界已复原：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、配置从备份 `config.json.bak-pre-t18fix-*` 还原 + 重新 select、worktree 已移除。
 
-### 我自己的错（本轮 0 次）
-本轮无新增自身错误（沿用：脚本 ASCII 引号、外部写盘后先 read 再 edit、查判据优先读台账）。
+### 我自己的错（本轮 1 次，且是上一轮埋的）
+- round 21 新增产物判据时**没有清点它会命中哪些阶段**：执行器对所有阶段都拼协议，于是方案阶段被误杀。
+  整改（写进流程）：**新增横切判据必须逐阶段/逐路径清点受理面，并对每个阶段各写一条测试**（本轮补的 4 条即是）。
