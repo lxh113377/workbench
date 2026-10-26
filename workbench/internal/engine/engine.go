@@ -563,14 +563,22 @@ func (e *Engine) stop(selfHeal bool) error {
 		// 任何一次正常（用户）停机都清掉标记，防止旧标记把「用户停过」又拉起来。
 		st.ResumeAfterRestart = false
 	}
-	_ = e.store.SaveState(st)
-	msg := "引擎已停止"
-	if hardStop {
-		msg = "引擎已停止（宽限期到期，已强制取消在跑任务）"
+	// state 落盘失败必须上报，但**不得阻断** Savepoint：队列快照写的是另一个文件（QueueFile），
+	// 是停机的另一半 —— 用 errors.Join 合并两半的错误，而不是提前 return 丢掉另一半。
+	// 相位没落上时也不发「引擎已停止」事件：那会让面板宣称一个磁盘上没有的状态。
+	var stateErr error
+	if err := e.store.SaveState(st); err != nil {
+		stateErr = fmt.Errorf("落盘停止相位失败（重启后接续判据读到旧相位）: %w", err)
+		e.log.Warn("引擎相位落盘失败", "err", err.Error(), "hardStop", hardStop)
+	} else {
+		msg := "引擎已停止"
+		if hardStop {
+			msg = "引擎已停止（宽限期到期，已强制取消在跑任务）"
+		}
+		e.log.Info("引擎已停止", "hardStop", hardStop, "graceSeconds", int(grace.Seconds()))
+		e.emitEvent(model.Event{Type: "engine", At: model.Now(), Msg: msg})
 	}
-	e.log.Info("引擎已停止", "hardStop", hardStop, "graceSeconds", int(grace.Seconds()))
-	e.emitEvent(model.Event{Type: "engine", At: model.Now(), Msg: msg})
-	return e.store.Savepoint()
+	return errors.Join(stateErr, e.store.Savepoint())
 }
 
 // cancelAllRunning 取消所有在跑任务的执行上下文（停机兜底）。
@@ -598,7 +606,12 @@ func (e *Engine) Pause() error {
 	st := e.store.State()
 	st.Phase = model.PhasePaused
 	st.PausedAt = model.Now()
-	_ = e.store.SaveState(st)
+	// 相位没落盘就不对用户宣布成功：重启后的接续判据 shouldAutoStart 读的是磁盘 state.json
+	//（见 Start() 的注释）。磁盘仍是 running ⇒ 用户以为暂停了、7×24 重启后实例自己跑起来。
+	// 内存相位不回滚，与 L435 的严格点同法：先改后落盘，落盘失败即返回错误。
+	if err := e.store.SaveState(st); err != nil {
+		return fmt.Errorf("落盘暂停相位失败: %w", err)
+	}
 	e.emitEvent(model.Event{Type: "engine", At: model.Now(), Msg: "引擎已暂停"})
 	return nil
 }
@@ -614,7 +627,10 @@ func (e *Engine) Resume() error {
 	e.mu.Unlock()
 	st := e.store.State()
 	st.Phase = model.PhaseRunning
-	_ = e.store.SaveState(st)
+	// 同 Pause：相位没落盘就不能对用户宣布成功（磁盘仍是 paused ⇒ 重启后不会自动接续）。
+	if err := e.store.SaveState(st); err != nil {
+		return fmt.Errorf("落盘恢复相位失败: %w", err)
+	}
 	e.emitEvent(model.Event{Type: "engine", At: model.Now(), Msg: "引擎已恢复"})
 	return nil
 }

@@ -270,7 +270,12 @@ func runApp(args []string) error {
 	quitOnce := sync.Once{}
 	gracefulQuit := func() {
 		quitOnce.Do(func() {
-			_ = eng.Stop()
+			// 退出照常执行（不能因为落盘失败就把用户困在进程里），但失败必须留痕：
+			// 相位没落上时，外部守护可能把「用户主动退出」当成异常停机再拉起。
+			if err := eng.Stop(); err != nil {
+				logger.At("quit").Warn("停机时状态落盘失败", "err", err.Error())
+				hub.Emit(model.Event{Type: "warn", At: model.Now(), Msg: "停机时状态落盘失败: " + err.Error()})
+			}
 			srv.Close()
 			os.Exit(0)
 		})
@@ -336,7 +341,12 @@ func runApp(args []string) error {
 		hub.Emit(model.Event{Type: "warn", At: model.Now(), Msg: "资源自愈触发: " + reason})
 		// 用 AbortForSelfHeal 而非 Stop：前者会落 ResumeAfterRestart 标记，
 		// 保证重启后引擎真的接续干活（否则 7x24 只是重启了壳）。
-		_ = eng.AbortForSelfHeal(reason)
+		// 上报但不阻断：state 没落上仍要继续自愈重启（不重启才是 7×24 事故），
+		// 但必须说出来 —— 否则运维以为 resumeAfterRestart 标记已经写上，实际新进程读的是旧 state。
+		if err := eng.AbortForSelfHeal(reason); err != nil {
+			logger.At("heal").Warn("自愈停机时状态落盘失败（仍将重启）", "err", err.Error())
+			hub.Emit(model.Event{Type: "warn", At: model.Now(), Msg: "自愈停机时状态落盘失败（仍将重启）: " + err.Error()})
+		}
 		if err := sup.SelfHeal(reason); err != nil {
 			hub.Emit(model.Event{Type: "error", At: model.Now(), Msg: "自愈重启失败: " + err.Error()})
 			return
@@ -376,6 +386,15 @@ func runApp(args []string) error {
 		openPanel(srv.URL())
 	}
 
+	// reportEngineOp 上报托盘触发的引擎操作失败：写日志 + 发事件流（与 OnWarn 同一条通道）。
+	reportEngineOp := func(op string, err error) {
+		if err == nil {
+			return
+		}
+		logger.At("tray").Warn("托盘"+op+"引擎失败", "err", err.Error())
+		hub.Emit(model.Event{Type: "warn", At: model.Now(), Msg: "托盘" + op + "引擎失败: " + err.Error()})
+	}
+
 	trayDone := make(chan struct{})
 	go func() {
 		defer close(trayDone)
@@ -389,11 +408,14 @@ func runApp(args []string) error {
 				logger.At("tray").Warn(msg)
 				hub.Emit(model.Event{Type: "warn", At: model.Now(), Msg: msg})
 			},
-			OnOpen:   func() { openPanel(srv.URL()) },
-			OnStart:  func() { _ = eng.Start() },
-			OnPause:  func() { _ = eng.Pause() },
-			OnResume: func() { _ = eng.Resume() },
-			OnStop:   func() { _ = eng.Stop() },
+			OnOpen: func() { openPanel(srv.URL()) },
+			// 托盘是不经 HTTP 的入口。面板那条路径（handleEnginePause/Resume）会判错并回非 2xx；
+			// 这里原先一律 _ = 吞掉 ⇒ 同一操作成了「一处报错、一处静默」。引擎侧已改为落盘失败即报错，
+			// 故这里必须把失败说出来（只上报、不弹窗：托盘是可选增强，不得打断主流程）。
+			OnStart:  func() { reportEngineOp("启动", eng.Start()) },
+			OnPause:  func() { reportEngineOp("暂停", eng.Pause()) },
+			OnResume: func() { reportEngineOp("恢复", eng.Resume()) },
+			OnStop:   func() { reportEngineOp("停止", eng.Stop()) },
 			// 「退出工作台」必须走 quitByUser（用户主动退出），不得裸调 gracefulQuit。
 			//
 			// 托盘是**不经 HTTP** 的退出入口：gracefulQuit 只落 stopped、不表达用户意图，

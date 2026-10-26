@@ -16,6 +16,37 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **修「引擎相位落盘失败却对用户宣布成功」：`Pause`/`Resume`/`stop` 三处吞掉的 `SaveState` 错误改为上报，并新增契约测试；托盘那条入口一并补齐**：
+  **缺陷与后果（实测，不是风格）**：`engine.go` 里 `SaveState` 共 7 处 —— L435/L461 严格判错，其余 5 处用 `_ =` 吞掉。
+  其中 `Pause()`/`Resume()`/`stop()` 的签名都是 `error`，却在落盘失败时照样 `emitEvent("引擎已暂停/已恢复/已停止")` 并
+  return nil。而 `Start()` 自己的注释（L408-409）写明「重启后的接续判据 shouldAutoStart 读的是**磁盘** state.json」
+  ⇒ 磁盘没落上时，用户以为暂停/停机了，7×24 重启后实例按旧相位自己跑起来。`SaveState` 的错误来自文件 I/O，不是理论路径。
+  **刻意只改 3 处、保留 2 处（不是漏改）**：L417（`Start()` 幂等分支的磁盘自愈，注释已论证是尽力而为且紧接着 return nil）
+  与 L475（`clearUserQuit` 两半都是忽略、设计自洽）保持原样 —— 判据抓不到不等于要改，先读作者留下的理由（⑳ 的第三关）。
+  `stop()` 单独处理：state 失败**不得阻断** `Savepoint()`（队列快照是另一个文件、是停机的另一半）⇒ 用
+  `errors.Join(stateErr, e.store.Savepoint())` 合并上报而不是提前 return；相位没落上时也不发「引擎已停止」事件。
+  **另一半在调用方（只修 engine 会留一半）**：`main.go` 的 5 处 `_ = eng.X()`（托盘 OnStart/OnPause/OnResume/OnStop、
+  `gracefulQuit`、`AbortForSelfHeal`）也吞 —— 面板那条走 HTTP（`server.go:373` 判错）而托盘不经 HTTP，就成了同一操作
+  「一处报错一处静默」。现在托盘经新增的 `reportEngineOp` 上报（日志+事件流，与 `OnWarn` 同通道、不弹窗）；
+  **自愈路径上报但不阻断重启**（state 没落上仍要 `SelfHeal`，不重启才是 7×24 事故）；`gracefulQuit` 同理留痕后照常退出。
+  改前我先核实：`_ = eng.AbortForSelfHeal(reason)` 丢弃返回值 ⇒ 引擎侧报错不会弄坏自愈链路 —— 这是我差点踩进去的坑。
+  **新增 `state_persist_contract_test.go`（4 个用例）—— 关键在注入手段**：不用 `config` 的私有 seam（`fsRename`/`fsRemove`
+  跨包不可写，也不该为一条 warn 路径改生产结构），而是把 `layout.StateFile` 指到**普通文件之下** ⇒ `os.MkdirAll` 必失败
+  （ENOTDIR），跨平台确定、与权限/杀软/占用无关。**首个用例是注入探针**：先证明 `SaveState` 真的报错，否则后三条全是
+  空转（本仓在册的 vacuous pass 家族）。判据只用可观测事实（返回 err、事件条数、`QueueFile` 是否仍被写），不比对错误文案。
+  **双向变异**：修前 3 条契约测试 FAIL（探针 PASS）→ 修后 4 条全 PASS；把 Pause/Resume 改回 `_ =` ⇒ 2 条判红；把 `stop()`
+  改成 state 失败即提前 return（阻断 Savepoint）⇒ 第 4 条判红并点名「Savepoint 被 state 失败阻断了（QueueFile 不存在）」；
+  还原后 GREEN、字节一致。
+  **验证**：`go build/vet ./...` rc=0；全仓 `go test ./...` **rc=0 无回归**；`check_crossbuild` 三平台 build+vet rc=0
+  （新测试在 linux/darwin 也编译）；20 道门禁仅 `check_report_figures` 因新测试未跟踪报 1 处不符（13 vs 12），
+  **暂存后实测 rc=0** —— 与 round 226/228/241 同型鸡生蛋窗口，非缺陷。gofmt clean；两个 .go 的 BOM/EOL 写盘前后一致
+  （`engine.go` 裸LF 2274→2290、`main.go` 1207→1229，均无 BOM）。
+  **我自己本轮的三个缺陷（全部当场抓住）**：① 一度在测试文件上做「连续片切」（原位 splice 索引互相错位、还留下一个
+  无用的辅助函数），当场按条款⑧改为**整文件重写**；② 第一次批量替换 engine/main 时**猜缩进**（写成两个 tab）⇒ 四个块
+  全部命中 0、未写盘；③ 变异 B 又猜了一次缩进（实际 1 个 tab）⇒ needle 命中异常。后两次都靠「命中数必须恰为 1」的
+  守卫在写盘前拦住。教训要落成动作：**改写前先用 trim 比较定位行、读该行实际前导空白**，不要凭印象拼。
+  另记一次工具层自纠：本条正文最初用反引号包裹标识符，连续三次让宿主脚本在解析期报错（无副作用），最后改成占位符 +
+  运行时替换才写进去 —— 即⑳「先怀疑测量器」在我自己的写入通道上也成立。零 worktree、零递归删除。
 - **修 `internal/engine` 两处被丢弃的 `store.Create` 错误：被拒任务落盘失败时面板仍报「任务被评估拒绝」，
   而重启后那条被拒记录根本不存在**（round 242 实测定位）：
   **缺陷实质**：`engine.go:862` 与 `engine.go:1359` 写的是 `_ = e.store.Create(task)`，紧接着一行就
