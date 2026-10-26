@@ -3,7 +3,9 @@ package executor
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+	"time"
 )
 
 // TestFirstProgressSecondsClamps 钉住首进展预算的取值口径（base/3，夹在 [30,120]）。
@@ -81,6 +83,20 @@ func TestIsSubstantiveEvent(t *testing.T) {
 	for _, c := range cases {
 		if got := IsSubstantiveEvent(c.ev); got != c.want {
 			t.Errorf("%s: IsSubstantiveEvent = %v, want %v", c.name, got, c.want)
+		}
+	}
+}
+
+// TestEarlyStallMessage 钉住「判定时刻必须写进原因文案」。
+//
+// 由来（round 14 实测残差 T15-③）：首进展预算 120 s，而 `elapsedMs` 实测 152.8 s，多出的 ~33 s 无法解释。
+// 把「判定于」与 elapsedMs（cmd.Wait 返回时刻）并排写出来，才能区分
+// 「预算没被遵守」与「判定及时、回收进程树耗了时间」——两种完全不同的处置。
+func TestEarlyStallMessage(t *testing.T) {
+	got := EarlyStallMessage(120*time.Second, 122858*time.Millisecond)
+	for _, want := range []string{"首进展预算 2m0s", "判定于 2m2.858s", "已提前回收并轮换下一个模型"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("文案缺 %q：%s", want, got)
 		}
 	}
 }

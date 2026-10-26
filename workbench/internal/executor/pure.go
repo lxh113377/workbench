@@ -355,6 +355,17 @@ func IsSubstantiveEvent(ev Event) bool {
 	return false
 }
 
+// EarlyStallMessage 组装「零进展提前回收」的原因文案（纯函数，便于单测与日志比对）。
+//
+// 为什么要把「判定时刻」写进文案（2026-10-26 round 14 实测残差 T15-③）：预算 120 s，
+// 但 `elapsedMs` 实测 152.8 s，多出的 ~33 s 一直无法解释。把**看门狗判定时刻**与
+// `elapsedMs`（= cmd.Wait 返回时刻）并排写出来，就能一眼区分「预算没被遵守」与
+// 「判定及时、回收（杀进程树）耗了时间」—— 这是两种完全不同的处置。
+func EarlyStallMessage(budget, decided time.Duration) string {
+	return "启动后零进展（首进展预算 " + budget.String() + "，判定于 " + decided.String() +
+		" 且无任何实质进展），已提前回收并轮换下一个模型"
+}
+
 // effectiveMaxBytes 计算单任务事件流上限（MB → bytes，带下限保护）。
 func effectiveMaxBytes(maxOutputMB int) int64 {
 	if maxOutputMB < 1 {

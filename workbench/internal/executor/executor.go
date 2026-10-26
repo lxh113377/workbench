@@ -76,7 +76,11 @@ type Result struct {
 	EarlyStall bool
 	// lastProgress 只在**实质进展**时前进（握手 status 帧不算），供 IsEarlyStall 判「从未起步」。
 	lastProgress atomic.Int64
-	Touch        func()
+	// StallDecidedMs 是看门狗**判定时刻**距启动的毫秒数（0 表示未判定）。
+	// 与 elapsedMs（cmd.Wait 返回时刻）之差 = 回收进程树的耗时，用于把「预算是否被遵守」与
+	// 「判定后回收花了多久」分开读（round 14 实测残差 T15-③）。
+	StallDecidedMs int64
+	Touch          func()
 	// SawThinking 标记本轮是否出现过 thinking 帧：用于自适应放宽卡死阈值。
 	SawThinking atomic.Bool
 }
@@ -426,6 +430,7 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 				early := IsEarlyStall(startMs, res.lastProgress.Load(), workDir, r.cfg.StallSeconds, nowMs)
 				if early || IsStalled(lastActive.Load(), workDir, r.cfg.StallSeconds, res.SawThinking.Load(), nowMs) {
 					res.EarlyStall = early
+					res.StallDecidedMs = nowMs - startMs
 					res.markStalled()
 					job.kill()
 					// 主动关闭读端，避免 consume 协程卡在 Read 上导致收尾挂起
@@ -497,7 +502,9 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	if res.Stalled {
 		res.ErrorKind = string(KindStalled)
 		if res.EarlyStall {
-			res.Err = fmt.Errorf("启动后零进展（首进展预算 %d s 内既无事件也无产出），已提前回收并轮换下一个模型", FirstProgressSeconds(r.cfg.StallSeconds))
+			res.Err = fmt.Errorf("%s", EarlyStallMessage(
+				time.Duration(FirstProgressSeconds(r.cfg.StallSeconds))*time.Second,
+				time.Duration(res.StallDecidedMs)*time.Millisecond))
 		} else {
 			res.Err = fmt.Errorf("任务长时间无任何进展，已判定卡死并回收进程")
 		}
