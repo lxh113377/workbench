@@ -81,3 +81,39 @@ T3（加前端/构建/性能域模板）必须**等 defaults.go 在途件提交�
 
 ### 我自己的错（本轮 1 次）
 - 把尚未创建的目录当 workdir 传参 ⇒ `spawn … ENOENT`（整条命令未执行、无副作用）；整改：**先建目录，再以它为 workdir 运行**。
+## round 3（同会话，2026-10-26 12:00-12:12）—— 把「模板内容」补上（目标核心）
+
+### 为什么走**用户模板通道**（而不是改 defaults.go）
+默认模板源文件 `workbench/internal/templates/defaults.go` 仍被并行会话占用（未提交、已闲置 1h+）。
+产品原生支持用户模板：`Registry.Open(<DataRoot>/templates.json)` 在内置 29 条之上追加 ⇒ **完全不碰在途文件**也能交付新模板内容。
+
+### 交付物 `docs/quality-packs/工程模板包-v1.json`（4 条，可导入任意实例）
+1. `quality-frontend-audit` 前端工程质量审查：HTML 语义与可访问性 / CSS 令牌体系 / JavaScript-TypeScript 正确性 / React-Vue 组件层，五轴口径 + P0-P1-P2 分级 + 合并结论与门禁建议；
+2. `quality-frontend-buildperf` 构建与性能调优：先量后改 + 受控 A/B、单点样本不许下结论、构建期与运行期不混；
+3. `quality-error-fix` 报错定位与最小修复：原始输出（命令+栈+退出码）+ 根因假设与最小实验 + 反向变异复验 + 静默失败补观测面；
+4. `quality-arch-design` 可扩展高可用架构：约束与失效模式 / 分层与边界 / 路径取舍 / 小步改造清单 / 「现在不做」。
+
+### 判据（不是写完就算）
+- `internal/templates/quality_pack_contract_test.go`：① 逐条过 Validate、ID 不撞内置、后继模板可解析（含"链边至少检查 3 条"受理面哨兵）；
+  ② 目标能力面关键词必须出现（HTML/CSS/TypeScript/构建/性能/报错/可扩展/高可用 + 必须有模板覆盖「前端」整面）；
+  ③ 走**真实导入路径** Registry.Open 断言 29+4=33 与 enabled/builtin 语义。
+- `internal/chain/pack_domain_pool_contract_test.go`：**先红后绿** —— 修前 FAIL「模板包领域 "frontend" 没有选题池 —— pickTopic 会静默回落 content 选题」→ 补池后 OK。
+
+### 配套小改
+`chain.go` 补 frontend 选题池（5 条，指回工作空间项目）；`config.go` 内置自主白名单补 frontend（遵守 round 2 写下的维护规则）；
+web 译名表加 `frontend=前端工程`（domain_label_test.go 钉住两张表同源）。
+
+### 提交 · 部署 · 线上验证（#40）
+- `21cbfb1` 已推送；干净 worktree @21cbfb1 构建 `BUILD_RC=0`（66.9 s），部署到 `dist\` 与 `D:\workbench-agent\`，
+  两处 hash == `SHA256SUMS` = `3F11CCED…5DD8`；`go version -m` vcs.revision=`21cbfb1`；`go test ./internal/web/`（产物逐字一致契约）ok。
+- **模板包已装入 live 实例**：`D:\workbench-agent\workbench-output\templates.json` 与仓库包 SHA256 逐字一致（`3816DBE3…`），含 4 条 id。
+- live `config.json` 的 `allowedDomains` 补 `frontend`，跑一次 exe 后仍为 `…,quality,frontend`（T6 修复对新增域同样生效）；
+  `--autonomy plan` 仍输出 quality 目标草稿。
+
+### 本轮登记/未做
+- **T8（待做）**：内置模板库（`defaults.go`）侧的同类扩充 + `TestDefaultsCount` 与头注释同步 —— 等并行会话把在途件提交后再做。
+- **T4 / T7** 未做（见报告 §6）；**引擎仍未启动**（沿用 round 2 的决定与回滚口径）。
+
+### 我自己的错（本轮 1 次）
+- 写 Go 测试源码时在 TS 模板串里直接写了 `\n`，被当成**真换行** ⇒ `string literal not terminated`。
+  教训：写代码时该写 `\\n` —— 要分清「这一层是谁在解析」（外层模板串 vs 内层语言字面量）。
