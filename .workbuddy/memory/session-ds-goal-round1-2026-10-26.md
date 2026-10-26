@@ -563,3 +563,40 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 我自己的错（本轮 0 次）
 本轮无新增自身错误。
+## round 20（同会话，2026-10-26 17:50-18:05）—— T17① 落地并实测：方案→执行模型连续性打通
+
+### 改动（三文件 + 一测）
+- `manager.go`：新增 `lastOK/lastOKAt` + `MarkSuccess` 记录 + `LastOKModel()` 访问器（失败不覆盖）。
+- `prefer.go`（新）：纯函数 `preferFirst(order, preferred)` —— **只做链内重排**（把刚成功的模型提到链首，其余顺序不变），
+  空/不在链中/已在首位时原样返回 ⇒ 绝不新增候选、不会把冷却或下线模型拉回来。
+- `failover.go`：候选链组装后按 `LastOKModel()` 重排链首。
+- `prefer_test.go`（新）：5 条重排边界 + 「链外 preferred 不得新增候选」 + `LastOKModel` 记录/更新/失败不覆盖。
+
+### 真跑读数（部署后真跑，keepalive 临时停用，观察后已复原）
+```
+17:58:08 combo:auto-free    → boot_failed（egress 不服务该模型）
+17:58:12 combo:auto-main    → boot_failed
+17:58:17 combo:auto-vision  → boot_failed
+17:58:21 dots-studio/dots-3-note-preview:free → 17:58:27 kind=ok（5,266 ms）
+17:58:27 执行阶段首模型 = dots-studio/dots-3-note-preview:free   ← 与方案成功模型一致（T17①生效）
+17:58:32 执行阶段 kind=ok（5,303 ms）                            ← 执行阶段首次「尝试成功」
+```
+
+### 但仍无成品 —— 且这次是验收闸门正确工作
+- `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
+- `final.md`（304 B）= 模型自有协议 `<dots_function_call><exec><command>ls -la</command>`（不认 `<<<ARTIFACTS>>>`）；
+- 日志「方案层不可用，退化直执行 → 产出过短且无产物块，判定为未完成」；
+- `attempts.jsonl`：`kind=plan action=degraded`（kimi-k2.6 方案 JSON 解析失败）、`kind=done action=done`（dots，321,692 ms）。
+
+### 新登记 T18（把「产出合格产物」变成一等信号）
+① `verify.json.pass=true` 作为正向健康信号（`MarkArtifactOK`）；② 「无产物块/产出过短」作为**协议不合规**（模型可归因失败）；
+③ `preferFirst` 改为优先「协议合规已验证」的车道；④ 教会或排除只会自有协议的车道（可保留其方案阶段资格）。
+
+### 提交 · 部署 · 线上验证（#40）
+- `f8217e6` 已推送；干净 worktree 构建 `BUILD_RC=0`（77 s）；部署 dist 与 D:\workbench-agent，hash == `SHA256SUMS` = `8BA5E782…9684`；
+  全仓 `go test ./...` rc=0；modelpool 全包 ok。
+- 运行边界已复原：引擎 `--quit`、`\WorkBenchKeepAlive` `/ENABLE`、配置从备份还原 + 重新 select、worktree 已移除。
+
+### 我自己的错（本轮 1 次）
+- 一条 `Select-String` 的模式里混进了多余引号 ⇒ PowerShell 解析报错（零执行）。整改：模式串只用一种引号、避免嵌套；
+  复杂过滤改成「先 ConvertFrom-Json 再取字段」。
