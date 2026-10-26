@@ -523,6 +523,14 @@ func (m *Manager) MarkFailure(id, kind, msg string) {
 				cooldownSec = 600
 			}
 		}
+		// 「上游在这条出口不服务该模型」是**出口级事实**（不是抖动，也不是端点连通性）：
+		// 一击即冷却，冷却抬到上限族（1800s）；恢复只能来自上游 availability 判定或一次真实执行成功（T17②-b）。
+		if kind == notServedKind {
+			maxFail = 1
+			if cooldownSec < 1800 {
+				cooldownSec = 1800
+			}
+		}
 		// 结构性错误直接长冷却（模型不存在/凭据缺失/端点不可达），
 		// 与「偶发超时」分层，避免风暴式重试把整池拖死。
 		long := kind == "model_unavailable" || kind == "missing_credential" || kind == "unreachable" || kind == "bad_endpoint"

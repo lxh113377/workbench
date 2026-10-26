@@ -104,11 +104,15 @@ const (
 	KindTimeout    Kind = "timeout"
 	KindMissingKey Kind = "missing_credential"
 	KindModelDead  Kind = "model_unavailable"
-	KindUpstream   Kind = "upstream_failed"
-	KindBoot       Kind = "boot_failed"
-	KindExit       Kind = "bad_exit"
-	KindCancelled  Kind = "cancelled"
-	KindStalled    Kind = "stalled"
+	// KindNotServed 是「上游在这条出口(egress)上根本不服务这个模型」——round 33 实测形态：
+	// `dsh: SERVER: our free model does not serve "combo:auto-free" on this egress`。
+	// 与 model_unavailable 分层：后者可由探测（端点可达）恢复，本类别**不能** —— 它是配置/出口级事实（T17②-b）。
+	KindNotServed Kind = "not_served"
+	KindUpstream  Kind = "upstream_failed"
+	KindBoot      Kind = "boot_failed"
+	KindExit      Kind = "bad_exit"
+	KindCancelled Kind = "cancelled"
+	KindStalled   Kind = "stalled"
 	// KindNoArtifact 是「回答有内容、但没有产物块」的失败类别（round 22 实测：引擎台账曾落成 unknown）。
 	// 与 bad_exit 的区别：bad_exit 是「没有最终答案」，本类别是「有答案但不符合产物协议」。
 	KindNoArtifact Kind = "no_artifact"
@@ -134,7 +138,7 @@ const (
 // Retryable 判断该类错误是否值得重试。
 func (k Kind) Retryable() bool {
 	switch k {
-	case KindTimeout, KindUpstream, KindExit, KindUnknown, KindStalled, KindNoArtifact:
+	case KindTimeout, KindUpstream, KindExit, KindUnknown, KindStalled, KindNoArtifact, KindNotServed:
 		return true
 	case KindRateLimited:
 		// 限流可重试：它不是模型下线（那个要长冷却 12h），只需整池冷却后重试。

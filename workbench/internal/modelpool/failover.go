@@ -137,10 +137,10 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 		// 把它算到模型头上会让整池在几分钟内被打入长冷却（现场 6 个模型同时 down）。
 		if modelAttributable(kind) {
 			f.mgr.MarkFailure(id, kind, detail)
-		} else if bootFailureAttributable(kind, detail) {
-			// 上游原文写明「这条车道没在服务该模型」⇒ 结构性不可用，按 model_unavailable 记（MarkFailure 对该类别走长冷却）。
-			// 修前它落在下面的 skip 分支：不入健康度、不进冷却，每个任务都要再白试一遍（T17②）。
-			f.mgr.MarkFailure(id, string(executor.KindModelDead), detail)
+		} else if atKind, hit := bootAttributionKind(kind, detail); hit {
+			// 上游原文写明「这条出口不服务该模型」⇒ 按 not_served 记：MarkFailure 对该类别一击即冷却 + 长冷却，
+			// 且探测**不得**把它治回（它是出口级事实，不是端点连通性问题）——round 33 T17② 归因被探测抵消的教训（T17②-b）。
+			f.mgr.MarkFailure(id, atKind, detail)
 		} else {
 			f.mgr.log(logRecord{Kind: "skip", Model: id, State: kind,
 				Reason: "任务级失败，不计入模型健康度: " + trim(detail, 160)})
