@@ -584,31 +584,30 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 21（同会话，2026-10-26 18:10-18:45）—— T18②③：产物块成为一等成功信号（含现场修正）
+## round 22（同会话，2026-10-26 18:50-19:10）—— T18②③ live 验证完成 + 新登记 T18⑤
 
-### 第一版（`b25f360`）真跑 ⇒ 判据一次都没触发
-- 判据取 `task.Prompt` 里有没有 `<<<ARTIFACTS>>>`；但**协议是执行器拼进 prompt 的**
-  （`executor.go` 写 stdin 那段 `prompt += 换行 + artifact.ProtocolInstruction`），`task.Prompt` 里没有它。
-- 真跑读数：执行阶段 `kind=ok` 6,311 ms、`no_artifact count=0` ⇒ 又一次「判据空转」（判据在跑、受理面不存在）。
+### 权威读数（台账与模型状态，不是引擎日志）
+```
+model-status.jsonl：
+  switch dots-studio → kilo-auto（no_artifact）
+  failure kilo-auto/free state=degraded reason=no_artifact: 回答不含产物块（不符合 ARTIFACTS 协议）
+  switch kilo-auto → liquid/lfm-2.5-2.6b（no_artifact）
+  failure liquid/lfm-2.5-2.6b state=degraded reason=no_artifact: …
+attempts.jsonl：
+  kind=unknown action=retry delayMs=4616 elapsedMs=524023 error="执行失败: no_artifact"
+```
+⇒ 三条结论实测成立：① failover 当场拒绝「只吐过程独白」的执行回答并连续换车道；
+② 协议不合规归因到车道（degraded + no_artifact），修前这种回答会被当成功并写进 lastOK；
+③ 引擎不再当交付，改为 retry（退避 4.6 s）。
 
-### 第二版（`95bace5`）
-- executor：Result 新增 `ArtifactsRequired atomic.Bool`（与 `SawThinking` 同口径），在**追加协议那一处**置位；
-  另新增常量 `ArtifactMarker` + 纯函数 `HasArtifactBlock`，Result 新增 `ArtifactBlock`（FinalText 定稿后、失败分支前打标）。
-- modelpool：`requireArtifactsFor(res, task)`（**执行器上报优先** + 提示词兜底）；`judge` 要求产物却无产物块 ⇒ 判 `no_artifact`；
-  `modelAttributable(no_artifact)=true`（协议不合规归因到车道能力）。
-- 测试：`TestHasArtifactBlock`（4 条）、`TestRequiresArtifacts`（3 条）、`TestJudgeArtifactRequirement`（4 条）、
-  `TestModelAttributableNoArtifact`、`TestRequireArtifactsFor`（4 条）；既有 `judge_test.go` 三处补形参。
+### 新发现的观察缺口（T18⑤）
+- `workbench.jsonl` 里 `no_artifact` 出现 **0 次**：引擎「尝试结束」把该次尝试落成 `kind=bad_exit`、`reason=""`（台账 `kind=unknown`）。
+- 危害：只看引擎日志的人会以为「无最终答案」，真相是「有答案但无产物块」⇒ 修法方向：让 `no_artifact` 贯通引擎失败分类与「尝试结束」字段。
 
-### live 验证状态（如实标：未完成，顺延 round 22）
-- `95bace5` 部署后真跑 7 分钟：执行阶段一直**连续 boot_failed 换车道**（combo:auto-free/auto-main/auto-vision 皆「egress 不服务该模型」），
-  窗口内没走到「会吐字但不带产物块」的车道 ⇒ `no_artifact` 仍未观察到（这次的 0 是「没机会触发」而非「判据不成立」，单测已覆盖该分支）。
-- 下一轮第一件事：把观察窗拉到出现会吐字车道为止，或把候选链首**定向固定**到一条会吐字的车道做定向验证。
+### 运行边界（已完成）
+- 引擎 `--quit`（family=0）；`\WorkBenchKeepAlive` `/ENABLE`（Ready）；配置从备份 `config.json.bak-pre-t18verify-*` 还原 + 重新 select `D:\workdesktop`；
+- 仓库未被写入（`git status` 仍是会话前 18 项；`docs/health-check.md` 不存在 —— 本任务的成品仍未产出，如实记）。
 
-### 提交 · 部署 · 边界（#40）
-- `b25f360` 与 `95bace5` 均已推送；各自干净 worktree 构建 `BUILD_RC=0`（81.7 s / 71.2 s），部署 dist 与 agent，
-  `95bace5` hash == `SHA256SUMS` = `186B0149…76BD`、`vcs.revision=95bace5`；全仓 `go test ./...` rc=0。
-- 运行边界已复原：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`、配置从备份还原 + 重新 select、两个 worktree 已移除。
-
-### 我自己的错（本轮 1 次，「判据空转」自查）
-- 第一版把判据建在 `task.Prompt` 上，没先核对「这段协议到底是谁拼进去的」⇒ 真跑一次零触发。
-  整改（写进流程）：**新增判据落盘前先问「受理面在哪、谁写这段数据」**，并用一次真跑确认 count≥1 才算生效。
+### 我自己的错（本轮 1 次，属「查证方式」）
+- 先用 `Select-String no_artifact` 搜**引擎日志**得到 count=0，一度以为判据又没生效；改用**权威台账**（`attempts.jsonl` + `model-status.jsonl`）才发现判据确实生效。
+  整改：查「某判据是否生效」时优先读**该判据直接写入的台账**，引擎日志只作旁证；两者不一致时按台账定性、把日志缺口登记成待办（本轮即 T18⑤）。
