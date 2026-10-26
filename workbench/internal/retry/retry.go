@@ -39,14 +39,19 @@ const (
 	StreamCut Kind = "stream_cut"
 	Cancelled Kind = "cancelled"
 	Stalled   Kind = "stalled"
-	Unknown   Kind = "unknown"
+	// NoArtifact 对应「回答有内容、但没有产物块」（executor.KindNoArtifact）。
+	// 它**可重试**：换一条车道往往就能拿到合规产物（round 22 实测：同一次尝试内 dots/kilo/liquid 连续因此被拒）。
+	// 为什么要在这里新增（2026-10-26 round 22 实测缺口）：不进 ParseKind 的话，类别落到 Unknown，
+	// 引擎台账只写 `kind=unknown`，「判据生效了但日志里查不到原因」。
+	NoArtifact Kind = "no_artifact"
+	Unknown    Kind = "unknown"
 )
 
 // ParseKind 把任意字符串收敛成已知 Kind（未知值一律 Unknown，避免策略表漏配）。
 func ParseKind(s string) Kind {
 	k := Kind(strings.TrimSpace(s))
 	switch k {
-	case Timeout, MissingKey, ModelDead, Upstream, Boot, Exit, Cancelled, Stalled, Unknown,
+	case Timeout, MissingKey, ModelDead, Upstream, Boot, Exit, Cancelled, Stalled, NoArtifact, Unknown,
 		Transport, StreamCut:
 		return k
 	}
@@ -61,7 +66,7 @@ func (k Kind) Retryable() bool {
 	// 网络/传输与流中断**应当重试**（2026-10-19）：
 	// ETIMEDOUT/ENOTFOUND 多为瞬时；stream_cut 常是上游抖动。
 	// 这两类恰恰是「换模型/重试就能好」的典型场景，判死不合理。
-	case Timeout, Upstream, Exit, Stalled, Unknown, Transport, StreamCut:
+	case Timeout, Upstream, Exit, Stalled, NoArtifact, Unknown, Transport, StreamCut:
 		return true
 	}
 	return false

@@ -62,6 +62,19 @@ func TestJudgeArtifactRequirement(t *testing.T) {
 //
 // 由来（round 21 实测）：协议由**执行器**拼进 prompt，`task.Prompt` 里没有 `<<<ARTIFACTS>>>`，
 // 只按提示词判时 `no_artifact` 一次都没触发（count=0）—— 所以执行器上报必须是第一判据。
+// TestNoArtifactKindSharesExecutorConstant 钉住「类别字符串只有一份来源」。
+//
+// failover 的产物判据用的 noArtifactKind 必须等于 executor 的类别常量，否则两处各写一遍必然漂移
+// （round 22 的教训：字符串对不上时，台账/日志里就会出现「判据生效但查不到原因」）。
+func TestNoArtifactKindSharesExecutorConstant(t *testing.T) {
+	if noArtifactKind != string(executor.KindNoArtifact) {
+		t.Fatalf("noArtifactKind=%q 必须等于 executor.KindNoArtifact=%q", noArtifactKind, executor.KindNoArtifact)
+	}
+	if noArtifactKind != "no_artifact" {
+		t.Fatalf("类别字符串是对外契约，不得改名（实得 %q）", noArtifactKind)
+	}
+}
+
 func TestRequireArtifactsFor(t *testing.T) {
 	withFlag := &executor.Result{}
 	withFlag.ArtifactsRequired.Store(true)

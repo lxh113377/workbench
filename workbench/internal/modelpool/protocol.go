@@ -36,4 +36,5 @@ func requireArtifactsFor(res *executor.Result, task *model.Task) bool {
 // 与 bad_exit 的区别：bad_exit 记的是「没有最终答案」（任务/提示词层面），
 // 本类别记的是「有答案但没有产物块」—— 实测该形态与**车道能力**强相关（只吐自有协议的车道永远交不出成品），
 // 因此 modelAttributable 认它（见 failover.go）。
-const noArtifactKind = "no_artifact"
+// 取值直接来自 executor 的类别常量：判据在 failover 层，但类别字符串必须与执行器同一份（两处各写一遍必然漂移）。
+const noArtifactKind = string(executor.KindNoArtifact)

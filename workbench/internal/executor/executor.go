@@ -109,6 +109,9 @@ const (
 	KindExit       Kind = "bad_exit"
 	KindCancelled  Kind = "cancelled"
 	KindStalled    Kind = "stalled"
+	// KindNoArtifact 是「回答有内容、但没有产物块」的失败类别（round 22 实测：引擎台账曾落成 unknown）。
+	// 与 bad_exit 的区别：bad_exit 是「没有最终答案」，本类别是「有答案但不符合产物协议」。
+	KindNoArtifact Kind = "no_artifact"
 	// KindRateLimited 是上游 429 限流（车道级，不是任务问题）。
 	// 引擎据此只冷却出问题的车道并把任务退回队列（不计失败）。
 	KindRateLimited Kind = "rate_limited"
@@ -131,7 +134,7 @@ const (
 // Retryable 判断该类错误是否值得重试。
 func (k Kind) Retryable() bool {
 	switch k {
-	case KindTimeout, KindUpstream, KindExit, KindUnknown, KindStalled:
+	case KindTimeout, KindUpstream, KindExit, KindUnknown, KindStalled, KindNoArtifact:
 		return true
 	case KindRateLimited:
 		// 限流可重试：它不是模型下线（那个要长冷却 12h），只需整池冷却后重试。
