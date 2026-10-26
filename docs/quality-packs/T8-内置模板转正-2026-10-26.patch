@@ -1,0 +1,535 @@
+diff --git "a/docs/quality-packs/\345\267\245\347\250\213\346\250\241\346\235\277\345\214\205-v1.json" "b/docs/quality-packs/\345\267\245\347\250\213\346\250\241\346\235\277\345\214\205-v1.json"
+deleted file mode 100644
+index 1d022bc..0000000
+--- "a/docs/quality-packs/\345\267\245\347\250\213\346\250\241\346\235\277\345\214\205-v1.json"
++++ /dev/null
+@@ -1,184 +0,0 @@
+-[
+-  {
+-    "id": "quality-frontend-audit",
+-    "name": "前端工程质量审查",
+-    "domain": "frontend",
+-    "description": "对 HTML/CSS/JS 与 React/Vue、TS 的前端面做质量审查，产出可直接贴 PR 的报告",
+-    "promptTemplate": "请对「{topic}」做一次前端工程质量审查，产出**可直接贴进 PR** 的报告。要求：① 逐层过一遍：HTML 语义与可访问性（标签语义、ARIA、键盘可达、对比度、缩放）、CSS 体系（设计令牌是否唯一来源、死样式、响应式断点、打印样式）、JavaScript/TypeScript 正确性（事件与定时器清理、内存泄漏、异步竞态、类型与接口契约、错误处理是否静默）、组件框架层（React/Vue 的 props/状态/渲染副作用、列表 key、事件绑定与卸载清理）；② 每个发现给 文件:行号 + 一句后果 + 最小改法，按 **P0 阻塞 / P1 应改 / P2 建议** 分级；③ 必须与**构建产物对照**：源码已改而产物未重建属于判红项（同源漂移）；④ 无问题的层也要写明「本层未发现问题」并说明检查了什么；⑤ 没读代码证实的一律标「存疑」，不许写成事实；⑥ 结尾给**合并结论**（可合并 / 改后可合并 / 需重写）与**门禁建议**（哪些发现应变成机器判据）。上下文：\n{context}",
+-    "params": {
+-      "modelTier": "balanced",
+-      "maxMinutes": 30,
+-      "outputFormat": "md",
+-      "webAllowed": false,
+-      "tags": [
+-        "前端",
+-        "审查",
+-        "PR"
+-      ]
+-    },
+-    "outputSpec": {
+-      "format": "md",
+-      "sections": [
+-        "可访问性与语义",
+-        "样式体系",
+-        "脚本与类型",
+-        "合并结论与门禁建议"
+-      ],
+-      "minWords": 800,
+-      "minBytes": 2400
+-    },
+-    "priorityWeight": 4,
+-    "valuePrior": 88,
+-    "costPrior": 50,
+-    "cooldownMinutes": 60,
+-    "diversityGroup": "frontend",
+-    "chain": {
+-      "successorTemplates": [
+-        "quality-frontend-buildperf",
+-        "quality-gate-spec"
+-      ],
+-      "maxDepth": 5,
+-      "fanout": 2
+-    },
+-    "enabled": true,
+-    "builtin": false,
+-    "createdAt": 0,
+-    "updatedAt": 0
+-  },
+-  {
+-    "id": "quality-frontend-buildperf",
+-    "name": "构建与性能调优",
+-    "domain": "frontend",
+-    "description": "先量后改的前端构建与运行期性能调优，产出可执行、可复算的改进清单",
+-    "promptTemplate": "请对「{topic}」做一次**构建与性能调优**，产出可执行的改进清单。要求：① 先量后改 —— 先给可复算的基线读数（产物体积与构成、构建时长分段、首屏关键路径、内存与分配热点），写清测量命令与取样次数；② 只认**受控 A/B**（同机、同轮交替、输出差异必须为 0 才可宣称等价），单点样本不许下结论；③ 每项优化给「改前 → 改后 + 证明方式」，并标注收益是否稳定（含反例样本）；④ 严格区分**构建期**与**运行期**，不把二者混为一谈；⑤ 不引入新依赖，除非同时给出替换收益与回滚方式；⑥ 结束时给出「不做」的项与触发条件。上下文：\n{context}",
+-    "params": {
+-      "modelTier": "balanced",
+-      "maxMinutes": 30,
+-      "outputFormat": "md",
+-      "webAllowed": false,
+-      "tags": [
+-        "构建",
+-        "性能",
+-        "度量"
+-      ]
+-    },
+-    "outputSpec": {
+-      "format": "md",
+-      "sections": [
+-        "基线读数",
+-        "瓶颈归因",
+-        "优化清单",
+-        "验证与回滚"
+-      ],
+-      "minWords": 700,
+-      "minBytes": 2200
+-    },
+-    "priorityWeight": 4,
+-    "valuePrior": 85,
+-    "costPrior": 55,
+-    "cooldownMinutes": 60,
+-    "diversityGroup": "frontend",
+-    "chain": {
+-      "successorTemplates": [
+-        "quality-verify"
+-      ],
+-      "maxDepth": 5,
+-      "fanout": 2
+-    },
+-    "enabled": true,
+-    "builtin": false,
+-    "createdAt": 0,
+-    "updatedAt": 0
+-  },
+-  {
+-    "id": "quality-error-fix",
+-    "name": "报错定位与最小修复",
+-    "domain": "code",
+-    "description": "从真实报错栈定位最小根因并修复，附可复现验证与防回归判据",
+-    "promptTemplate": "请定位并修复与「{topic}」相关的**真实报错**。要求：① 先复现并给出原始输出 —— 命令、错误栈全文、退出码，不许转述或摘要；② 列 2-3 个根因假设，用**最小实验**逐个排除，写清每个实验的判据与结果；③ 只做**最小改动**（一步一改），改完必须复验：同一命令重跑 + **反向变异**证明判据会判红；④ 若根因属于「静默失败」（吞错、无日志、rc=0 却无产出），必须同时补上可观测面（日志 + 事件 + 可复算字段）；⑤ 结尾给「根因一句话 + 防回归的机器判据」；⑥ 修不动的（需要外部凭据、平台能力缺口）如实标出并给下一步。上下文：\n{context}",
+-    "params": {
+-      "modelTier": "balanced",
+-      "maxMinutes": 30,
+-      "outputFormat": "md",
+-      "webAllowed": false,
+-      "tags": [
+-        "报错",
+-        "根因",
+-        "修复"
+-      ]
+-    },
+-    "outputSpec": {
+-      "format": "md",
+-      "sections": [
+-        "复现与原始输出",
+-        "根因假设与实验",
+-        "最小修复",
+-        "复验与防回归"
+-      ],
+-      "minWords": 600,
+-      "minBytes": 1800
+-    },
+-    "priorityWeight": 5,
+-    "valuePrior": 92,
+-    "costPrior": 60,
+-    "cooldownMinutes": 60,
+-    "diversityGroup": "code",
+-    "chain": {
+-      "successorTemplates": [
+-        "quality-gate-spec"
+-      ],
+-      "maxDepth": 5,
+-      "fanout": 2
+-    },
+-    "enabled": true,
+-    "builtin": false,
+-    "createdAt": 0,
+-    "updatedAt": 0
+-  },
+-  {
+-    "id": "quality-arch-design",
+-    "name": "可扩展高可用架构设计",
+-    "domain": "quality",
+-    "description": "为指定对象设计可扩展、高可用架构，并落成小步可验收的改造清单",
+-    "promptTemplate": "请为「{topic}」设计**可扩展、高可用**的软件架构，并给出可落地的改造步骤。要求：① 先写约束与失效模式（单点、背压、超时与重试、幂等、状态落盘与崩溃恢复、观测面）；② 给分层与边界（模块职责、依赖方向、扩展点、不变量），并说明现有结构与它的差距；③ 给至少两条可选路径与取舍（不谈成本，只说最优），标明推荐项与理由；④ 落成**小步改造清单**：每步限定在少量文件内的改动 + 验收判据 + 回滚方式，禁止一步跨多个子系统；⑤ 明确哪些是「现在不做」并给出触发条件；⑥ 结论要能被下游直接照做，不要停留在原则。上下文：\n{context}",
+-    "params": {
+-      "modelTier": "balanced",
+-      "maxMinutes": 30,
+-      "outputFormat": "md",
+-      "webAllowed": false,
+-      "tags": [
+-        "架构",
+-        "可扩展",
+-        "高可用"
+-      ]
+-    },
+-    "outputSpec": {
+-      "format": "md",
+-      "sections": [
+-        "约束与失效模式",
+-        "分层与边界",
+-        "路径取舍",
+-        "小步改造清单",
+-        "现在不做"
+-      ],
+-      "minWords": 900,
+-      "minBytes": 2600
+-    },
+-    "priorityWeight": 4,
+-    "valuePrior": 86,
+-    "costPrior": 55,
+-    "cooldownMinutes": 60,
+-    "diversityGroup": "quality",
+-    "chain": {
+-      "successorTemplates": [
+-        "quality-gate-spec"
+-      ],
+-      "maxDepth": 5,
+-      "fanout": 2
+-    },
+-    "enabled": true,
+-    "builtin": false,
+-    "createdAt": 0,
+-    "updatedAt": 0
+-  }
+-]
+diff --git a/workbench/internal/chain/pack_domain_pool_contract_test.go b/workbench/internal/chain/pack_domain_pool_contract_test.go
+deleted file mode 100644
+index 446ab5a..0000000
+--- a/workbench/internal/chain/pack_domain_pool_contract_test.go
++++ /dev/null
+@@ -1,60 +0,0 @@
+-package chain
+-
+-import (
+-	"encoding/json"
+-	"os"
+-	"path/filepath"
+-	"testing"
+-)
+-
+-// packPath 是工程模板包在仓库里的位置（与 internal/templates 的契约测试同一份资产）。
+-const packPath = "../../../docs/quality-packs/工程模板包-v1.json"
+-
+-// TestPackDomainsHaveTopicPool 钉住「模板包用到的每个领域都必须有非空选题池」。
+-//
+-// 为什么需要：round 1 实测的 P0 就是这个形态 —— quality 域在模板库里存在、但 topicsByDomain 缺键，
+-// pickTopic（chain.go）静默回落 content 选题，于是工程质量任务的 {topic} 变成「AI 时代的个人效率」。
+-// 模板包新增了 frontend 领域（前端工程审查 / 构建与性能调优），若只加模板不加池，同一条缺陷会原样复发。
+-// 本判据把它挡在导入之前：判据先红（缺 frontend 池）、补齐后转绿。
+-func TestPackDomainsHaveTopicPool(t *testing.T) {
+-	raw, err := os.ReadFile(filepath.FromSlash(packPath))
+-	if err != nil {
+-		t.Fatalf("读不到工程模板包 %s: %v", packPath, err)
+-	}
+-	var pack []struct {
+-		ID     string `json:"id"`
+-		Domain string `json:"domain"`
+-	}
+-	if err := json.Unmarshal(raw, &pack); err != nil {
+-		t.Fatalf("模板包不是合法 JSON: %v", err)
+-	}
+-	if len(pack) == 0 {
+-		t.Fatal("模板包解析出 0 条 —— 判据会空集全绿，先修解析面")
+-	}
+-	seen := map[string]bool{}
+-	checked := 0
+-	for _, p := range pack {
+-		if p.Domain == "" {
+-			t.Errorf("模板 %s 没有 domain", p.ID)
+-			continue
+-		}
+-		if seen[p.Domain] {
+-			continue
+-		}
+-		seen[p.Domain] = true
+-		checked++
+-		pool, ok := topicsByDomain[p.Domain]
+-		if !ok || len(pool) == 0 {
+-			t.Errorf("模板包领域 %q 没有选题池 —— pickTopic 会静默回落 content 选题，该面任务的主题与被测项目无关", p.Domain)
+-			continue
+-		}
+-		for i, topic := range pool {
+-			if len(topic) == 0 {
+-				t.Errorf("领域 %q 第 %d 条选题为空串", p.Domain, i)
+-			}
+-		}
+-	}
+-	if checked < 2 {
+-		t.Fatalf("只检查到 %d 个领域（期望 >=2）—— 判据失去受理面", checked)
+-	}
+-}
+diff --git a/workbench/internal/templates/chain_link_contract_test.go b/workbench/internal/templates/chain_link_contract_test.go
+index 0dc4c91..a088641 100644
+--- a/workbench/internal/templates/chain_link_contract_test.go
++++ b/workbench/internal/templates/chain_link_contract_test.go
+@@ -11,9 +11,9 @@ import "testing"
+ // 即一个**拼错或已被删除的后继 ID 会被静默跳过** —— 不报错、不打日志，
+ // 链在那一步无声停止延伸。7x24 无人值守下表现就是"某类任务再也不往后走了"，
+ // 而所有测试与门禁都是绿的。既有守卫只有 chain_test.go 里 4 个抽查用例，
+-// 覆盖不到 29 条模板的全部 11 条边；受跟踪与未跟踪测试里都没有链完整性断言（实测）。
++// 覆盖不到全部模板的所有后继边（数量以本文件输出为准 —— 2026-10-26 T8 转正实测为 33 条 / 16 条边）；受跟踪与未跟踪测试里都没有链完整性断言（实测）。
+ //
+-// 判据只覆盖「客观错」的三类，且都是当前真值已满足的（实测 29 模板 / 11 条边：
++// 判据只覆盖「客观错」的三类（条数与边数一律以本文件输出为准，不写成会过期的现状断言）：
+ // 断链 0、自环 0、同一后继列表内重复 0）：
+ //  1. 断链：后继 ID 不在模板集合里（静默丢边的直接成因）；
+ //  2. 自环：自己把自己列为后继（A→A 会在 MaxDepth 内反复衍生同一模板）；
+@@ -56,7 +56,7 @@ func TestTemplateChainHasNoBrokenLinks(t *testing.T) {
+ 		t.Fatal("Defaults() 返回空 —— 判据失去受理面")
+ 	}
+ 	if edges == 0 {
+-		t.Fatal("29 条模板的后继边总数为 0 —— 链配置整体丢失，判据在比空气")
++		t.Fatal("后继边总数为 0 —— 链配置整体丢失，判据在比空气")
+ 	}
+ 	t.Logf("链完整性 OK：%d 条模板、%d 条后继边，无断链/自环/重复", len(all), edges)
+ }
+diff --git a/workbench/internal/templates/defaults.go b/workbench/internal/templates/defaults.go
+index 9819508..08ca2ee 100644
+--- a/workbench/internal/templates/defaults.go
++++ b/workbench/internal/templates/defaults.go
+@@ -22,7 +22,8 @@ func mkSpec(format string, sections []string, minWords, minBytes int) spec {
+ 	return spec{Format: format, Sections: sections, MinWords: minWords, MinBytes: minBytes}
+ }
+ 
+-// Defaults 返回内置的 29 条持续产出模板（7 领域；quality 领域 2026-10-24 round 88/90 新增，含五轴审查）。
++// Defaults 返回内置的 33 条持续产出模板（8 领域；quality 领域 2026-10-24 round 88/90 新增，含五轴审查；
++// frontend 领域 2026-10-26 新增 —— 由用户模板包 docs/quality-packs 转正，含报错修复与架构设计两条 quality/code 模板）。
+ // 设计原则：每条都必须能独立产出真实可用的成果物，且彼此有逻辑递进关系。
+ func Defaults() []tpl {
+ 	now := model.Now()
+@@ -495,6 +496,49 @@ func Defaults() []tpl {
+ 			[]string{"审查", "PR", "五轴"}, 95, 60, 5,
+ 			mkSpec("md", []string{"正确性", "可读性", "架构", "安全", "性能", "合并结论与门禁建议"}, 900, 3000),
+ 			[]string{"quality-gate-spec"}),
++		// 2026-10-26 转正（原用户模板包）：报错修复与架构设计并入 quality/code 领域。
++		mk("quality-error-fix", "报错定位与最小修复", "code",
++			"从真实报错栈定位最小根因并修复，附可复现验证与防回归判据",
++			"请定位并修复与「{topic}」相关的**真实报错**。要求：① 先复现并给出原始输出 —— 命令、错误栈全文、退出码，不许转述或摘要；"+
++				"② 列 2-3 个根因假设，用**最小实验**逐个排除，写清每个实验的判据与结果；"+
++				"③ 只做**最小改动**（一步一改），改完必须复验：同一命令重跑 + **反向变异**证明判据会判红；"+
++				"④ 若根因属于「静默失败」（吞错、无日志、rc=0 却无产出），必须同时补上可观测面；"+
++				"⑤ 结尾给「根因一句话 + 防回归的机器判据」；⑥ 修不动的（需外部凭据/平台能力缺口）如实标出并给下一步。上下文：\n{context}",
++			[]string{"报错", "根因", "修复"}, 92, 60, 5,
++			mkSpec("md", []string{"复现与原始输出", "根因假设与实验", "最小修复", "复验与防回归"}, 600, 1800),
++			[]string{"quality-gate-spec"}),
++		mk("quality-arch-design", "可扩展高可用架构设计", "quality",
++			"为指定对象设计可扩展、高可用架构，并落成小步可验收的改造清单",
++			"请为「{topic}」设计**可扩展、高可用**的软件架构，并给出可落地的改造步骤。要求：① 先写约束与失效模式"+
++				"（单点、背压、超时与重试、幂等、状态落盘与崩溃恢复、观测面）；② 给分层与边界（模块职责、依赖方向、扩展点、不变量）；"+
++				"③ 给至少两条可选路径与取舍（不谈成本，只说最优），标明推荐项与理由；④ 落成**小步改造清单**：每步限定在少量文件内 + 验收判据 + 回滚方式；"+
++				"⑤ 明确「现在不做」并给出触发条件；⑥ 结论要能被下游直接照做。上下文：\n{context}",
++			[]string{"架构", "可扩展", "高可用"}, 86, 55, 4,
++			mkSpec("md", []string{"约束与失效模式", "分层与边界", "路径取舍", "小步改造清单", "现在不做"}, 900, 2600),
++			[]string{"quality-gate-spec"}),
++
++		// ── 前端工程 frontend（2026-10-26 新增领域；原用户模板包转正）────────────
++		mk("quality-frontend-audit", "前端工程质量审查", "frontend",
++			"对 HTML/CSS/JS 与 React/Vue、TS 的前端面做质量审查，产出可直接贴 PR 的报告",
++			"请对「{topic}」做一次前端工程质量审查，产出**可直接贴进 PR** 的报告。要求：① 逐层过一遍：HTML 语义与可访问性"+
++				"（标签语义、ARIA、键盘可达、对比度、缩放）、CSS 体系（设计令牌是否唯一来源、死样式、响应式断点、打印样式）、"+
++				"JavaScript/TypeScript 正确性（事件与定时器清理、内存泄漏、异步竞态、类型与接口契约、错误处理是否静默）、"+
++				"组件框架层（React/Vue 的 props/状态/渲染副作用、列表 key、事件绑定与卸载清理）；② 每个发现给 文件:行号 + 一句后果 + 最小改法，"+
++				"按 **P0 阻塞 / P1 应改 / P2 建议** 分级；③ 必须与**构建产物对照**（源码已改而产物未重建属判红项）；"+
++				"④ 无问题的层也要写明「本层未发现问题」并说明检查了什么；⑤ 没读代码证实的一律标「存疑」；⑥ 结尾给**合并结论**与**门禁建议**。上下文：\n{context}",
++			[]string{"前端", "审查", "PR"}, 88, 50, 4,
++			mkSpec("md", []string{"可访问性与语义", "样式体系", "脚本与类型", "合并结论与门禁建议"}, 800, 2400),
++			[]string{"quality-frontend-buildperf", "quality-gate-spec"}),
++		mk("quality-frontend-buildperf", "构建与性能调优", "frontend",
++			"先量后改的前端构建与运行期性能调优，产出可执行、可复算的改进清单",
++			"请对「{topic}」做一次**构建与性能调优**，产出可执行的改进清单。要求：① 先量后改 —— 先给可复算的基线读数"+
++				"（产物体积与构成、构建时长分段、首屏关键路径、内存与分配热点），写清测量命令与取样次数；"+
++				"② 只认**受控 A/B**（同机、同轮交替、输出差异必须为 0 才可宣称等价），单点样本不许下结论；"+
++				"③ 每项优化给「改前 → 改后 + 证明方式」，并标注收益是否稳定；④ 严格区分**构建期**与**运行期**；"+
++				"⑤ 不引入新依赖，除非同时给出替换收益与回滚方式；⑥ 结束时给出「不做」的项与触发条件。上下文：\n{context}",
++			[]string{"构建", "性能", "度量"}, 85, 55, 4,
++			mkSpec("md", []string{"基线读数", "瓶颈归因", "优化清单", "验证与回滚"}, 700, 2200),
++			[]string{"quality-verify"}),
+ 	}
+ }
+ 
+diff --git a/workbench/internal/templates/quality_pack_contract_test.go b/workbench/internal/templates/quality_pack_contract_test.go
+deleted file mode 100644
+index 20af09c..0000000
+--- a/workbench/internal/templates/quality_pack_contract_test.go
++++ /dev/null
+@@ -1,144 +0,0 @@
+-package templates
+-
+-import (
+-	"encoding/json"
+-	"os"
+-	"path/filepath"
+-	"strings"
+-	"testing"
+-)
+-
+-// packPath 是「工程模板包」在仓库里的位置（模板以**用户模板**形式分发：
+-// 落在 <DataRoot>/templates.json 里，不改 defaults.go，因此不与并行会话的在途件冲突）。
+-const packPath = "../../../docs/quality-packs/工程模板包-v1.json"
+-
+-// loadPack 读模板包；读不到直接判红（它是仓库资产，不是可选项）。
+-func loadPack(t *testing.T) []tpl {
+-	t.Helper()
+-	raw, err := os.ReadFile(filepath.FromSlash(packPath))
+-	if err != nil {
+-		t.Fatalf("读不到工程模板包 %s: %v", packPath, err)
+-	}
+-	var pack []tpl
+-	if err := json.Unmarshal(raw, &pack); err != nil {
+-		t.Fatalf("模板包不是合法模板数组: %v", err)
+-	}
+-	return pack
+-}
+-
+-// TestEngineeringPackTemplatesValidate 钉住模板包里的每条都能过 Validate、
+-// ID 不与内置冲突、后继模板都能解析 —— 否则导入后是「坏模板」，
+-// 表现是那条模板静默不生效或被评估直接拒（本仓最怕的隐身失败）。
+-func TestEngineeringPackTemplatesValidate(t *testing.T) {
+-	pack := loadPack(t)
+-	if len(pack) < 4 {
+-		t.Fatalf("模板包只有 %d 条（期望 >=4）—— 判据会空集全绿，先补内容", len(pack))
+-	}
+-	builtin := map[string]bool{}
+-	for _, b := range Defaults() {
+-		builtin[b.ID] = true
+-	}
+-	if len(builtin) == 0 {
+-		t.Fatal("Defaults() 为空 —— 解析面没跑起来，本判据不可信")
+-	}
+-	packIDs := map[string]bool{}
+-	for _, p := range pack {
+-		if builtin[p.ID] {
+-			t.Errorf("模板包 id %q 与内置模板重名：导入后会**覆盖**内置条目而不是新增", p.ID)
+-		}
+-		if packIDs[p.ID] {
+-			t.Errorf("模板包内 id 重复: %q", p.ID)
+-		}
+-		packIDs[p.ID] = true
+-	}
+-	checkedSucc := 0
+-	for _, p := range pack {
+-		if err := Validate(p); err != nil {
+-			t.Errorf("模板 %s 校验失败（导入即坏）: %v", p.ID, err)
+-			continue
+-		}
+-		if strings.TrimSpace(p.Domain) == "" {
+-			t.Errorf("模板 %s 没有 domain：选题池与白名单都挂不上去", p.ID)
+-			continue
+-		}
+-		if !p.Enabled {
+-			t.Errorf("模板 %s enabled=false：导入后不会进轮转", p.ID)
+-		}
+-		for _, s := range p.Chain.SuccessorTemplates {
+-			checkedSucc++
+-			if !builtin[s] && !packIDs[s] {
+-				t.Errorf("模板 %s 的后继 %q 既不在内置也不在包里 —— 链会断在这里", p.ID, s)
+-			}
+-		}
+-	}
+-	// 受理面哨兵：链边必须真的被检查过（否则「后继都能解析」是空话）。
+-	if checkedSucc < 3 {
+-		t.Fatalf("只检查到 %d 条链边（期望 >=3）—— 判据失去受理面", checkedSucc)
+-	}
+-}
+-
+-// TestEngineeringPackCoversObjectiveAreas 钉住「目标点名的能力面」在包里有模板对应。
+-// 目标口径（2026-10-26）：HTML/CSS/JS 与 React/Vue、TS、工程化构建、性能调优、报错修复、可扩展高可用架构。
+-// 判法用「关键词必须在某条 prompt 里出现」，不用语义判断（语义不可机判，本仓在册教训）。
+-func TestEngineeringPackCoversObjectiveAreas(t *testing.T) {
+-	pack := loadPack(t)
+-	if len(pack) == 0 {
+-		t.Fatal("模板包为空")
+-	}
+-	joined := ""
+-	for _, p := range pack {
+-		joined += p.PromptTemplate + "\n" + p.Description + "\n"
+-	}
+-	for _, kw := range []string{"HTML", "CSS", "TypeScript", "构建", "性能", "报错", "可扩展", "高可用"} {
+-		if !strings.Contains(joined, kw) {
+-			t.Errorf("模板包覆盖缺 %q —— 目标点名的这一面没有模板承接", kw)
+-		}
+-	}
+-	// 至少一条要明确覆盖“前端”这个整面（不是零散关键词凑数）。
+-	frontend := 0
+-	for _, p := range pack {
+-		if strings.Contains(p.PromptTemplate, "前端") {
+-			frontend++
+-		}
+-	}
+-	if frontend == 0 {
+-		t.Error("没有任何模板覆盖「前端」整面")
+-	}
+-}
+-
+-// TestEngineeringPackImportsAsUserTemplates 走真实导入路径（Registry.Open 读
+-// <DataRoot>/templates.json）：断言条数 = 内置 + 包，且包里每条都能被 Get 到。
+-// 这是「放对地方了吗」的判据 —— 模板包放错位置就等于没交付。
+-func TestEngineeringPackImportsAsUserTemplates(t *testing.T) {
+-	pack := loadPack(t)
+-	dir := t.TempDir()
+-	raw, err := os.ReadFile(filepath.FromSlash(packPath))
+-	if err != nil {
+-		t.Fatalf("读模板包失败: %v", err)
+-	}
+-	if err := os.WriteFile(filepath.Join(dir, "templates.json"), raw, 0o644); err != nil {
+-		t.Fatalf("写临时用户模板失败: %v", err)
+-	}
+-	reg, err := Open(filepath.Join(dir, "templates.json"))
+-	if err != nil {
+-		t.Fatalf("Registry.Open: %v", err)
+-	}
+-	got := len(reg.List())
+-	want := len(Defaults()) + len(pack)
+-	if got != want {
+-		t.Fatalf("导入后模板总数 = %d，期望 %d（内置 %d + 包 %d）", got, want, len(Defaults()), len(pack))
+-	}
+-	for _, p := range pack {
+-		gotTpl, ok := reg.Get(p.ID)
+-		if !ok {
+-			t.Errorf("导入后取不到 %q —— 用户模板覆盖/追加路径没生效", p.ID)
+-			continue
+-		}
+-		if gotTpl.Builtin {
+-			t.Errorf("%q 被标成 builtin=true：用户模板不得冒充内置（会误导「恢复默认」语义）", p.ID)
+-		}
+-		if !gotTpl.Enabled {
+-			t.Errorf("%q 导入后 enabled=false：不会进轮转", p.ID)
+-		}
+-	}
+-}
+diff --git a/workbench/internal/templates/templates_test.go b/workbench/internal/templates/templates_test.go
+index aeae80e..322ccb4 100644
+--- a/workbench/internal/templates/templates_test.go
++++ b/workbench/internal/templates/templates_test.go
+@@ -7,17 +7,18 @@ import (
+ 
+ func TestDefaultsCount(t *testing.T) {
+ 	all := Defaults()
+-	if len(all) != 29 {
+-		t.Fatalf("内置模板数 = %d, want 29", len(all))
++	if len(all) != 33 {
++		t.Fatalf("内置模板数 = %d, want 33", len(all))
+ 	}
+ 	domains := map[string]int{}
+ 	for _, tpl := range all {
+ 		domains[tpl.Domain]++
+ 	}
+-	// quality 领域 2026-10-24 round 88 新增（工程质量四动作：体检/判据化/验证/固化）
+-	want := []string{"content", "code", "knowledge", "data", "solution", "report", "quality"}
+-	// 各领域模板数（round 88/90 新增 quality 后：content..report 各 4，quality 5）
+-	wantCount := map[string]int{"content": 4, "code": 4, "knowledge": 4, "data": 4, "solution": 4, "report": 4, "quality": 5}
++	// quality 领域 2026-10-24 round 88 新增（工程质量四动作：体检/判据化/验证/固化）；
++	// frontend 领域 2026-10-26 由用户模板包转正（前端工程审查 / 构建与性能调优）。
++	want := []string{"content", "code", "knowledge", "data", "solution", "report", "quality", "frontend"}
++	// 各领域模板数（round 88/90 后 content..report 各 4；2026-10-26 转正后 code 5 / quality 6 / frontend 2）
++	wantCount := map[string]int{"content": 4, "code": 5, "knowledge": 4, "data": 4, "solution": 4, "report": 4, "quality": 6, "frontend": 2}
+ 	for _, d := range want {
+ 		if domains[d] != wantCount[d] {
+ 			t.Fatalf("领域 %s 模板数 = %d, want %d", d, domains[d], wantCount[d])
+@@ -64,8 +65,8 @@ func TestRegistryRoundtrip(t *testing.T) {
+ 	if err != nil {
+ 		t.Fatal(err)
+ 	}
+-	if got := len(reg.List()); got != 29 {
+-		t.Fatalf("registry list = %d, want 29", got)
++	if got := len(reg.List()); got != 33 {
++		t.Fatalf("registry list = %d, want 33", got)
+ 	}
+ 	custom := Defaults()[0]
+ 	custom.ID = "custom-1"

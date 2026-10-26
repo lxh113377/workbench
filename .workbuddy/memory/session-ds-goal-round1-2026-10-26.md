@@ -175,3 +175,30 @@ web 译名表加 `frontend=前端工程`（domain_label_test.go 钉住两张表�
 - 第二次踩同一类转义坑：在 TS 模板串里写 `\"` 想得到 Go 源码里的转义引号，实际得到裸引号 ⇒ Go 语法错
   （`string literal not terminated`）。整改：**Go 源码里的反引号用字符串插值、内部双引号原样写**，一次通过；
   教训：要分清「外层模板串也是一个解析器」。
+## round 6（同会话，2026-10-26 12:5x-13:0x）—— T8 补丁就绪（已验证）+ 部署实例离线闭环取证
+
+### 本轮判断
+T8 依赖的 `workbench/internal/templates/defaults.go` 第六轮开局仍未提交（mtime 10:54，停滞 >2h）——
+按 ownership 边界不能碰。于是把 T8 从「待做」变成**「已验证、可一键落地」**：交付补丁 + 任务卡，任何人可安全落地。
+
+### 交付物（指定地点 docs/quality-packs/）
+- `T8-内置模板转正-2026-10-26.patch`（26,328 B；6 文件：defaults.go / templates_test.go / chain_link_contract_test.go 改，
+  工程模板包 JSON 与两条包判据删）。
+- `T8-内置模板转正-任务卡.md`（前置条件、逐文件说明、验收命令、落地后清理 live `templates.json` 的收尾、已知风险）。
+- **验证不是口头的**：干净检出（worktree @cee0ea3）`git apply --check` rc=0 → 真实 `git apply` rc=0 →
+  `go build ./...` rc=0、`go vet` rc=0、`go test ./internal/templates/ ./internal/chain/` 两包 ok、gofmt 干净；
+  读数：**33 条模板 / 16 条后继边，无断链/自环/重复**。
+
+### 部署实例离线闭环取证（运行根 D:\workbench-agent）
+- `--autonomy selftest` → **11 PASS / 0 FAIL**（目标树规划/验收/回退/目标完成/下一目标、存储重开可恢复）
+- `--plan-selftest` → **12 通过 / 0 失败**（方案 → 执行 → 验收回灌全链）
+- `--selftest-workspace <临时目录>` → **pass:true**（产物落盘 + 真实验收 exit=0）；隔离目录 3 个文件，已回收站删除
+即：「external 工作空间 + 工程质量目标 + quality/frontend 白名单 + 4 条模板」这套配置下，闭环机制离线自证健康（不消耗模型额度）。
+
+### 剩余
+- T8 本体（应用补丁）—— 等 `defaults.go` 在途件提交后一条命令落地；或由并行会话自行应用。
+- 引擎仍未启动（沿用 round 2 决定与回滚口径）。
+
+### 我自己的错（本轮 1 次）
+- 补丁注释先按推算写「17 条边」（旧 11 + 新增 5），**实测是 16**；立刻改用实测值，并在任务卡写明「以本文件输出为准」。
+  教训：**能跑一次拿真值，就不要靠推算**（本仓在册同款教训）。
