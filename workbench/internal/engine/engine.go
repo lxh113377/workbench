@@ -1258,13 +1258,9 @@ func (e *Engine) completeTask(task *model.Task, running *model.Task, res *execut
 	// 验收判定（P3）：没有通过验收的产出不算 done。
 	// 这修复了改造前"截断/不可运行也算成功"的虚报 —— 现场 26 篇里 3 篇围栏未闭合，
 	// 状态全是 done 并计入今日产出。
-	finalState := model.StateDone
-	finalNote := "执行成功"
+	// 完成判定抽成纯函数（round 46 · T28）：nil 报告 = 没有产物块 = **没交东西**，不得记完成品。
+	finalState, finalNote := completionVerdict(verifyRep)
 	verified := verifyRep != nil && verifyRep.Pass
-	if verifyRep != nil && !verifyRep.Pass {
-		finalState = model.StateDegraded
-		finalNote = "产出未通过验收，已降级"
-	}
 	if _, err := e.store.Update(task.ID, func(t *model.Task) error {
 		t.Verify = verifyRep
 		t.Verified = verified

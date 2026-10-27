@@ -37,6 +37,14 @@ func repairPrompt(task *model.Task, prevFiles []artifactFile, rep *model.VerifyR
 	b.WriteString("### 原始任务\n")
 	b.WriteString(task.Prompt)
 	b.WriteString("\n\n### 验收失败的证据\n")
+	if rep == nil {
+		// 无产物块是最常见的「没交」形态（弱车道只吐自家 tool-call 语法）：
+		// 这里必须把话说死 —— 不是「验收没过」，而是「压根没交产物」，并给出可照抄的块形状。
+		b.WriteString("这次**不是验收没过，而是根本没有产物块**：你的回答里没有 `<<<ARTIFACTS>>>` 段落，\n")
+		b.WriteString("工作台因此没有任何文件可落盘、也没有命令可验收。\n\n")
+		b.WriteString("请只做一件事：按产物协议重新输出**完整回答**，必须以 `<<<ARTIFACTS>>>` 开头，\n")
+		b.WriteString("并在其中给出「文件清单 + 文件内容 + 验收命令」。不要输出你自己的工具调用语法。\n")
+	}
 	if rep != nil && strings.TrimSpace(rep.FailReason) != "" {
 		b.WriteString("```\n")
 		b.WriteString(rep.FailReason)
@@ -98,7 +106,11 @@ func readPrevArtifacts(workDir string, limit int) []artifactFile {
 
 // shouldRepair 判断是否还值得再返工一轮。
 func shouldRepair(task *model.Task, rep *model.VerifyReport, cfg config.Config) bool {
-	if rep == nil || rep.Pass {
+	// nil 报告 = **根本没有产物块**（materializeArtifacts 只在有块时返回报告）：
+	// 这不是「验收过了」，而是「没交东西」——必须允许返工要回产物块（round 46 · T28）。
+	// 早先写成 `rep == nil || rep.Pass { return false }`，于是「无产物块」直接跳过返工、
+	// 一路记成 done（虚报完成）——审计实测：0 个 artifacts-index / 0 个 workspace，却有 done 记录。
+	if rep != nil && rep.Pass {
 		return false
 	}
 	rounds := cfg.Executor.RepairRounds
