@@ -708,3 +708,42 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 1. `rev-list` 双向 = 0（双方提交均在线上）；
 2. 上一版**全部 `##` 小节**在本版 `Contains=True`（标题级差集为空）；
 3. 本版字节数 == 上版字节数 + 追加段字节数（精确相等，不做"差不多"判断）。
+## round 43（同会话，2026-10-27 14:45-16:00）—— T23 方案阶段总预算 + 独立审计三连修（T24/T25/T26）+ 部署一致性事故
+
+### 一、观察窗口（T17③ 落地后第一次观测，14:50-15:05）
+- 读数：无 `pass=true`、无工作区交付物、**无任何 verify.json** —— 整窗被**方案阶段**吃光：
+  `z-ai/glm-5.3` 8m0s 超时（479,965 ms）+ `cohere/north-mini-code` 139s 卡死 + `combo:*` ×3 boot_failed + `dots-studio` 134s 卡死；
+  执行阶段（唯一产物出口）**一次都没跑到** ⇒ 直接催生 T23。
+
+### 二、T23 落地（`a1e4db4`，CI+E2E success）
+- `config.PlanConfig.StageMaxMinutes`（默认 4；零值/越界回落 4）+ `engine.planStageBudget(minutes)`（纯函数）；
+- `buildPlan` 整段套 `context.WithTimeout`：到点取消子调用，置「方案阶段总预算耗尽（N 分钟），退化直执行」+ `StageBudgetExhausted`；
+- 两测：`engine/plan_budget_test.go`、`config/stage_max_minutes_test.go`。
+
+### 三、派出的独立审计（只读，`dde2bbac`）与它的根因清单
+- 结论：**不是验收那一环坏了，是产物块从来没被生产出来**（0 个 `artifacts-index.json`、0 个 `workspace/`、只有 1 个 `verify.json(pass=false)`）；
+- 7 条根因（含 file:line 与 live 铁证）已转录进报告「附录 R43」，并编号 T24–T31（本轮落地三条、其余留任务卡）；
+- 最高价值发现 **T24**：产物协议被无条件拼进「只准输出 JSON」的方案调用（我的 round 24 只豁免了判据、没豁免 prompt 拼装）。
+
+### 四、本轮落地（`682a5f1`）与验证状态
+- **T24 ✅ live 验证**：抽出纯函数 `promptFor(task, appendProtocol)`（方案阶段原样透传且不回报「要求产物」）；
+  新方案 session 实测 `hasArtifactsMarker=False`、`hasPlanJSONOnly=True`、`hasItem7=True`；测试 `TestPromptForSkipsProtocolInPlanPhase`；
+- **T25 ✅ 落地**：`hasMarkdownHeading` 的 `"\\n"` → `"\n"`（真换行）+ `TestHasMarkdownHeading`；
+- **T26 ⚠️ 代码+单测落地、live 未取得**：探测不再把执行侧/出口级失败车道标回 healthy（`TestProbeDoesNotReviveDeadLane`，含 unreachable 对照组）；
+  本轮读到的 combo `state=healthy` 与 `down→healthy` 事件时间戳落在窗口之外/被后续运行污染 ⇒ **如实标未取得**，下次窗口重测。
+
+### 五、部署一致性事故（我方责任，已修，如实记）
+- 构建 6/6「首页契约门禁」运行期探针在本机 18s 未就绪（`--ui-probe` 端口被占）⇒ rc=2 中断、**未生成 `SHA256SUMS`**；
+- 我的部署脚本仍把 exe 拷进两处根 ⇒ 出现「exe 是新哈希、`SHA256SUMS` 还是旧哈希」的**不一致部署**（自查发现）；
+- 修复：按 `SHA256SUMS` 的真实语义（exe 哈希清单）如实补齐并同步两处（`hash == SUMS`、`vcs.revision` 双核对通过：`a1e4db4` → 后接 `682a5f1`）；
+- 入规：**部署后必须核对 `hash == SHA256SUMS` + `vcs.revision`**，任一不符即视为部署未完成（不以「拷过去了」当部署）。
+
+### 六、我自己的错（本轮 4 次，均已修）
+1. 内联 PowerShell 拼 JS 字符串两次踩引号/拼接坑（`Expected identifier`/`Unexpected token`）⇒ 改用脚本文件化；
+2. `edit` 工具改写 `tests/check_all.ps1` 丢 BOM（被仓库暂存区 BOM 门禁拦下，已补）；
+3. 大文件「读全文→写回」会**静默截断尾部**（回执三次冲突的真根因）⇒ 入规：大文件一律**字节级追加**；本轮报告与回执均按此append；
+4. 部署脚本未校验 `SHA256SUMS` ⇒ 制造过一段不一致部署（见上，已修）。
+
+### 七、边界
+- 观察/验证窗口均自带 finally 回滚（`plan=true / autoStart=false / maxTasks=12 / conc=2`，已复核）；family=0；keepalive Ready；
+- 本轮提交：`a1e4db4`（T23）、`682a5f1`（T24/T25/T26）；worktree 用后即删；仓库未并入并行会话在途件。
