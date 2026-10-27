@@ -33,6 +33,13 @@ type EvalConfig struct {
 	SimilarityCap float64     `json:"similarityCap"` // 判为重复的相似度上限
 	DailyCap      int         `json:"dailyCap"`      // 每日最多生成任务数
 	DiversityCap  float64     `json:"diversityCap"`  // 同组占比上限
+	// ExactDupWindowMinutes 是「完全重复」判据的时间窗（分钟，默认 60；<=0 按 60 处理）。
+	//
+	// 为什么需要（round 45 · T29 实测）：模板生成的任务 `goalId` 为空，而 `sameGoal` 是
+	// `a != "" && a == b` ⇒ 同目标豁免**本就不适用**；于是只要生成器产出的 (title,prompt) 与滚动窗口里
+	// 任何一条完全相同，就被永久判重 —— 实测 queue.json 5001 条里 rejected 4970、**queued 仅 1**（调度饥饿）。
+	// 口径：同一个任务在**没交付成功**之前，隔一段时间重跑是合理的；这里只拦「最近一小时内」的同指纹。
+	ExactDupWindowMinutes int `json:"exactDupWindowMinutes"`
 }
 
 // EvalWeights 是三维权重。
@@ -345,6 +352,8 @@ func DefaultConfig() Config {
 			SimilarityCap: 0.9,
 			DailyCap:      200,
 			DiversityCap:  0.4,
+			// 60 分钟：够拦住生成器的短周期抖动，又不至于让「同一批模板组合」把队列永久判死。
+			ExactDupWindowMinutes: 60,
 		},
 		Models: []ModelRoute{
 			{Model: "z-ai/glm-5.3", Provider: "our-free-model", Tier: "balanced", Enabled: true, Weight: 100, MaxFail: 3, CooldownM: 30},

@@ -210,16 +210,40 @@ func (e *Evaluator) gates(in Input, now int64) []string {
 			//   现在：精确指纹（标题+Prompt 归一化后完全相同）**任何目标都要拦**；
 			//   模糊相似才按目标豁免（同目标阶段任务本就共享上下文）。
 			if it.Fingerprint == fp {
-				out = append(out, "与最近任务完全重复")
-				break
+				// 精确重复加**时间窗**（round 45 · T29）：原先永久封杀同指纹，而模板任务的 goalId 为空 ⇒
+				// 同目标豁免不适用 ⇒ 生成器只要反复产同一批组合，队列就被自己判死（实测 rejected 4970 / queued 1）。
+				// 窗内仍拦（防短周期抖动）；窗外放行（那个任务多半还没交付成功，重跑是合理的）。
+				win := cfg.ExactDupWindowMinutes
+				if win <= 0 {
+					win = 60
+				}
+				if now-it.CreatedAt < int64(win)*60_000 {
+					out = append(out, "与最近任务完全重复")
+					break
+				}
+				// 窗外：本条老记录不作为重复依据，继续比对窗口内其它条目（别把后面的相似判据一起跳过）。
+				continue
 			}
 			if sameGoal(it.GoalID, t.GoalID) {
 				continue
 			}
-			sim := similarity(t.Title+" "+t.Prompt, it.Title+" "+it.Prompt)
+			// 模糊相似**只比标题**（round 45 · T32，独立排查实锤）：比全量 title+prompt 时，
+			// 长脚手架模板的常量段把相似度顶到 0.92~0.997（9 条模板 859 条**永久误杀**），
+			// 量的其实是模板常量而不是主题变量。实测全库「只看标题」的 Jaccard 从不为 ≥0.9。
+			sim := similarity(t.Title, it.Title)
 			if sim >= cfg.SimilarityCap {
-				out = append(out, fmt.Sprintf("与最近任务高度相似（%.2f）", sim))
-				break
+				// 模糊判据与精确指纹**同口径加时间窗**：窗外不再拦 ——
+				// 否则「同标题不同 prompt」这类组合仍会被永久封杀（队列饿死换个入口复发）。
+				win := cfg.ExactDupWindowMinutes
+				if win <= 0 {
+					win = 60
+				}
+				if now-it.CreatedAt < int64(win)*60_000 {
+					out = append(out, fmt.Sprintf("与最近任务高度相似（%.2f）", sim))
+					break
+				}
+				// 窗外：本条不作重复依据，继续比对窗口内其它条目。
+				continue
 			}
 		}
 	}

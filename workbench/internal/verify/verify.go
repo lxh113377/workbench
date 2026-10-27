@@ -135,13 +135,11 @@ func runOne(ctx context.Context, workDir string, c artifact.Check, opt Options) 
 		oc.Exit = -1
 		return oc
 	}
-	// 阻止命令参数里出现绝对路径越界（保守：只允许 workspace 内的相对引用）
-	for _, a := range argv[1:] {
-		if strings.Contains(a, "..") || strings.HasPrefix(a, "/") || (len(a) > 1 && a[1] == ':') {
-			oc.Skipped = "参数含越界路径: " + a
-			oc.Exit = -1
-			return oc
-		}
+	// 阻止命令参数越出 workspace（round 45 · T30）：抽成纯函数才能被单测钉住（见 argOutOfBounds 注释）。
+	if bad := argOutOfBounds(argv[1:]); bad != "" {
+		oc.Skipped = "参数含越界路径: " + bad
+		oc.Exit = -1
+		return oc
 	}
 
 	runCtx, cancel := context.WithTimeout(ctx, timeout)
@@ -376,4 +374,29 @@ func tailText(s string, n int) string {
 	}
 	cut := s[len(s)-n:]
 	return "..." + cut
+}
+
+// argOutOfBounds 返回第一个「越出 workspace」的参数（无越界返回空串）（round 45 · T30）。
+//
+// 为什么单独一个纯函数：原判据内联在 runOne 里，只能靠「真跑一条命令」验证 —— 而它的缺陷恰恰是
+// **把合法参数当越界**：`go test ./...`（最典型的验收命令）里的 `./...` 含 `..`，原判据一律 skip，
+// 于是每次验收都落 skippedReason、任务白白判失败。
+//
+// 口径（第一版写错、被单测当场抓出，如实记）：`filepath.Clean("./...")` 得到 `...`，而 `HasPrefix("...", "..")` 为真
+// ⇒ 用「前缀判 `..`」仍然误杀 `go test ./...`。真正要对的是**路径分量**：只有整段等于 `..`（父目录引用）才算越界，
+// `...`（Go/go-tool 的通配）不是。因此按分量判：`./...` ⇒ 分量 ["..."] 放行；`../../etc` ⇒ ["..","..","etc"] 拒绝；
+// `a/../b` ⇒ Clean 成 `b` 放行；绝对路径（含盘符）一律拒绝。
+func argOutOfBounds(args []string) string {
+	for _, a := range args {
+		c := filepath.ToSlash(filepath.Clean(a))
+		if strings.HasPrefix(c, "/") || filepath.IsAbs(a) || (len(a) > 1 && a[1] == ':') {
+			return a
+		}
+		for _, part := range strings.Split(c, "/") {
+			if part == ".." {
+				return a
+			}
+		}
+	}
+	return ""
 }
