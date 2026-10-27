@@ -945,3 +945,27 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 
 ### 六、边界
 - `HEAD == origin/master == 37391c3`（本轮另有 `d4eff59`）；家族进程 0；keepalive Ready；pool.json 已还原；下一轮开局重建部署 `37391c3` 并跑「无配置绕过」的复验窗口（判据：boot_failed≈0）。
+## round 52（同会话，2026-10-27 22:39-23:05）—— 🎯 首次 pass=true + post-T44 复验通过（boot_failed 293→2）
+
+### 一、post-T44 复验（未加任何配置绕过）
+- `boot_failed` **293 → 2**；not-served 错误 2 条（三条 combo 各首犯一次）；
+- combo 三条 `state=down | kind=not_served | consec=1/1/2` ⇒ **首犯后不再被复活**（T44 线上生效）；
+- 执行尝试 25 次全落真实车道；[自主规划熔断]=0、[自主任务已生成]=1。
+
+### 二、🎯 首次 `verify.json pass=true`（当前外置根）
+- 任务 `task-fb880f2adfa8d202`（22:46:11）：车道 `openrouter/free`（T42 偏好表内）；
+- `artifacts-index.json` = **level strict / problems null**，产物 `check_env.py`（97B，python，带 sha256）；
+- 验收 `python check_env.py` → **exit 0（64ms）**，`pass=true round=1`；
+- ⇒ 全链正向证据齐备：生成 → 偏好选道 → 合规产物块（T39）→ 严格落盘 → 真实执行 → 通过。
+
+### 三、判据口径校正（自我约束）
+- 我事前把判据写成「not-served ≈ 0」，实测 2（部署时三条车道仍 healthy ⇒ 首犯属预期）；
+- 正确判据 = 「首犯后不再复活」⇒ 已按实测校正并写进报告，避免下轮把它当回归。
+
+### 四、委派（#44）
+- 本轮派 2 件（A：历史通过任务的域/模板分布；B：弱车道真实输出形态表征）——**收尾消息尚未到**；
+- 本会话累计派发 18 件：成功 14、零产出 2、在飞 2。
+
+### 五、边界
+- 本轮无生产代码改动（只有文档追加）⇒ 部署仍为 `360be6d`（两处根 hash==SUMS 一致）；
+- 窗口自带 finally 回滚（已复核 baseline：plan=true/autoStart=false/maxTasks=12/sync=600）；keepalive Running；worktree 清零。
