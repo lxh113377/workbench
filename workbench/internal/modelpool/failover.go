@@ -78,6 +78,13 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 	now := nowMs()
 	specs := f.mgr.Specs()
 	chain := f.sch.PickChain(specs, now)
+	// 池内**没有任何可用车道**（全部冷却/下线/停用）⇒ 立刻返回哨兵，**不要**再拿引擎给的 modelID 拼链。
+	//
+	// round 37 实测教训：第一版把判据写成 `len(order) == 0`，而 `order` 开头就被 modelID 占位 ⇒ 判据永不成立，
+	// 引擎带着刚冷却的车道硬跑，任务继续被烧成 `boot_failed`（与修复前现场现象完全一致）。判据必须看**候选链**。
+	if len(chain) == 0 {
+		return nil, executor.ErrNoLane
+	}
 	order := make([]string, 0, len(chain)+1)
 	seen := map[string]bool{}
 	if strings.TrimSpace(modelID) != "" {
@@ -91,12 +98,7 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 		order = append(order, id)
 		seen[id] = true
 	}
-	if len(order) == 0 {
-		// 池内**没有任何可用车道**（全部冷却/下线/停用）：不要拿引擎给的 modelID 硬跑 ——
-		// round 35 实测：全池只剩 3 条 `not_served` 车道时，硬跑把两个任务烧成 `boot_failed` 任务失败。
-		// 返回哨兵，让引擎设池闸门 + 把任务退回队列（T19）。
-		return nil, executor.ErrNoLane
-	}
+	// 候选链非空 ⇒ order 至少含链上元素；上面的 chain==0 分支已覆盖「无可用车道」（含 modelID 也为空的情形）。
 	// 链首优先复用「刚被证明能产出」的模型（T17①）：只在候选链**内部**重排，绝不引入链外模型，
 	// 因此不会把冷却/下线的模型拉回来。
 	if okID, _, ok := f.mgr.LastOKModel(); ok {
