@@ -816,3 +816,11 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 ### 五、边界
 - 观察窗口自带 finally 回滚（`plan=true / autoStart=false / maxTasks=12 / conc=2` 已复核）；family=0；keepalive Ready；
 - 部署 `8911afb`：两处根 `hash == SHA256SUMS`、`vcs.revision` 核对通过（首页运行期探针仍 UNVERIFIED ⇒ SUMS 如实补齐，缺口继续挂待办）。
+### 附录 R46 补（round 46 收尾事实，2026-10-27 18:05）
+
+- **CI 事实核对（此前写的是预测，现改为实测）**：`6ba7f8d`（T28 越界版）**CI = failure**、E2E = success；
+  `8911afb`（收窄版）CI = success、E2E = success；`a1726eb`（附录与回执）CI = success、E2E = success。
+  ⇒「提交前必跑全仓套件」这条教训由 CI 独立复现（红/绿分界与本地一致）。
+- **派发事实（#44 ⑦ 记录）**：本轮 T34 排查子代理（`e74062fd`）**失败且无收尾消息**；
+  加上 round 46 早前的 T28 实现子代理（`1025f28a`）同样失败无产出 ⇒ **本会话 4 次派发中 2 次零产出**（另 2 次：只读审计、T29 排查，均高质量交付）。
+  处置：按 ⑦ 不再重派同件，均转为 Lead 自干/未取证登记；若后续再现，按 ⑦ 第三条先查 provider 适配器·凭据·限流。
