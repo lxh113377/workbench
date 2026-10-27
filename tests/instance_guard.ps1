@@ -188,26 +188,46 @@ function Decide([int]$targetPid, [string]$reason) {
   $script:verdict[$targetPid] = $reason
 }
 
-# A 生产实例只留 1 个
+# A 生产实例按「安装根」各留 1 个（round 56 · T49 修正）
+#
+# 为什么必须按根分组：internal/single 的实例锁是**按 runtime 目录**的（每个安装根一把锁），
+# 所以「dist 生产根 + workbench-agent 实验根」并存是**设计允许**的（验收/实验各用独立 --dir 根）。
+# 旧写法全机只留 1 个，会把另一个根的正当实例判成「生产实例重复」直接杀掉。
+function Get-InstallRoot($procInfo) { return (Split-Path -Parent $procInfo.Path).ToLower() }
 $keepProd = $null
-if ($prod.Count -gt 0) {
-  $keepProd = $prod | Where-Object { $_.Pid -eq $lockPid } | Select-Object -First 1
-  if (-not $keepProd) { $keepProd = $prod | Sort-Object AgeSec -Descending | Select-Object -First 1 }
-  foreach ($p in $prod) {
-    if ($p.Pid -ne $keepProd.Pid) { Decide $p.Pid ("生产实例重复（仅允许 1 个，保留 pid=" + $keepProd.Pid + "）") }
+$prodByRoot = @($prod | Group-Object { Get-InstallRoot $_ })
+foreach ($grp in $prodByRoot) {
+  $keep = $grp.Group | Where-Object { $_.Pid -eq $lockPid } | Select-Object -First 1
+  if (-not $keep) { $keep = $grp.Group | Sort-Object AgeSec -Descending | Select-Object -First 1 }
+  foreach ($p in $grp.Group) {
+    if ($p.Pid -ne $keep.Pid) { Decide $p.Pid ("同安装根内生产实例重复（每根仅允许 1 个，保留 pid=" + $keep.Pid + "）") }
   }
 }
-
-# B 用户显式退出后仍活着的生产实例
-if ($userQuit) {
-  # 宽限期取 max(GraceSeconds, 300)：产品只在 Engine.Start 时清 user-quit 标记，
-  # 用户双击拉起后可能几十秒才走到那一步 —— 判太急会误杀"用户刚打开的那个实例"。
-  $quitGrace = [Math]::Max($GraceSeconds, 300)
-  foreach ($p in $prod) {
-    if ($p.AgeSec -ge $quitGrace) { Decide $p.Pid "用户已显式退出(user-quit.flag)但实例仍在，属残留" }
+# B 用户显式退出后仍活着的生产实例（round 56 · T49 修正：按**实例自身根**判退出旗标）
+#
+# 为什么必须按根：user-quit.flag 是**每个安装根各写各的**（产品侧 engine.MarkUserQuit 落在该实例
+# 自己的 runtime 目录），而旧写法只读主根（dist\runtime）的旗标，却拿去裁决**全机所有**生产实例
+# ⇒ 主根 10-25 那次「托盘点退出」留下的**过期旗标**，会把实验根刚拉起的实例在 300s 宽限后一并处死。
+# 现场（时间反推精确命中）：实例 startedAt 23:36:29.9 → 日志停在 23:41:25（age=296s，下个整分钟 age≥300 被杀）；
+# 第二次 startedAt 00:33:10 → 日志停在 00:37:03 的「尝试开始」、再无「尝试结束」（age≈300s 同刻静默死亡）。
+# 两次都不是崩溃、也不是 --quit（无任何退出日志），而是 keepalive 每分钟的 guard 规则 B 执行了「用户已退出」。
+# 修法：只认「该实例自己那个根」的旗标；主根旗标（$userQuit）继续用于面板展示，不再作为全机判据。
+$quitGrace = [Math]::Max($GraceSeconds, 300)
+foreach ($p in $prod) {
+  $ownRuntime = Join-Path (Split-Path -Parent $p.Path) "runtime"
+  $ownQuit = $false
+  if (Test-Path -LiteralPath (Join-Path $ownRuntime "user-quit.flag")) { $ownQuit = $true }
+  $ownState = Join-Path (Split-Path -Parent $ownRuntime) "workbench-output\state.json"
+  if (-not $ownQuit -and (Test-Path -LiteralPath $ownState)) {
+    try {
+      $sj = Get-Content -LiteralPath $ownState -Raw -ErrorAction Stop | ConvertFrom-Json
+      if ($sj.userQuit -eq $true) { $ownQuit = $true }
+    } catch { }
+  }
+  if ($ownQuit -and $p.AgeSec -ge $quitGrace) {
+    Decide $p.Pid ("该实例所属根的用户退出标记在册但实例仍在，属残留（root=" + (Split-Path -Parent $p.Path) + "）")
   }
 }
-
 # C/D/F 探针实例
 foreach ($p in $probe) {
   if ($p.Budget -gt 0) {
