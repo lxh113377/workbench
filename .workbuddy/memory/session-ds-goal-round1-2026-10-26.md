@@ -584,13 +584,21 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-### 独立复核结论（子代理 `eb6f1e16`，只读；六项全 PASS）
-- ① `effectiveMinWords`：`attempt=0 ⇒ ≤200`（base=0/-5 先兜底 300 再压到 200，永不为 0/负）、`attempt>0 ⇒ base`；
-- ② 「产出过短」门槛在 `engine/artifacts.go:57`（`n < 200 && !hasMarkdownHeading`，**仅无产物块路径**）⇒ 首轮 200 与之相容；
-- ③ `minWordsOf` 五处调用点：`engine.go:1010/1040`、`plan_stage.go:119` 已接分档；`engine.go:1315`（质量评估）刻意不接（压载会让质量分虚高）；
-- ④ 第 7 条在册、排在第 6 条之后、第 1 条仍在、体量原样透传；⑤ `go build` rc=0、`go test ./internal/engine/ ./internal/blueprint/` ok；
-- ⑥ 反例：任何输入都不会把首轮压到 0/负，也不会压载后续轮。
+### 门禁自纠 #3（round 42）
+- 新增门禁上线即判红一行：`kind=unknown action=cancel model=z-ai/glm-5.3`（引擎 `--quit` 时写成）；
+- 根因：取消行可能**没跑到子进程就返回（res=nil）**，本就没有命令行可记 ⇒ 判它是把「没跑过的尝试」当违规；
+- 修正：`action=cancel` 豁免 `dshCommand` 判据但**必须披露**（实测输出「披露 取消行 4 条已豁免…其中 3 条本就没有命令行」），
+  `kind` 判据对它们照样适用；修正后门禁 `GATE_RC=0`。
 
-### 委派闭环（按 2026-10-27「委派优先」新规）
-- 第一次派发（`be883dd1-…`）未收到收尾消息、`send_message` 回报 `active teammate ... not found` ⇒ **如实记「派出未收产出」**（不冒充已核验）；
-- 重派（`eb6f1e16-…`，`subagent_fork`，附「六条核验项 + 回报格式」）⇒ 本轮内收到结论并折入报告 §1.38。
+### 合规产物落地：独立核对（不采纳未复现的主张）
+```
+workbench-agent 根 : verify.json 1 条 → pass=False（10-26 18:24 产出过短 32 字）
+dist 仓内根       : verify.json 4 条 → 仅 10-24 22:06 pass=True（早于外置部署）
+docs 近 24h 变更  : 仅本报告自身（无自动任务交付物）
+```
+- 结论：外置部署（round 1+）后至今**仍无 `verify.json pass=true`、无交付物落进工作区**；另一会话 `40f827d` 的「首个合规产物落地」
+  在我的两处数据根扫描下**未复现** ⇒ 按证据写，不结论化对方主张（保持开放）。
+
+### 提交与 CI（本轮）
+- `19e4473`（round 41-42 报告与回执）、`b88f4f3`（折入子代理复核结论）：CI + Autonomy Container E2E 均 success（用 `--json headSha` 精确核对）。
+- 本轮另有并发会话提交 `8c0037f` / `40f827d`（同一报告文件），推送时远端已前进 ⇒ 我的提交落在其后（`40f827d..b88f4f3`）。

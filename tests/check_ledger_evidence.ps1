@@ -109,10 +109,11 @@ if (-not (Test-Path $tasksDir)) {
       if ([string]::IsNullOrWhiteSpace($l)) { continue }
       try { $j = $l | ConvertFrom-Json } catch { continue }
       $rows += [pscustomobject]@{
-        at  = [int64]$j.at
-        cmd = ("" + $j.dshCommand)
-        has = (("" + $j.dshCommand) -match "--profile web-desktop" -and ("" + $j.dshCommand) -match "--json -")
-        kind = ("" + $j.kind)
+        at     = [int64]$j.at
+        cmd    = ("" + $j.dshCommand)
+        has    = (("" + $j.dshCommand) -match "--profile web-desktop" -and ("" + $j.dshCommand) -match "--json -")
+        kind   = ("" + $j.kind)
+        action = ("" + $j.action)
       }
     }
   }
@@ -121,6 +122,16 @@ if (-not (Test-Path $tasksDir)) {
     Say "  UNVERIFIED 台账 0 行"
   } else {
     $badKind = @($rows | Where-Object { [string]::IsNullOrWhiteSpace($_.kind) }).Count
+    # 取消行（action=cancel）**豁免** dshCommand 判据：这类尝试可能压根没跑到子进程就返回了（res=nil），
+    # 本来就不存在命令行可记 —— 判它等于把「没跑过的尝试」当违规（round 42 实测：引擎 --quit 时的取消行）。
+    # 但合规性不能靠豁免消失：豁免行数单独披露，且 `kind` 判据对它们照样适用。
+    $cancelRows = @($rows | Where-Object { $_.action -eq "cancel" })
+    $judged = @($rows | Where-Object { $_.action -ne "cancel" })
+    $rows = $judged
+    if ($cancelRows.Count -gt 0) {
+      # 豁免必须看得见：不打印就等于「静默放过」（本仓在册失效形态）。
+      Say ("  披露 取消行 " + $cancelRows.Count + " 条已豁免 dshCommand 判据（其中 " + @($cancelRows | Where-Object { -not $_.has }).Count + " 条本就没有命令行）")
+    }
     $withCmd = @($rows | Where-Object { $_.has })
     $wm = 0
     if ($withCmd.Count -gt 0) { $wm = ($withCmd | Measure-Object -Property at -Maximum).Maximum }
