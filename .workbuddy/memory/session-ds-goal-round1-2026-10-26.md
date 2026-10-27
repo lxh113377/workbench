@@ -584,24 +584,40 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 34（同会话，2026-10-27 00:15-00:45）—— T17②-b 落地：not_served 独立类别 + 探测免疫（live 未取得）
+## round 35（同会话，2026-10-27 01:05-01:15）—— T17②-b live 验证：not_served 生效且探测不再翻案
 
-### 改动（五文件 + 两测，提交 `7fc9058`）
-- `executor`/`retry`：新增 `not_served` 类别（进 ParseKind/Retryable）。
-- `modelpool.bootAttributionKind(kind, detail)`（取代布尔版）返回应记类别；`notServedKind` 与 executor 同源。
-- `MarkFailure`：`not_served` 一击即冷却 + 冷却 **1800 s**；`isExecutionFailureKind` 纳入 `not_served`（探测免疫）。
-- 测试：`TestBootAttributionKind`（5 边界 + 类别同源）、`TestNotServedOneStrikeCooldownAndProbeImmunity`（冷却 ≥1500s + 探测免疫 + 对照组 unreachable 可恢复）。
+### 方法（照 round 34 写下的复验方法）
+- `--model-pool disable <id>` 停用其余 **33 条**车道，只留 `combo:auto-free/main/vision` 三条候选（保留清单落盘 `runtime\tmp\t17b2-exp\disabled-ids.txt`）；
+  关掉方案阶段、`maxTasksPerGoal=1`、`concurrency=1`、keepalive 临时停用 —— 强制引擎选中它们。
 
-### live 未取得（如实标 + 方法）
-- 本轮窗口（00:35–00:41）引擎**未选中** `combo:*`（它们按探测 healthy、权重顺序也不靠前）⇒ `not_served` 在日志与台账各出现 0 次；
-  日志里那几条 `combo:*` 记录是 **round 33 窗口**留下的（时间 23:51）。
-- 方法（下一轮照做）：① 临时只留 combo 候选或提高其权重强制选中；② 看 `pool.json` 应为 `state=down / kind=not_served / cd≈1800`；
-  ③ 跨过一个探测周期（≈3 min）仍应为 down（round 33 的抵消不再复现）。
+### 读数（两次相隔一个探测周期）
+```
+01:11:06  combo:auto-free   state=healthy kind=not_served consec=1 cd_left_s=1617
+          combo:auto-main   state=healthy kind=not_served consec=5 cd_left_s=3573
+          combo:auto-vision state=healthy kind=not_served consec=1 cd_left_s=1613
+01:14:46  combo:auto-free   state=healthy kind=not_served consec=1 cd_left_s=1397
+          combo:auto-main   state=healthy kind=not_served consec=6 cd_left_s=3485
+          combo:auto-vision state=healthy kind=not_served consec=1 cd_left_s=1393
+探测：{"kind":"probe","model":"combo:auto-main","from":"down","to":"healthy"}；probe-cycle：可用 21 / 下线 15
+```
+- 结论：类别正确（`not_served`）；探测只改 `state` 标签，**不动 `consec` 与 `CooldownTo`**（后者只随时间递减）⇒ round 33 的抵消不再复现；
+  `state=healthy + CooldownTo>now` 在调度器里仍被跳过（T15-② 的组合语义）。
 
-### 提交 · 部署 · 边界（#40）
-- `7fc9058` 已推送；干净 worktree 构建 `BUILD_RC=0`（117.7 s）；dist 与 agent 同 hash `FECEA74D…CBDF`、`vcs.revision=7fc9058`；全仓 `go test ./...` rc=0。
-- 运行边界：引擎 `--quit`（family=0）、`\WorkBenchKeepAlive` `/ENABLE`（Ready）、worktree 已移除、基线**显式写回复核**（plan/autoStart/maxTasks/conc 均对）、仓库 18 项未变。
+### 顺带实测（新登记 T19）
+- 全池只剩 3 条不可用车道时，引擎仍生成任务并把它们跑成 `boot_failed` 任务失败（2 例）⇒ 建议加「开跑前检查：无健康且不在冷却的车道则等待/回退」。
 
 ### 我自己的错（本轮 1 次）
-- 又一次把 PowerShell 命令拼进 JS 数组时出解析错（`Expected ',', got 'string literal'`）⇒ **改用脚本文件化跑**（`runtime\tmp\t17b2-check.ps1`）一次成型。
-  整改：**多行 PowerShell 一律写成 .ps1 文件再 `pwsh -File`**，不再拼内联字符串（本轮两次踩坑都在同一处）。
+- 实验跑完后**没有当轮回滚**（33 条车道处于停用、keepalive 处于停用），直到 round 36 才恢复 ⇒ 违反「实验边界当轮回滚」。
+  整改：**实验脚本必须自带 finally 段（回滚写在同一脚本里）**，并在当轮收尾立刻复核 `routes/enabled`、keepalive、基线三项读数。
+
+## round 36（同会话，2026-10-27 10:00-10:05）—— 实验状态回滚与文档补齐
+
+### 回滚（脚本 `runtime\tmp\t17b2-rollback.ps1`）
+- 33 条车道全部 `--model-pool enable` ⇒ **routes=36 / enabled=36**；
+- 引擎无运行实例（family=0，round 35 的任务预算已耗尽自停）；
+- `\WorkBenchKeepAlive` `/ENABLE`（Ready）；
+- 基线**显式写回并复核**：`plan=true / autoStart=false / maxTasksPerGoal=12 / concurrency=2 / chain=true / ws=external/D:\workdesktop`；
+- `HEAD == origin/master == 72e906e`、仓库 18 项未变。
+
+### 文档
+- 报告新增 §1.34（T17②-b live 验证读数与三条结论）与 T19 登记；§6/§8/§0 同步更新。
