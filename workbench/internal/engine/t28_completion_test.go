@@ -104,9 +104,17 @@ func TestTemplateArtifactExemption(t *testing.T) {
 	if st, _ := completionVerdict(nil, requiresArtifactBlock("code", "code-tool", nil, []string{"code-review"})); st != model.StateDegraded {
 		t.Fatalf("非豁免同域模板：无产物块应落 degraded，实际 %s", st)
 	}
-	// ③ 豁免列表为空 ⇒ 行为与改造前完全一致（默认工程集仍要求产物、report 域仍豁免）。
-	if !requiresArtifactBlock("quality", "review-five-axis", nil, nil) || requiresArtifactBlock("report", "report-weekly", nil, nil) {
-		t.Fatal("空豁免列表必须回落现状判定（默认集生效）")
+	// ③ 豁免列表为空 ⇒ **用默认豁免集**（round 50 · T41）：存量 config.json 没有该键（实测本机 schema 6），
+	//    若把空值当「无豁免」，T37 这条修正对老安装**永不生效** ⇒ 必须回落到 `defaultArtifactExemptTemplates`。
+	if requiresArtifactBlock("quality", "review-five-axis", nil, nil) {
+		t.Fatal("空豁免列表必须回落默认豁免集（否则存量安装拿不到 T37 修正）")
+	}
+	if requiresArtifactBlock("report", "report-weekly", nil, nil) {
+		t.Fatal("report 域本就不要求产物块")
+	}
+	// ③b 默认豁免集**只**覆盖列出的模板：同域未列出的模板仍要求产物（豁免不得外溢）。
+	if !requiresArtifactBlock("code", "code-tool", nil, nil) {
+		t.Fatal("未列出的模板不得被空列表默认豁免")
 	}
 	// ④ 大小写/空白容错（配置/模板 id 由人手写）。
 	if requiresArtifactBlock(" Code ", "  Code-Review ", nil, []string{"code-review"}) {

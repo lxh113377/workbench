@@ -35,9 +35,23 @@ func matchesExactFold(s string, list []string) bool {
 	return false
 }
 
-// artifactExempted 判定该模板是否被豁免产物块要求（零值/空 = 无豁免）。
+// defaultArtifactExemptTemplates 是「即便域要求产物块，也不强制」的默认模板集（round 50 · T41）。
+//
+// 为什么要有代码层默认（而不是只靠 config 默认值）：`DefaultConfig()` 只对**新装**生效 ——
+// 已在跑的 config.json（schema 6）里没有 `artifactExemptTemplates` 键 ⇒ 反序列化得到 nil ⇒
+// 若 nil 当「无豁免」处理，T37 这条修正对**存量安装永不生效**（实测这台机器就是 schema 6）。
+// 与 `ArtifactDomains` 的取舍一致：空值 ⇒ 用默认集（代价是无法表达「一个都不豁免」，已记录）。
+var defaultArtifactExemptTemplates = []string{
+	"code-review", "code-snippet-library", "code-test-plan", "quality-audit", "review-five-axis",
+}
+
+// artifactExempted 判定该模板是否被豁免产物块要求（零值/空 ⇒ 用默认集，见上）。
 func artifactExempted(templateID string, exempt []string) bool {
-	return matchesExactFold(templateID, exempt)
+	list := exempt
+	if len(list) == 0 {
+		list = defaultArtifactExemptTemplates
+	}
+	return matchesExactFold(templateID, list)
 }
 
 // requiresArtifactBlock 是 T37 的判定入口：**先模板豁免、后域** ——
