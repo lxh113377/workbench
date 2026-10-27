@@ -1122,10 +1122,13 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 					time.Duration(rateLimitCooldownSeconds)*time.Second,
 					string(executor.KindRateLimited), "429 rate limited")
 			}
+			// 限流退回队列这条也要带取证三件套：它是**最常见**的台账行之一，缺了它「哪次经 DSH 无头跑过」就查不全。
+			stderrPath, producedRunes, dshCommand := attemptEvidence(res)
 			e.store.AppendAttempt(store.AttemptRecord{
 				TaskID: task.ID, Attempt: attempt, Model: modelID, Kind: string(executor.KindRateLimited),
 				Action: "requeue", ElapsedMs: elapsed.Milliseconds(),
-				Error: errText(runErr) + " | lane=" + lane,
+				Error:      errText(runErr) + " | lane=" + lane,
+				StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
 			})
 			remaining := e.router.AvailableLanes()
 			e.requeueForPoolWait(task.ID, running.ChainID)
@@ -1156,9 +1159,12 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 		lastKind = kind
 		// 调用方取消优先于一切分类：不重试、不计失败
 		if e.isCancelling(task.ID) || ctx.Err() != nil || kind == retry.Cancelled {
+			// 取消行同样带取证三件套：台账六处写入点**列同构**，读的时候不必再记「哪条有、哪条没有」。
+			stderrPath, producedRunes, dshCommand := attemptEvidence(res)
 			e.store.AppendAttempt(store.AttemptRecord{
 				TaskID: task.ID, Attempt: attempt, Model: modelID, Kind: string(kind),
 				Action: "cancel", ElapsedMs: elapsed.Milliseconds(), Error: errText(lastErr),
+				StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
 			})
 			e.finishCancelled(task.ID, lastErr)
 			return
