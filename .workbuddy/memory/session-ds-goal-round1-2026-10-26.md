@@ -584,33 +584,31 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 39-40（同会话，2026-10-27 11:55-12:15）—— T22：台账取证不变量门禁（含两条自纠）
+## round 41-42（同会话，2026-10-27 12:35-13:55）—— T17③ 分档降载落地 + 确定性验证（含委派记录）
 
-### 起因
-目标要求交付物「可直接贴 PR + 附门禁建议」。本轮把三件事从报告里的一句话变成机器判据：
-协议第 6 条（T18④）、方案提示词第 6 条（T18④-2）、**凡 `AppendAttempt` 调用点逐点带 `DSHCommand`**
-（round 38 实测漏掉最常见的 `rate_limited requeue` 行 ⇒ 靠人数必然漏）。
+### 改动（提交 c5904cf，CI+E2E success，部署 hash 0F00BE66…7A70）
+- `engine.effectiveMinWords(base, attempt)`：首轮压到 200（最小可验收量级）、后续轮返回模板体量、base≤0 兜底 300；
+- 接线：两处 `PlanPrompt(...)` + `plan_stage` 的 `minWords`；
+- `blueprint.PlanPrompt` 第 7 条「首轮按最小可验收交付设计（1 个文件 + 1 条本机可执行的验收命令）」；
+- 两测：`engine/tiering_test.go`（7 边界）、`blueprint/minimal_delivery_contract_test.go`（要素+顺序+体量透传）。
 
-### 交付（提交 442040c）
-- `tests/check_ledger_evidence.ps1`：源侧 8 项（协议/方案第 6 条、台账三字段、6/6 写入点带字段、
-  `BuildArgs` 唯一拼装点、`DSHCommandLine` 在册）+ 运行侧（最近台账行须含 `--profile web-desktop` 与 `--json -`，
-  以最新一条带该字段的行为基线，历史行只披露不判红）；三态口径 PASS/FAIL/UNVERIFIED。
-- 受理面注册：`tests/check_all.ps1` 新增 Section + `.github/workflows/ci.yml` repo-gates 清单加一项。
-
-### CI 证据（干净检出）
+### 确定性 live 验证（读引擎落盘提示词，与车道行为解耦）
 ```
-repo gates (script-level)  ===== GATE: tests/check_ledger_evidence.ps1
-repo gates (script-level)  GATE PASS: tests/check_ledger_evidence.ps1
+新版 task-2b1b64ab3faa8e8c\plans\prompt-plan-0.md（2,645B, 12:51:13）:
+  hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
+  7. 首轮按**最小可验收交付**设计：优先「1 个文件（建议 ≤60 行）+ 1 条本机可执行的验收命令」；
+  产出体量参考：约 200 字
+对照组（10-26 23:25 两份旧渲染）: hasItem7=False hasAbout200=False
 ```
+- 同窗口旁证：combo 三车道冷却到期后重新进候选并 boot_failed（T17②-b 语义）；dots-studio 早停 139s（T15①）。
+- **仍无 verify.json** ⇒ 合规产物仍未落地（最后一关=车道服从性）。
 
-### 门禁自己抓出的两个缺陷（自纠记录）
-- 第一版判据落错文件（把 spawn 判据写在 `engine.go`，真正 spawn 在 `executor.go`）⇒ 门禁把自己判红；
-- 第一版把历史台账行当判红对象（7 行里 6 行是 T21 之前写的）⇒ 改成「基线 + 披露」，不为历史数据永久拖红。
+### 委派记录（按 2026-10-27 新规「委派优先」）
+- 第一次派子代理（`be883dd1-…`）做「独立验证 T17③」：其收尾消息未见，且 `send_message` 回报
+  `active teammate ... not found`（通道不可寻址）⇒ **如实记为「派出未收产出」**，不冒充已核验；
+- 整改：**重新派发**（`eb6f1e16-…`，`subagent_fork`，只读复核 + 明确 6 条核验项），本轮收尾前必须收其结论；
+- 经验：子代理要能被收产出，派发时同时给「回报格式 + 回报渠道」；收不到就重派，不把"派过"当"验过"。
 
-### 过程中被仓库门禁拦下一次（正面证据）
-- `edit` 工具改写 `tests/check_all.ps1` 丢了 UTF-8 BOM ⇒ **暂存区 BOM 门禁如实拦下**（"含非 ASCII 但索引 blob 无 BOM"）；
-  按提示补回 BOM + 统一 EOL 后，`check_staged_bom` / `check_ps1_eol` / `check_ps1_syntax` 全 rc=0。
-
-### 我的错（本轮 2 次，均已修）
-- 门禁判据落错文件（见上）；
-- 门禁运行侧口径把历史数据当违规（见上）—— 两次都不是"环境问题"，是判据设计没过脑子；整改：**写判据先问"它落在哪个文件/哪段数据上"**。
+### 边界
+- 实验脚本自带 finally 回滚（plan=true / autoStart=false / maxTasks=12 / conc=2 复核通过）；
+- worktree `rel-c5904cf` 已移除（wt_left=0）；family=0；keepalive Ready；`HEAD == origin/master == c5904cf`；仓库 18 项未变。
