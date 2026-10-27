@@ -74,9 +74,13 @@ type Result struct {
 	//	CliPath —— 实际使用的 desktop-cli.js 路径；
 	//	Profile —— 实际使用的 profile（本仓恒为 web-desktop，见 dshprofile/bootstrap.go 的白名单说明）；
 	//	Command —— exe + 全部参数（与 BuildArgsWithPatches 同源拼装，不含密钥），可直接入台账。
-	CliPath   string
-	Profile   string
-	Command   string
+	CliPath string
+	Profile string
+	Command string
+	// Model 是**本次调用真正执行的模型 id**（round 44 · T27）。
+	// 为什么必须由执行器上报：`FailoverRunner` 会在自己内部沿候选链换车道，引擎只知道「它选的是谁」；
+	// 台账/健康度若记 selected 而不记 actual，就会把失败算到没被执行的模型头上（审计实测 3/3 不符）。
+	Model     string
 	LastError string
 	Stalled   bool
 	// EarlyStall 标记「启动后零进展」的提前回收：与 Stalled 同 kind，但原因不同，便于归因（round 14 · T15）。
@@ -410,7 +414,7 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	job := attachJob(ProcessOf(cmd.Process))
 	defer job.close()
 
-	res := &Result{EventsPath: eventsPath, CliPath: cli, Profile: r.cfg.ProfileName, Command: cmdLine}
+	res := &Result{EventsPath: eventsPath, CliPath: cli, Profile: r.cfg.ProfileName, Command: cmdLine, Model: modelID}
 	var stderrBuf bytes.Buffer
 	var wg sync.WaitGroup
 	wg.Add(2)

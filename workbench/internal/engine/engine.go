@@ -264,8 +264,9 @@ func (e *Engine) attachAttemptLogging() {
 			if strings.TrimSpace(reason) == "" && err != nil {
 				reason = model.Truncate(err.Error(), 300)
 			}
+			// 日志同样记实际执行模型（T27）：这是 7×24 无人值守下唯一的事实来源，记 selected 会误导排查方向。
 			e.log.Info("尝试结束", logging.Redact([]any{
-				"taskId", task.ID, "model", modelID, "kind", kind,
+				"taskId", task.ID, "model", attemptedModel(res, modelID), "kind", kind,
 				"elapsedMs", elapsed, "stalled", stalled,
 				"reason", reason, "stderrPath", stderrPath,
 			})...)
@@ -1055,6 +1056,9 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 			}
 		}
 		res, runErr := e.runner.Run(ctx, execTask, modelID)
+		// 台账/健康度/日志都记**实际执行**的模型（round 44 · T27）：failover 会在候选链上换车道，
+		// selected ≠ actual；记错会把失败算到没被执行的模型上、把好模型一起冷却（审计实测 3/3 不符）。
+		actualModel := attemptedModel(res, modelID)
 		elapsed := time.Since(startedAt)
 
 		// ── 成功 ───────────────────────────────────────────────
@@ -1065,19 +1069,19 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 			} else if res.TimedOut {
 				lastErr = fmt.Errorf("任务超时")
 				lastKind = retry.Timeout
-				e.router.RecordFailure(modelID, string(executor.KindTimeout), "timeout")
+				e.router.RecordFailure(actualModel, string(executor.KindTimeout), "timeout")
 			} else if res.FinalText == "" {
 				lastErr = fmt.Errorf("任务无最终答案")
 				lastKind = retry.Exit
-				e.router.RecordFailure(modelID, string(executor.KindExit), "empty final")
+				e.router.RecordFailure(actualModel, string(executor.KindExit), "empty final")
 			} else {
-				e.router.RecordSuccess(modelID, res.Elapsed.Milliseconds())
+				e.router.RecordSuccess(actualModel, res.Elapsed.Milliseconds())
 				// 成功一次即清零限流退避：说明车道已恢复，下次限流重新从 5 分钟起。
 				e.clearRateLimit()
 				// 成功台账同样带产出体量与 stderr 位置：既是“这次真产出了多少”的读数，也让 done 与失败行**列同构**，便于对照。
 				stderrPath, producedRunes, dshCommand := attemptEvidence(res)
 				e.store.AppendAttempt(store.AttemptRecord{
-					TaskID: task.ID, Attempt: attempt, Model: modelID, Kind: "done",
+					TaskID: task.ID, Attempt: attempt, Model: actualModel, Kind: "done",
 					Action: "done", ElapsedMs: elapsed.Milliseconds(),
 					StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
 				})
@@ -1125,7 +1129,7 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 			// 限流退回队列这条也要带取证三件套：它是**最常见**的台账行之一，缺了它「哪次经 DSH 无头跑过」就查不全。
 			stderrPath, producedRunes, dshCommand := attemptEvidence(res)
 			e.store.AppendAttempt(store.AttemptRecord{
-				TaskID: task.ID, Attempt: attempt, Model: modelID, Kind: string(executor.KindRateLimited),
+				TaskID: task.ID, Attempt: attempt, Model: actualModel, Kind: string(executor.KindRateLimited),
 				Action: "requeue", ElapsedMs: elapsed.Milliseconds(),
 				Error:      errText(runErr) + " | lane=" + lane,
 				StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
@@ -1151,10 +1155,10 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 		kind := retry.Unknown
 		if res != nil && res.ErrorKind != "" {
 			kind = retry.ParseKind(res.ErrorKind)
-			e.router.RecordFailure(modelID, res.ErrorKind, errText(runErr))
+			e.router.RecordFailure(actualModel, res.ErrorKind, errText(runErr))
 		} else if runErr != nil {
 			kind = retry.Boot
-			e.router.RecordFailure(modelID, string(executor.KindBoot), errText(runErr))
+			e.router.RecordFailure(actualModel, string(executor.KindBoot), errText(runErr))
 		}
 		lastKind = kind
 		// 调用方取消优先于一切分类：不重试、不计失败
@@ -1162,7 +1166,7 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 			// 取消行同样带取证三件套：台账六处写入点**列同构**，读的时候不必再记「哪条有、哪条没有」。
 			stderrPath, producedRunes, dshCommand := attemptEvidence(res)
 			e.store.AppendAttempt(store.AttemptRecord{
-				TaskID: task.ID, Attempt: attempt, Model: modelID, Kind: string(kind),
+				TaskID: task.ID, Attempt: attempt, Model: actualModel, Kind: string(kind),
 				Action: "cancel", ElapsedMs: elapsed.Milliseconds(), Error: errText(lastErr),
 				StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
 			})
@@ -1173,7 +1177,7 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 		// 失败台账带上取证两件套（stderr 落盘位置 + 产出体量，T15-④）。
 		stderrPath, producedRunes, dshCommand := attemptEvidence(res)
 		e.store.AppendAttempt(store.AttemptRecord{
-			TaskID: task.ID, Attempt: attempt, Model: modelID, Kind: string(kind),
+			TaskID: task.ID, Attempt: attempt, Model: actualModel, Kind: string(kind),
 			Action: string(dec.Action), DelayMs: dec.Delay.Milliseconds(),
 			ElapsedMs: elapsed.Milliseconds(), Error: errText(lastErr),
 			StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
