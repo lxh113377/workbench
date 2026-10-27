@@ -902,3 +902,22 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 ### 五、边界
 - 观察/验证窗口自带回滚并已复核；family=0；keepalive Ready；`HEAD == origin/master == 89a3ce3`；dirty=18（并行会话在途件）；
 - 部署：本轮代码改动（T37/T38）**待下一次部署**（当前两处根仍是 `ba52871` 构建，hash==SUMS 一致）—— 下一轮开局补部署。
+## round 50（同会话，2026-10-27 20:45-21:45）—— T41/T39/T42 落地 + 车道通过率实测表 + T40 派出未收
+
+### 一、三件落地（均已 Lead 独立复核）
+- **T41**（`8c71e1c`，我方自干）：空豁免列表回落默认集 ⇒ T37 对存量安装真正生效（原先只对新装生效）；测试同步改口径 + 新增③b；
+- **T39**（`5f2a867`，子代理 `03018732`）：协议首屏最小形态 + 尾屏再点一次；负控（换回旧顺序）四条断言同时判红；
+- **T42**（`7efb5dc`，子代理 `1ec202a1`）：车道偏好（有序、空=关闭、策略排序后稳定分组）；四测含 least-loaded 与未知 id。
+
+### 二、车道通过率实测（T42 的依据）
+- 退役根 118 条：84 pass / 34 fail；`reflection/beam-free` 16/0、`nvidia/nemotron-3-super-120b-a12b:free` 8/0、
+  `nvidia/nemotron-3.5-lightning:free` 8/1、`opencode/deepseek-v4.1-flash-free` 6/1、`kilo-auto/free` 5/2、`space-bunny-free` 0/3（负样本）；
+- ⇒ 车道差异极大，「历史真能交付的车道排前」有量化依据（但也只是概率改善，不等价于产能恢复）。
+
+### 三、委派（#44）
+- 本轮派 3 件：T39（成功落地）、T42（成功落地）、T40（**派出未收产出**：~45 分钟无落点、无收尾消息 ⇒ 按 ⑦ 登记未取证、不重派同件）；
+- 本会话累计派发 14 件：成功 11、零产出 3。
+
+### 四、边界
+- `HEAD == origin/master == 7efb5dc`（本轮另有 `8c71e1c`/`5f2a867`），dirty=18（并行会话在途件）；
+- family=0；keepalive Ready；本轮已把 `7efb5dc` 部署到两处根（hash==SUMS + `vcs.revision` 核对），下轮开局可直接跑窗口复验。
