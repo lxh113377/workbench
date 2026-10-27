@@ -130,7 +130,10 @@ jobs:
             'tests/check_spawn_silent.ps1',
             'tests/check_snapshot_build.ps1',
             'tests/check_crossbuild.ps1',
-            'tests/check_agg_bypass.ps1'
+            'tests/check_agg_bypass.ps1',
+            # 台账取证不变量：协议/方案提示词第 6 条 + 六处 AppendAttempt 全带取证字段 + dshCommand 自证。
+            # 运行侧在 CI 无 live 数据根 ⇒ 脚本显式 UNVERIFIED（不静默通过）。
+            'tests/check_ledger_evidence.ps1'
           )
           $failed = @()
           foreach ($g in $gates) {

@@ -313,6 +313,17 @@ Section '受理面覆盖（每个 check_*.ps1 必须挂某个受理面，防判�
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（不计 PASS）' -ForegroundColor Yellow }
 }
 
+Section '台账取证不变量（协议第 6 条 / 六处台账写入点 / dshCommand 自证）' {
+
+  # 为什么单列一段（round 40）：本仓已有「判据存在但没挂受理面」的在册失效形态；
+  # 台账取证这三件事（协议禁自有语法、每个 AppendAttempt 带取证字段、dshCommand 含 profile/--json）
+  # 都吃过「只接最容易想到的几处」的亏（round 38 实测漏掉最常见的 rate_limited 行），
+  # 故做成可重复判定的门禁，而不是散在报告里的一句话。
+  $g = Join-Path $Root 'tests\check_ledger_evidence.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（运行侧无 live 台账，不计 PASS）' -ForegroundColor Yellow }
+}
 Section '全仓入库 EOL（已入库的 CRLF/混合残留，CI 兜底层）' {
 
 
