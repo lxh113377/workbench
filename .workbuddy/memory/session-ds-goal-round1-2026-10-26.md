@@ -990,3 +990,28 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 ### 五、边界
 - `HEAD == origin/master == 1e7a963`；CI 上 `ddb377d`/`360be6d` 均 success；部署仍为 `360be6d`（本轮无生产 Go 改动）；
 - baseline 已复核（plan=true/autoStart=false/maxTasks=12/conc=2/sync=600/pref 9 条）；family=0；keepalive Ready；worktree 清零。
+## round 56（同会话，2026-10-28 00:42-01:40）—— 🔧 T49：自家实例守卫每分钟处刑实验引擎（四杀实证 → 已修并跨线复验）
+
+### 一、真凶与取证
+- 现象：`autoStart=true` 打开后引擎 3 小时死 4 次，**全部无退出日志**；
+- 三件套：guard 留痕四次 REAPED（22:52 / 23:41 / 00:38 / 01:07）与引擎日志末刻一一对应 + `state.json phase=running, stoppedAt=0`（被杀而非优雅退出）
+  + 算术精确命中（age 302/323/316s ≥ 宽限 300s，01:07 那次全程目击）；
+- 根因：guard 规则 B 用**主根的过期 user-quit 旗标**（10-25 我方退出 dist 时留下）裁决**全机**实例；规则 A「全机只留 1 个生产实例」与 `internal/single` 的**按根加锁**语义矛盾。
+
+### 二、修复与验证（`6108111`，+29/-4 行）
+- A 按安装根分组各留 1；B 只认实例**自己根**的旗标；注释按 #42 写满；
+- 门禁：syntax 77/77 rc=0、encoding rc=0（BOM 保留）、EOL 与改前同形态、新 guard 实跑 CLEAN；
+- **跨线复验**：修复后实例 01:16:49 启动 → age 295s 存活 → 01:29:48 再查 guard 留痕 **2100B → 2100B（无新增 REAPED）**；
+- 负向对照即旧代码的四次 REAPED 留痕（判据有牙）。
+
+### 三、意义
+- 「持续自动执行」此前被自家守卫结构性封死（实验根最多活 5 分钟）；本轮之后 7×24 才真正成立。
+
+### 四、更正与新观察
+- 更正两条旧读数（round 53 的 20 分钟全零窗、round 54 的 52 分钟空窗都是本缺陷所致）；
+- 新观察：跨线期间 pid 仍 4736→23796（guard 未增记录 ⇒ 另有换代源），登记待办三线并查。
+
+### 五、配置状态（本轮的持久变更，可回滚）
+- 已改为**持续自动执行**：`autoStart=true / plan=true / chain=true / conc=2 / maxTasks=12`（备份 `config.json.bak-r54-*`）；
+- `pool.preferredModels` 按当代实测 ok 率重排 9 条（dots-studio、kilo-auto、openrouter 在前）；keepalive 已重新 ENABLE（Ready）；
+- 引擎在跑（当前 pid 见台账）；guard 修复在仓库文件里即时生效（keepalive 直接读 `tests\instance_guard.ps1`，无需重建二进制）。
