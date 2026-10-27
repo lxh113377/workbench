@@ -584,40 +584,33 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 35（同会话，2026-10-27 01:05-01:15）—— T17②-b live 验证：not_served 生效且探测不再翻案
+## round 37（同会话，2026-10-27 10:15-10:45）—— T19 落地 + 自纠「判据永不成立」+ live 验证
 
-### 方法（照 round 34 写下的复验方法）
-- `--model-pool disable <id>` 停用其余 **33 条**车道，只留 `combo:auto-free/main/vision` 三条候选（保留清单落盘 `runtime\tmp\t17b2-exp\disabled-ids.txt`）；
-  关掉方案阶段、`maxTasksPerGoal=1`、`concurrency=1`、keepalive 临时停用 —— 强制引擎选中它们。
+### 第一版（提交 714b9fd）
+- `executor.ErrNoLane` + `KindNoLane`、`retry.NoLane`；`FailoverRunner` 无候选链时返回哨兵；
+  引擎 `isNoLane(res, err)` 分支：`setPoolCooldown` + `requeueForPoolWait`，不判任务失败；测试 `TestIsNoLane`。
 
-### 读数（两次相隔一个探测周期）
+### 第一次 live 尝试：判据没触发（如实记）
+- 复跑 combo-only 实验 ⇒ 「池内无可用车道」计数 0，仍有任务失败：
+  10:24:39 / 10:24:45 / 10:24:51 / 10:27:03 四次 `boot_failed`，`model=combo:auto-main`（冷却中的车道）。
+- 根因：判据写成 `len(order) == 0`，而 `order` 在拼链前就被引擎的 `modelID` 占位 ⇒ 永不成立；
+  且 `PickChain` 早就跳过冷却车道（round 15 的护栏），所以候选链当时是空的。
+
+### 修复（提交 230dbcc）
+- 判据移到候选链上（拼 `modelID` 之前）：`len(chain) == 0 ⇒ executor.ErrNoLane`；删死代码分支。
+- 回归测试 `TestFailoverNoLaneDoesNotRunCooledModel`：先自证前置（冷却车道不在候选链），再断言 `ErrNoLane` 且内层 runner 未被调用。
+
+### 修后 live 验证（同实验，部署 @230dbcc）
 ```
-01:11:06  combo:auto-free   state=healthy kind=not_served consec=1 cd_left_s=1617
-          combo:auto-main   state=healthy kind=not_served consec=5 cd_left_s=3573
-          combo:auto-vision state=healthy kind=not_served consec=1 cd_left_s=1613
-01:14:46  combo:auto-free   state=healthy kind=not_served consec=1 cd_left_s=1397
-          combo:auto-main   state=healthy kind=not_served consec=6 cd_left_s=3485
-          combo:auto-vision state=healthy kind=not_served consec=1 cd_left_s=1393
-探测：{"kind":"probe","model":"combo:auto-main","from":"down","to":"healthy"}；probe-cycle：可用 21 / 下线 15
+{"level":"INFO","msg":"仍有可用车道，任务退回队列后立即重调度","taskId":"task-8d3b5ec20f2453ec","lanes":"provider:our-free-model"}
+{"level":"WARN","msg":"池内无可用车道，任务退回队列等待冷却","taskId":"task-8d3b5ec20f2453ec","waitSeconds":300}
 ```
-- 结论：类别正确（`not_served`）；探测只改 `state` 标签，**不动 `consec` 与 `CooldownTo`**（后者只随时间递减）⇒ round 33 的抵消不再复现；
-  `state=healthy + CooldownTo>now` 在调度器里仍被跳过（T15-② 的组合语义）。
+- 最后一条 combo 车道冷却（10:39:01）后走进新分支：**300 s 池闸门 + 任务退回队列**；此后无任务失败（最后一次停在 10:27:08 = 部署前）。
 
-### 顺带实测（新登记 T19）
-- 全池只剩 3 条不可用车道时，引擎仍生成任务并把它们跑成 `boot_failed` 任务失败（2 例）⇒ 建议加「开跑前检查：无健康且不在冷却的车道则等待/回退」。
+### 边界（实验脚本自带 finally 回滚）
+- `routes=36 enabled=36`、keepalive Ready、基线 plan=true/autoStart=false/maxTasks=12/conc=2/chain=true、family=0、
+  worktree 已移除、`HEAD == origin/master == 230dbcc`、仓库 18 项未变。
 
-### 我自己的错（本轮 1 次）
-- 实验跑完后**没有当轮回滚**（33 条车道处于停用、keepalive 处于停用），直到 round 36 才恢复 ⇒ 违反「实验边界当轮回滚」。
-  整改：**实验脚本必须自带 finally 段（回滚写在同一脚本里）**，并在当轮收尾立刻复核 `routes/enabled`、keepalive、基线三项读数。
-
-## round 36（同会话，2026-10-27 10:00-10:05）—— 实验状态回滚与文档补齐
-
-### 回滚（脚本 `runtime\tmp\t17b2-rollback.ps1`）
-- 33 条车道全部 `--model-pool enable` ⇒ **routes=36 / enabled=36**；
-- 引擎无运行实例（family=0，round 35 的任务预算已耗尽自停）；
-- `\WorkBenchKeepAlive` `/ENABLE`（Ready）；
-- 基线**显式写回并复核**：`plan=true / autoStart=false / maxTasksPerGoal=12 / concurrency=2 / chain=true / ws=external/D:\workdesktop`；
-- `HEAD == origin/master == 72e906e`、仓库 18 项未变。
-
-### 文档
-- 报告新增 §1.34（T17②-b live 验证读数与三条结论）与 T19 登记；§6/§8/§0 同步更新。
+### 我自己的错（本轮 1 次，已自纠）
+- 护栏判据写成了永不成立的条件（`len(order)==0`），而单测照样通过 ⇒ 一度误以为“已修好”。
+  整改（写进规矩）：新增护栏/闸门类判据必须用 live 计数证明真的触发过（≥1）；单测要覆盖「判据在最易踩的输入下成立」。
