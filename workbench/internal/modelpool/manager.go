@@ -454,6 +454,10 @@ func (m *Manager) MarkSuccess(id string, latencyMs int64) {
 		h.ConsecFail = 0
 		h.State = StateHealthy
 		h.CooldownTo = 0
+		// 真实执行成功是清掉出口级印记（not_served）的唯一自动路径；不清则车道虽已恢复，
+		// 旧印记会让下一次无关失败仍被当成出口级事实而永远无法半开（守卫读到陈旧 LastErrKind）。
+		h.LastErr = ""
+		h.LastErrKind = ""
 		h.CheckedAt = nowMs()
 		h.LastUsedAt = nowMs()
 		if latencyMs > 0 {
@@ -588,6 +592,15 @@ func (m *Manager) healHalfOpenLocked(now int64) {
 		if h.State != StateDown || h.CooldownTo <= 0 || h.CooldownTo > now {
 			continue
 		}
+		// 出口级事实（not_served）**不半开**：上游原文写明「本出口不服务该模型」，
+		// 冷却到期只说明「等够了」，不说明「现在能用了」。若在这里把它放回 unknown 并清掉
+		// LastErrKind，下一次探测就会因「没有出口级印记」而把它标回 healthy，
+		// 于是 down(冷却) -> healthy(探测) -> boot_failed(白跑) -> down 的循环继续吃掉整池尝试
+		// （round 51 实测：combo:auto-vision 11:45:37 recover -> 11:45:39 probe healthy -> 11:50 boot_failed）。
+		// 清除这条印记只允许两条路径：一次**真实执行成功**（MarkSuccess）或手动重置（Restore）。
+		if h.LastErrKind == notServedKind {
+			continue
+		}
 		h.State = StateUnknown
 		h.CooldownTo = 0
 		h.ConsecFail = 0
@@ -632,7 +645,10 @@ func (m *Manager) ApplyProbe(results []ProbeResult) ProbeSummary {
 			// round 43 独立审计铁证：这里原先**无条件** `h.State = StateHealthy` ⇒
 			// `combo:auto-*` 的 state 每 ~66 秒被探测从 down 写成 healthy，而 lastErrKind 一直是
 			// `not_served`、consecFail 已 39/77/91 ⇒ 每个任务仍要白试 3 条（boot_failed 占全部尝试 71%）。
-			if isExecutionFailureKind(h.LastErrKind) {
+			if h.State == StateDisabled {
+				// 用户手动停用的车道保持 disabled：探测只证明端点可达，不能把它翻回 healthy
+				// （round 51 实测：14:20:11 面板停用后，同一毫秒的探测写出 disabled -> healthy 假象）。
+			} else if isExecutionFailureKind(h.LastErrKind) {
 				// 保持原状态（down/degraded）与计数：**探测不得翻案**。
 			} else {
 				h.State = StateHealthy
