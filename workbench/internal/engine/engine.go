@@ -847,6 +847,17 @@ func (e *Engine) tick(ctx context.Context) {
 	}
 }
 
+// recentTopicWindow 是 RootTask 排除近期主题的回溯条数：24 < 单域池 42（取整窗口 400 会抽干池 ⇒ T32-c 饥饿），既保底每域 18 条可选又压住同域近期连续重复。
+const recentTopicWindow = 24
+
+// topicFromTitle 取「<模板名> · <主题>」的主题段（无分隔符则整条）：pickTopic 比的是池内主题字面量，窗口存的却是标题，不转换则排除恒不匹配（chain 签名不在 T36 白名单）。
+func topicFromTitle(title string) string {
+	if i := strings.Index(title, "·"); i >= 0 {
+		return strings.TrimSpace(title[i+len("·"):])
+	}
+	return strings.TrimSpace(title)
+}
+
 // supplyCandidates 生成并评估新任务。策略：优先从模板池轮转，其次延续链。
 func (e *Engine) supplyCandidates(ctx context.Context, cfg config.Config) {
 	// 0) 自主链路优先（目标要求 1）：先由项目目标推导阶段任务；
@@ -873,11 +884,22 @@ func (e *Engine) supplyCandidates(ctx context.Context, cfg config.Config) {
 	// 选模板：优先从未使用/冷却结束的模板中选，避免同域扎堆
 	candidates := make([]*model.Task, 0, 3)
 	now := model.Now()
+	// 近期主题整批映射（口径见 recentTopicWindow 注释），供 RootTask 排除。
+	recent := make([]string, 0, recentTopicWindow)
+	for _, title := range e.eval.RecentTitles(recentTopicWindow) {
+		if topic := topicFromTitle(title); topic != "" {
+			recent = append(recent, topic)
+		}
+	}
 	for _, tpl := range enabled {
 		if len(candidates) >= cfg.Executor.Concurrency {
 			break
 		}
-		task := e.gen.RootTask(tpl, now)
+		task := e.gen.RootTask(tpl, now, recent...)
+		// 池尽（该域近期主题全覆盖）时跳过：不评估不落盘，窗口滑出后自然恢复。
+		if task == nil {
+			continue
+		}
 		// 若当日该模板已用过且密集，降低优先级而非硬拒
 		in := evaluate.Input{Task: task, Template: &tpl, History: all, Now: now, DailyCount: daily}
 		scores := e.eval.Evaluate(in)
