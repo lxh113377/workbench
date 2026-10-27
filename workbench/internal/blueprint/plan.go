@@ -47,6 +47,12 @@ func PlanPrompt(goalIntent, taskTitle, taskPrompt string, minWords int, lastFail
 	// 工作台不执行这些语法，也不会把它们当作方案 —— 必须在提示词里说清楚。
 	b.WriteString("6. 不要输出你自己的工具调用语法（实测出现过 `<|tool_call_start|>[bash(...)]`、`<dots_function_call>…`）：\n")
 	b.WriteString("   工作台**不会执行**它们，方案只会被判为不可用。方案只能是一个 JSON 对象（见下方 schema）。\n")
+	// 第 7 条（round 41 · T17③ 分档降载）：40 轮实测里没有任何一次合规产物落地 —— 免费车道在
+	// 「一次交约 1000 字 + 多文件 + 验收命令」的要求下几乎必然零产出。首轮先要「小而能验收」的东西，
+	// 后续轮次再在这份产物上追加（调用方已经把首轮的体量参考压到最小可验收量级）。
+	b.WriteString("7. 首轮按**最小可验收交付**设计：优先「1 个文件（建议 ≤60 行）+ 1 条本机可执行的验收命令」；\n")
+	b.WriteString("   后续轮次会在这份产物上追加，不要一上来就贪大。\n")
+	b.WriteString("   工作台**不会执行**它们，方案只会被判为不可用。方案只能是一个 JSON 对象（见下方 schema）。\n")
 
 	b.WriteString("\n## 输出 schema\n")
 	b.WriteString("{\n")

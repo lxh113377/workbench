@@ -1007,7 +1007,7 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 				if cfg.Plan.AppendPlanToPrompt {
 					execTask = cloneTaskWithPrompt(task, rendered)
 				}
-				e.savePlan(task, pst, blueprint.PlanPrompt(e.autonomyGoalIntentFor(task.GoalID), task.Title, task.Prompt, minWordsOf(e, task), lastFailure), planRound)
+				e.savePlan(task, pst, blueprint.PlanPrompt(e.autonomyGoalIntentFor(task.GoalID), task.Title, task.Prompt, effectiveMinWords(minWordsOf(e, task), attempt), lastFailure), planRound)
 				e.store.AppendAttempt(store.AttemptRecord{
 					TaskID: task.ID, Attempt: attempt, Model: pst.Model, Kind: "plan",
 					Action: "done", ElapsedMs: pst.ElapsedMs,
@@ -1037,7 +1037,7 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 				if pst.Err != nil {
 					reason = pst.Err.Error()
 				}
-				e.savePlan(task, pst, blueprint.PlanPrompt(e.autonomyGoalIntentFor(task.GoalID), task.Title, task.Prompt, minWordsOf(e, task), lastFailure), planRound)
+				e.savePlan(task, pst, blueprint.PlanPrompt(e.autonomyGoalIntentFor(task.GoalID), task.Title, task.Prompt, effectiveMinWords(minWordsOf(e, task), attempt), lastFailure), planRound)
 				e.store.AppendAttempt(store.AttemptRecord{
 					TaskID: task.ID, Attempt: attempt, Model: pst.Model, Kind: "plan",
 					Action: "degraded", ElapsedMs: pst.ElapsedMs, Error: reason,

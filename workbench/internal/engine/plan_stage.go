@@ -115,7 +115,8 @@ func (e *Engine) buildPlan(ctx context.Context, task *model.Task, cfg config.Con
 	}
 	st.Model = modelID
 
-	minWords := minWordsOf(e, task)
+	// 分档降载：首轮（round 0）的方案只要「最小可验收」体量，后续轮次才回到模板体量（round 41 · T17③）。
+	minWords := effectiveMinWords(minWordsOf(e, task), round)
 	goalIntent := ""
 	if e.autonomy != nil && task.GoalID != "" {
 		// 目标意图让方案服务于长期目标，而不是只对一句话任务负责。
