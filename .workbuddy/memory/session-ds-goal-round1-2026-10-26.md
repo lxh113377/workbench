@@ -921,3 +921,27 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 ### 四、边界
 - `HEAD == origin/master == 7efb5dc`（本轮另有 `8c71e1c`/`5f2a867`），dirty=18（并行会话在途件）；
 - family=0；keepalive Ready；本轮已把 `7efb5dc` 部署到两处根（hash==SUMS + `vcs.revision` 核对），下轮开局可直接跑窗口复验。
+## round 51（同会话，2026-10-27 22:00-22:45）—— 决定性诊断（半数额度被一条路由缺陷吃掉）+ T44/T45 落地 + 对我 round-50 结论的更正
+
+### 一、诊断（子代理 7894b603，读数带 sha）
+- 566 次「尝试结束」里 **boot_failed 293**，其中 combo:auto-vision 117/117、auto-main 104/105、auto-free 65 全是同一句 not-served ⇒ **一条路由缺陷吃掉一半尝试**；
+- **`kind=ok` 是假绿**（36 次 exec ok 全部 <15s、34/36 无产物块）⇒ 更正我此前把 ok 当正向信号的读法；
+- `attempts.jsonl` 是子集（漏 49.5%）且 67% model 是别名 ⇒ 按车道统计改用 `logs/workbench.jsonl`；
+- 当代真实车道：dots-studio 82.4%、kilo-auto 80%、openrouter 60%、liquid 29%、cohere 11.8%；26 个真实模型中 21 个当代 ok=0。
+
+### 二、止血测量（8 分钟）
+- 临时禁用 3 条 combo + sync=2h ⇒ **窗口内 not-served 错误 0 条**，尝试全落真实车道；结束后已还原 pool.json/配置。
+
+### 三、落地
+- **T44**（`37391c3`）：`not_served` 不半开 + `MarkSuccess` 清印记 + `StateDisabled` 不被探针翻回；3 测含**反证测试**；负控摘守卫 ⇒ 判红；
+- **T45**（`d4eff59`）：T8 绕行（严格内置不可行有 file:line 证据；公开注册 API + 外部文件通道双路径 **33 条**）+ **线上安装 `promoted_found: 4/4`**；
+- 两件均由 Lead 独立复核（build/vet/包测/**全仓 rc=0**）。
+
+### 四、对我 round-50 结论的更正
+- 我此前归因「上游容量/配额退化」⇒ 现证据表明**首位原因是代码缺陷**（冷却清印记 ⇒ 探测守卫失效 ⇒ not_served 车道反复洗白）；容量/配额降为次要因素。
+
+### 五、委派（#44）
+- 本轮派 4 件：A（诊断，成功）、B（T8 绕行，成功）、T44（成功）、外加早前 T39/T42 已记；本会话累计派发 16 件：成功 14、零产出 2。
+
+### 六、边界
+- `HEAD == origin/master == 37391c3`（本轮另有 `d4eff59`）；家族进程 0；keepalive Ready；pool.json 已还原；下一轮开局重建部署 `37391c3` 并跑「无配置绕过」的复验窗口（判据：boot_failed≈0）。
