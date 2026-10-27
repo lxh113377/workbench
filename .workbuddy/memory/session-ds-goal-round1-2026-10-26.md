@@ -584,38 +584,33 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 38（同会话，2026-10-27 11:00-11:35）—— T21：台账自证「经 DSH 无头控制执行」（含一处 live 暴露的漏接）
+## round 39-40（同会话，2026-10-27 11:55-12:15）—— T22：台账取证不变量门禁（含两条自纠）
 
-### 背景（本轮目标文本新增条款）
-「自动执行的任务通过 deepseek harness desktop 无头控制执行」——修前台账只有错误类别/耗时/stderr/产出体量，
-无法自证某次尝试是否真的经 DSH 无头跑、用的哪个 CLI 与 profile。
+### 起因
+目标要求交付物「可直接贴 PR + 附门禁建议」。本轮把三件事从报告里的一句话变成机器判据：
+协议第 6 条（T18④）、方案提示词第 6 条（T18④-2）、**凡 `AppendAttempt` 调用点逐点带 `DSHCommand`**
+（round 38 实测漏掉最常见的 `rate_limited requeue` 行 ⇒ 靠人数必然漏）。
 
-### 改动（`830e4ac` 主件）
-- `executor.Result` + `CliPath`/`Profile`/`Command`；新纯函数 `DSHCommandLine(...)` 与 `BuildArgsWithPatches` 同源拼装；
-- **顺手去历史重复**：调用点原来自抄一份参数数组 ⇒ 现在只经 `BuildArgs` 一处（形态已被 pure_test 钉住）；
-- `store.AttemptRecord` + `dshCommand`；引擎接执行路径（失败/done）与方案路径（done/degraded）；
-- 三测：`executor/dsh_command_test.go`（要素 + 同源逐项一致）、`engine/attempt_evidence_test.go`（三件套 + nil 安全）、
-  `store/attempt_evidence_test.go`（三个键可见 + 回读一致）。
+### 交付（提交 442040c）
+- `tests/check_ledger_evidence.ps1`：源侧 8 项（协议/方案第 6 条、台账三字段、6/6 写入点带字段、
+  `BuildArgs` 唯一拼装点、`DSHCommandLine` 在册）+ 运行侧（最近台账行须含 `--profile web-desktop` 与 `--json -`，
+  以最新一条带该字段的行为基线，历史行只披露不判红）；三态口径 PASS/FAIL/UNVERIFIED。
+- 受理面注册：`tests/check_all.ps1` 新增 Section + `.github/workflows/ci.yml` repo-gates 清单加一项。
 
-### live 暴露漏接（`374db4f` 补）
-- 长窗口（11:13-11:21）里唯一两条台账行是 `kind=rate_limited action=requeue`，`dshLen=0` ⇒ 只接了"最容易想到的几处"；
-- 补齐限流 `requeue` 与取消 `cancel` 两处 ⇒ **六处写入点列同构**（读台账不必再记哪条有、哪条没有）。
-
-### live 验证（部署 @374db4f）
+### CI 证据（干净检出）
 ```
-{"kind":"cancelled","action":"cancel","model":"z-ai/glm-5.3","elapsedMs":280721,
- "dshCommand":"D:\\deepseek desktop\\DSH Desktop\\DSH Desktop.exe --expose-internals …\\lib\\desktop-cli.js
-               --profile web-desktop --patch …\\tasks\\task-49de87a831e3f821\\overlay.yml --json -"}
-hasExposeInternals=True hasProfile=True hasJson=True
+repo gates (script-level)  ===== GATE: tests/check_ledger_evidence.ps1
+repo gates (script-level)  GATE PASS: tests/check_ledger_evidence.ps1
 ```
-- 同窗口旁证：`glm-5.3` 卡死被提前回收（「启动后零进展（首进展预算 2m0s，判定于 2m46.917s…）」）⇒ T15① 仍生效。
 
-### 提交 · 部署 · 边界（#40）
-- `830e4ac` → `374db4f`（补漏）已推送；干净 worktree 构建 `BUILD_RC=0`（66.2 s）；
-  dist 与 agent 同 hash `8D4DD5B4…5F6C`、`vcs.revision=374db4f`；全仓 `go test ./...` rc=0。
-- 实验脚本自带 finally 回滚：routes=36 enabled=36（available≈19）、基线 plan=true/autoStart=false/maxTasks=12/conc=2/chain=true、
-  family=0、keepalive Ready；`HEAD == origin/master == 374db4f`、仓库 18 项未变。
+### 门禁自己抓出的两个缺陷（自纠记录）
+- 第一版判据落错文件（把 spawn 判据写在 `engine.go`，真正 spawn 在 `executor.go`）⇒ 门禁把自己判红；
+- 第一版把历史台账行当判红对象（7 行里 6 行是 T21 之前写的）⇒ 改成「基线 + 披露」，不为历史数据永久拖红。
 
-### 我自己的错（本轮 1 次，live 暴露后自纠）
-- 接线取证字段时只接了「最容易想到的调用点」，漏掉窗口里**最常见**的 `rate_limited requeue` 行 —— 判据是"台账要能自证"，
-  而最常见的那条恰恰不能。整改：**接线前先枚举全部写入点（`git grep AppendAttempt`），逐点清单核对**，不靠印象挑几处。
+### 过程中被仓库门禁拦下一次（正面证据）
+- `edit` 工具改写 `tests/check_all.ps1` 丢了 UTF-8 BOM ⇒ **暂存区 BOM 门禁如实拦下**（"含非 ASCII 但索引 blob 无 BOM"）；
+  按提示补回 BOM + 统一 EOL 后，`check_staged_bom` / `check_ps1_eol` / `check_ps1_syntax` 全 rc=0。
+
+### 我的错（本轮 2 次，均已修）
+- 门禁判据落错文件（见上）；
+- 门禁运行侧口径把历史数据当违规（见上）—— 两次都不是"环境问题"，是判据设计没过脑子；整改：**写判据先问"它落在哪个文件/哪段数据上"**。
