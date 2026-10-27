@@ -47,14 +47,17 @@ const (
 	// NotServed 对应「上游在这条出口上不服务该模型」（executor.KindNotServed）。
 	// 必须在这里登记：否则 ParseKind 收敛成 Unknown，引擎台账只写 kind=unknown（round 22 同款教训）。
 	NotServed Kind = "not_served"
-	Unknown   Kind = "unknown"
+	// NoLane 对应「池内没有任何可用车道」（executor.KindNoLane）：它不是任务失败，而是整池此刻不可用，
+	// 引擎应退回队列等冷却（T19）。登记它是为了让台账不落成 unknown。
+	NoLane  Kind = "no_lane"
+	Unknown Kind = "unknown"
 )
 
 // ParseKind 把任意字符串收敛成已知 Kind（未知值一律 Unknown，避免策略表漏配）。
 func ParseKind(s string) Kind {
 	k := Kind(strings.TrimSpace(s))
 	switch k {
-	case Timeout, MissingKey, ModelDead, Upstream, Boot, Exit, Cancelled, Stalled, NoArtifact, NotServed, Unknown,
+	case Timeout, MissingKey, ModelDead, Upstream, Boot, Exit, Cancelled, Stalled, NoArtifact, NotServed, NoLane, Unknown,
 		Transport, StreamCut:
 		return k
 	}

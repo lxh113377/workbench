@@ -92,7 +92,10 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 		seen[id] = true
 	}
 	if len(order) == 0 {
-		return f.inner.Run(ctx, task, modelID)
+		// 池内**没有任何可用车道**（全部冷却/下线/停用）：不要拿引擎给的 modelID 硬跑 ——
+		// round 35 实测：全池只剩 3 条 `not_served` 车道时，硬跑把两个任务烧成 `boot_failed` 任务失败。
+		// 返回哨兵，让引擎设池闸门 + 把任务退回队列（T19）。
+		return nil, executor.ErrNoLane
 	}
 	// 链首优先复用「刚被证明能产出」的模型（T17①）：只在候选链**内部**重排，绝不引入链外模型，
 	// 因此不会把冷却/下线的模型拉回来。

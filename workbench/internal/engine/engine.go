@@ -1097,6 +1097,17 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 		// 给整池设置冷却闸门，等 OFM 车道自身恢复。
 		// 判据要同时覆盖两种情况：执行器给出 res（含 ErrorKind），或只返回 error
 		// （FailoverRunner 上抛时可能 res 为 nil）。文本兜底用于兜住漏分类的实现。
+		// ── 池内无可用车道（T19）：与限流同路，但**不判任务失败** ─────────
+		//
+		// round 35 实测：全池只剩 3 条 `not_served` 车道时，引擎仍开跑，把两个任务烧成
+		// `boot_failed` 任务失败。正确处置是：设池闸门 + 把任务退回队列等冷却。
+		if isNoLane(res, runErr) {
+			e.setPoolCooldown(rateLimitCooldownSeconds)
+			e.requeueForPoolWait(task.ID, running.ChainID)
+			e.log.Warn("池内无可用车道，任务退回队列等待冷却",
+				"taskId", task.ID, "waitSeconds", rateLimitCooldownSeconds)
+			return
+		}
 		if isRateLimited(res, runErr) {
 			// 车道级冷却（2026-10-19 09:05 现场实测修正）：
 			// our-free-model 插件把 OFM 免费 / Kilo 免费池 / EAC 协付三条**独立上游
@@ -1574,6 +1585,17 @@ func isRateLimited(res *executor.Result, err error) bool {
 		}
 	}
 	return false
+}
+
+// isNoLane 判定「这次失败是整池无可用车道」，而不是某条车道的问题（T19）。
+//
+// 两条判据都认：模型池侧返回的哨兵错误（`executor.ErrNoLane`，由调度器在候选链为空时抛出），
+// 或执行器结果把类别写成 `no_lane`。命中后由调用方设池闸门 + 任务退回队列，**不计任务失败**。
+func isNoLane(res *executor.Result, err error) bool {
+	if errors.Is(err, executor.ErrNoLane) {
+		return true
+	}
+	return res != nil && res.ErrorKind == string(executor.KindNoLane)
 }
 
 // requeueForPoolWait 把任务从 running 退回 queued（合法迁移），并给整池设置等待闸门。

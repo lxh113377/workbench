@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -133,7 +134,15 @@ const (
 	// 与 transport 区分：transport 是「没连上」，stream_cut 是「连上后断了」。
 	KindStreamCut Kind = "stream_cut"
 	KindUnknown   Kind = "unknown"
+	// KindNoLane 是「池内没有任何可用车道」——不是某条车道的问题，而是**整池此刻不可用**。
+	// 引擎据此把任务退回队列并设池闸门，而不是把任务判失败（T19：round 35 实测全池仅剩 not_served 车道时，
+	// 引擎仍开跑并把两个任务烧成 boot_failed 任务失败）。
+	KindNoLane Kind = "no_lane"
 )
+
+// ErrNoLane 是「池内无可用车道」的哨兵错误：模型池侧的调度器在候选链为空时返回它，
+// 引擎用 errors.Is 识别，转成「设池闸门 + 任务退回队列」的处置（与限流同路）。
+var ErrNoLane = errors.New("模型池无可用车道")
 
 // Retryable 判断该类错误是否值得重试。
 func (k Kind) Retryable() bool {
