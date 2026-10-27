@@ -12,6 +12,19 @@ package artifact
 // 本文件用 FENCE 常量（三个反引号）拼接，并有专门的契约测试校验渲染结果。
 const ProtocolInstruction = "" +
 	"\n## 产出协议（必须遵守，工作台会据此落盘并真实验收）\n" +
+	// T39（2026-10-27 live 现场：弱车道 final 文本 0/41 含 <<<ARTIFACTS>>>）：
+	// 唯一被证明有效的措辞来自 engine/repair.go 的返工提示词（「必须以
+	// <<<ARTIFACTS>>> 开头」）。这里把同样的话术前置到首轮协议 —— 只读第一屏
+	// 也要看到产物块长什么样，先给块再谈别的；结尾（第 6 条之后）再点一次。
+	"没有 <<<ARTIFACTS>>> 块 = 没有交付：\n\n" +
+	"<<<ARTIFACTS>>>\n" +
+	FENCE + "manifest\n" +
+	`{"files":[{"path":"m.py"}],"verify":[{"cmd":"python m.py","expectExit":0}]}` + "\n" +
+	FENCE + "\n" +
+	FENCE + "file:m.py\n" +
+	"pass\n" +
+	FENCE + "\n" +
+	"<<<END>>>\n\n" +
 	"你的回答除了说明文字，必须包含一段产物块。工作台会把其中的文件写入磁盘，\n" +
 	"并真实执行 verify 里的命令；命令不通过会带着报错让你返工。\n\n" +
 	"格式（下例照抄，围栏就是三个反引号）：\n\n" +
@@ -42,7 +55,9 @@ const ProtocolInstruction = "" +
 	"6. 不要输出你自己的工具调用语法（实测出现过 <dots_function_call>…</dots_function_call>、\n" +
 	"   <|tool_call_start|>…<|tool_call_end|>、裸 function_call 之类）：工作台**不会执行**它们，\n" +
 	"   它们只会让整个回答被判为不合格并要求返工。要交付文件，只能按上面的 ARTIFACTS 块写；\n" +
-	"   没有产物块 = 没有交付。\n"
+	"   没有产物块 = 没有交付。\n" +
+	// T39：结尾再点一次，形成「首屏 + 尾屏」双保险（弱车道只看尾部也能被拦住）。
+	"\n最后确认：没有 <<<ARTIFACTS>>> 块 = 没有交付。\n"
 
 // FENCE 是三个反引号，即 Markdown 代码围栏。
 // 用常量拼接而不是字面量：Go raw string 会被三个反引号截断；
