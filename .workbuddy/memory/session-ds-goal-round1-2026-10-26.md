@@ -767,3 +767,28 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 ### 四、边界
 - 验证窗口自带 finally 回滚（`plan=true / autoStart=false / maxTasks=12 / conc=2` 已复核）；family=0；keepalive Ready；
 - worktree `rel-86a825a` 用后即删；仓库未并入并行会话在途件。
+## round 45（同会话，2026-10-27 16:30-17:20）—— T29/T30/T32 落地；T33 假设证伪；T28 子代理失败无产出
+
+### 一、落地（`fc69237`，全仓 go test rc=0）
+- `config.EvalConfig.ExactDupWindowMinutes`（默认 60）+ `evaluate.go`：「完全重复」加时间窗；模糊判据**只比标题**且同口径加时间窗；
+- `verify.go`：抽出纯函数 `argOutOfBounds`，按**路径分量**判 `..` ⇒ `go test ./...` 不再被误杀（第一版前缀判法被新单测当场抓出）；
+- 三测：`evaluate/exact_dup_window_test.go`、`evaluate/fuzzy_title_window_test.go`、`verify/arg_bounds_test.go`（9 条边界）。
+
+### 二、派出的 T29 只读排查（`aefd8ec9`，已收产出）
+- 逐条复算 24 条 rejected：判据可复现、14/14 精确行指纹逐字相同、9/9 模糊行误差 ≤0.008；
+- 数据分界：166 个唯一组合、165 理论组合 100% 用尽 ⇒ **81.4% 真重复（内容池打满）/ 17.2% 判据过严**；
+- 最小修法与残余（T32-b / T32-c）已转录进报告附录 R45。
+
+### 三、live 验证状态（如实标）
+- **T29 live 未取得**：7 分钟窗口内 `decisions.jsonl` 新增 **0**、queue 计数不变 ⇒ 无法判定「queued 抬升」；
+- **T33 假设证伪**：疑「每日上限把被拒草案算工作量」⇒ 读码确认 `tasksToday()` 已排除 `StateRejected`（未改代码）；
+- **新登记 T34**：生成器在一段窗口内**零新决策** ⇒ 生成循环是否停摆成为新的未解问题（判据已写）。
+
+### 四、委派（#44）执行情况
+- 本轮派出两件：只读排查（成功、已收产出、结论折入报告）与 T28 实现（**失败、无产出**）；
+- 失败项按 #44 ⑦ 处理：**查工作树确认无半成品** ⇒ 下一轮 Lead 缩范围自干（不重派同件）；
+- brief 已按 #44 ④ 七项写（目标/证据路径/写面白名单与禁止项/产出格式/完成判据/自证命令/退路），但对方仍失败 ⇒ 记为「provider 侧未产出」，不做第三次派发。
+
+### 五、边界
+- 观察窗口自带 finally 回滚（`plan=true / autoStart=false / maxTasks=12 / conc=2` 已复核）；family=0；keepalive Ready；
+- 部署 `fc69237` 两处根 `hash == SHA256SUMS`、`vcs.revision` 核对通过（首页运行期探针仍 UNVERIFIED ⇒ SUMS 如实补齐，缺口继续挂待办）。
