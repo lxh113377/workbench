@@ -296,24 +296,29 @@ func TestClosedLoopThroughRunOne(t *testing.T) {
 	}
 	e.runOne(context.Background(), task)
 
-	// runOne 成功后 completeTask 落 done，postProcess 异步做自评与自主验收；
-	// 这里等待闭环跑完（最多 5 秒）。
-	deadline := time.Now().Add(5 * time.Second)
-	for time.Now().Before(deadline) {
-		next, ok := e.Autonomy().Active()
-		if ok && next != nil && next.ID != g.ID {
-			// 闭环完成：目标已完成并推导出新目标
-			got, _ := st.Get(task.ID)
-			if got == nil || got.State != model.StateDone {
-				t.Fatalf("闭环完成时任务应为 done，实际 %+v", got)
-				return
-			}
-			// 目标已切换且任务落 done：闭环在引擎层成立
-			return
-		}
-		time.Sleep(50 * time.Millisecond)
+	// runOne 成功后 completeTask 落 done，postProcess（自评 → 自主验收 → 下一目标推导）
+	// 在后台 goroutine 里跑。这里必须等它**真正结束**再断言，而不是猜一个墙钟窗口。
+	//
+	// 为什么改（CI 实测 2026-10-27，flaky 根因）：改造前写死等 5 秒，CI（盘/机比本机慢）
+	// 上 postProcess 还没跑完就到点，用例报
+	//     --- FAIL: TestClosedLoopThroughRunOne (10.05s)
+	// 5s 判红后 newTestEngine 的 cleanup 又 WaitInflight 5s，正好凑成 10.05s；
+	// 同一份代码在本机（~1s）与后续提交（7c25bb8/ba52871）全绿 —— 固定等待口径过紧。
+	//
+	// WaitInflight 是生产自带 seam（engine.go completeTask 在起 goroutine 前
+	// e.inflight.Add(1)，runOne 同步返回时计数必 >0，不存在"等待挂空"）；
+	// postProcess 内部**同步**调用 finishAutonomous，所以它一结束，目标切换就已落定。
+	if !e.WaitInflight(60 * time.Second) {
+		t.Fatal("60 秒内后台后处理未结束（自评/自主验收/下一目标推导未完成）")
 	}
-	t.Fatal("5 秒内未见目标切换（引擎层闭环未推进）")
+	next, ok := e.Autonomy().Active()
+	if !ok || next == nil || next.ID == g.ID {
+		t.Fatalf("后处理已结束但目标未切换（引擎层闭环未推进）：active=%+v", next)
+	}
+	got, _ := st.Get(task.ID)
+	if got == nil || got.State != model.StateDone {
+		t.Fatalf("闭环完成时任务应为 done，实际 %+v", got)
+	}
 }
 
 // fakeLoopRunner 是一个可控的假执行器：按顺序返回预设结果，用来端到端验证

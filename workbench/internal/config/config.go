@@ -96,6 +96,12 @@ type ExecutorConfig struct {
 	// 而在**工程/质量类域**意味着「压根没交文件」——那必须判未完成，不能记 done（审计实锤：0 个 artifacts-index 却有 done）。
 	// 零值/空表示用默认集（code/quality/frontend），与目标「工程质量优先」一致。
 	ArtifactDomains []string `json:"artifactDomains"`
+	// ArtifactExemptTemplates 列出「即便域在 ArtifactDomains 中，也不要求产物块」的模板 id（round 48 · T37）。
+	//
+	// 为什么按模板豁免：域是粗粒度代理，同域里存在 report 型模板（交付物是正文/报告本身）——
+	// 按域一刀切会把它们的「无产物块成功」误判未完成并白走返工/降级。
+	// 判定顺序：**先模板豁免、后域**；零值/空 = 无豁免（行为与改造前一致）。
+	ArtifactExemptTemplates []string `json:"artifactExemptTemplates"`
 	// RequestsPerMinute 是全局请求速率上限（每分钟发起的 DSH 调用次数）。
 	//
 	// 2026-10-19 生产事故后新增：事故时每分钟 45-70 次请求打爆免费车道，
@@ -396,6 +402,8 @@ func DefaultConfig() Config {
 			// 旧默认 180 秒会把"正在深思"误判成卡死（现场 glm-5.3 4 次失败全是 stalled）。
 			StallSeconds: 420,
 			ProfileName:  "web-desktop",
+			// T37 预置豁免：code 三条 report 型模板 + quality 审查报告类（体检/五轴）。
+			ArtifactExemptTemplates: []string{"code-review", "code-snippet-library", "code-test-plan", "quality-audit", "review-five-axis"},
 		},
 		Chain:  ChainConfig{Enabled: true, MaxDepth: 5, Fanout: 2, MinQuality: 6, ContextChars: 2000},
 		Server: ServerConfig{Host: "127.0.0.1", Port: 17890, OpenBrowser: true},

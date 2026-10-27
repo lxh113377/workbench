@@ -21,13 +21,32 @@ func artifactRequired(domain string, allowed []string) bool {
 	if len(list) == 0 {
 		list = defaultArtifactDomains
 	}
-	d := strings.ToLower(strings.TrimSpace(domain))
+	return matchesExactFold(domain, list)
+}
+
+// matchesExactFold 判定 s 是否精确命中 list（大小写不敏感、去空白）。
+func matchesExactFold(s string, list []string) bool {
+	s = strings.ToLower(strings.TrimSpace(s))
 	for _, a := range list {
-		if d == strings.ToLower(strings.TrimSpace(a)) {
+		if s == strings.ToLower(strings.TrimSpace(a)) {
 			return true
 		}
 	}
 	return false
+}
+
+// artifactExempted 判定该模板是否被豁免产物块要求（零值/空 = 无豁免）。
+func artifactExempted(templateID string, exempt []string) bool {
+	return matchesExactFold(templateID, exempt)
+}
+
+// requiresArtifactBlock 是 T37 的判定入口：**先模板豁免、后域** ——
+// 豁免命中的模板哪怕域在工程集里也判「不要求产物」。
+func requiresArtifactBlock(domain, templateID string, allowedDomains, exemptTemplates []string) bool {
+	if artifactExempted(templateID, exemptTemplates) {
+		return false
+	}
+	return artifactRequired(domain, allowedDomains)
 }
 
 // completionVerdict 判定一次「执行器成功返回」的产出该落哪个终态（round 46 · T28）。

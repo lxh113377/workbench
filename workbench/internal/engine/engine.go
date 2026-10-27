@@ -1282,7 +1282,8 @@ func (e *Engine) completeTask(task *model.Task, running *model.Task, res *execut
 	// 状态全是 done 并计入今日产出。
 	// 完成判定抽成纯函数（round 46 · T28）：只有**交付物=文件的域**才把「无产物块」判成未完成；
 	// 内容/报告类域的正文即交付（D7 契约：prose 型成功仍要跑语义后处理）。
-	finalState, finalNote := completionVerdict(verifyRep, artifactRequired(task.Domain, cfg.Executor.ArtifactDomains))
+	// T37 再叠一层模板豁免（先模板、后域）：report 型模板不被域判据拖去返工。
+	finalState, finalNote := completionVerdict(verifyRep, requiresArtifactBlock(task.Domain, task.TemplateID, cfg.Executor.ArtifactDomains, cfg.Executor.ArtifactExemptTemplates))
 	verified := verifyRep != nil && verifyRep.Pass
 	if _, err := e.store.Update(task.ID, func(t *model.Task) error {
 		t.Verify = verifyRep

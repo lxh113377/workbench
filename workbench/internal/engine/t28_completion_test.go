@@ -90,3 +90,33 @@ func TestRepairPromptForMissingArtifact(t *testing.T) {
 		}
 	}
 }
+
+// TestTemplateArtifactExemption 钉住「按模板豁免产物块」的判定顺序与容错（round 48 · T37）。
+//
+// 由来：域是粗粒度代理 —— code-review / code-snippet-library / code-test-plan 与 quality 审查报告类
+// 的交付物就是正文/报告本身，却被 code/quality 默认工程域强制要产物块，无产物块即判未完成、白走返工。
+func TestTemplateArtifactExemption(t *testing.T) {
+	// ① 豁免模板 + 工程域 ⇒ 不要求产物块 ⇒ 无产物块仍判 done。
+	if st, _ := completionVerdict(nil, requiresArtifactBlock("code", "code-review", nil, []string{"code-review"})); st != model.StateDone {
+		t.Fatalf("豁免模板（域 code）：无产物块应仍落 done，实际 %s", st)
+	}
+	// ② 同域非豁免模板 ⇒ 仍要求产物块 ⇒ 无产物块判 degraded（豁免不得外溢到同域别的模板）。
+	if st, _ := completionVerdict(nil, requiresArtifactBlock("code", "code-tool", nil, []string{"code-review"})); st != model.StateDegraded {
+		t.Fatalf("非豁免同域模板：无产物块应落 degraded，实际 %s", st)
+	}
+	// ③ 豁免列表为空 ⇒ 行为与改造前完全一致（默认工程集仍要求产物、report 域仍豁免）。
+	if !requiresArtifactBlock("quality", "review-five-axis", nil, nil) || requiresArtifactBlock("report", "report-weekly", nil, nil) {
+		t.Fatal("空豁免列表必须回落现状判定（默认集生效）")
+	}
+	// ④ 大小写/空白容错（配置/模板 id 由人手写）。
+	if requiresArtifactBlock(" Code ", "  Code-Review ", nil, []string{"code-review"}) {
+		t.Error("模板 id 匹配应大小写不敏感并容忍空白")
+	}
+	// ⑤ 默认配置预置了 report 型模板：域 code/quality 都在工程集里，仍须判定为「不要求产物」。
+	cfg := config.DefaultConfig()
+	for _, id := range []string{"code-review", "code-snippet-library", "code-test-plan", "quality-audit", "review-five-axis"} {
+		if requiresArtifactBlock("code", id, cfg.Executor.ArtifactDomains, cfg.Executor.ArtifactExemptTemplates) {
+			t.Errorf("模板 %s 应在默认豁免集里（域 code 也不得强制产物块）", id)
+		}
+	}
+}
