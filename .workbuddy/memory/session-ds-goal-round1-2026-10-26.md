@@ -584,33 +584,38 @@ probe-cycle：本轮探测 36 个：可用 21 / 下线 15 / 未知 0
 
 ### 但仍无成品 —— 且这次是验收闸门正确工作
 - `verify.json`：`pass=false, failReason="产出过短（37 字，最少需要 200 字）…"`；
-## round 37（同会话，2026-10-27 10:15-10:45）—— T19 落地 + 自纠「判据永不成立」+ live 验证
+## round 38（同会话，2026-10-27 11:00-11:35）—— T21：台账自证「经 DSH 无头控制执行」（含一处 live 暴露的漏接）
 
-### 第一版（提交 714b9fd）
-- `executor.ErrNoLane` + `KindNoLane`、`retry.NoLane`；`FailoverRunner` 无候选链时返回哨兵；
-  引擎 `isNoLane(res, err)` 分支：`setPoolCooldown` + `requeueForPoolWait`，不判任务失败；测试 `TestIsNoLane`。
+### 背景（本轮目标文本新增条款）
+「自动执行的任务通过 deepseek harness desktop 无头控制执行」——修前台账只有错误类别/耗时/stderr/产出体量，
+无法自证某次尝试是否真的经 DSH 无头跑、用的哪个 CLI 与 profile。
 
-### 第一次 live 尝试：判据没触发（如实记）
-- 复跑 combo-only 实验 ⇒ 「池内无可用车道」计数 0，仍有任务失败：
-  10:24:39 / 10:24:45 / 10:24:51 / 10:27:03 四次 `boot_failed`，`model=combo:auto-main`（冷却中的车道）。
-- 根因：判据写成 `len(order) == 0`，而 `order` 在拼链前就被引擎的 `modelID` 占位 ⇒ 永不成立；
-  且 `PickChain` 早就跳过冷却车道（round 15 的护栏），所以候选链当时是空的。
+### 改动（`830e4ac` 主件）
+- `executor.Result` + `CliPath`/`Profile`/`Command`；新纯函数 `DSHCommandLine(...)` 与 `BuildArgsWithPatches` 同源拼装；
+- **顺手去历史重复**：调用点原来自抄一份参数数组 ⇒ 现在只经 `BuildArgs` 一处（形态已被 pure_test 钉住）；
+- `store.AttemptRecord` + `dshCommand`；引擎接执行路径（失败/done）与方案路径（done/degraded）；
+- 三测：`executor/dsh_command_test.go`（要素 + 同源逐项一致）、`engine/attempt_evidence_test.go`（三件套 + nil 安全）、
+  `store/attempt_evidence_test.go`（三个键可见 + 回读一致）。
 
-### 修复（提交 230dbcc）
-- 判据移到候选链上（拼 `modelID` 之前）：`len(chain) == 0 ⇒ executor.ErrNoLane`；删死代码分支。
-- 回归测试 `TestFailoverNoLaneDoesNotRunCooledModel`：先自证前置（冷却车道不在候选链），再断言 `ErrNoLane` 且内层 runner 未被调用。
+### live 暴露漏接（`374db4f` 补）
+- 长窗口（11:13-11:21）里唯一两条台账行是 `kind=rate_limited action=requeue`，`dshLen=0` ⇒ 只接了"最容易想到的几处"；
+- 补齐限流 `requeue` 与取消 `cancel` 两处 ⇒ **六处写入点列同构**（读台账不必再记哪条有、哪条没有）。
 
-### 修后 live 验证（同实验，部署 @230dbcc）
+### live 验证（部署 @374db4f）
 ```
-{"level":"INFO","msg":"仍有可用车道，任务退回队列后立即重调度","taskId":"task-8d3b5ec20f2453ec","lanes":"provider:our-free-model"}
-{"level":"WARN","msg":"池内无可用车道，任务退回队列等待冷却","taskId":"task-8d3b5ec20f2453ec","waitSeconds":300}
+{"kind":"cancelled","action":"cancel","model":"z-ai/glm-5.3","elapsedMs":280721,
+ "dshCommand":"D:\\deepseek desktop\\DSH Desktop\\DSH Desktop.exe --expose-internals …\\lib\\desktop-cli.js
+               --profile web-desktop --patch …\\tasks\\task-49de87a831e3f821\\overlay.yml --json -"}
+hasExposeInternals=True hasProfile=True hasJson=True
 ```
-- 最后一条 combo 车道冷却（10:39:01）后走进新分支：**300 s 池闸门 + 任务退回队列**；此后无任务失败（最后一次停在 10:27:08 = 部署前）。
+- 同窗口旁证：`glm-5.3` 卡死被提前回收（「启动后零进展（首进展预算 2m0s，判定于 2m46.917s…）」）⇒ T15① 仍生效。
 
-### 边界（实验脚本自带 finally 回滚）
-- `routes=36 enabled=36`、keepalive Ready、基线 plan=true/autoStart=false/maxTasks=12/conc=2/chain=true、family=0、
-  worktree 已移除、`HEAD == origin/master == 230dbcc`、仓库 18 项未变。
+### 提交 · 部署 · 边界（#40）
+- `830e4ac` → `374db4f`（补漏）已推送；干净 worktree 构建 `BUILD_RC=0`（66.2 s）；
+  dist 与 agent 同 hash `8D4DD5B4…5F6C`、`vcs.revision=374db4f`；全仓 `go test ./...` rc=0。
+- 实验脚本自带 finally 回滚：routes=36 enabled=36（available≈19）、基线 plan=true/autoStart=false/maxTasks=12/conc=2/chain=true、
+  family=0、keepalive Ready；`HEAD == origin/master == 374db4f`、仓库 18 项未变。
 
-### 我自己的错（本轮 1 次，已自纠）
-- 护栏判据写成了永不成立的条件（`len(order)==0`），而单测照样通过 ⇒ 一度误以为“已修好”。
-  整改（写进规矩）：新增护栏/闸门类判据必须用 live 计数证明真的触发过（≥1）；单测要覆盖「判据在最易踩的输入下成立」。
+### 我自己的错（本轮 1 次，live 暴露后自纠）
+- 接线取证字段时只接了「最容易想到的调用点」，漏掉窗口里**最常见**的 `rate_limited requeue` 行 —— 判据是"台账要能自证"，
+  而最常见的那条恰恰不能。整改：**接线前先枚举全部写入点（`git grep AppendAttempt`），逐点清单核对**，不靠印象挑几处。
