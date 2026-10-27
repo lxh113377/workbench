@@ -19,7 +19,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"workbench/internal/artifact"
 	"workbench/internal/config"
 	"workbench/internal/dshprofile"
 	"workbench/internal/model"
@@ -489,9 +488,9 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 		// 追加产出协议（P3）：模型必须在一次回答里给出「文件清单 + 文件内容 +
 		// 验收命令」，工作台据此落盘并真实执行。协议说明放最后，保证模型读到的是
 		// "最终指令"而不是被前面的正文稀释。
-		prompt := task.Prompt
-		if r.cfg.AppendProtocol {
-			prompt += "\n" + artifact.ProtocolInstruction
+		// 走纯函数决定「真正写给子进程的提示词」：方案阶段**不得**拼产物协议（T24，见 promptFor 注释）。
+		prompt, required := promptFor(task, r.cfg.AppendProtocol)
+		if required {
 			// 让上层（failover）知道「本轮要求产物」：只有拼 prompt 的这里才有这个事实。
 			res.ArtifactsRequired.Store(true)
 		}

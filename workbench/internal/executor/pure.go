@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"workbench/internal/artifact"
 	"workbench/internal/config"
 	"workbench/internal/model"
 )
@@ -37,6 +38,27 @@ func BuildArgsWithPatches(cliPath, profileName string, overlayPaths []string) []
 		args = append(args, "--patch", p)
 	}
 	return append(args, "--json", "-")
+}
+
+// promptFor 决定本次调用真正写给子进程的提示词，并回报「本轮是否要求产物」（T24）。
+//
+// 为什么必须按阶段分流（round 43 独立审计的铁证）：产物协议原先被**无条件**拼进方案调用，
+// 而方案提示词第一句就是「只输出一个 JSON 对象，不要任何解释文字、不要 Markdown 围栏」——
+// 实测方案 session 缓存里「只输出一个 JSON 对象」与「<<<ARTIFACTS>>>」同框出现，
+// 33 条方案尝试里 30 条 degraded（方案 JSON 解析失败 / 方案模型无输出）。
+// 方案阶段要的是「想清楚」；产物协议的适用对象是**执行阶段**。
+//
+// 返回值 required 只对调用方有意义：它决定 failover 是否把「无产物块」当成可切换失败，
+// 因此方案阶段必须回报 false（否则方案又被产物判据判死 —— round 24 修过一次的同类问题）。
+func promptFor(task *model.Task, appendProtocol bool) (prompt string, required bool) {
+	base := ""
+	if task != nil {
+		base = task.Prompt
+	}
+	if !appendProtocol || task == nil || task.Phase == model.PhasePlan {
+		return base, false
+	}
+	return base + "\n" + artifact.ProtocolInstruction, true
 }
 
 // DSHCommandLine 把一次 DSH 无头调用拼成**可入台账**的字符串。

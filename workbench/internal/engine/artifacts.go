@@ -254,7 +254,9 @@ func countWordsEngine(s string) int {
 
 // hasMarkdownHeading 判断文本是否含 markdown 标题行（# ~ ###）。
 func hasMarkdownHeading(s string) bool {
-	for _, line := range strings.Split(s, "\\n") {
+	// round 43 独立审计抓到的真实缺陷：这里原来写的是反斜杠 + n 两个字符（不是换行）⇒
+	// 无论文本多规范，hasMarkdownHeading 都返回 false，带 `#` 标题的短产物照样被判「产出过短」。
+	for _, line := range strings.Split(s, "\n") {
 		t := strings.TrimSpace(line)
 		if strings.HasPrefix(t, "# ") || strings.HasPrefix(t, "## ") || strings.HasPrefix(t, "### ") {
 			return true

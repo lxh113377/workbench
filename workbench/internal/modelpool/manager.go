@@ -624,11 +624,18 @@ func (m *Manager) ApplyProbe(results []ProbeResult) ProbeSummary {
 		switch r.State {
 		case StateHealthy:
 			h.ProbeOK++
-			h.State = StateHealthy
 			// 探测成功只证明「端点可达」，不等于「模型会产出」（round 15 实测：零产出模型的
-			// 执行侧连续失败每轮被探测抹掉 ⇒ 首个路由永远落在它身上）。执行侧失败只能由
-			// 执行成功（MarkSuccess）清除；结构性故障仍由探测恢复（对照组测试钉住）。
-			if !isExecutionFailureKind(h.LastErrKind) {
+			// 执行侧连续失败每轮被探测抹掉 ⇒ 首个路由永远落在它身上）。**执行侧失败**与
+			// **出口级事实**（上游不服务该模型）都只能由 MarkSuccess（真实执行成功）或
+			// 冷却到期的半开恢复清除；结构性故障（不可达/缺凭据/端点坏）仍由探测恢复（对照组测试钉住）。
+			//
+			// round 43 独立审计铁证：这里原先**无条件** `h.State = StateHealthy` ⇒
+			// `combo:auto-*` 的 state 每 ~66 秒被探测从 down 写成 healthy，而 lastErrKind 一直是
+			// `not_served`、consecFail 已 39/77/91 ⇒ 每个任务仍要白试 3 条（boot_failed 占全部尝试 71%）。
+			if isExecutionFailureKind(h.LastErrKind) {
+				// 保持原状态（down/degraded）与计数：**探测不得翻案**。
+			} else {
+				h.State = StateHealthy
 				h.ConsecFail = 0
 				h.Success++
 				h.CooldownTo = 0
