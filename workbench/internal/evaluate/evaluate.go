@@ -35,6 +35,22 @@ type recentItem struct {
 	CreatedAt   int64
 	Quality     int
 	Fingerprint string
+	// Delivered 标记本条是否是**已交付成功**的任务（done / verified）。
+	//
+	// 为什么必须记（round 46 · T32-b）：时间窗是给「没交付成功的同一任务」留的重跑口子；
+	// 缺了交付态，窗外放行会把**已交付**的 (title,prompt) 也放出去重产重跑。
+	Delivered bool
+}
+
+// delivered 判断一条历史任务是否已经**交付成功**。
+//
+// done 是引擎「通过真实验收」的终态（未过验收走 degraded），Verified 是同一事实的显式存证；
+// 两者都算已交付：这条任务已经产出并被接受，滚动窗口内不允许再被当成新任务重放。
+func delivered(t *model.Task) bool {
+	if t == nil {
+		return false
+	}
+	return t.State == model.StateDone || t.Verified
 }
 
 // New 构造评估器。
@@ -210,6 +226,12 @@ func (e *Evaluator) gates(in Input, now int64) []string {
 			//   现在：精确指纹（标题+Prompt 归一化后完全相同）**任何目标都要拦**；
 			//   模糊相似才按目标豁免（同目标阶段任务本就共享上下文）。
 			if it.Fingerprint == fp {
+				// 已交付的任务**不许重放**（round 46 · T32-b）：时间窗只给「未交付的同一任务」开口子，
+				// 已交付的条目窗外也必须拦 —— 否则 done 过的 (title,prompt) 会被当新任务重产重跑。
+				if it.Delivered {
+					out = append(out, "与最近任务完全重复")
+					break
+				}
 				// 精确重复加**时间窗**（round 45 · T29）：原先永久封杀同指纹，而模板任务的 goalId 为空 ⇒
 				// 同目标豁免不适用 ⇒ 生成器只要反复产同一批组合，队列就被自己判死（实测 rejected 4970 / queued 1）。
 				// 窗内仍拦（防短周期抖动）；窗外放行（那个任务多半还没交付成功，重跑是合理的）。
@@ -359,6 +381,7 @@ func (e *Evaluator) Observe(t *model.Task, quality int, diversity string, maxKee
 		GoalID:    t.GoalID,
 		Diversity: diversity, TemplateID: t.TemplateID, CreatedAt: t.CreatedAt,
 		Quality: quality, Fingerprint: fingerprint(t.Title, t.Prompt),
+		Delivered: delivered(t),
 	})
 	if len(e.recent) > maxKeep {
 		e.recent = e.recent[len(e.recent)-maxKeep:]
@@ -389,6 +412,7 @@ func (e *Evaluator) Seed(tasks []*model.Task, maxKeep int) {
 			GoalID:     t.GoalID,
 			TemplateID: t.TemplateID, CreatedAt: t.CreatedAt, Quality: q,
 			Fingerprint: fingerprint(t.Title, t.Prompt),
+			Delivered:   delivered(t),
 		})
 	}
 	if len(e.recent) > maxKeep {
