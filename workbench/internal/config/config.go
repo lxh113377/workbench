@@ -153,6 +153,8 @@ type PoolConfig struct {
 	SyncSeconds  int    `json:"syncSeconds"`  // 网关清单同步周期（秒），60..7200
 	Strategy     string `json:"strategy"`     // priority / round-robin / weighted / least-loaded
 	DeepProbe    bool   `json:"deepProbe"`    // 是否发模型级补全探测（会消耗额度，默认关）
+	// PreferredModels 是有序车道路径偏好（T42）；零值/空 = 关闭，PickChain 在其后稳定分组前置命中者。
+	PreferredModels []string `json:"preferredModels,omitempty"`
 }
 
 // PlanConfig 控制「双角色闭环」：思考模型只出方案，agent 模型负责执行。

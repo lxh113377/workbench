@@ -37,6 +37,8 @@ type Scheduler struct {
 	inflight map[string]int
 	// rr 是加权随机的确定性轮盘（用累计票数，避免 math/rand 的全局竞争）。
 	rrPos int
+	// preferred 是有序车道路径偏好（高通过率车道在前）；空 = 关闭，行为同改造前。
+	preferred []string
 }
 
 // NewScheduler 构造调度器。
@@ -67,6 +69,18 @@ func (s *Scheduler) Strategy() Strategy {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.strategy
+}
+
+// SetPreferredModels 设置有序车道路径偏好；空/全空白表 = 关闭（绝不静默沿用）；用 setter 因调用方不在本次写面内。
+func (s *Scheduler) SetPreferredModels(ids []string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.preferred = nil
+	for _, id := range ids {
+		if id = strings.TrimSpace(id); id != "" { // 去空白/空串，保住有序性
+			s.preferred = append(s.preferred, id)
+		}
+	}
 }
 
 // Acquire 标记某模型开始处理一个任务（least-loaded 计数）。
@@ -218,7 +232,6 @@ func (s *Scheduler) PickChain(specs []Spec, now int64) []string {
 			// 这样「零负载」场景仍返回 [a b c]，不会引入随机抖动。
 			return false
 		})
-		return ord
 	}
 	if s.strategy == StrategyRoundRobin && len(ord) > 1 {
 		if s.cursor >= len(ord) {
@@ -227,6 +240,24 @@ func (s *Scheduler) PickChain(specs []Spec, now int64) []string {
 		ord = append(ord[s.cursor:], ord[:s.cursor]...)
 		s.cursor = (s.cursor + 1) % len(cands)
 	}
+	// 稳定分组放在所有策略排序之后：命中者前置、其余保持策略序；不可用偏好已在上面被过滤。
+	return groupPreferred(ord, s.preferred)
+}
+
+// groupPreferred 稳定分组：命中者按偏好顺序前置、其余保持策略序；未知 id 被自然忽略。
+func groupPreferred(ord, pref []string) []string {
+	if len(pref) == 0 || len(ord) < 2 {
+		return ord
+	}
+	rank := make(map[string]int, len(pref))
+	for i := len(pref) - 1; i >= 0; i-- { // 逆序写：重复 id 保留最早那次
+		rank[pref[i]] = i
+	}
+	sort.SliceStable(ord, func(i, j int) bool {
+		ri, iok := rank[ord[i]]
+		rj, jok := rank[ord[j]]
+		return iok && (!jok || ri < rj) // 命中组一律前置；都命中才比偏好序
+	})
 	return ord
 }
 
