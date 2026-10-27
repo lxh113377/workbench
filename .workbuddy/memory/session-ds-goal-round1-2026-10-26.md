@@ -824,3 +824,24 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 - **派发事实（#44 ⑦ 记录）**：本轮 T34 排查子代理（`e74062fd`）**失败且无收尾消息**；
   加上 round 46 早前的 T28 实现子代理（`1025f28a`）同样失败无产出 ⇒ **本会话 4 次派发中 2 次零产出**（另 2 次：只读审计、T29 排查，均高质量交付）。
   处置：按 ⑦ 不再重派同件，均转为 Lead 自干/未取证登记；若后续再现，按 ⑦ 第三条先查 provider 适配器·凭据·限流。
+## round 47（同会话，2026-10-27 18:05-18:55）—— T35 熔断时间窗（**生成器恢复**）+ T32-b/T32-c 落地（两件子代理产出，Lead 复核）
+
+### 一、T35（`f84ab49`，Lead 自干；T34 的结论）
+- T34 由 Lead 自干（原派发件两次零产出后按 #44 ⑦ 收口）：live 铁证 = `自主任务已生成` 停在 09:02:11、此后每次 tick 都 `自主规划熔断 streak=5`、`decisions.jsonl` 冻在 25 行；
+- 根因：熔断数「尾部连续被拒」且**不看时间** ⇒ 陈旧尾巴把生成器永久掐死，且熔断后不产草案 ⇒ 永远无法靠「被受理」解套（死锁）；
+- 改动：`AutonomyConfig.RejectStreakWindowMinutes`（默认 10）+ `rejectionPressure` 加时间窗 + 两处调用点统一（供料/诊断）；测试 `t35_fuse_window_test.go` 四态；
+- **live 验证通过**：窗口内「自主规划熔断」= **0**、「自主任务已生成」= **1**（18:39:39）、decisions 25→26、执行阶段真实尝试 4 条车道轮换。
+
+### 二、T32-b（`1841f69`）与 T32-c（`f88978c`）—— 两件子代理产出，均按 #44 ⑥/⑧ 独立复核后落地
+- T32-b：`recentItem.Delivered` + `delivered()`；已交付指纹窗外仍拦、未交付吃时间窗；三测（含窗内四态回归）；未改 engine 签名；
+- T32-c：8 域 × 42 = 336 条选题（唯一组合 1218 ≥ 3×400）+ `pickTopic(..., exclude...)` 池尽返回空 + `RootTask` 池尽返回 nil；两契约测 + 变异证明；
+- 两件均由 Lead 独立复跑 `go build` / `go vet` / 包测 / **全仓 `go test ./...` rc=0**；两件各带负向对照（RED→GREEN / 变异 FAIL）；
+- 子代理纠正我文档算式错误（660 < 1200）—— 已采纳，判据改为 42/域。
+
+### 三、委派（#44）执行情况
+- 本轮派发 2 件（T32-b / T32-c）：**均成功交付**（含七项 brief、后台形态、自证命令、负向对照）；
+- 本会话累计派发 6 件：成功 4（只读审计 / T29 排查 / T32-b / T32-c）、零产出 2（T28 实现 / T34 排查）⇒ 成功率 4/6（前 2 次失败已按 ⑦ 转 Lead 自干）。
+
+### 四、边界
+- 观察窗口自带 finally 回滚（`plan=true / autoStart=false / maxTasks=12 / conc=2` 已复核）；family=0；keepalive Ready；
+- 部署 `f88978c`：两处根 `hash == SHA256SUMS`、`vcs.revision` 核对通过（首页运行期探针仍 UNVERIFIED ⇒ SUMS 如实补齐）。
