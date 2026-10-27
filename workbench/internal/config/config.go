@@ -89,6 +89,13 @@ type ExecutorConfig struct {
 	AppendProtocol bool `json:"appendProtocol"`
 	// RepairRounds 是验收失败后的最大返工轮数（额度无限，默认 3）。
 	RepairRounds int `json:"repairRounds"`
+	// ArtifactDomains 列出「交付物必须是**文件**（即必须有产物块）」的域（round 46 · T28 收窄）。
+	//
+	// 为什么需要按域收窄：`materializeArtifacts` 只在回答里**有产物块**时才返回报告，
+	// 于是「无产物块」在**内容/报告类域**是正常形态（交付物就是正文本身，D7 契约要求成功后仍跑语义后处理），
+	// 而在**工程/质量类域**意味着「压根没交文件」——那必须判未完成，不能记 done（审计实锤：0 个 artifacts-index 却有 done）。
+	// 零值/空表示用默认集（code/quality/frontend），与目标「工程质量优先」一致。
+	ArtifactDomains []string `json:"artifactDomains"`
 	// RequestsPerMinute 是全局请求速率上限（每分钟发起的 DSH 调用次数）。
 	//
 	// 2026-10-19 生产事故后新增：事故时每分钟 45-70 次请求打爆免费车道，

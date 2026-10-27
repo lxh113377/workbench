@@ -1258,8 +1258,9 @@ func (e *Engine) completeTask(task *model.Task, running *model.Task, res *execut
 	// 验收判定（P3）：没有通过验收的产出不算 done。
 	// 这修复了改造前"截断/不可运行也算成功"的虚报 —— 现场 26 篇里 3 篇围栏未闭合，
 	// 状态全是 done 并计入今日产出。
-	// 完成判定抽成纯函数（round 46 · T28）：nil 报告 = 没有产物块 = **没交东西**，不得记完成品。
-	finalState, finalNote := completionVerdict(verifyRep)
+	// 完成判定抽成纯函数（round 46 · T28）：只有**交付物=文件的域**才把「无产物块」判成未完成；
+	// 内容/报告类域的正文即交付（D7 契约：prose 型成功仍要跑语义后处理）。
+	finalState, finalNote := completionVerdict(verifyRep, artifactRequired(task.Domain, cfg.Executor.ArtifactDomains))
 	verified := verifyRep != nil && verifyRep.Pass
 	if _, err := e.store.Update(task.ID, func(t *model.Task) error {
 		t.Verify = verifyRep
