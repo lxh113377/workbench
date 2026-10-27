@@ -747,3 +747,23 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 ### 七、边界
 - 观察/验证窗口均自带 finally 回滚（`plan=true / autoStart=false / maxTasks=12 / conc=2`，已复核）；family=0；keepalive Ready；
 - 本轮提交：`a1e4db4`（T23）、`682a5f1`（T24/T25/T26）；worktree 用后即删；仓库未并入并行会话在途件。
+## round 44（同会话，2026-10-27 15:45-16:25）—— T27 落地并 live 验证 + 派出 T29 独立排查
+
+### 一、T27（`86a825a`）—— 台账/健康度/日志记实际执行模型
+- 由来：round 43 审计实锤 3/3 抽查「`attempts.jsonl` 的 model ≠ 同 attempt 的 `overlay.yml` 的 model」；
+- 改动：`executor.Result.Model`（执行器在构造结果处按实际 modelID 落值）+ `engine.attemptedModel(res, selected)`
+  （执行器上报优先、为空回落 selected）+ 4 处台账 / 5 处 router 记账 / 「尝试结束」日志全部改用 `actualModel`；
+- 验证：**live 3/3 一致、不一致 0**（近 40 分钟台账 vs overlay）；`TestAttemptedModel` 三态单测；build/vet/全包测试全绿。
+
+### 二、部署与一致性
+- 部署 `86a825a`：两处根 `hash == SHA256SUMS`、`vcs.revision` 核对通过（脚本内自检已固化）；
+- 6/6「首页契约门禁」运行期探针**仍 UNVERIFIED**（`--ui-probe` 端口被占）⇒ `SHA256SUMS` 按真实语义如实补齐（继续挂待办）。
+
+### 三、派出的 T29 独立排查（`aefd8ec9`，只读）
+- 派发内容：生成→评估门把 99.4% 任务判重复（rejected 4972 / queued 1）的机制、豁免为何不生效、最小修法、
+  以及代码问题 vs 内容问题的数据分界；要求按算法**自己复算 ≥20 条**样例。
+- 本轮状态：**尚未收到收尾消息**（派发于 15:45）⇒ 如实记为「派出未收产出」；其结论到达后折入附录与下一轮任务卡。
+
+### 四、边界
+- 验证窗口自带 finally 回滚（`plan=true / autoStart=false / maxTasks=12 / conc=2` 已复核）；family=0；keepalive Ready；
+- worktree `rel-86a825a` 用后即删；仓库未并入并行会话在途件。
