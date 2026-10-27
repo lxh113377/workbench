@@ -331,10 +331,11 @@ func IsStalled(lastEventMs int64, workDir string, baseSeconds int, sawThinking b
 	// ⇒ 无论产出多新都**不可能**判卡死 ⇒ 这一轮根本不需要读盘。
 	//
 	// 为什么必须加（改造前的实测代价）：看门狗每 5 s 回调本函数，而 external 模式下 workDir 是
-	// 用户真实项目（现场 D:workdesktop = 480,572 个文件），旧实现**无条件**走一遍全树
-	// （filepath.Walk 实测单次 18.0 s）⇒ 每个在跑任务全程把 CPU/磁盘元数据打满，同机所有
-	// DSH 子进程与 GUI 会话一起被拖慢；同时把「零进展」判定从预算 120 s 拖到 ~150 s
-	// （实测 stalled 的 elapsedMs p50 = 149,994 ms = 120 s 预算 + 两轮 18 s 扫描）。
+	// 用户真实项目（现场 D:/workdesktop：Go 侧可见 295,305 个文件 / 431.5k 个目录项，2026-10-28 实测；
+	// 注意 python os.walk 会跟随 junction 多算约 18.5 万个文件，那不是本代码实际遍历的树），
+	// 旧实现**无条件**走一遍全树（filepath.Walk 实测单次 16–21 s）⇒ 每个在跑任务全程把 CPU/磁盘
+	// 元数据打满，同机所有 DSH 子进程与 GUI 会话一起被拖慢；同时把「零进展」判定从预算 120 s
+	// 拖到 ~150 s（实测 stalled 的 elapsedMs p50 = 149,994 ms ≈ 120 s 预算 + 两轮全树扫描）。
 	if lastEventMs >= watermark {
 		return false
 	}
@@ -370,9 +371,14 @@ func LatestOutputMtimeMs(dir string) int64 { return latestOutputMtime(dir, 0) }
 //	             （含 now-last == limit 的边界：命中测试与判据都用严格 >，不会把「恰好等于」判成卡死）。
 //	IsEarlyStall 同理（watermark = startedMs，判据 fm > startedMs）。
 //
-// 为什么改成 WalkDir 而不是 Walk（2026-10-27 本机实测，目录 = D:\workdesktop / 480,572 个文件）：
-// Walk 对每个条目额外做一次 Lstat（全树 18.0 s），WalkDir 直接吃 ReadDir 得到的目录项（全树 4.87 s，快 3.7 倍）。
+// 为什么改成 WalkDir 而不是 Walk（2026-10-28 本机实测，目录 = D:/workdesktop，同日两人各自复算）：
+// Walk 对每个条目额外做一次 Lstat（全树 16–21 s），WalkDir 直接吃 ReadDir 得到的目录项（全树 4.9–6.6 s），
+// 加速比 2.8–3.7×（区间 = 本轮 Lead 与独立复核者各自读数，机器负载不同，不取单值）。
 // 先扫顶层文件再递归：产物协议下模型通常把文件写在 cwd 根，命中即可省掉整棵树。
+//
+// ⚠️ 返回值契约（别拿它当「最近产出时刻」）：watermarkMs > 0 且命中时，返回的是**首个**超过 watermark
+// 的文件 mtime，可能小于全树最大值；它只保证「严格大于 watermark」这一条 ⇒ **只可用于与 watermark 比较**。
+// 需要全局最大值（如「最近产出时刻」）时，调用方必须传 watermarkMs <= 0，即走 LatestOutputMtimeMs。
 func latestOutputMtime(dir string, watermarkMs int64) int64 {
 	if strings.TrimSpace(dir) == "" {
 		return 0
