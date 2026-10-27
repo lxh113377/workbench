@@ -71,8 +71,15 @@ type Result struct {
 	EventsPath string
 	// StderrPath 是本轮子进程 stderr 的落盘位置（有内容才非空；由来见 persistStderrTail）。
 	StderrPath string
-	LastError  string
-	Stalled    bool
+	// CliPath / Profile / Command 是「这次尝试确实经 DSH 无头控制执行」的自证字段（round 38 · T21）：
+	//	CliPath —— 实际使用的 desktop-cli.js 路径；
+	//	Profile —— 实际使用的 profile（本仓恒为 web-desktop，见 dshprofile/bootstrap.go 的白名单说明）；
+	//	Command —— exe + 全部参数（与 BuildArgsWithPatches 同源拼装，不含密钥），可直接入台账。
+	CliPath   string
+	Profile   string
+	Command   string
+	LastError string
+	Stalled   bool
 	// EarlyStall 标记「启动后零进展」的提前回收：与 Stalled 同 kind，但原因不同，便于归因（round 14 · T15）。
 	EarlyStall bool
 	// ArtifactBlock 标记最终文本里带不带本仓产物协议块（`<<<ARTIFACTS>>>`）。
@@ -353,12 +360,10 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 		return nil, fmt.Errorf("写入模型覆盖层失败: %w", err)
 	}
 
-	args := []string{
-		"--expose-internals", cli,
-		"--profile", r.cfg.ProfileName,
-		"--patch", overlayPath,
-		"--json", "-",
-	}
+	// 参数**只经 BuildArgs（已被 pure_test 钉住形态）一处拼装**，不在调用点手抄一遍：
+	// 否则「测试覆盖的形态」与「真正执行的形态」会各走各的（round 38 · T21 顺手修掉的历史重复）。
+	args := BuildArgs(cli, r.cfg.ProfileName, overlayPath)
+	cmdLine := DSHCommandLine(exe, cli, r.cfg.ProfileName, []string{overlayPath})
 	cmd := exec.CommandContext(runCtx, exe, args...)
 	cmd.Dir = workDir
 	taskHome, homeErr := r.taskHome(task.ID)
@@ -406,7 +411,7 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	job := attachJob(ProcessOf(cmd.Process))
 	defer job.close()
 
-	res := &Result{EventsPath: eventsPath}
+	res := &Result{EventsPath: eventsPath, CliPath: cli, Profile: r.cfg.ProfileName, Command: cmdLine}
 	var stderrBuf bytes.Buffer
 	var wg sync.WaitGroup
 	wg.Add(2)

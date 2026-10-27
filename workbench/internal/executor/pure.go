@@ -39,6 +39,15 @@ func BuildArgsWithPatches(cliPath, profileName string, overlayPaths []string) []
 	return append(args, "--json", "-")
 }
 
+// DSHCommandLine 把一次 DSH 无头调用拼成**可入台账**的字符串。
+//
+// 为什么需要（round 38 · T21）：目标要求「自动执行的任务通过 DeepSeek Harness Desktop 无头控制执行」，
+// 但修前台账只记错误类别与耗时 —— 事后无法自证某次尝试到底有没有真的经 DSH 无头跑、用的哪个 CLI 与 profile。
+// 与 BuildArgsWithPatches **同源拼装**，保证「记下来的」与「真正执行的」不会漂移（参数在别处手抄一份=迟早不一致）。
+func DSHCommandLine(exe, cliPath, profileName string, overlayPaths []string) string {
+	return strings.TrimSpace(exe) + " " + strings.Join(BuildArgsWithPatches(cliPath, profileName, overlayPaths), " ")
+}
+
 // SandboxOverlayYAML 是 external 模式追加的运行层沙箱放行补丁。
 //
 // 字段名来自 @deepseek-ai/dsh-sandbox-policy 的 Config：mode / workspaceRoot；

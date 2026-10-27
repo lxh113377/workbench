@@ -1012,7 +1012,7 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 					TaskID: task.ID, Attempt: attempt, Model: pst.Model, Kind: "plan",
 					Action: "done", ElapsedMs: pst.ElapsedMs,
 					Error:      "方案：" + pst.Blueprint.SummaryLine(),
-					StderrPath: pst.StderrPath, ProducedRunes: pst.ProducedRunes,
+					StderrPath: pst.StderrPath, ProducedRunes: pst.ProducedRunes, DSHCommand: pst.DSHCommand,
 				})
 				// 方案结果写回任务：面板要能看出"方案层真的跑过、用的是哪个思考模型"，
 				// 否则"思考模型只出方案"就是一句无法验证的口号。
@@ -1042,7 +1042,7 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 					TaskID: task.ID, Attempt: attempt, Model: pst.Model, Kind: "plan",
 					Action: "degraded", ElapsedMs: pst.ElapsedMs, Error: reason,
 					// 方案阶段的取证两件套：`producedRunes=0` = 模型没吐字；>0 = 吐了但方案 JSON 解析失败。
-					StderrPath: pst.StderrPath, ProducedRunes: pst.ProducedRunes,
+					StderrPath: pst.StderrPath, ProducedRunes: pst.ProducedRunes, DSHCommand: pst.DSHCommand,
 				})
 				_, _ = e.store.Update(task.ID, func(t *model.Task) error {
 					t.PlanDegraded = true
@@ -1075,11 +1075,11 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 				// 成功一次即清零限流退避：说明车道已恢复，下次限流重新从 5 分钟起。
 				e.clearRateLimit()
 				// 成功台账同样带产出体量与 stderr 位置：既是“这次真产出了多少”的读数，也让 done 与失败行**列同构**，便于对照。
-				stderrPath, producedRunes := attemptEvidence(res)
+				stderrPath, producedRunes, dshCommand := attemptEvidence(res)
 				e.store.AppendAttempt(store.AttemptRecord{
 					TaskID: task.ID, Attempt: attempt, Model: modelID, Kind: "done",
 					Action: "done", ElapsedMs: elapsed.Milliseconds(),
-					StderrPath: stderrPath, ProducedRunes: producedRunes,
+					StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
 				})
 				e.completeTask(task, running, res, modelID, cfg)
 				return
@@ -1165,12 +1165,12 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 		}
 		dec := pol.Decide(kind, attempt, errText(lastErr))
 		// 失败台账带上取证两件套（stderr 落盘位置 + 产出体量，T15-④）。
-		stderrPath, producedRunes := attemptEvidence(res)
+		stderrPath, producedRunes, dshCommand := attemptEvidence(res)
 		e.store.AppendAttempt(store.AttemptRecord{
 			TaskID: task.ID, Attempt: attempt, Model: modelID, Kind: string(kind),
 			Action: string(dec.Action), DelayMs: dec.Delay.Milliseconds(),
 			ElapsedMs: elapsed.Milliseconds(), Error: errText(lastErr),
-			StderrPath: stderrPath, ProducedRunes: producedRunes,
+			StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
 		})
 		if dec.Action != retry.ActionRetry {
 			break

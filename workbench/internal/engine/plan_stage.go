@@ -49,6 +49,8 @@ type planStage struct {
 	//   不必再翻任务目录去猜（对齐执行阶段的同名台账字段）。
 	StderrPath    string
 	ProducedRunes int
+	// DSHCommand 是本轮方案调用实际执行的 DSH 无头命令行（自证走 DSH 无头控制，round 38 · T21）。
+	DSHCommand string
 }
 
 // usable 判断这次规划是否可用于编排执行。
@@ -141,7 +143,7 @@ func (e *Engine) buildPlan(ctx context.Context, task *model.Task, cfg config.Con
 	res, err := e.runner.Run(ctx, sub, modelID)
 	st.ElapsedMs = time.Since(started).Milliseconds()
 	// 先取证再判失败：三条失败路径（调用失败 / 空输出 / 解析失败）都要带着这份读数回去。
-	st.StderrPath, st.ProducedRunes = attemptEvidence(res)
+	st.StderrPath, st.ProducedRunes, st.DSHCommand = attemptEvidence(res)
 	if err != nil {
 		st.Err = fmt.Errorf("方案调用失败: %w", err)
 		return st

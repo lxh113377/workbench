@@ -37,6 +37,9 @@ type AttemptRecord struct {
 	// 动机：只靠 `error` 摘要排查时仍要翻任务目录；写进台账就能一眼分辨「子进程报错」与「模型空产出」。
 	StderrPath    string `json:"stderrPath,omitempty"`
 	ProducedRunes int    `json:"producedRunes,omitempty"`
+	// DSHCommand 是「这次尝试确实经 DSH 无头控制执行」的自证（round 38 · T21）：
+	// exe + cli 路径 + profile + 覆盖层 + `--json -`。目标要求自动任务走 DSH 无头控制，本字段让每次尝试可自证。
+	DSHCommand string `json:"dshCommand,omitempty"`
 }
 
 // AuditRecord 是一条审计记录，写入 audit.jsonl 后不可变。
