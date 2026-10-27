@@ -792,3 +792,27 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 ### 五、边界
 - 观察窗口自带 finally 回滚（`plan=true / autoStart=false / maxTasks=12 / conc=2` 已复核）；family=0；keepalive Ready；
 - 部署 `fc69237` 两处根 `hash == SHA256SUMS`、`vcs.revision` 核对通过（首页运行期探针仍 UNVERIFIED ⇒ SUMS 如实补齐，缺口继续挂待办）。
+## round 46（同会话，2026-10-27 17:15-18:00）—— T28 落地（两版：越界→收窄全绿）；T34 派出未收产出
+
+### 一、T28（`6ba7f8d` → `8911afb`）
+- 第一版把「无产物块 ⇒ 未完成」一刀切 ⇒ 撞掉 D7 契约（`TestPostProcessUsesInjectedRunner` 判红、**全仓 go test 失败却已推送**）；
+- 收窄版：`ExecutorConfig.ArtifactDomains`（默认 `code/quality/frontend`）+ `artifactRequired` + `completionVerdict(rep, require)`；
+  内容/报告类域保持「正文即交付」（D7 契约恢复绿灯），工程/质量类域才把无产物块判未完成；
+- 配套：`shouldRepair` 允许 nil（工程域真的返工要回产物块）；`repairPrompt` 对 nil 补「不是验收没过、是根本没交产物」+ 可照抄形状；
+- 验证：`go build` / `go vet` / **全仓 `go test ./...` rc=0**（本次提交前已跑，绿灯后才提交）；三测覆盖判定真值表、域集判定、nil 返工、提示词要素。
+
+### 二、live 状态（如实标）
+- **T28 live 未取得**：6 分钟窗口内无返工产物、无「无产物块」日志；台账 `done x2` / `no_artifact x3`、queue 计数不变（`queued=1`）；
+- **不过回归**：窗口内没有出现异常状态或额外失败类别（改动未破坏既有行为）。
+
+### 三、委派（#44）
+- T34（生成器零新决策）派出 `e74062fd`：**30 分钟未收产出** ⇒ 按 ⑦ 登记未取证、不重派同件，下一轮 Lead 自干；
+- 本轮同时把「T28 实现」由 Lead 自干完成（上一轮该件子代理失败、按 ⑦ 不再重派）。
+
+### 四、我自己的错（本轮 1 次，性质严重）
+- **提交前只跑了新测（`-run` 过滤）而没跑全仓 `go test ./...`** ⇒ 一个破坏既有契约的改动被推送（CI 会红）。
+  整改：**提交前必跑全仓套件，绿灯才算可提交**（这条本会话前 40 轮一直执行，本轮为省事跳过 —— 教训记下）。
+
+### 五、边界
+- 观察窗口自带 finally 回滚（`plan=true / autoStart=false / maxTasks=12 / conc=2` 已复核）；family=0；keepalive Ready；
+- 部署 `8911afb`：两处根 `hash == SHA256SUMS`、`vcs.revision` 核对通过（首页运行期探针仍 UNVERIFIED ⇒ SUMS 如实补齐，缺口继续挂待办）。
