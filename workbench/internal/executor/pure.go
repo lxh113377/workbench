@@ -303,7 +303,9 @@ func IsEarlyStall(startedMs, lastEventMs int64, workDir string, baseSeconds int,
 	if lastEventMs > startedMs {
 		return false // 有过事件：交给 IsStalled 按「最近进展」判
 	}
-	if fm := LatestOutputMtimeMs(workDir); fm > startedMs {
+	// 产出探测带 watermark = startedMs：命中「比启动时刻更新的白名单文件」即刻返回，
+	// 不必扫完整棵树（等价性见 latestOutputMtime 注释）。
+	if fm := latestOutputMtime(workDir, startedMs); fm > startedMs {
 		return false // 有过产出：同上
 	}
 	return true
@@ -321,15 +323,28 @@ func IsEarlyStall(startedMs, lastEventMs int64, workDir string, baseSeconds int,
 // 这是 2026-10-22 对标 river watchStuck 后新增的覆盖：旧判据只认事件，
 // 会把"静默写盘期"的长任务误判成卡死并杀掉，已写出的产物一并丢失。
 func IsStalled(lastEventMs int64, workDir string, baseSeconds int, sawThinking bool, nowMs int64) bool {
+	limit := stallLimitFor(baseSeconds, sawThinking)
 	last := lastEventMs
-	if fm := LatestOutputMtimeMs(workDir); fm > last {
+	// 门槛值：判据是「now-last > limit」，等价于 last < watermark。
+	watermark := nowMs - limit.Milliseconds()
+	// 快速路径（2026-10-27 实测优化）：事件信号本身仍在窗口内 ⇒ last = max(事件, 产出) ≥ 事件 ≥ watermark
+	// ⇒ 无论产出多新都**不可能**判卡死 ⇒ 这一轮根本不需要读盘。
+	//
+	// 为什么必须加（改造前的实测代价）：看门狗每 5 s 回调本函数，而 external 模式下 workDir 是
+	// 用户真实项目（现场 D:workdesktop = 480,572 个文件），旧实现**无条件**走一遍全树
+	// （filepath.Walk 实测单次 18.0 s）⇒ 每个在跑任务全程把 CPU/磁盘元数据打满，同机所有
+	// DSH 子进程与 GUI 会话一起被拖慢；同时把「零进展」判定从预算 120 s 拖到 ~150 s
+	// （实测 stalled 的 elapsedMs p50 = 149,994 ms = 120 s 预算 + 两轮 18 s 扫描）。
+	if lastEventMs >= watermark {
+		return false
+	}
+	if fm := latestOutputMtime(workDir, watermark); fm > last {
 		last = fm
 	}
 	if last <= 0 {
 		// 两个信号都没有：尚无任何进展证据，不判卡死（启动初期）。
 		return false
 	}
-	limit := stallLimitFor(baseSeconds, sawThinking)
 	return nowMs-last > limit.Milliseconds()
 }
 
@@ -338,27 +353,80 @@ func IsStalled(lastEventMs int64, workDir string, baseSeconds int, sawThinking b
 //
 // 设计要点：
 //   - 只认扩展名白名单，避免把日志/临时文件当产出；
-//   - 单次全量 Walk（任务 workspace 通常几十个文件，开销远小于 5s 的看门狗周期）；
-//   - 出错不扩散： Walk 的任何错误都被忽略，最坏情况退化为「无产出信号」，
+//   - 返回**全量最大值**（watermark=0 ⇒ 不做提前退出），与历史语义逐字一致；
+//   - 出错不扩散：遍历的任何错误都被忽略，最坏情况退化为「无产出信号」，
 //     与改造前行为一致（不会因为探测失败而误判）。
-func LatestOutputMtimeMs(dir string) int64 {
+func LatestOutputMtimeMs(dir string) int64 { return latestOutputMtime(dir, 0) }
+
+// latestOutputMtime 是产出探测的唯一实现（看门狗与 LatestOutputMtimeMs 共用一份，避免两套判据漂移）。
+//
+// watermarkMs > 0 时启用**提前退出**：一旦发现某个白名单文件的 mtime 严格大于 watermark 就立刻返回
+// 该 mtime（SkipAll），不再扫完剩下的树。为什么返回「首个命中」而不是全局最大值仍然等价 ——
+// 两个调用方都只把它与 watermark 比较：
+//
+//	IsStalled    判据 now-last > limit，其中 last = max(lastEventMs, 产出最大 mtime)、watermark = now-limit。
+//	             命中 ⇒ 返回值 > watermark ⇒ now-返回值 < limit ⇒ 必不判卡死；全量最大值也必然 > watermark，
+//	             两者结论同向。未命中 ⇒ 全树白名单文件都 ≤ watermark ⇒ 返回真实最大值 ⇒ 与旧实现逐位一致
+//	             （含 now-last == limit 的边界：命中测试与判据都用严格 >，不会把「恰好等于」判成卡死）。
+//	IsEarlyStall 同理（watermark = startedMs，判据 fm > startedMs）。
+//
+// 为什么改成 WalkDir 而不是 Walk（2026-10-27 本机实测，目录 = D:\workdesktop / 480,572 个文件）：
+// Walk 对每个条目额外做一次 Lstat（全树 18.0 s），WalkDir 直接吃 ReadDir 得到的目录项（全树 4.87 s，快 3.7 倍）。
+// 先扫顶层文件再递归：产物协议下模型通常把文件写在 cwd 根，命中即可省掉整棵树。
+func latestOutputMtime(dir string, watermarkMs int64) int64 {
 	if strings.TrimSpace(dir) == "" {
 		return 0
 	}
+	if watermarkMs > 0 {
+		if ms, hit := topLevelOutputAfter(dir, watermarkMs); hit {
+			return ms
+		}
+	}
 	var latest int64
-	_ = filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil || info == nil || info.IsDir() {
+	_ = filepath.WalkDir(dir, func(path string, d os.DirEntry, err error) error {
+		if err != nil || d == nil || d.IsDir() {
 			return nil
 		}
 		if !outputExtensions[strings.ToLower(filepath.Ext(path))] {
 			return nil
 		}
-		if ms := info.ModTime().UnixMilli(); ms > latest {
+		info, ierr := d.Info()
+		if ierr != nil {
+			return nil
+		}
+		ms := info.ModTime().UnixMilli()
+		if ms > latest {
 			latest = ms
+		}
+		if watermarkMs > 0 && ms > watermarkMs {
+			return filepath.SkipAll // 已证「有比 watermark 更新的产出」⇒ 结论已定，停止遍历
 		}
 		return nil
 	})
 	return latest
+}
+
+// topLevelOutputAfter 只扫 dir 的顶层文件（不递归），返回第一个 mtime 严格大于 watermark 的白名单文件。
+// 存在的意义：模型把产物写在 cwd 根时，一次 ReadDir（几十个条目）就能替代整棵树的遍历 ——
+// 命中即返回，语义与递归扫描的命中判据完全相同（缺省不命中则回落到全树递归，不改变结论）。
+func topLevelOutputAfter(dir string, watermarkMs int64) (int64, bool) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return 0, false
+	}
+	for _, e := range entries {
+		if e.IsDir() || !outputExtensions[strings.ToLower(filepath.Ext(e.Name()))] {
+			continue
+		}
+		info, ierr := e.Info()
+		if ierr != nil {
+			continue
+		}
+		if ms := info.ModTime().UnixMilli(); ms > watermarkMs {
+			return ms, true
+		}
+	}
+	return 0, false
 }
 
 // ArtifactMarker 是本仓产物协议的起始标记（引擎侧 appendProtocol 给出，artifact.Parse 也认它）。
