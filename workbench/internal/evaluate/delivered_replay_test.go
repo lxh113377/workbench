@@ -89,3 +89,28 @@ func TestDeliveredAndUndeliveredStillBlockedInsideWindow(t *testing.T) {
 		})
 	}
 }
+
+// TestVerifiedAloneIsNotDelivered 钉住「`Verified` 不能单独作为已交付判据」（round 48 · 独立复核抓到的缺口）。
+//
+// 可达路径：`completeTask` 先写 `t.Verified=true`、再 `Transition(StateDone)`（两次独立 WAL 写且后者错误被丢弃），
+// 两次之间崩溃/被杀 ⇒ 重启后任务呈 `running + Verified=true`；若 `delivered()` 认可 Verified，
+// 这类**未交付**任务会被当已交付 ⇒ 全窗口永久拦 ⇒ 队列饥饿回归。
+func TestVerifiedAloneIsNotDelivered(t *testing.T) {
+	cfg := dupCfg()
+	now := time.Now().UnixMilli()
+	ev := New(cfg)
+	// 未交付（cancelled）但 Verified=true，且指纹远在窗外。
+	seed := &model.Task{ID: "c1", Title: "T", Prompt: "P", State: model.StateCancelled, Verified: true, CreatedAt: now - 24*3600*1000}
+	ev.Observe(seed, 0, "d", 400)
+	got := ev.gates(Input{Task: &model.Task{ID: "r", Title: "T", Prompt: "P", CreatedAt: now}}, now)
+	if containsDupReason(got) {
+		t.Fatalf("未交付（cancelled）+Verified=true 被当已交付、窗外仍拦：reasons=%v", got)
+	}
+	// 对照：同样是 cancelled 但 Verified=false ⇒ 当然也放行（判据只看终态）。
+	ev2 := New(cfg)
+	seed2 := &model.Task{ID: "c2", Title: "T2", Prompt: "P2", State: model.StateCancelled, CreatedAt: now - 24*3600*1000}
+	ev2.Observe(seed2, 0, "d", 400)
+	if got := ev2.gates(Input{Task: &model.Task{ID: "r2", Title: "T2", Prompt: "P2", CreatedAt: now}}, now); containsDupReason(got) {
+		t.Fatalf("cancelled 未交付应放行：reasons=%v", got)
+	}
+}

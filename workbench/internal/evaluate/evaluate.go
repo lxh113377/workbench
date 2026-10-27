@@ -50,7 +50,12 @@ func delivered(t *model.Task) bool {
 	if t == nil {
 		return false
 	}
-	return t.State == model.StateDone || t.Verified
+	// 只看**终态**，不看 `Verified`（round 48 · 独立复核抓到的可达缺口）：
+	// `completeTask` 先写 `t.Verified = true`（一次 WAL 写），再 `Transition(StateDone)`（另一次 WAL 写，且错误被丢弃
+	// `_, _ =`）—— 若两次之间进程被杀/崩溃（7×24 自愈重启是常态），重启后任务会是 `running + Verified=true`，
+	// 于是「未交付」被当成「已交付」⇒ 全窗口永久拦 ⇒ 队列饥饿回归。
+	// 口径：已交付 = 终态 done；`Verified` 只是同一事实的存证，不足以单独作为判据。
+	return t.State == model.StateDone
 }
 
 // New 构造评估器。
