@@ -878,3 +878,27 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 - **已修**（`7c25bb8`）：`delivered()` 改为只看终态 `done`，并把复核给的最小复现固化成仓库测试 `TestVerifiedAloneIsNotDelivered`；全仓 `go test ./...` rc=0；
 - **新登记 T37**（复核指出的过严风险）：`code-review`/`code-snippet-library`/`code-test-plan` 与 quality 审查报告本质是 report 型，却因「域∈默认产物集」被强制要产物块 ⇒ 建议改按**模板**判定；
 - 复核者自述未证实项已如实转录进报告附录；所有变异/探针均在仓库外副本执行，仓库未被改动。
+## round 49（同会话，2026-10-27 19:45-20:20）—— T23 定向验证通过 + T37/T38 落地 + 历史基线修正
+
+### 一、T23 定向验证 ✅（挂账结清）
+- 方法：把 `plan.stageMaxMinutes` 临时压到 **1 分钟**，制造可观测窗口；
+- 读数：19:52:19 出现 `方案阶段总预算耗尽（1 分钟），退化直执行`（距方案尝试起 ~60 s），**紧接着**同 taskId 起了非 plan 的执行尝试 ⇒ 时间让给执行阶段；
+- 回滚复核：`plan=true / stageMaxMinutes=0（代码回落 4 分钟）/ autoStart=false / family=0`。
+
+### 二、两件子代理产出（`89a3ce3`，均已 Lead 独立复核）
+- **T37**（`cef5e36a`）：按模板豁免产物要求（默认豁免 5 条 report 型模板）+ `requiresArtifactBlock`（先模板豁免、后域）+ 容错 + 调用点用 `task.TemplateID`；新测 PASS；
+- **T38**（`6a824af5`）：闭环用例去 flaky（写死 5s 等待 → `WaitInflight(60s)` seam）；根因与 CI 的 10.05 s 严丝合缝；**正面判据 `-count=10` 全绿**；
+- **操作瑕疵如实记**：`89a3ce3` 实际含两件（前次提交被 gofmt 门禁拦下、两次 add 被一并提交），消息只写了 T37；不改写历史，已核对内容并标注。
+
+### 三、历史基线修正（正确性纪律）
+- 退役仓内根：`verify.json` 118 条 / **pass=true 84 条** / artifacts-index 94 / workspace 1273，全部落在 10-19~10-24；**10-24 22:06 之后 0 条**；
+- 本会话外置根：verify 1 条 / pass=0 ⇒ 「缺口」是**上游容量/配额退化**所致（现池 18 down / 16 healthy），不是链路缺陷；
+- 已在报告对应处补注，纠正「链路从未能交付」的潜在误读。
+
+### 四、委派（#44）
+- 本轮派发 2 件（T37/T38）：**产出均已落盘并经 Lead 独立复跑**（build/vet/包测/全仓套件 + T38 的 `-count=10`）；
+- 两件的**收尾消息本轮未到**（按 ⑥ 以磁盘与复算为准，不以自述为据）；本会话累计派发 11 件：成功 9、零产出 2。
+
+### 五、边界
+- 观察/验证窗口自带回滚并已复核；family=0；keepalive Ready；`HEAD == origin/master == 89a3ce3`；dirty=18（并行会话在途件）；
+- 部署：本轮代码改动（T37/T38）**待下一次部署**（当前两处根仍是 `ba52871` 构建，hash==SUMS 一致）—— 下一轮开局补部署。
