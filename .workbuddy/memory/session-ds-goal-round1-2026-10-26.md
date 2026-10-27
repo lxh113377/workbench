@@ -969,3 +969,24 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 ### 五、边界
 - 本轮无生产代码改动（只有文档追加）⇒ 部署仍为 `360be6d`（两处根 hash==SUMS 一致）；
 - 窗口自带 finally 回滚（已复核 baseline：plan=true/autoStart=false/maxTasks=12/sync=600）；keepalive Running；worktree 清零。
+## round 53（同会话，2026-10-27 23:05-23:35）—— 里程碑回填 + 持续性读数（未复现）+ T48 落地 / T47 登记
+
+### 一、里程碑回填（round 52 回执因中断未发出）
+- 🎯 首次 `verify.json pass=true`（`task-fb880f2adfa8d202` @22:46:11）：车道 `openrouter/free`、产物 `check_env.py`(97B,strict)、验收 `python check_env.py` exit 0；
+- 全链正向证据齐备：生成→偏好选道→合规产物块→严格落盘→真实执行→通过；
+- post-T44 复验：`boot_failed` **293 → 2**，三条 combo 首犯后保持 down（判据已校正为「首犯后不再复活」）。
+
+### 二、持续性窗口（15 分钟，conc=1）
+- `not-served = 0`（T44 稳）；尝试仅 10 次（bad_exit 7 / ok 1 / stalled 2）；**窗口内无新交付**；
+- ⇒ 「首次通过」已达、「可持续交付」未证；下一步该动吞吐与车道质量，不再动判据。
+
+### 三、本轮落地与登记
+- **T48**（`1e7a963`）：4 条模板加「交付物门禁·硬性」（报告三节 + 证明文件内容 + 玩具脚本反例）；子代理全改好后失败，Lead 完成安装与验证（线上 hardened 0→4）；
+- **T47**：子代理失败无产出 ⇒ 登记待办，**默认关闭**取向写明（立即启用会挡掉首例 97B 交付，掩盖链路已通）。
+
+### 四、委派（#44）
+- round 52 的 A/B 超时无产出；本轮 T48 部分成功（Lead 补齐）、T47 失败无产出；累计派发 20 件：成功 14、部分 1、零产出 5。
+
+### 五、边界
+- `HEAD == origin/master == 1e7a963`；CI 上 `ddb377d`/`360be6d` 均 success；部署仍为 `360be6d`（本轮无生产 Go 改动）；
+- baseline 已复核（plan=true/autoStart=false/maxTasks=12/conc=2/sync=600/pref 9 条）；family=0；keepalive Ready；worktree 清零。
