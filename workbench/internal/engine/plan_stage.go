@@ -51,6 +51,9 @@ type planStage struct {
 	ProducedRunes int
 	// DSHCommand 是本轮方案调用实际执行的 DSH 无头命令行（自证走 DSH 无头控制，round 38 · T21）。
 	DSHCommand string
+	// StageBudgetExhausted 标记「整段方案阶段的预算到点」（T23）：与单次调用失败区分，
+	// 便于面板/台账读成「时间让给执行阶段」，而不是「模型坏了」。
+	StageBudgetExhausted bool
 }
 
 // usable 判断这次规划是否可用于编排执行。
@@ -141,8 +144,18 @@ func (e *Engine) buildPlan(ctx context.Context, task *model.Task, cfg config.Con
 		WorkRoot: task.WorkRoot,
 	}
 	started := time.Now()
-	res, err := e.runner.Run(ctx, sub, modelID)
+	// 方案阶段**总预算**（T23）：单次 8 分钟 × N 条车道实测能把整个任务预算吃光（15 分钟窗口内执行阶段一次都没跑到，
+	// 而产物只有执行阶段能产出）。给整段方案一个 deadline，到点即取消子调用 ⇒ 由调用方退化直执行（留审计，不静默跳过）。
+	sctx, scancel := context.WithTimeout(ctx, planStageBudget(cfg.Plan.StageMaxMinutes))
+	defer scancel()
+	res, err := e.runner.Run(sctx, sub, modelID)
 	st.ElapsedMs = time.Since(started).Milliseconds()
+	if err != nil && sctx.Err() == context.DeadlineExceeded && ctx.Err() == nil {
+		// 只有「阶段预算到点」才改写成这条原因：调用方自身的取消/超时不得被冒充（否则会误导排查方向）。
+		st.Err = fmt.Errorf("方案阶段总预算耗尽（%d 分钟），退化直执行", cfg.Plan.StageMaxMinutes)
+		st.StageBudgetExhausted = true
+		return st
+	}
 	// 先取证再判失败：三条失败路径（调用失败 / 空输出 / 解析失败）都要带着这份读数回去。
 	st.StderrPath, st.ProducedRunes, st.DSHCommand = attemptEvidence(res)
 	if err != nil {

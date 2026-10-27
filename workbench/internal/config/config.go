@@ -160,6 +160,13 @@ type PlanConfig struct {
 	PlannerTier string `json:"plannerTier"`
 	// PlannerMaxMinutes 是方案调用的单次超时（分钟）。方案比产出短，默认 8。
 	PlannerMaxMinutes int `json:"plannerMaxMinutes"`
+	// StageMaxMinutes 是**整个方案阶段**的总预算（分钟，默认 4）—— 与单次超时分层。
+	//
+	// 为什么需要（2026-10-27 实测）：方案阶段由 failover 逐条车道重试，单次上限 8 分钟；实测一个 15 分钟窗口被
+	// **一条任务**的方案阶段吃光（`z-ai/glm-5.3` 8m0s 超时 + `cohere/north-mini-code` 139s 卡死 + `combo:*` ×3 boot_failed
+	// + `dots-studio` 134s 卡死），**执行阶段一次都没跑到** —— 而产物只能由执行阶段产出。
+	// 阶段总预算到点即退化直执行，把时间让给执行阶段（与目标条款「执行模型不要步子迈得太大」同源的取舍）。
+	StageMaxMinutes int `json:"stageMaxMinutes"`
 	// ReplanRounds 是验收失败后**重新规划**的最大轮数（默认 2）。
 	//
 	// 与 Executor.RepairRounds 的分工（这是本设计的核心取舍）：
@@ -196,6 +203,10 @@ func NormalizePlan(p *PlanConfig, fromSchema int) {
 	}
 	if p.PlannerMaxMinutes < 1 || p.PlannerMaxMinutes > 60 {
 		p.PlannerMaxMinutes = 8
+	}
+	// 方案阶段总预算：零值＝未配置（老安装升级后必须补默认，否则等于没这道闸）；越界同样回落默认。
+	if p.StageMaxMinutes < 1 || p.StageMaxMinutes > 60 {
+		p.StageMaxMinutes = 4
 	}
 	// 重规划轮数：零值是"未配置"，必须按默认补齐 —— 否则老安装升级后
 	// 「返工用尽 -> 重新规划」这一整条闭环支路永远不生效。
@@ -375,9 +386,11 @@ func DefaultConfig() Config {
 		// 双角色闭环默认开启：方案阶段用 quality 档模型想清楚，执行阶段按模板 tier 选。
 		// ReplanRounds=2：返工（RepairRounds=3）先用完再重新规划 —— 改方案等于推翻重来。
 		Plan: PlanConfig{
-			Enabled:            true,
-			PlannerTier:        "quality",
-			PlannerMaxMinutes:  8,
+			Enabled:           true,
+			PlannerTier:       "quality",
+			PlannerMaxMinutes: 8,
+			// 阶段总预算 4 分钟：单次 8 分钟 × N 条车道会把整个任务预算吃光，执行阶段（唯一产物出口）就轮不到。
+			StageMaxMinutes:    4,
 			ReplanRounds:       2,
 			AppendPlanToPrompt: true,
 		},
