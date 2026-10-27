@@ -845,3 +845,36 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 ### 四、边界
 - 观察窗口自带 finally 回滚（`plan=true / autoStart=false / maxTasks=12 / conc=2` 已复核）；family=0；keepalive Ready；
 - 部署 `f88978c`：两处根 `hash == SHA256SUMS`、`vcs.revision` 核对通过（首页运行期探针仍 UNVERIFIED ⇒ SUMS 如实补齐）。
+## round 48（同会话，2026-10-27 18:55-19:25）—— T36 落地 + 15 分钟综合窗口（T26 live 通过、T23 未取得）+ 车道边界结论
+
+### 一、T36（`c22db93`，子代理 `448b05c2` 实现 + Lead 独立复核）
+- 接线「排除近期主题」到生产调度：`recentTopicWindow=24` + `topicFromTitle` + `RootTask(tpl, now, recent...)` + 池尽 `nil` 跳过；59 行；
+- 子代理负向对照对**最终代码**实测（摘线 ⇒ 判红两次，随机命中不同主题）；Lead 独立复跑 build/vet/单测/全仓 `go test ./...` rc=0 后落地。
+
+### 二、15 分钟综合窗口（plan 开、maxTasks=4、conc=1；`f88978c` 构建）
+- **熔断 0 条**（T35 生效）、方案层退化 1 次、尝试结束 13 条（含 `kilo-auto` ok 5,139 ms）、任务失败 0；
+- `verify.json` = 0、返工 prompt = 0 ⇒ 仍无产物落地（车道能力/配额所限，见下）；
+- **T26 live 复测通过**：combo 三条 `state=down | kind=not_served | consec=1 | cd≈1690s`（不被探测翻回）；
+- **T23 live 未取得**：方案阶段的尝试都很短、未跑到 4 分钟阶段预算。
+
+### 三、自我修正（如实记）
+- 早前三轮把「`queued=1`」当饥饿证据 —— 生成本轮已恢复，`queued=1` 与「队列正在被消费」同时成立 ⇒
+  判据改为「**`decisions.jsonl` 是否有新增**」，不再看 `queued` 大小。
+
+### 四、车道边界（结论性）
+- 本地网关 8326 在线且池内 36 条路由都指向它；但强车道（deepseek 系）被上游限流、`combo:auto-*` 属「本出口不服务」⇒ 结构性 down；
+- 能进执行阶段的只有弱车道，其实测 `final` 文本 0 条含产物块 ⇒ 按 #29 属**外部凭据/配额缺口**，非代码可解。
+
+### 五、委派（#44）
+- 本轮派出 2 件：T36（成功交付并落地）、近四个提交的独立回归复核（**尚未收到收尾消息** ⇒ 按 ⑦ 记未取证、不重派同件）；
+- 本会话累计派发 7 件：成功 5、零产出 2。
+
+### 六、边界
+- 窗口自带 finally 回滚（`plan=true / autoStart=false / maxTasks=12 / conc=2` 已复核）；family=0；keepalive Ready；
+- 部署未变（本轮无二进制改动需要重部署 —— T36 已部署：`c22db93` 的构建见下一轮；本轮 `f88978c` 仍在两处根且 hash==SUMS）。
+### 七、独立回归复核（round 48，子代理 `f79d0a93`，只读；已收产出）
+- 结论：四提交内**无当前可稳定触发的功能回归**；命中 **1 个真实低概率缺口**（T32-b `delivered()` 只看 `Verified` 不看终态 ⇒ 两次 WAL 写之间崩溃后 `running+Verified=true` 被当已交付 ⇒ 饥饿回归）+ 1 个已被 `c22db93`（T36）关闭的潜伏 nil 陷阱（`RootTask` 池尽返 nil 而旧调用点无 nil 检查 ⇒ 接线即 panic）；
+- T35/T28/T32-c 与三个新配置项零值回落**判定安全**（各带负向对照：`cutoff=-1` 判红、content 进默认集判红、摘 `if it.Delivered` 判红等）；
+- **已修**（`7c25bb8`）：`delivered()` 改为只看终态 `done`，并把复核给的最小复现固化成仓库测试 `TestVerifiedAloneIsNotDelivered`；全仓 `go test ./...` rc=0；
+- **新登记 T37**（复核指出的过严风险）：`code-review`/`code-snippet-library`/`code-test-plan` 与 quality 审查报告本质是 report 型，却因「域∈默认产物集」被强制要产物块 ⇒ 建议改按**模板**判定；
+- 复核者自述未证实项已如实转录进报告附录；所有变异/探针均在仓库外副本执行，仓库未被改动。
