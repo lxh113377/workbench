@@ -233,7 +233,9 @@ func runApp(args []string) error {
 		SyncSeconds:  cstore.Get().Pool.SyncSeconds,
 		Strategy:     modelpool.Strategy(cstore.Get().Pool.Strategy),
 		DeepProbe:    cstore.Get().Pool.DeepProbe,
-		DSHHome:      layout.DSHHome,
+		// 车道偏好（T43）：有序列表来自配置，空 = 关闭。
+		PreferredModels: cstore.Get().Pool.PreferredModels,
+		DSHHome:         layout.DSHHome,
 	})
 	poolSvc.SetRouteSink(func(routes []config.ModelRoute) {
 		if len(routes) == 0 {

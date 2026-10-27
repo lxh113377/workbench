@@ -36,6 +36,9 @@ type ServiceConfig struct {
 	DeepProbe    bool          `json:"deepProbe"`    // 是否发模型级补全探测（耗额度）
 	ProbeTimeout time.Duration `json:"-"`            // 单次探测超时，默认 10s
 	DSHHome      string        `json:"-" `
+	// PreferredModels 是有序车道偏好（round 50 · T43 接线）：高历史通过率车道在兜底链里前置。
+	// 空 = 关闭（行为同改造前）；由调用方从 `PoolConfig.PreferredModels` 传入。
+	PreferredModels []string `json:"-"`
 }
 
 // normalize 补齐默认值。
@@ -107,6 +110,9 @@ func NewService(store *Store, seed []Spec, cfg ServiceConfig) *Service {
 		store:    store,
 		keyCache: map[string]string{},
 	}
+	// 车道偏好接线（round 50 · T43）：把配置里的有序偏好交给调度器 —— 不接这一步，
+	// `PoolConfig.PreferredModels` 就只是一份没人读的配置（T42 子代理在⑤里如实报告了这一缺口）。
+	svc.sch.SetPreferredModels(cfg.PreferredModels)
 	// 密钥轮换自愈：探测遇到 401 时重新发现网关并返回可用密钥。
 	svc.prober.KeyResolver = svc.resolveGatewayKey
 	return svc
