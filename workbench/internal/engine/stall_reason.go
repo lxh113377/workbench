@@ -236,7 +236,9 @@ func (e *Engine) StallReason() StallReason {
 	// 3) 规划熔断：连续被拒后主动停手（本轮现场的根因表现）。
 	if e.autonomy != nil && cfg.Autonomy.Enabled {
 		if g, ok := e.autonomy.Active(); ok && g != nil {
-			if streak, tripped := e.rejectionPressure(g.ID); tripped {
+			// 诊断口径与供料口径一致（round 47 · T35）：都走同一个时间窗，
+			// 否则「停机原因说熔断」而「供料其实已经放过」—— 诊断与行为对不上。
+			if streak, tripped := e.rejectionPressure(g.ID, cfg.Autonomy.RejectStreakWindowMinutes); tripped {
 				return StallReason{
 					Code: StallRejectBreaker,
 					Text: fmt.Sprintf("自主规划已熔断：目标「%s」连续 %d 条草案被评估拒绝，暂停规划以免空转刷台账",

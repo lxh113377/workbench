@@ -152,7 +152,7 @@ func (e *Engine) supplyAutonomous(ctx context.Context, cfg config.Config) bool {
 	// 注意熔断只影响"本轮是否规划"，不清空、不修改任何台账；
 	// 候选修复（配额口径、新颖度口径）落地后 streak 自然归零。
 	if hasGoal && activeGoal != nil {
-		if streak, tripped := e.rejectionPressure(activeGoal.ID); tripped {
+		if streak, tripped := e.rejectionPressure(activeGoal.ID, cfg.Autonomy.RejectStreakWindowMinutes); tripped {
 			e.logRejectBreakerOnce(activeGoal.ID, streak)
 			return false
 		}
@@ -474,10 +474,16 @@ const rejectStreakLimit = 5
 //   - streak >= rejectStreakLimit 时返回 true，本 tick 不再规划；
 //   - 一旦出现被受理（入队）的自主任务，streak 自然归零（只看尾部连续段）；
 //   - 只统计 autonomy 来源的 rejected，且只数**连续**尾部，不看历史总量。
-func (e *Engine) rejectionPressure(goalID string) (int, bool) {
+func (e *Engine) rejectionPressure(goalID string, windowMinutes int) (int, bool) {
 	if goalID == "" {
 		return 0, false
 	}
+	if windowMinutes <= 0 {
+		windowMinutes = 10
+	}
+	// 半开的重试口（round 47 · T35）：只有**最近**几分钟内的连续拒绝才算熔断压力；
+	// 陈旧尾巴不计入 —— 否则生成器被「几小时前的拒绝」永久掐死，且永远无法靠「被受理」解套（死锁）。
+	cutoff := model.Now() - int64(windowMinutes)*60_000
 	all := e.store.List()
 	streak := 0
 	// 从最新往回数：遇到非 autonomy/非本目标/非 rejected 的任务即停。
@@ -488,6 +494,9 @@ func (e *Engine) rejectionPressure(goalID string) (int, bool) {
 		}
 		if t.State != model.StateRejected {
 			break
+		}
+		if t.CreatedAt < cutoff {
+			continue // 陈旧拒绝：跳过（不构成本轮压力）
 		}
 		streak++
 		if streak >= rejectStreakLimit {

@@ -78,7 +78,7 @@ func TestRejectStreakTripsBreaker(t *testing.T) {
 	for i := 0; i < rejectStreakLimit; i++ {
 		seedRejected(t, e, "task-streak-"+string(rune('a'+i)), goal)
 	}
-	streak, tripped := e.rejectionPressure(goal)
+	streak, tripped := e.rejectionPressure(goal, 0)
 	if !tripped {
 		t.Fatalf("连续 %d 条被拒必须熔断，实际 streak=%d", rejectStreakLimit, streak)
 	}
@@ -95,7 +95,7 @@ func TestRejectStreakResetsOnAnyAcceptedTask(t *testing.T) {
 	for i := 0; i < rejectStreakLimit+2; i++ {
 		seedRejected(t, e, "task-reset-rej-"+string(rune('a'+i)), goal)
 	}
-	if _, tripped := e.rejectionPressure(goal); !tripped {
+	if _, tripped := e.rejectionPressure(goal, 0); !tripped {
 		t.Fatal("前置条件不成立：应先熔断")
 	}
 	// 出现一条被受理的任务（入队即算恢复）。
@@ -106,7 +106,7 @@ func TestRejectStreakResetsOnAnyAcceptedTask(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if streak, tripped := e.rejectionPressure(goal); tripped {
+	if streak, tripped := e.rejectionPressure(goal, 0); tripped {
 		t.Fatalf("出现被受理任务后熔断必须解除，实际仍 tripped（streak=%d）", streak)
 	}
 }
@@ -145,7 +145,7 @@ func TestRejectBreakerOnlyCountsSameGoal(t *testing.T) {
 	for i := 0; i < rejectStreakLimit+2; i++ {
 		seedRejected(t, e, "task-other-"+string(rune('a'+i)), "goal-other")
 	}
-	if streak, tripped := e.rejectionPressure("goal-mine"); tripped {
+	if streak, tripped := e.rejectionPressure("goal-mine", 0); tripped {
 		t.Fatalf("别的目标的连续拒绝不得牵连本目标（streak=%d）", streak)
 	}
 }

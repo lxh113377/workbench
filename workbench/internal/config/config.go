@@ -264,6 +264,12 @@ type AutonomyConfig struct {
 	Plan     AutonomyPlan     `json:"plan"`
 	Risk     AutonomyRisk     `json:"risk"`
 	Rollback AutonomyRollback `json:"rollback"`
+	// RejectStreakWindowMinutes 是「连续被拒」熔断判据的时间窗（分钟，<=0 按 10 处理）。
+	//
+	// 为什么必须加窗（round 47 · T35，live 铁证）：熔断判据数的是「尾部连续被拒」，而尾巴可能是**几小时前**的；
+	// 实测 09:02 最后一次成功生成后，每次 tick 都 `自主规划熔断 streak=5` ⇒ 不再产草案 ⇒ 也就永远不可能
+	// 靠「被受理」冲掉尾巴（死锁：熔断依据自己把自己锁住）。加窗后陈旧拒绝不再计入，生成器自动半开重试。
+	RejectStreakWindowMinutes int `json:"rejectStreakWindowMinutes"`
 }
 
 // AutonomyBudget 是自主循环的预算上限（防失控的三道闸）。
@@ -423,6 +429,8 @@ func DefaultConfig() Config {
 func DefaultAutonomyConfig() AutonomyConfig {
 	return AutonomyConfig{
 		Enabled: true,
+		// 熔断判据只看最近 10 分钟（round 47 · T35）：陈旧拒绝尾巴不得把生成器永久掐死。
+		RejectStreakWindowMinutes: 10,
 		Budget: AutonomyBudget{
 			MaxTasksPerGoal: 12, MaxStages: 6, MinQuality: 6, MaxRollbacks: 3, StageEvery: 1,
 		},
