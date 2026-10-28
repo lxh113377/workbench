@@ -1631,6 +1631,13 @@ func isNoLane(res *executor.Result, err error) bool {
 	return res != nil && res.ErrorKind == string(executor.KindNoLane)
 }
 
+// poolWaitBudget 是单个任务允许「因环境退回队列」的最大次数（round 60 · T54）。
+//
+// 取 4 的依据：现场 5134 的重投节奏约每 3~6 分钟一次（15:13/15:14/15:19/15:23/15:53…），
+// 4 次 ≈ 20 分钟 —— 足够跨过既有的 5 分钟闸门重探与上游短时限流窗口，又不至于让一条任务
+// 独占自主供料门数小时。判死后若上游已恢复，任务会被下一条自主草案取代；人工重试同样可重开。
+const poolWaitBudget = 4
+
 // requeueForPoolWait 把任务从 running 退回 queued（合法迁移），并给整池设置等待闸门。
 //
 // 设计要点：
@@ -1638,6 +1645,29 @@ func isNoLane(res *executor.Result, err error) bool {
 //   - 闸门取"最早结束冷却的模型时刻 + 5 秒缓冲"，无可用信息时退化为 15 秒；
 //   - 任务本身不计失败（Attempts 不变），避免把环境问题算成任务问题。
 func (e *Engine) requeueForPoolWait(taskID, chainID string) {
+	// 无效重投封顶（round 60 · T54）：环境类退回**不计失败**是对的，但完全无上限会造出僵尸任务。
+	//
+	// 现场（2026-10-28，外置根实测）：唯一活任务 5134 在 47.7 分钟里被重投 47 次（attempts 只涨到 2/3），
+	// 于是它永远不落终态；而自主供料门 inFlightTasksOfGoal 把 **queued 也算在途**（只排终态与被拒），
+	// 一条卡住的自主任务 = 永久不再产生新任务 = 7×24 下产出恒为 0。实测生成时间线印证：
+	// 10-28 十次引擎启动只有三次生成，且每次都精确发生在**前一个任务被判死的 3~22 秒之后**
+	// （01:29:22←cd1c 01:29:04；14:28:33←d5d8 14:28:08；15:11:08←df68 15:11:04）。
+	// 口径：到顶即判死（running→failed 是合法迁移，且 failTask 会释放链、留台账），
+	// 面板「重试」仍可人工重开（RetryTask 允许 failed→queued 并把 Attempts 归零）——
+	// 判死不是放弃任务，是把「永久独占供料」换成「可重开的一次失败」。
+	waits := 0
+	if _, err := e.store.Update(taskID, func(x *model.Task) error { x.PoolWaits++; return nil }); err == nil {
+		if cur, ok := e.store.Get(taskID); ok {
+			waits = cur.PoolWaits
+		}
+	}
+	if waits >= poolWaitBudget {
+		e.log.Warn("模型池重投次数到顶，判死以解锁自主供料", "taskId", taskID, "poolWaits", waits, "budget", poolWaitBudget)
+		e.emitEvent(model.Event{Type: "task", At: model.Now(), TaskID: taskID,
+			Msg: fmt.Sprintf("模型池连续 %d 次不可用，任务判死（可在面板重试）", waits)})
+		e.failTask(taskID, fmt.Errorf("模型池连续 %d 次不可用/限流，环境等待封顶判死", waits), retry.Unknown)
+		return
+	}
 	if q, err := e.store.Transition(taskID, model.StateQueued, "engine", "模型池冷却，退回队列"); err == nil {
 		e.q.Push(q)
 	} else {

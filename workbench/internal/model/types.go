@@ -196,7 +196,14 @@ type Task struct {
 	// CrashRescues 是「崩溃救援」累计轮次（L4）。不能复用 Attempts：
 	// Attempts 是单次 runOne 内的重试序号（engine.go 每轮直接赋值 t.Attempts = attempt），
 	// 崩溃恢复后重跑会被重置覆盖 —— 拿它当崩溃预算等于没有预算。
-	CrashRescues int    `json:"crashRescues,omitempty"`
+	CrashRescues int `json:"crashRescues,omitempty"`
+	// PoolWaits 是「因环境（整池冷却 / 无可用车道 / 上游限流）被退回队列」的累计次数（round 60 · T54）。
+	//
+	// 为什么不能复用 Attempts（与 CrashRescues 同一教训）：Attempts 是**单次 runOne 内**的重试序号
+	// （engine.go 每轮 `t.Attempts = attempt` 直接赋值），任务被退回队列后重新起跑会从 0 覆盖回去 ——
+	// 实测 5134 台账行内 attempt 值序列 0,0,0,1,1,2,2,0，即 47 次循环只涨到 2/3。
+	// 拿它当重投预算等于没有预算，僵尸任务会永久占住在途位（见 engine.go 的 poolWaitBudget 注释）。
+	PoolWaits    int    `json:"poolWaits,omitempty"`
 	MaxAttempts  int    `json:"maxAttempts"`
 	Model        string `json:"model"`
 	OutputFormat string `json:"outputFormat"`
