@@ -2293,6 +2293,28 @@ func collectOutputs(workDir string) (map[string][]byte, []string, error) {
 	return collectOutputsSince(workDir, 0)
 }
 
+// workspaceScratchDirs 是**代理/工具草稿**目录（round 61 · T60）。
+//
+// 为什么要跳过：工作空间是**多写者共用**的（人类、并行的 DSH 会话、守护脚本都往里写），
+// 而 collectOutputsSince 只按 mtime 筛"窗口内变更"——于是别人的草稿会被当成"本任务的产物"。
+// live 实锤（2026-10-28 23:15）：任务 task-dafac806656cc52b 的产物目录里出现
+// `runtime/tmp/commitmsg-t59.md`，与 Lead 在工作空间的同名文件 **sha256 逐字节一致**（7917744BA17873D9）。
+//
+// 后果不止是证据被污染：产物集合决定"有没有产出"（len(produced)==0 时才会退回 final 文本兜底）
+// 与返工提示词的内容 —— 别人写下的文件可以让一次**零产出**任务凭空"有产出"。
+// 这些目录是工具草稿而非项目交付，跳过它们不损本意（本意是捞「模型没声明产物块、但真把文件写进了项目」的那种产出）。
+var workspaceScratchDirs = []string{"runtime/tmp", "xtmp"}
+
+// isWorkspaceScratch 判断工作空间相对路径是否落在草稿目录里（传入须为 slash 形式）。
+func isWorkspaceScratch(rel string) bool {
+	for _, p := range workspaceScratchDirs {
+		if rel == p || strings.HasPrefix(rel, p+"/") {
+			return true
+		}
+	}
+	return false
+}
+
 // collectOutputsSince 读取 workspace 下的文本文件；since>0 时只收 mtime >= since 的文件。
 //
 // external 模式必须带 since：工作目录是用户真实项目，全量采集会把历史文件当产出。
@@ -2310,6 +2332,10 @@ func collectOutputsSince(workDir string, since int64) (map[string][]byte, []stri
 		}
 		if d.IsDir() {
 			if d.Name() == "node_modules" || strings.HasPrefix(d.Name(), ".") {
+				return filepath.SkipDir
+			}
+			// 目录级跳过代理/工具草稿（T60）：整棵子树不进 Walk，既去污染也省扫描。
+			if rel, rerr := filepath.Rel(workDir, path); rerr == nil && isWorkspaceScratch(filepath.ToSlash(rel)) {
 				return filepath.SkipDir
 			}
 			return nil
@@ -2338,8 +2364,12 @@ func collectOutputsSince(workDir string, since int64) (map[string][]byte, []stri
 		if relErr != nil {
 			rel = filepath.Base(path)
 		}
-		out[filepath.ToSlash(rel)] = data
-		names = append(names, filepath.ToSlash(rel))
+		relSlash := filepath.ToSlash(rel)
+		if isWorkspaceScratch(relSlash) {
+			return nil
+		}
+		out[relSlash] = data
+		names = append(names, relSlash)
 		return nil
 	})
 	return out, names, err
