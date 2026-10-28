@@ -1040,3 +1040,27 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 ### 六、边界
 - `HEAD == origin/master == 67577b4`（推送踩坑复现：脚本内 push 静默「up-to-date」，单独推才成 ⇒ 已固化为「push 单独一步并核对」）；
 - 引擎在跑（pid 19116，被新守护自动拉起）；keepalive 两个任务 Ready；baseline 未动；worktree 清零；未提交并行会话在途件。
+### 附录 R58 补（round 58 收尾，2026-10-28 15:15）：T51 落地 + 7×24 端到端决断验证通过
+
+**一、T51（`f6d1f9c`，已部署）**：限流台账行不再写「有 lane 没原因」的空壳（三条 live 读数 ` | lane=lane:kilo` 为证），
+新增 `attemptErrorText(res, runErr)`（runErr 优先 → 回退 T50 的 `res.LastError` → 两头空不硬造），带**接线守卫**；
+同提交自纠 round 42 我在 `PlanPrompt` 留下的**孤儿重复句**（blame 定位 `c5904cf3`；出现次数 2→1，绝对路径复算）。
+**负向对照**：摘线 ⇒ `TestRateLimitLedgerWired` 判红；还原 sha 一致 `e1fe143813ef6e74`、复跑 ok。全仓 `go test ./...` rc=0。
+
+**二、T52 判据修正（我原本的假设被代码证据推翻，如实改登记）**：plan 阶段 4/4 失败**不是**「缺禁令」——
+禁令第 6 条 round 31 就在、`plan_toolcall_contract_test.go` 在册；真实失败模式是**思考文本与工具语法混进同一条 final**（模型不听话）⇒ 属车道能力面，不做伪修复。
+
+**三、7×24 的端到端决断验证（本轮最重要的一条运行事实）**
+
+```
+部署：两处根 rev=f6d1f9c、hash==SHA256SUMS 双核对（首页探针仍 UNVERIFIED ⇒ SUMS 如实补齐）
+坑：我用 --quit 停引擎 ⇒ 产品按语义落 state.json.userQuit=true ⇒ 守护「尊重用户意愿不拉起」（判据正确，非缺陷）
+    中途一次「60s 未拉起」正是这条语义在起作用；正规复位 = 再启动一次引擎（Engine.Start 自清标记），不是删文件
+复验：重启后 state.json 无 userQuit → 再杀进程 → **19 秒被 WorkBenchKeepAliveAgent 自动拉起**，运行中二进制 rev=f6d1f9c
+```
+
+⇒ 实验根自此**第一次**具备真正的无人值守续航（此前 12 小时零活动的根因已闭环：keepalive 只认 dist 根）。
+
+**四、遗留（下一轮）**
+- T50/T51 的「bad_exit 行是否带上游 CODE」仍需等一条新 bad_exit 台账样本（本轮窗口内 0 条新 bad_exit 行）；
+- 交付复现仍未取得（累计 verify=2 / pass=1 未变）；T8、T47、T53 待办不变。
