@@ -350,14 +350,19 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		"lastError": s.engine.LastError(),
 		"now":       model.Now(),
 		"models":    s.engine.RouterHealth(),
-		"startedAt": s.engine.Stats().TotalTasks,
+		// startedAt 复用上面第 344 行已算好的 st（2026-10-28 性能修复）：原先这里写的是
+		// s.engine.Stats().TotalTasks —— 同一次请求里第二次全量 store.List()（5001 条按值
+		// 拷贝 + 排序，实测单价 2.0–2.75ms / 2.9MB 垃圾），而它只要一个 int。
+		// 下面 stallReason 同理走 StallReasonWith：一次 /api/status 原本要付 5~6 份快照。
+		"startedAt": st.TotalTasks,
 		// 限流状态自证：上游 429 时工作台会"运行中但 0 产出"，
 		// 必须让面板能说清"我为什么没在干活"（否则 24/7 系统会静默停摆）。
 		"rateLimit": s.engine.RateLimitStatus(),
 		// 停摆原因自证（2026-10-21 现场）：用户报告的正是"运行中但今日产出 0"。
 		// 只报 running + 0 而不说为什么，等于把排查成本全推给人；
 		// stallReason 把"为什么现在没有产出"归纳成稳定原因码 + 一句人话。
-		"stallReason": s.engine.StallReason(),
+		// With 版本复用 st：判据与文案不变，只是不再重算快照（由来见 StallReasonWith 注释）。
+		"stallReason": s.engine.StallReasonWith(st),
 	})
 }
 

@@ -91,8 +91,13 @@ const StallUpstreamRejecting = "upstream_rejecting"
 //
 // 实现只读 e.lastErr / 限流状态等**已有**信号，不新增热路径开销：
 // 任务失败时引擎已把错误写进 lastErr（见 failTask），这里直接取用。
-func (e *Engine) upstreamFailingStall(now int64) (StallReason, bool) {
-	stats := e.Stats()
+//
+// stats 由调用方传入（2026-10-28 性能修复）：原先这里自带一次 e.Stats()，而调用方
+// （面板 /api/status）本来就已经算过一份 ⇒ 同一次请求把全量 store.List() 重复付 5~6 次
+// （生产 5001 条，实测单价 2.0–2.75ms + 2.9MB 垃圾，见 store/bench_perf_probe_test.go）。
+// 传入的第二层收益：三个判据看的是**同一时刻**的快照，不再出现「前一个判据读到 running=1、
+// 后一个读到 running=0」的撕裂读数（原判据各自重算，这条时间面缺口一直存在）。
+func (e *Engine) upstreamFailingStall(now int64, stats model.Stats) (StallReason, bool) {
 	if stats.TodayDone > 0 || stats.RunningTasks == 0 {
 		return StallReason{}, false
 	}
@@ -128,8 +133,8 @@ func (e *Engine) upstreamFailingStall(now int64) (StallReason, bool) {
 //  3. 整池冷却闸门仍在生效（poolWaitUntil > now）。
 //
 // 不依赖 TodayDone：这条原因解释的是"为什么此刻 0 个在跑"，不是"今天有没有产出"。
-func (e *Engine) queuedWaitingForLane(now int64) (StallReason, bool) {
-	stats := e.Stats()
+// stats 同 upstreamFailingStall：由调用方传入同一份快照，这里不重算。
+func (e *Engine) queuedWaitingForLane(now int64, stats model.Stats) (StallReason, bool) {
 	if stats.QueuedTasks == 0 || stats.RunningTasks > 0 {
 		return StallReason{}, false
 	}
@@ -177,24 +182,33 @@ func upstreamRejectKind(lastErr string) string {
 // 只在"引擎处于 running 且当前无产出压力"时给出非空原因；
 // 其余情形返回 StallNone（正常产出中，或引擎本来就没在跑）。
 func (e *Engine) StallReason() StallReason {
+	// 兼容入口（对外签名不变）：手上没有 stats 的调用方（CLI / 治理采样）自算一份。
+	// 已经算过 Stats() 的调用方（面板 /api/status）**必须改走 StallReasonWith**，
+	// 否则同一次请求里全量 store.List() 会被重复付 —— 由来见 upstreamFailingStall 注释。
+	return e.StallReasonWith(e.Stats())
+}
+
+// StallReasonWith 与 StallReason 判据、文案、优先级完全相同，只多收一份调用方已算好的
+// stats 快照。拆两个入口而不是给 StallReason 加参数：后者是对外 API（web/CLI 都在调），
+// 改签名就违反「对外接口不变」。
+func (e *Engine) StallReasonWith(stats model.Stats) StallReason {
 	if e.Phase() != model.PhaseRunning {
 		return StallReason{}
 	}
-	stats := e.Stats()
 	now := model.Now()
 	// 「有任务在跑」不等于「在产出」（2026-10-21 现场，这是用户报的那句话的正解）：
 	//   面板显示 running=6 / queued=3，看起来一切正常，但 todayDone=0 —— 因为 6 条任务
 	//   全部卡在"上游拒答→换模型→再被拒"的重试环里，一条都没有真正完成。
 	//   旧的早退条件（RunningTasks > 0 就不报停摆）恰好把这个形态判成"正常"，
 	//   于是最需要解释的现象反而没有解释。必须先判"跑着但没有任何完成"。
-	if stall, hit := e.upstreamFailingStall(now); hit {
+	if stall, hit := e.upstreamFailingStall(now, stats); hit {
 		return stall
 	}
 	// 「有排队任务」不等于「不用解释」（2026-10-21 22:3x 现场补判）：
 	// 整池闸门按住调度时队列会一直满着而 running 恒为 0，旧早退条件把这个形态
 	// 当成"只是还没轮到"，于是用户看到的"排队 14 / 正在执行 0"没有任何解释。
 	// 这条必须在下面的早退之前判 —— 它比"还没轮到"更具体，有确定的等待时长。
-	if stall, hit := e.queuedWaitingForLane(now); hit {
+	if stall, hit := e.queuedWaitingForLane(now, stats); hit {
 		return stall
 	}
 	if stats.TodayDone > 0 || stats.RunningTasks > 0 || stats.QueuedTasks > 0 {

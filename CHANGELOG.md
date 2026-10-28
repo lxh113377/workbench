@@ -72,6 +72,35 @@
   **该项本轮不做，登记为待办（不是遗漏）**：避开坏车道 / 取消 tier 放宽 / 缩短阶段预算，三者都会改变
   方案车道选择，进而改变执行段 prompt 与产物内容 ⇒ 与本轮目标第 1 条「保持输出结果不变」直接冲突
   （P0.19：当轮命令 > 一切规则）。待办含卡点、实测证据与下一步：`.workbuddy/memory/2026-10-28_plan白烧待办.md`。
+- **面板 /api/status 不再重复付 5~6 次全量快照：`StallReason` 单价实测 3.0 倍（2.95×，与理论值吻合）**：
+  **这是同族第二处「重复计算」，但与上一笔不同 —— 它在线上真实、持续触发，与评估器窗口 W 无关**：
+  一次 `/api/status` 里全量 `store.List()`（生产 5001 条按值拷贝 + 排序，单价实测 1.97–2.75ms / 2.9MB /
+  5004 allocs，读数见 `internal/store/bench_perf_probe_test.go`）被重复付 5~6 次 ——
+  `server.go:344` 自算一次、**`server.go:353` 的 `startedAt` 字段又字面重算一次**（只为取一个 int）、
+  `StallReason` 内部再自带三次（自身 + `upstreamFailingStall` + `queuedWaitingForLane` 各一次）。
+  面板 5s 轮询 + SSE 每事件刷新 ⇒ 这台机器上持续有白烧 CPU 与 GC 压力，而它跟 DSH 子进程争的是同一份
+  CPU/磁盘 —— 「各种对话都偏慢」里属于面板侧的那一块就来自这里。
+  **顺带修掉一个隐性正确性缺陷（不是性能）**：三个判据原先各看各的快照，同一次请求里可能出现
+  「前一判据读到 running=1、后一判据读到 running=0」的撕裂读数 —— 现在同源同一份。
+  **改法（三处，对外接口与结果不变）**：两个判据函数改收 `stats` 形参；新增 `StallReasonWith(stats)`；
+  `StallReason()` 签名不变、退化为 `StallReasonWith(e.Stats())` 薄封装（CLI/治理那些手上没有现成快照的
+  调用方零改动 —— 直接给现有导出方法加参数会违反「对外接口不变」）。
+  **判据（四条，全在 engine 包）**：① 行为保持 = 既有 `TestStall*` 11 例**一行未改**全 PASS；
+  ② 等价 = 两个入口逐字段相等（命中分支与早退分支各钉一条）；③ 负向对照 = 注入一份与实况不同的空快照，
+  输出必须随之改变，否则说明形参没被消费、"省下的 List()"不存在（假收益）；④ 防回归 = 源码级钉
+  「三个函数体内不得再出现 `e.Stats()`」并要求兼容入口仍委托 `StallReasonWith(e.Stats())`。
+  **判据自身的负控（D10.2）**：把 `stats = e.Stats()` 注回体内 ⇒ ③ 立刻判红（实测 FAIL 文案点名
+  「实现自行重算了 Stats()」），验完还原、residue=false。**这条判据是它自己救回来的**：我第一版
+  写的是「两入口耗时比 ≥2.5」，实测比值 **0.69 判红** —— 因为改完之后 `StallReason()` 只是薄封装、
+  两边快照次数已经相同，那条测的是「封装有没有额外开销」而不是「新旧差多少」；
+  ⇒ 次数下降属**结构事实**，只能用结构判据钉；新旧差必须**跨工作树**测。
+  **收益实测（同一份 bench 文件分别在 `fb98919` 旧树与当前树各跑 3 轮，`-benchtime=100x`）**：
+  旧树 4.66 / 3.27 / 3.15 ms → 新树 1.62 / 1.12 / 1.06 ms ⇒ 中位比 **2.95 倍**（理论 3.0，逐份吻合），
+  每省一份快照另省 2.9MB 垃圾与 5004 次分配。**部署前线上基线已抓**（同实例、5001 条、n=40）：
+  `/api/status` p50=20.8ms / p90=23.5ms，留部署后同口径复测。
+  **验证**：`go test ./internal/engine -run "TestNoInternalStatsInStallPath|TestStall|TestUpstream" -count=1 -v`
+  （期望 11 条既有 + 4 条新增全 PASS）；`go vet ./... && go test ./... -count=1 &&
+  go test ./internal/engine/ ./internal/web/ ./internal/evaluate/ -race -count=1` 全绿（实测 rc=0）。
 ### Fixed
 - **扩展 check_dead_css_tokens：新增 `keyframes` 动画名双向对账（此前没有任何闸管动画名 —— 受跟踪闸里 keyframes 字样命中 0）**：
   **为什么加（目标点名的前端性能与质量面，实测定位的缺口）**：`animation` 引用了不存在的动画名时**浏览器静默忽略** ——
