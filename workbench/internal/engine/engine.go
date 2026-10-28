@@ -1018,7 +1018,19 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 		// 现在的顺序：方案模型出结构化方案 → 渲染成执行指令 → 执行模型落地。
 		// 方案失败不阻塞执行（退化直执行 + 审计），因为通道层的 429 不是任务的错。
 		execTask := task
-		if cfg.Plan.Enabled {
+		// 方案阶段封顶（round 63 · T64）：逐轮重付方案调用是配额黑洞（现场实测占 ~50%），
+		// 到顶后直接执行 —— 方案不是交付的必要条件（退化直执行本就是既有语义），但**反复重付**是。
+		// 留痕不靠静默跳过：日志 + 事件都写清是「到顶」而不是「没跑」。
+		if cfg.Plan.Enabled && task.PlanAttempts >= planAttemptCap {
+			e.log.Info("方案尝试已达上限，直接执行", "taskId", task.ID, "planAttempts", task.PlanAttempts, "cap", planAttemptCap)
+			e.emitEvent(model.Event{Type: "task", At: model.Now(), TaskID: task.ID,
+				Msg: fmt.Sprintf("方案已尝试 %d 次（上限 %d），本轮直接执行", task.PlanAttempts, planAttemptCap)})
+		}
+		if cfg.Plan.Enabled && task.PlanAttempts < planAttemptCap {
+			// 先记账再调用：即使 buildPlan 中途失败，这次"花掉的配额"也要留下痕迹。
+			if _, uerr := e.store.Update(task.ID, func(t *model.Task) error { t.PlanAttempts++; return nil }); uerr != nil {
+				e.log.Warn("方案尝试计数写入失败", "taskId", task.ID, "err", uerr.Error())
+			}
 			lastFailure := planFailureContext(task, cfg)
 			planRound := task.RepairRounds
 			if planRound < 0 {
@@ -1635,6 +1647,14 @@ func isNoLane(res *executor.Result, err error) bool {
 // 4 次 ≈ 20 分钟 —— 足够跨过既有的 5 分钟闸门重探与上游短时限流窗口，又不至于让一条任务
 // 独占自主供料门数小时。判死后若上游已恢复，任务会被下一条自主草案取代；人工重试同样可重开。
 const poolWaitBudget = 4
+
+// planAttemptCap 是单个任务允许「调用思考模型出方案」的最大次数（round 63 · T64）。
+//
+// 取 2 的依据（现场实测，2026-10-29 近 90 分钟）：每任务实际 plan 调用 3~5 次、占全部台账行 ≈50%，
+// 而失败形态是弱车道能力问题（「方案模型无输出」「方案 JSON 解析失败」）——**同池重试的边际收益极低**。
+// 2 次足以跨过一次车道抖动（换一条车道再试一次），又不会把配额对半烧在规划上；
+// 到顶后走既有的「退化直执行」路径（方案并非交付的必要条件），需要真重规划时由 shouldReplan 单独放行。
+const planAttemptCap = 2
 
 // requeueForPoolWait 把任务从 running 退回 queued（合法迁移），并给整池设置等待闸门。
 //

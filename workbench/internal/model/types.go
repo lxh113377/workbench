@@ -203,7 +203,15 @@ type Task struct {
 	// （engine.go 每轮 `t.Attempts = attempt` 直接赋值），任务被退回队列后重新起跑会从 0 覆盖回去 ——
 	// 实测 5134 台账行内 attempt 值序列 0,0,0,1,1,2,2,0，即 47 次循环只涨到 2/3。
 	// 拿它当重投预算等于没有预算，僵尸任务会永久占住在途位（见 engine.go 的 poolWaitBudget 注释）。
-	PoolWaits    int    `json:"poolWaits,omitempty"`
+	PoolWaits int `json:"poolWaits,omitempty"`
+	// PlanAttempts 是「方案阶段已实际调用思考模型的次数」（round 63 · T64）。
+	//
+	// 为什么需要独立计数：attempt 循环里每一轮都会重走一次方案阶段（engine.go 的
+	// `pst := e.buildPlan(...)` 位于 `for attempt` 内），而既有的 shouldReplan 只管
+	// 「验收失败后要不要重新规划」，**不管这条逐轮重付**。现场实测（2026-10-29 近 90 分钟）：
+	// 34 条台账里 plan 行占 17 条（≈50% 配额）、每任务 3~5 次，且绝大多数以
+	// 「方案模型无输出」「方案 JSON 解析失败」收场 ⇒ 一半配额烧在规划上、执行侧反而没配额。
+	PlanAttempts int    `json:"planAttempts,omitempty"`
 	MaxAttempts  int    `json:"maxAttempts"`
 	Model        string `json:"model"`
 	OutputFormat string `json:"outputFormat"`
