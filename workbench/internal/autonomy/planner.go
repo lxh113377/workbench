@@ -136,6 +136,24 @@ var domainLadder = map[string][]string{
 	},
 }
 
+// qualityAxes 是工程质量体检的五轴（round 62 · T61）：与 docs/quality-packs 模板包、
+// 目标文本里的「正确性/可读性/架构/安全/性能」同一套口径 —— 分轴体检产出的是可直接贴 PR 的分级报告。
+var qualityAxes = []string{"正确性", "可读性", "架构", "安全", "性能"}
+
+// axisRotation 数 Recent 里已出现的分轴体检标题条数，作为下一轴的轮转号。
+//
+// 为什么用 Recent 而不是计划器内部状态：计划器是纯函数式的（PlanContext 进出、无状态），
+// 而 Recent 由引擎按 ~24 条近期标题（含被拒草案）喂入 —— 正是「这条目标已经体检过几轴」的事实来源。
+func axisRotation(recent []string) int {
+	n := 0
+	for _, r := range recent {
+		if strings.Contains(r, "体检（") {
+			n++
+		}
+	}
+	return n
+}
+
 // ladderFor 返回某领域的推进阶梯（未知领域回退到 content）。
 func ladderFor(domain string) []string {
 	if l, ok := domainLadder[domain]; ok && len(l) > 0 {
@@ -207,12 +225,29 @@ func (p *Planner) Plan(ctx PlanContext) []Draft {
 		// 截到 80 再回退合法边界后正好停在 78 字节：**追加的焦点后缀被整体吃掉**，
 		// 标题退化成目标标题本身。composeTitle 保证焦点段永不被裁掉。
 		title := composeTitle(goal.Title, shortFocus(focus))
+		rationale := fmt.Sprintf("目标处于第 %d 阶段，按领域推进阶梯执行「%s」", ctx.StageIndex, shortFocus(focus))
+		// 五轴轮转（round 62 · T61）：阶段 0 的「体检」在目标未推进时**标题恒定**，
+		// 于是评估器按重复门禁反复拒绝（2026-10-28 23:58 实测同秒 5 连拒 ⇒ 熔断让位模板），
+		// 目标永远停在第 0 阶段。破法：把体检按五轴轮转 —— 标题互不相同，且每一轮正好是
+		// 目标要的「正确性/可读性/架构/安全/性能」分轴审查（可直接贴 PR 的那种报告）。
+		// 轮转号取自 Recent 里体检类标题的条数（引擎喂入 ~24 条，含被拒草案）：
+		// 前 25 条内必然互不相同；饱和后由下面的兜底分支（保证唯一标题）接管，不会退回死循环。
+		if domain == "quality" && strings.HasPrefix(focus, "体检") {
+			n := axisRotation(ctx.Recent)
+			axis := qualityAxes[n%len(qualityAxes)]
+			focus = fmt.Sprintf("体检：只做「%s」这一轴 —— 扫当前工作目录的项目，列出带 文件:行号 的真实缺陷", axis)
+			// ⚠️ 焦点段里的轴名与轮次之间**禁止再用 "·"**：duplicated() 取的是「最后一个 · 之后」的焦点段，
+			// 内层再来一个 · 会让「正确性·第1轮」与「可读性·第1轮」被截成同一个「第1轮）」⇒ 判重退回死循环。
+			// 这条是写这个修法时被测试当场抓出来的（诊断读数：第二轮退回兜底标题「…· 阶段1」）。
+			title = composeTitle(goal.Title, fmt.Sprintf("体检（%s/第%d轮）", axis, n/len(qualityAxes)+1))
+			rationale = fmt.Sprintf("阶段 0 分轴体检：%s（五轴轮转，避免恒定标题被判重）", axis)
+		}
 		d := Draft{
 			Title:     title,
 			Prompt:    p.buildLadderPrompt(goal, focus, ctx),
 			Domain:    domain,
 			Words:     p.cfg.Words,
-			Rationale: fmt.Sprintf("目标处于第 %d 阶段，按领域推进阶梯执行「%s」", ctx.StageIndex, shortFocus(focus)),
+			Rationale: rationale,
 		}
 		if !duplicated(d.Title, ctx.Recent) {
 			out = append(out, d)
