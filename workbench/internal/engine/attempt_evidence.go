@@ -1,6 +1,10 @@
 package engine
 
-import "workbench/internal/executor"
+import (
+	"strings"
+
+	"workbench/internal/executor"
+)
 
 // attemptEvidence 从执行结果里抽出「失败取证」三个字段，供 attempts.jsonl 落账（T15-④ / T21）。
 //
@@ -19,4 +23,23 @@ func attemptEvidence(res *executor.Result) (stderrPath string, producedRunes int
 		return "", 0, ""
 	}
 	return res.StderrPath, len([]rune(res.FinalText)), res.Command
+}
+
+// attemptErrorText 给台账的 error 列选一句**有信息量**的原因（round 58 · T51）。
+//
+// 为什么需要（live 实锤）：限流分支原先写 `errText(runErr) + " | lane=…"`，而执行器在
+// 「退出码 0 但没有最终答案 / 429」这类路径上 **runErr 是 nil**（错误信息只落在 res.LastError 里），
+// 于是台账里出现 `error=" | lane=lane:kilo"` —— lane 有了、上游原因丢了，运维查不到为什么被限流。
+// （T50 之后 res.LastError 才真的带上游 CODE，本函数才有的可拿。）
+//
+// 取舍：runErr 优先（它是包装层的最终结论，带重试语境），为空才退回事件流抓到的上游错误；
+// 两者都空时返回空串，由调用方保留原有拼接逻辑，不硬造一个假原因。nil 安全。
+func attemptErrorText(res *executor.Result, runErr error) string {
+	if s := errText(runErr); s != "" {
+		return s
+	}
+	if res != nil {
+		return strings.TrimSpace(res.LastError)
+	}
+	return ""
 }

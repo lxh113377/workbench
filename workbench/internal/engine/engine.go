@@ -1153,7 +1153,10 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 			e.store.AppendAttempt(store.AttemptRecord{
 				TaskID: task.ID, Attempt: attempt, Model: actualModel, Kind: string(executor.KindRateLimited),
 				Action: "requeue", ElapsedMs: elapsed.Milliseconds(),
-				Error:      errText(runErr) + " | lane=" + lane,
+				// T51：runErr 在这条路径上常为 nil（执行器退出码 0 但被判限流），
+				// 旧写法只拼 runErr ⇒ 台账留下 `error=" | lane=…"` 这种「有 lane、没原因」的空壳。
+				// attemptErrorText 在 runErr 为空时回退到事件流抓到的上游错误（T50 的 StreamError/LastError）。
+				Error:      attemptErrorText(res, runErr) + " | lane=" + lane,
 				StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
 			})
 			remaining := e.router.AvailableLanes()

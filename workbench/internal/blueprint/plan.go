@@ -52,7 +52,6 @@ func PlanPrompt(goalIntent, taskTitle, taskPrompt string, minWords int, lastFail
 	// 后续轮次再在这份产物上追加（调用方已经把首轮的体量参考压到最小可验收量级）。
 	b.WriteString("7. 首轮按**最小可验收交付**设计：优先「1 个文件（建议 ≤60 行）+ 1 条本机可执行的验收命令」；\n")
 	b.WriteString("   后续轮次会在这份产物上追加，不要一上来就贪大。\n")
-	b.WriteString("   工作台**不会执行**它们，方案只会被判为不可用。方案只能是一个 JSON 对象（见下方 schema）。\n")
 
 	b.WriteString("\n## 输出 schema\n")
 	b.WriteString("{\n")
