@@ -257,6 +257,28 @@ func (p *Planner) Plan(ctx PlanContext) []Draft {
 //
 // 这是"动态任务"与"固定模板"的核心区别：模板的 Prompt 是 {topic} 占位符，
 // 这里的 Prompt 带着项目目标、已完成阶段、上一阶段不足，模型是在"接着项目往下做"。
+// autonomyDeliverableGate 是自主任务的**交付物门禁**条款（round 61 · T59）。
+//
+// 为什么必须加（本会话两处 live 取证合成的结构矛盾）：
+//   - 自主 prompt 原先写「直接输出可用的 Markdown 正文」（聊天正文）；
+//   - 而执行器会给每个任务追加产物协议（executor.AppendProtocol），failover 闸门 judge()
+//     又要求响应里必须有 <<<ARTIFACTS>>> 产物块，否则记 no_artifact 并换车道。
+//
+// 两侧要求互斥 ⇒ 听话按 prompt 的车道被判 no_artifact（round 60 实测 12 次 kind=ok、判定行 0、从未走到验收），
+// 听话按协议的车道交出自写脚本又常年跑不过（现网 8 条 verify 里 7 条 fail：探索脚本退出码 1、
+// manifest JSON 解析失败、代码围栏未闭合）。
+//
+// 本条款把自主任务拉回「报告文件 + 内容判据」这条两类车道都做得动的窄路，并**顺带对齐目标要求**：
+// 报告落在 docs/（指定地点）、含结论/证据/门禁建议三节、证据带 file:line、可直接贴 PR。
+// 措辞复用产物协议第 4 条已由 live 证明有效的「.md 成果文件 + 原样命令」范式。
+const autonomyDeliverableGate = "\n\n## 交付物门禁（硬性）\n" +
+	"1. 交付物是**文件**不是聊天正文：按上面的产物协议输出产物块，把报告写到 docs/ 下的 .md\n" +
+	"   （例：docs/五轴审查-<主题>.md）。\n" +
+	"2. 报告必须含三节，标题逐字一致：`## 结论`、`## 证据`、`## 门禁建议`。\n" +
+	"3. 「证据」节每条都要带 **file:line** 或一条**可复跑命令**；禁止「经检查」「可以发现」这类无证据表述。\n" +
+	"4. verify 至少 1 条**检查报告内容**的命令；不要拿「运行你自己刚写的脚本」当唯一验收 —— 免费车道写的脚本跑不过，会把整条任务拖成返工。\n" +
+	"5. 不要输出你自己的工具调用语法（工作台不执行它们，只会判本方案/本产物不可用）。\n"
+
 func (p *Planner) buildLadderPrompt(goal *Goal, focus string, ctx PlanContext) string {
 	var b strings.Builder
 	b.WriteString("你是自主执行本项目的 AI。项目核心目标：")
@@ -284,8 +306,9 @@ func (p *Planner) buildLadderPrompt(goal *Goal, focus string, ctx PlanContext) s
 		}
 		b.WriteString("\n")
 	}
-	b.WriteString(fmt.Sprintf("产出要求：约 %d 字；直接输出可用的 Markdown 正文；", p.cfg.Words))
+	b.WriteString(fmt.Sprintf("产出要求：约 %d 字；报告正文写进**产物文件**（不是聊天正文，见下方交付物门禁）；", p.cfg.Words))
 	b.WriteString("包含明确结论与可执行建议；不要写导语寒暄；不要复述上面的要求。\n")
+	b.WriteString(autonomyDeliverableGate)
 	return b.String()
 }
 
@@ -302,7 +325,8 @@ func (p *Planner) enrichPrompt(goal *Goal, ideaPrompt string, stage int, gaps []
 			b.WriteString("- " + strings.TrimSpace(g) + "\n")
 		}
 	}
-	b.WriteString("\n要求：输出 Markdown 正文，内容具体可执行，约 " + fmt.Sprint(p.cfg.Words) + " 字；直接给出成果，不要寒暄。")
+	b.WriteString("\n要求：内容具体可执行，约 " + fmt.Sprint(p.cfg.Words) + " 字；直接给出成果，不要寒暄；交付形态见下方交付物门禁。")
+	b.WriteString(autonomyDeliverableGate)
 	return b.String()
 }
 
