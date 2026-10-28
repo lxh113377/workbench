@@ -1015,3 +1015,28 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 - 已改为**持续自动执行**：`autoStart=true / plan=true / chain=true / conc=2 / maxTasks=12`（备份 `config.json.bak-r54-*`）；
 - `pool.preferredModels` 按当代实测 ok 率重排 9 条（dots-studio、kilo-auto、openrouter 在前）；keepalive 已重新 ENABLE（Ready）；
 - 引擎在跑（当前 pid 见台账）；guard 修复在仓库文件里即时生效（keepalive 直接读 `tests\instance_guard.ps1`，无需重建二进制）。
+## round 58（同会话，2026-10-28 14:10-15:00）—— T50 落地并 live 生效 + 实验根守护补齐（7×24 真成立）+ 三项新登记
+
+### 一、T50（`ef06c76`，Lead 自干）
+- 取证：`Event.Reason` 全仓零解析点，三类上游错误（TRANSPORT/SERVER/RATE_LIMIT）全在 status 帧；bad_exit 台账 `stderrPath` 12/12 空、error 是循环表述；
+- 改动：`captureEventError` + `Result.StreamError` + `finalErrorText`（上游优先，旧写法被 stderr 无条件覆盖）+ `kindFromStreamError` 正名 + `classify` 补 not_served；
+- 测试：4 组表驱动 + **接线守卫**（防「有单测没接线」——本会话第 4 次）；行为面复核 `retry.ParseKind` 不改重试语义；全仓 `go test ./...` rc=0。
+
+### 二、T50 的 live 判读（按行时间戳，不用 mtime）
+- **生效**：部署后新写的 3 条 `rate_limited` 行带 lane 标签（14:33/14:37/14:44）⇒ 429 不再被当 bad_exit、改走「车道冷却 + 退队列」；
+- 未取：bad_exit 行的上游原因（本窗口无新 bad_exit 台账行）；窗口内新增 verify=0 ⇒ 交付未复现。
+
+### 三、实验根守护补齐（`67577b4`）—— 12 小时零活动的真因
+- 真因：keepalive 只认 dist 根（且该根有 10-25 遗留 user-quit.flag ⇒ 尊重意愿不拉），实验根无人守护；
+- 新增 `tests/keepalive-agent.cmd` + 计划任务 `WorkBenchKeepAliveAgent`；踩坑：.cmd 中文注释被 cmd.exe 按 OEM 码页切碎当命令执行（任务 Ready 却空转），改 ASCII-only 后端到端**杀 → 28 秒自动复活**，且不误杀在跑实例；
+- 部署 `ef06c76` 到两处根（hash==SUMS、vcs.revision 双核对）。
+
+### 四、T48 取证更正（我上轮选错样本）
+- 模板层生效（4/4 含条款、历史上被用 627 次），但安装后新建的 2 条任务**全是 autonomy 来源、无 templateId** ⇒ 条款还没进过新任务 prompt ⇒ 判「部分生效」，判据保留。
+
+### 五、新登记
+- **T51** rate_limited 台账丢了上游原因（engine.go:1156 在该路径 runErr 为空）；**T52** plan 阶段吐自有工具语法 ⇒ `方案 JSON 解析失败` 4/4（plan 全灭），取向是加一行禁自有语法而非塞产物协议；**T53** 自动任务把 scratch 写进工作空间 `undefined/`（探针属并行会话在途件，本轮未碰）。
+
+### 六、边界
+- `HEAD == origin/master == 67577b4`（推送踩坑复现：脚本内 push 静默「up-to-date」，单独推才成 ⇒ 已固化为「push 单独一步并核对」）；
+- 引擎在跑（pid 19116，被新守护自动拉起）；keepalive 两个任务 Ready；baseline 未动；worktree 清零；未提交并行会话在途件。
