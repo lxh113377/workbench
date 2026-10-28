@@ -70,3 +70,10 @@ workbench/exec
 # workbench/workbench.exe 是本地构建产物（实测 13.88MB / ProductVersion 1.0.0.0，
 # 与 dist/workbench.exe 9.82MB 不同 —— 是另一条构建路径的输出）。交付物只在 dist/。
 workbench/workbench.exe
+
+# 2026-10-28（性能优化会话）：DSH 会话在本工作区写出的面板/工具流量记录（.dsh-ops/panel/*.ndjson、
+# *.json 逐调用转写）。实测 41 个文件 / 24MB、受跟踪 0 个，且单文件最大 6.8MB 仍在增长 ——
+# 形态与 tests/_egress/（41MB GeoIP）、workbench/build/（32MB 构建）同类：可再生的运行副产物，
+# 不是源码也不是并行会话的在途工作（check_gitignore_leak 判红即因它漏出 ignore）。
+# 整目录收：该目录内没有任何需要入库的资产，逐条列名只会让下一次会话新增文件时再判红。
+.dsh-ops/
