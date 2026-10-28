@@ -16,6 +16,48 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **调度热路径的相似度重复计算：一个补货 tick 从 826ms 降到 10.4ms（79 倍），内存与分配各降 1264 倍 / 1580 倍**：
+  **瓶颈定位（先测再改，两处初判都被实测推翻，如实记录）**：目标说「任务执行明显偏慢」，我先量化「慢在哪一段」，
+  用生产数据根 `D:\workbench-agent\workbench-output`（非仓库内旧快照）把一条任务从创建到终态拆开：
+  排队 22.90h vs 执行 22.90h（各 50%），机器空闲占比 80% ⇒ **不是容量 bound**。
+  被实测推翻的两个初判：① 「方案车道避让」——按车道分组 63 行 plan 台账得「纯成功车道 0 / 纯失败车道 15」，
+  成功不聚集 ⇒ 无信号，方案作废；② 「collectOutputsSince 先筛扩展名再 Info()」——探针报 24.9s→7.2s（3.5 倍），
+  但那是 A 先跑吃冷树的**缓存混淆**；改成同树交替 3 轮取中位数 ⇒ **1.00 倍**，已回滚（`d.Info()` 在 Windows
+  由 ReadDir 目录项缓存供给，热时 ≈1.6µs，原注释本就写明）。这轮唯一站得住的是 `go test` 计时排除不了的面：
+  `internal/evaluate` 的 `similarity()` 每次比对都把**两侧**字符串重新 normalize + 建 3-gram 集合。
+  **量级（基准实测，bench_similarity_probe_test.go）**：`supplyCandidates` 每 tick 对 24 个模板各评估一次，
+  每次评估都要与滚动窗口（生产 Seed=400 条）逐条比对 ⇒ 一次 `novelty()` = **39.0ms / 14.2MB / 39.2 万次分配**，
+  一个 tick = **826ms / 364MB / 969 万次分配**。队列几乎恒空 ⇒ 每 3 秒白付一次 0.83 秒 CPU 与 364MB 垃圾，
+  这与面板/其他会话争同一台机器的 CPU 与 GC —— 正是「各种对话都偏慢」的同源症状。
+  **修法（最小改动：三处，零语义变化）**：历史侧 3-gram 集合缓存在 `recentItem` 的两个新字段上（条目内容
+  写入后不再变化 ⇒ 一生只归一一次），候选侧集合提到循环外（单次评估内它本就是常量，原写法被重建 400 遍）；
+  比对走新抽的 `jaccard(sa, sb)`，公式与 `similarity` **逐字同式**，`similarity` 本体保留未改 ⇒ 充当等价性参照。
+  `for _, it := range` 改成 `for i := range` 取地址 —— range 给副本，写不回缓存字段。
+  **判据（similarity_cache_test.go，四条）**：逐值等价（含空串/超短串<3rune/纯空白三类边界，17 位精度比对）、
+  `novelty()` 整体返回值与不缓存旧路径相等、窗口对外读数（RecentTitles/DomainShare）不受新字段影响、
+  **负向对照**：人为把缓存改坏必须立刻判红（实测 `before != after` 且 `fresh != after` 双断言 ⇒ 证明判据有牙、
+  不是恒绿；若它绿着就说明 jaccard 根本没读缓存）。缓存就地写字段的并发安全由 `go test -race`
+  （evaluate/engine/store/web 四包）钉住 —— 调用方必须持 `e.mu` 写锁，已在方法注释写明。
+  **内存护栏（本轮由自己的判据抓出的回归，不是设计时想清的）**：内存探针第一版用「填充前后 HeapAlloc 之差」
+  读出**负数**（-0.27 / -1.26 / -3.71 MB）⇒ 测法本身不可信（基线被 GC 清扫时机污染）；改成「同刻双窗口只填一边」
+  又出现同一份缓存测出 -0.21MB 与 +2.29MB（噪声与信号同量级）；第三版改成五窗口交替填充、丢首读、取中位数
+  并要求极差 ≤30%，读数才稳（离散度 0.00）。稳了之后立刻暴露真问题：**集合成本 ≈75 字节/rune**，
+  400 条 ×3000 rune 的 `fullSh` 要 **60MB**（生产 prompt 实测 p50=91 / p90=974 / max=6948 ⇒ 最坏能冲到 140MB），
+  与 supervisor 的 MemLimitMB=700 自愈阈值冲突（现场曾报高峰 752MB）。故加 `maxCachedShingleEntries=1024`：
+  超限条目**不落缓存、每次现算**（返回临时集合，字段保持 nil）⇒ 判据结果逐字节不变，只是长文回到旧路径；
+  实测最坏档缓存从 60.3MB 降到 0.26MB（只留标题侧），典型档（p50 长度）约 2.3MB。
+  并用 `BenchmarkNovelty400Uncached` 钉住护栏下界：400 条 ×3000 rune 全走现算 = 143ms，
+  **与改造前同速 ⇒ 护栏不引入更差路径**（这条基准是「长文本没被拖慢」的声明，不是收益声明）。
+  **收益**：`BenchmarkTickSupply` 826ms → 10.4ms（**79 倍**），分配 969 万 → 6,137（1,580 倍），
+  字节 364MB → 288KB（**1,264 倍**）；一次 `novelty()` 39.0ms → 0.561ms。
+  **对外接口与结果零改动**：`similarity`/`normalize`/`shingles` 签名与语义不变，`Evaluate` 入参出参不变，
+  两个新字段是非导出且只承载派生值；本提交只含 1 个 `.go` 源文件改动（+79/−4，无整文件重写）+ 4 个测试文件。
+  **验证（可复跑）**：
+  `go test ./internal/evaluate/ -run "TestSimilarityCache|TestNoveltyEquals|TestCacheCorruption|TestWindowFields" -count=1 -v`（期望 4 PASS）；
+  `go test ./internal/evaluate/ -run XXX -bench Benchmark -benchtime=100x -benchmem`（期望 TickSupply ≈10ms 量级）；
+  `WB_MEM=1 go test ./internal/evaluate -run TestCacheMemoryCost -count=1 -v`（期望三档中位数均 <40MB 且短文已缓存/超长未缓存）；
+  `go vet ./... && go test ./... -count=1 && go test ./internal/evaluate/ ./internal/engine/ ./internal/store/ ./internal/web/ -race -count=1` 全绿。
+### Fixed
 - **扩展 check_dead_css_tokens：新增 `keyframes` 动画名双向对账（此前没有任何闸管动画名 —— 受跟踪闸里 keyframes 字样命中 0）**：
   **为什么加（目标点名的前端性能与质量面，实测定位的缺口）**：`animation` 引用了不存在的动画名时**浏览器静默忽略** ——
   不报错、不告警、控制台干净，只有动效没了；定义了却没人引用则是死代码。这正是本仓最怕的「隐身失败」类，而同族的

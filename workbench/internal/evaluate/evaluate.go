@@ -40,6 +40,13 @@ type recentItem struct {
 	// 为什么必须记（round 46 · T32-b）：时间窗是给「没交付成功的同一任务」留的重跑口子；
 	// 缺了交付态，窗外放行会把**已交付**的 (title,prompt) 也放出去重产重跑。
 	Delivered bool
+	// shTitle / shFull 是相似度集合缓存（2026-10-28 性能修复，由来见 similarity 的注释）：
+	// 这两项都是 Title / Title+Prompt 经 normalize + 3-gram 的派生值，**条目写入后不再变化**，
+	// 而每次评估都要与整窗口重算一遍（实测一个补货 tick = 24 模板 × 400 条 × 两侧重建
+	// = 826ms CPU / 364MB 垃圾）。nil = 尚未计算，首次在持锁路径里惰性填充。
+	// 语义零影响：缓存值与每次重算逐字节相同（判据 TestSimilarityCacheEqualsFreshComputation）。
+	shTitle map[string]struct{}
+	shFull  map[string]struct{}
 }
 
 // delivered 判断一条历史任务是否已经**交付成功**。
@@ -220,7 +227,11 @@ func (e *Evaluator) gates(in Input, now int64) []string {
 		// 正确口径：最近窗口里"同目标"的历史条目不作为重复依据；
 		// 跨目标的相似产出仍然受门禁约束。
 		fp := fingerprint(t.Title, t.Prompt)
-		for _, it := range e.recent {
+		// 候选侧集合单次评估内不变 ⇒ 提到循环外只算一遍（原写法每条历史都要重建候选侧，
+		// 一个 tick 24 模板 × 400 条 ⇒ 候选侧重建 9600 次）。
+		shCandTitle := shinglesOf(t.Title)
+		for i := range e.recent {
+			it := &e.recent[i] // 索引取地址：range 给副本，写不回缓存字段
 			if it.TaskID == t.ID {
 				continue
 			}
@@ -257,7 +268,8 @@ func (e *Evaluator) gates(in Input, now int64) []string {
 			// 模糊相似**只比标题**（round 45 · T32，独立排查实锤）：比全量 title+prompt 时，
 			// 长脚手架模板的常量段把相似度顶到 0.92~0.997（9 条模板 859 条**永久误杀**），
 			// 量的其实是模板常量而不是主题变量。实测全库「只看标题」的 Jaccard 从不为 ≥0.9。
-			sim := similarity(t.Title, it.Title)
+			// 历史侧走缓存（jaccard 与 similarity 同公式，判据钉住逐值相等）。
+			sim := jaccard(shCandTitle, it.titleSh())
 			if sim >= cfg.SimilarityCap {
 				// 模糊判据与精确指纹**同口径加时间窗**：窗外不再拦 ——
 				// 否则「同标题不同 prompt」这类组合仍会被永久封杀（队列饿死换个入口复发）。
@@ -307,15 +319,19 @@ func (e *Evaluator) novelty(t *model.Task) float64 {
 	}
 	text := t.Title + " " + t.Prompt
 	fp := fingerprint(t.Title, t.Prompt)
+	// 候选侧全文集合只算一次（与 gates 同一手法）；历史侧用 recentItem 的缓存集合，
+	// 每个条目一生只归一 + 建集合一次。
+	shCandFull := shinglesOf(text)
 	maxSim := 0.0
-	for _, it := range e.recent {
+	for i := range e.recent {
+		it := &e.recent[i]
 		if sameGoal(it.GoalID, t.GoalID) {
 			if it.Fingerprint == fp {
 				return 0 // 同一目标下逐字相同的任务 ＝ 重放，无新颖度
 			}
 			continue
 		}
-		sim := similarity(text, it.Title+" "+it.Prompt)
+		sim := jaccard(shCandFull, it.fullSh())
 		if sim > maxSim {
 			maxSim = sim
 		}
@@ -502,6 +518,65 @@ func sameGoal(a, b string) bool {
 }
 
 // similarity 用 shingle 集合的 Jaccard 相似度近似语义重复。
+// shinglesOf 归一 + 3-gram 的一步到位形式（调用点统一走这里，避免 normalize/shingles 两步散写）。
+func shinglesOf(s string) map[string]struct{} {
+	return shingles(normalize(s))
+}
+
+// jaccard 在**已归一**的两侧集合上算 Jaccard，公式与 similarity 完全同式
+// （交集 / 并集；任一侧空集返回 0）。单独抽出来的理由：similarity 每次都要重建两侧集合，
+// 而窗口比对里同一侧会被反复重建 —— 缓存后走这里，两侧集合各算一次。
+func jaccard(sa, sb map[string]struct{}) float64 {
+	if len(sa) == 0 || len(sb) == 0 {
+		return 0
+	}
+	inter := 0
+	for k := range sa {
+		if _, ok := sb[k]; ok {
+			inter++
+		}
+	}
+	union := len(sa) + len(sb) - inter
+	if union == 0 {
+		return 0
+	}
+	return float64(inter) / float64(union)
+}
+
+// titleSh / fullSh 取（并缓存）历史条目的相似度集合。
+// 调用方必须持 e.mu 写锁（Evaluate / Observe / Seed 的路径都满足），
+// 因为这里会**就地写缓存字段**；只读方（RecentTitles/DomainShare）不碰这两个字段。
+func (it *recentItem) titleSh() map[string]struct{} {
+	if it.shTitle == nil {
+		it.shTitle = shinglesOf(it.Title)
+	}
+	return it.shTitle
+}
+
+// maxCachedShingleEntries 是「值得长期留存」的 3-gram 集合规模上限（2026-10-28 实测定档）。
+//
+// 依据：一个 map[string]struct{} 条目实测占 ≈75 字节堆（cache_mem_probe_test.go 的
+// 配对读数：400 条 ×3000 rune 的集合要 60MB），而窗口有 400 条、生产 prompt 实测
+// p50=91 / p90=974 / max=6948 rune —— 不设上限时单是窗口缓存就能冲到 140MB，
+// 与 supervisor 的 MemLimitMB=700 自愈阈值冲突（现场曾报过高峰 752MB）。
+// 1024 档 ⇒ 最坏 400×1024×75B ≈ 30MB，典型（p50）只有约 3MB。
+//
+// 超上限的条目**不落缓存、每次现算**：判据结果逐字节相同（只是回到旧路径），
+// 所以这是纯内存护栏，不改语义。
+const maxCachedShingleEntries = 1024
+
+func (it *recentItem) fullSh() map[string]struct{} {
+	if it.shFull == nil {
+		sh := shinglesOf(it.Title + " " + it.Prompt)
+		// 长文不进缓存：返回临时集合，字段保持 nil ⇒ 下次仍现算（内存护栏）
+		if len(sh) > maxCachedShingleEntries {
+			return sh
+		}
+		it.shFull = sh
+	}
+	return it.shFull
+}
+
 func similarity(a, b string) float64 {
 	sa := shingles(normalize(a))
 	sb := shingles(normalize(b))
