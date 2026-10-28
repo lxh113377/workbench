@@ -8,6 +8,7 @@ package executor
 // 结果判定拆成 jobExecutorResult 的做法。
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -510,4 +511,88 @@ func firstNonEmptyStr(a, b string) string {
 		return a
 	}
 	return b
+}
+
+// ---------------------------------------------------------------------------
+// 事件流错误的捕获（round 58 · T50）
+//
+// 现场缺陷（实测 12/12 条 bad_exit 的 stderrPath 为空、台账 error 写成循环表述「执行失败: bad_exit」）：
+// 上游真实错误**不在 stderr、也不在顶层 error 帧**，而是塞在 `status` 帧的 `reason.error` 里，例如：
+//   {"type":"status","phase":"turn_end","reason":{"kind":"error","error":{"message":"…closed the stream…","code":"TRANSPORT"}}}
+//   {"type":"status",…,"error":{"message":"our free model does not serve \"combo:auto-vision\" on this egress","code":"SERVER"}}
+//   {"type":"status",…,"error":{"message":"Provider returned error","code":"RATE_LIMIT","status":429}}
+// 而改造前的解析只认 `ev.Type=="error"` ⇒ 这三类全部丢失：429 被当成 bad_exit（于是烧穿候选链换 8 个模型，
+// 正是 2026-10-19 事故的放大路径），not_served 也不进 T44 的出口级粘性判定。
+// ---------------------------------------------------------------------------
+
+// captureEventError 从一条事件里提取「上游真实错误」文本，归一为 "CODE[(status)]: message"；无错误返回空串。
+//
+// CODE 前缀不是装饰，是**分类依据**：现场 TRANSPORT/RATE_LIMIT 两类 message 里没有可匹配关键词（
+// "Provider returned error" 不含 rate_limit），只有 code 能定性；classify 走小写子串匹配，故必须带上 code。
+func captureEventError(ev Event) string {
+	if ev.Error != nil {
+		return formatEventError(ev.Error.Code, ev.Error.Message)
+	}
+	if ev.Type != "status" || len(ev.Reason) == 0 {
+		return ""
+	}
+	// reason 是可变结构：只有 {"kind":"error","error":{…}} 这一支才是上游错误，其余（end_turn 等）忽略。
+	var payload struct {
+		Kind  string `json:"kind"`
+		Error struct {
+			Message string `json:"message"`
+			Code    string `json:"code"`
+			Status  int    `json:"status"`
+		} `json:"error"`
+	}
+	if err := json.Unmarshal(ev.Reason, &payload); err != nil || payload.Kind != "error" {
+		return ""
+	}
+	return formatEventError(payload.Error.Code, payload.Error.Message)
+}
+
+// formatEventError 把 code/status/message 三元组拼成一行文本；message 为空时退回 code（至少有类别可查）。
+func formatEventError(code, message string) string {
+	code = strings.TrimSpace(code)
+	msg := strings.TrimSpace(message)
+	switch {
+	case msg == "" && code == "":
+		return "" // 两头都空：按「无错误」处理，调用方不会把空串当证据
+	case code == "":
+		return msg
+	case msg == "":
+		return code // 只有类别没有描述：至少有类别可查，不算丢失
+	default:
+		return code + ": " + msg
+	}
+}
+
+// finalErrorText 决定本轮 res.LastError 的取值：事件流抓到的上游错误**优先**，
+// stderr 只作为补充（现场 stderr 常是空噪声，而真错误在事件流里）。
+func finalErrorText(streamErr, stderrText string) string {
+	streamErr = strings.TrimSpace(streamErr)
+	stderrText = strings.TrimSpace(stderrText)
+	switch {
+	case streamErr == "":
+		return stderrText
+	case stderrText == "":
+		return streamErr
+	default:
+		return streamErr + " | stderr: " + model.Truncate(stderrText, 300)
+	}
+}
+
+// kindFromStreamError 用抓到的上游错误给「无最终答案」正名（返回 KindUnknown 表示不改变原判定）。
+//
+// 为什么排除 Boot/Exit/Unknown 三种结果：这三类要么来自 stderr 的 "dsh:" 噪声、要么是没匹配上，
+// 拿它们覆盖原判定等于用更弱的证据推翻更强的证据；只有明确的通道级类别（限流/流断/传输/上游/不服务）才升级。
+func kindFromStreamError(streamErr string) Kind {
+	if strings.TrimSpace(streamErr) == "" {
+		return KindUnknown
+	}
+	k := classify(streamErr, &Result{})
+	if k == KindBoot || k == KindExit || k == KindUnknown {
+		return KindUnknown
+	}
+	return k
 }

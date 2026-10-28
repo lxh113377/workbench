@@ -70,6 +70,9 @@ type Result struct {
 	EventsPath string
 	// StderrPath 是本轮子进程 stderr 的落盘位置（有内容才非空；由来见 persistStderrTail）。
 	StderrPath string
+	// StreamError 是事件流里抓到的**上游真实错误**（round 58 · T50，由来见 captureEventError）。
+	// 与 FinalText/SessionID 同一个读流 goroutine 写、cmd.Wait 之后读，不引入新竞态。
+	StreamError string
 	// CliPath / Profile / Command 是「这次尝试确实经 DSH 无头控制执行」的自证字段（round 38 · T21）：
 	//	CliPath —— 实际使用的 desktop-cli.js 路径；
 	//	Profile —— 实际使用的 profile（本仓恒为 web-desktop，见 dshprofile/bootstrap.go 的白名单说明）；
@@ -564,7 +567,8 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	}
 
 	stderrText := strings.TrimSpace(stderrBuf.String())
-	res.LastError = stderrText
+	// T50：上游错误优先，stderr 作补充（旧写法无条件用 stderr **覆盖**，把结构化错误冲掉）。
+	res.LastError = finalErrorText(res.StreamError, stderrText)
 	if waitErr != nil && res.ExitCode != 0 {
 		res.ErrorKind = string(classify(stderrText, res))
 		res.Err = fmt.Errorf("DSH 退出码 %d: %s", res.ExitCode, model.Truncate(stderrText, 400))
@@ -572,6 +576,14 @@ func (r *Runner) run(ctx context.Context, task *model.Task, modelID string) (*Re
 	}
 	// 有些任务把成果写进文件而没有 final 文本；只要 workspace 里有产物也算成功。
 	if strings.TrimSpace(res.FinalText) == "" && !hasWorkspaceOutput(workDir) {
+		// T50：现场最痛的一条 —— 429 / 流断 / 出口不服务都表现为「退出码 0 但没有最终答案」，
+		// 旧代码一律记 KindExit（bad_exit），于是 isRateLimited 判不出来、引擎换 8 个模型打空整池。
+		// 现在用抓到的上游错误正名：拿到明确通道类别就按它归因，拿不到才维持 KindExit。
+		if k := kindFromStreamError(res.StreamError); k != KindUnknown {
+			res.ErrorKind = string(k)
+			res.Err = fmt.Errorf("任务未产生最终答案（上游错误: %s）", model.Truncate(res.StreamError, 300))
+			return res, nil
+		}
 		res.ErrorKind = string(KindExit)
 		res.Err = fmt.Errorf("任务未产生最终答案（stderr: %s）", model.Truncate(stderrText, 300))
 		return res, nil
@@ -646,6 +658,11 @@ func (r *Runner) consume(reader io.Reader, eventsFile *os.File, res *Result, clo
 		case "tool_call":
 			res.ToolCalls++
 		case "status":
+			// T50：上游错误藏在 status 帧的 reason.error 里（不在 stderr、也不在顶层 error 帧）。
+			// 只留第一条 —— 它最贴近根因，后续同型噪声不改写它。
+			if txt := captureEventError(ev); txt != "" && res.StreamError == "" {
+				res.StreamError = txt
+			}
 			if ev.Usage != nil {
 				if ev.Usage.InputTokens > res.Usage.InputTokens {
 					res.Usage.InputTokens = ev.Usage.InputTokens
@@ -657,8 +674,11 @@ func (r *Runner) consume(reader io.Reader, eventsFile *os.File, res *Result, clo
 				res.Usage.ReasoningTokens += ev.Usage.ReasoningTokens
 			}
 		case "error":
-			if ev.Error != nil {
-				res.LastError = ev.Error.Code + ": " + ev.Error.Message
+			if txt := captureEventError(ev); txt != "" {
+				res.LastError = txt
+				if res.StreamError == "" {
+					res.StreamError = txt
+				}
 			}
 		}
 	}
@@ -723,6 +743,10 @@ func classify(stderr string, res *Result) Kind {
 		strings.Contains(lower, "econnreset"), strings.Contains(lower, "fetch failed"),
 		strings.Contains(lower, "transport"):
 		return KindTransport
+	// 出口不服务（round 58 · T50）：实测文案「our free model does not serve \"x\" on this egress」，
+	// 必须归 not_served —— 它是**出口配置事实**，T44 靠这个 kind 阻止探测把车道洗白。
+	case strings.Contains(lower, "does not serve"), strings.Contains(lower, "not_served"):
+		return KindNotServed
 	case strings.Contains(lower, "upstream"), strings.Contains(lower, "timeout"):
 		return KindUpstream
 	case strings.Contains(stderr, "dsh:"):
