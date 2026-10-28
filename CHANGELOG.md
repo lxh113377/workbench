@@ -16,7 +16,7 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
-- **调度热路径的相似度重复计算：一个补货 tick 从 826ms 降到 10.4ms（79 倍），内存与分配各降 1264 倍 / 1580 倍**：
+- **调度热路径的相似度重复计算：满窗补货 tick 从 826ms 降到 10.4ms（79 倍，线上 W≈1 时收益近零 —— 见本条「口径更正」）**：
   **瓶颈定位（先测再改，两处初判都被实测推翻，如实记录）**：目标说「任务执行明显偏慢」，我先量化「慢在哪一段」，
   用生产数据根 `D:\workbench-agent\workbench-output`（非仓库内旧快照）把一条任务从创建到终态拆开：
   排队 22.90h vs 执行 22.90h（各 50%），机器空闲占比 80% ⇒ **不是容量 bound**。
@@ -57,6 +57,21 @@
   `go test ./internal/evaluate/ -run XXX -bench Benchmark -benchtime=100x -benchmem`（期望 TickSupply ≈10ms 量级）；
   `WB_MEM=1 go test ./internal/evaluate -run TestCacheMemoryCost -count=1 -v`（期望三档中位数均 <40MB 且短文已缓存/超长未缓存）；
   `go vet ./... && go test ./... -count=1 && go test ./internal/evaluate/ ./internal/engine/ ./internal/store/ ./internal/web/ -race -count=1` 全绿。
+  **口径更正（同日线上实测；标题那 79 倍是「满窗」数，不是线上当前数 —— 不写清就是虚报，#36）**：
+  评估器窗口 `recent` 由 Seed 重建，而 Seed **只收 `done|running`**（evaluate.go:407）；生产快照 5001 条里 done=1 ⇒
+  **线上窗口实测 W：p50=1 / p90=2**（两个数据根、293 次引擎启动一致；生命周期 p50 仅 24 分钟，窗口根本长不满）。
+  故满窗（W=400）的 826ms→10.4ms 属「不重启地长跑 / soak」形态的收益；**当前线上该项收益接近零**，
+  线上端到端实测 `/api/eval/preview`（真实 5001 条 History + 真实窗口）p50=5.5ms / p90=8.1ms。
+  改动仍值得留：窗口只会随长跑涨到 400 封顶（soak 实例就是满窗形态），且它有等价判据、内存护栏、零行为变化，
+  撤掉等于把满窗形态的 0.83s/tick 放回去。
+  **线上真正慢在哪（同窗 259 行台账、按「占并发槽时长」口径）**：方案阶段 7.52h = 占槽 37.4%，
+  其中**失败白烧 6.85h（占 plan 的 91.1%，平均每次白等 207s）**；执行段 12.56h；退避 4.48h。
+  plan 白烧成因链：生产 `plannerTier="quality"`，而路由表 tiers 只有 balanced/fast（无 quality）⇒
+  `planModelFor` 按注释「宁可放宽到任意 tier」把**执行车道**拿去出方案（plan_stage.go:85-104）⇒
+  模型吐 tool-call 语法或散文 → parse fail / 无输出 / 等满 4 分钟阶段预算（context canceled 19 次）。
+  **该项本轮不做，登记为待办（不是遗漏）**：避开坏车道 / 取消 tier 放宽 / 缩短阶段预算，三者都会改变
+  方案车道选择，进而改变执行段 prompt 与产物内容 ⇒ 与本轮目标第 1 条「保持输出结果不变」直接冲突
+  （P0.19：当轮命令 > 一切规则）。待办含卡点、实测证据与下一步：`.workbuddy/memory/2026-10-28_plan白烧待办.md`。
 ### Fixed
 - **扩展 check_dead_css_tokens：新增 `keyframes` 动画名双向对账（此前没有任何闸管动画名 —— 受跟踪闸里 keyframes 字样命中 0）**：
   **为什么加（目标点名的前端性能与质量面，实测定位的缺口）**：`animation` 引用了不存在的动画名时**浏览器静默忽略** ——
