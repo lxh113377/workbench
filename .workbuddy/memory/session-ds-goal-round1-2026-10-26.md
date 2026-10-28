@@ -1121,3 +1121,16 @@ hasItem7=True hasMinimalDelivery=True hasAbout200=True hasItem1Json=True
 负向对照：换入旧版 ⇒ 守卫判红（打印点名 todayStart）；还原后 ok、文件回写一致。**第一次负控被 PS 自身崩坏**（.NET CWD + utf8NoNL 非法编码名）⇒ NEG_RC=0 属无效读数，已判废并用 Node 重做（同族纪律第三次显形：红/绿先查脚本再下结论）。
 
 **四、台账（round 59-60 全部落地）**：T54 `e87358f`（判死解锁，live 全链实证）· T57 `d9ac5f9`（口径统一）· 上一里程碑 T50 `ef06c76`（429 不再伪装 bad_exit，3 条 lane 行实证）。派发：d1 数据取证（交付两次自我修正）✓、d2 代码取证（交付主报告+勘误）✓ —— 我中途用 `list_agents` 判 d2「零产出」是**误判**（该工具不列 subagent），已入纪律。
+## round 61（同会话，2026-10-28 22:41-23:15）—— T59：自主 prompt 与产物协议对齐；引擎续航排障；两处自误
+
+### 一、T59（`cce0445`，已部署）
+- 结构矛盾定性：自主 prompt 要「直接输出 Markdown 正文」，执行器/failover 要 `<<<ARTIFACTS>>>` 产物块 ⇒ 两侧互斥；
+  证据：round 60「12 次 ok、判定行 0、从未走到验收」+ 现网 8 条 verify 里 7 条 fail（脚本 exit 1 / manifest JSON 坏 / 围栏未闭合）；
+- 修法：`autonomyDeliverableGate` 接入两条 prompt 构造器；交付物 = `docs/` 下 .md，含 `## 结论`/`## 证据`/`## 门禁建议`，证据带 file:line，验收检查报告内容；
+- 验证：新测 6 要素 + 旧措辞禁入；负控（摘挂载 ⇒ 判红）；全仓 rc=0；两处根 `rev=cce0445` + hash==SUMS + **二进制文本含条款**。
+### 二、引擎续航
+- 22:38 停止系并行会话 `--quit`（userQuit=true + flag），守护按语义不拉 ⇒ 行为正确；Engine.Start 复位后拉起（部署后 pid=13880）。
+### 三、现场
+- 首次出现 template 来源任务（quality-error-fix / code-tool）；线上 templates.json（数组）含门禁条款；存活任务 poolWaits 计数生效。
+### 四、自误 2 处
+- 进程检查 `\x27` 转义写成字面量 ⇒ 「引擎不在」假读数（已改 Get-Process 复核实为 running）；未先 read 就改 planner.go 被拒（补读后完成）。
