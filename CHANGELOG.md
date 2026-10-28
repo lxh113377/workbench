@@ -97,7 +97,14 @@
   **收益实测（同一份 bench 文件分别在 `fb98919` 旧树与当前树各跑 3 轮，`-benchtime=100x`）**：
   旧树 4.66 / 3.27 / 3.15 ms → 新树 1.62 / 1.12 / 1.06 ms ⇒ 中位比 **2.95 倍**（理论 3.0，逐份吻合），
   每省一份快照另省 2.9MB 垃圾与 5004 次分配。**部署前线上基线已抓**（同实例、5001 条、n=40）：
-  `/api/status` p50=20.8ms / p90=23.5ms，留部署后同口径复测。
+  `/api/status` p50=20.8ms / p90=23.5ms（n=40）。
+  **部署后同口径复测（已回填，实测非预估）**：同一台机、同一数据根（5003 条）、同一 n=40、同一脚本 ⇒
+  **p50=4.7ms / 4.8ms（两次独立跑），比基线快 4.4 倍**（省 16.1ms）。与结构预估交叉核对：
+  省下 4 份全量快照 × 单价 1.97ms ≈ 7.9ms，实测差额 8.2ms 来自 GC 压力（每请求少约 11.6MB 分配）。
+  基线二进制是 `fb98919`（已含上一笔 evaluate 缓存），故本次差值**干净隔离到本笔**，不是两笔混账。
+  线上行为回归同步复算：`stallReason` 字段仍正常返回（池闸门形态下给出 queued_no_lane 全文案；
+  两条判据同源一份快照后语义未变）；重启窗口取在 `runningTasks=0` 时刻（3 条排队、池冷却 504 秒），
+  零在跑任务被打断。
   **验证**：`go test ./internal/engine -run "TestNoInternalStatsInStallPath|TestStall|TestUpstream" -count=1 -v`
   （期望 11 条既有 + 4 条新增全 PASS）；`go vet ./... && go test ./... -count=1 &&
   go test ./internal/engine/ ./internal/web/ ./internal/evaluate/ -race -count=1` 全绿（实测 rc=0）。
