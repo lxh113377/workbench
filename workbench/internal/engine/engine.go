@@ -1423,13 +1423,11 @@ func (e *Engine) extendChain(ctx context.Context, parent *model.Task, critique *
 	}
 	// 3) 评估 -> 自动批准 -> 入队
 	all := e.store.List()
-	daily := 0
-	todayStart := startOfToday()
-	for _, t := range all {
-		if t.CreatedAt >= todayStart {
-			daily++
-		}
-	}
+	// 每日计数统一走 tasksToday()（round 60 · T57）：这里原先就地重算「今天创建的全部任务」，
+	// **含被拒草案**，而 tasksToday() 明确剔除 rejected（engine_autonomy.go:452-453）。
+	// 同一台机器两套口径 ⇒ 高拒绝日里后继链会被误判「已达每日上限」而集体被拒 ——
+	// 这正是 engine.go:876-879 在册要求「两处口径必须完全一致」要防的错位（历史成因：12 小时零产出）。
+	daily := e.tasksToday()
 	var approved []*model.Task
 	for _, draft := range drafts {
 		var tplPtr *model.Template
