@@ -24,7 +24,21 @@ param(
   #   engine 68.3->65 / web 37.7->34 / executor 42.7->39 / modelpool 58.5->55 / supervisor 51.7->48
   #   cmd/workbench 5.7->2 / evaluate 63.8->60 / modelroute 50.6->47 / shortcut 28.9->25
   #   chain 88.6->85 / judge 81.1->78 / single 71.4->68 / tray 见下 / dshprofile 77.8->74
+  #
+  # **2026-10-29 round 70 · L3 按 CI 口径重校（只动有两个数都有 CI 权威读数的两包）**：
+  # 读数来源 = GitHub Actions run 40866494973 的 job `build + coverage gate`（step 内 build.ps1 逐包
+  # 打印 coverage:），evaluate=70.7 / modelpool=70.2 / modelroute=52.6；自证：31 包求和 2220.7/31
+  # = 71.64 与 CI 自己打印的 avg=71.64% 逐位一致 ⇒ 提取口径可信。六个 run 交叉核对读数恒定。
+  # 按既有规则「CI 实测 − 3pp」取：evaluate 60→67（余量 3.7）、modelpool 55→67（余量 3.2），
+  # 两者同时满足 L3 的「≥65 且基线==实测、余量 ≤5 点」。
+  # **modelroute 本轮刻意不动（保持 47）**：补测的 4 个测试文件（本机 55.8→99.0）尚未入库，
+  # CI 上的 52.6 是**补测前**的读数 ⇒ 现在抬基线就是拿本机数定 CI 阈值（正是上面那条铁律禁止的
+  # 形态）。等 CI 跑出一轮含新测试文件的读数，再按「CI − 3pp」抬到 65 以上。
+  # 同轮登记更大的洞（issue，未在本笔动）：「余量 ≤5」按 CI 口径核对 15 条专项基线，
+  # 只有 dshprofile 3.6 / judge 3.1 / single 3.4 达标，其余 12 条虚设（cmd/workbench 空转 15.1、
+  # web 18.2、shortcut 17.5）—— 只修三包会留 9 条假护栏。
   # tray 双环境实测：CI 26.3% / 本机 21.3%（**本机更低**——该包断言依赖 Explorer 桌面会话），
+  #
   #   故阈值必须取下界：21.3 - 3 = 18。这是「两个环境都要过」的取值规则。
   #
   # tray 说明（2026-10-21 立、2026-10-23 两次复核更新）：守护测试全是「常量/契约」型断言
@@ -39,7 +53,7 @@ param(
 # 起 Edge --app 或 rundll32 会真弹窗口/真起进程，单测里跑它们等于污染桌面，
 # 正是本包要在测试里守的纪律（见 headless_test.go 的 TestOpenDoesNothingWhenHeadless）。
 # 故按本仓「实测-3pp」惯例设 22，后续只许抬不许降。
-  [string[]]$PerPackageCover = @("workbench/internal/engine=65", "workbench/internal/web=34", "workbench/internal/executor=39", "workbench/internal/modelpool=55", "workbench/internal/supervisor=48", "workbench/cmd/workbench=2", "workbench/internal/evaluate=60", "workbench/internal/modelroute=47", "workbench/internal/shortcut=25", "workbench/internal/chain=85", "workbench/internal/judge=78", "workbench/internal/single=68", "workbench/internal/tray=18", "workbench/internal/dshprofile=74", "workbench/internal/browser=22")
+  [string[]]$PerPackageCover = @("workbench/internal/engine=65", "workbench/internal/web=34", "workbench/internal/executor=39", "workbench/internal/modelpool=67", "workbench/internal/supervisor=48", "workbench/cmd/workbench=2", "workbench/internal/evaluate=67", "workbench/internal/modelroute=47", "workbench/internal/shortcut=25", "workbench/internal/chain=85", "workbench/internal/judge=78", "workbench/internal/single=68", "workbench/internal/tray=18", "workbench/internal/dshprofile=74", "workbench/internal/browser=22")
 
 # dshprofile 阈值说明（2026-10-21 立、2026-10-23 复核更新）：该包原被判「只能真机跑」
 # （LocateDSH/resolveFromShim 探测、copyDir/linkOFM 复制、hiddenProcAttr 全是 IO 型）。
