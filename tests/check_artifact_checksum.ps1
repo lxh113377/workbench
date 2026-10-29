@@ -40,6 +40,16 @@ $listedHash = ($listed -split "\s+")[0].ToUpper()
 $actual = (Get-FileHash -LiteralPath $Exe -Algorithm SHA256).Hash.ToUpper()
 if ($listedHash -ne $actual) {
   Write-Host ("FAIL SHA256SUMS 漂移: 清单 " + $listedHash + " != 实测 " + $actual + "（产物与清单不一致）") -ForegroundColor Red
+  # 归因（issue #14，2026-10-29）：不一致分两种，先分清再动手，别一律当"产物被篡改"去查。
+  #   本轮实测的是第一种：并行会话把已构建的 exe 直接拷进 dist、没重写清单 ⇒ 清单比产物旧。
+  #   这种跑 tests/sync_dist_manifest.ps1 就修好；第二种才需要核对来源。
+  $eM = (Get-Item -LiteralPath $Exe).LastWriteTime
+  $sM = (Get-Item -LiteralPath $Sums).LastWriteTime
+  if ($sM -lt $eM) {
+    Write-Host ("  归因: 清单 mtime " + $sM.ToString("HH:mm:ss") + " 早于产物 " + $eM.ToString("HH:mm:ss") + " ⇒ 大概率是换装只拷了 exe、没重写清单（跑 tests/sync_dist_manifest.ps1 修复），不是产物被篡改。") -ForegroundColor Yellow
+  } else {
+    Write-Host ("  归因: 清单 mtime " + $sM.ToString("HH:mm:ss") + " 不早于产物 " + $eM.ToString("HH:mm:ss") + " ⇒ 不是「换装没更新清单」这一类时序漂移，需人工核对来源（是否走了 build.ps1？产物是否被替换？）") -ForegroundColor Yellow
+  }
   exit 1
 }
 if (-not $Quiet) { Write-Host ("PASS 产物与清单一致: " + $actual) -ForegroundColor Green }

@@ -328,8 +328,20 @@ Write-Host "    文件: $exe"
 Write-Host "    大小: $size MB"
 Write-Host "    版本: $($info.FileVersion)"
 Write-Host "    产品: $($info.ProductName)"
-$hash = (Get-FileHash $exe -Algorithm SHA256).Hash
-"$hash  workbench.exe" | Set-Content (Join-Path $dist "SHA256SUMS")
+# 清单由 tests/sync_dist_manifest.ps1 统一生成（issue #14）：清单文本格式此前在这里与
+# 换装脚本各写一遍，两处迟早漂移 —— 本仓在册形态「同一规则有两个来源」。更要紧的是
+# 换装路径（把已构建的 exe 直接拷进 dist/）**根本不调用 build.ps1**，所以只在构建链里
+# 写清单永远管不住那条路径：实测过两次"产物新、清单旧"（清单 mtime 比产物早 1-2 分钟）。
+# 现在 build.ps1 与 redeploy_agent_root.ps1 都调同一个件，格式与读回自证只有一份实现。
+$syncManifest = Join-Path $PSScriptRoot "..\tests\sync_dist_manifest.ps1"
+if (-not (Test-Path -LiteralPath $syncManifest)) { throw "缺 tests/sync_dist_manifest.ps1 —— 校验清单的唯一生成步，不许退化成此处手写一遍" }
+& powershell -NoProfile -ExecutionPolicy Bypass -File $syncManifest -Exe $exe
+# 退出码语义必须逐值判，不能写成 -gt N：本件的码是 0=已写入且读回一致 / 1=失败（产物不存在、
+# 读回不符、期间产物又变了）/ 3=本来就一致（幂等）。我第一版写的是 `-gt 3` ⇒ **rc=1 会静默通过**，
+# 也就是"清单没写成但构建继续报成功"——正是本仓在册的把"跑了但失败"洗成 PASS 那个洞（自己写的
+# 判据自己踩，第二次）。逐值枚举才锁得住。
+if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne 3) { throw ("校验清单生成失败（rc=" + $LASTEXITCODE + "）：产物或清单不可读、写后读回不符、或写入期间产物被并发改动") }
+$hash = (([IO.File]::ReadAllText((Join-Path $dist "SHA256SUMS"))).Split([string][char]10)[0]).Split(" ")[0]
 Write-Host "    SHA256: $hash"
 
 # 清单读回自证（2026-10-25 round 154）：CI 的 build job 有独立读回，本地构建链此前没有。

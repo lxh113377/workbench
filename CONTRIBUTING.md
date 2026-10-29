@@ -156,7 +156,14 @@ docs(v1.2.0): 架构手册补可观测性四小节 + 项目记忆回写 + engine
    `tests/check_changelog.ps1`（已挂 CI）校验位置、日期格式与版本降序
 2. `pwsh -File setup/build.ps1 -Version <x.y.z>`
 3. 跑 `tests/e2e.ps1` 确认全绿
-4. 确认 `dist/SHA256SUMS` 已更新，并在 `docs/验收报告.md` 追加本次复验记录
+4. 校验清单由代码生成、不靠人确认（issue #14，2026-10-29 实测：本仓此前**没有任何**受跟踪的部署
+   权威件，而实际换装脚本躺在 gitignore 的 xtmp/ 里、只拷 exe 不写清单 ⇒ 连续两轮"产物新、清单旧"）：
+   - 构建路径：`setup/build.ps1` 已改为调用 `tests/sync_dist_manifest.ps1`（清单文本格式只有一处定义）；
+   - 换装路径：`tests/redeploy_agent_root.ps1`（已提为受跟踪件）在 `Copy-Item` 之后立刻重写清单，
+     sync 返回非 0/3 就 `exit 6` **拒绝留下带旧清单的位点**；
+   - 只拷了产物没走上面两条时，手工补一次：`pwsh -File tests/sync_dist_manifest.ps1 [-Exe <path>] [-Sums <path>]`；
+   - 复验：`pwsh -File tests/check_artifact_checksum.ps1`（判红时会区分"清单早于产物 ⇒ 换装没重写清单"
+     与"清单不早于产物 ⇒ 需核对来源"两种归因，别一律当篡改查）。在 `docs/验收报告.md` 追加本次复验记录。
 5. 提交 `chore(build): v<x.y.z> 产物 SHA 与验收回执`
 
 > 版本号与产物必须能对上：`workbench.exe --version` 的输出、`dist/SHA256SUMS` 的记录、
