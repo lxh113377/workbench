@@ -1674,14 +1674,19 @@ func minWordsOf(e *Engine, task *model.Task) int {
 	return 300
 }
 
-// isRateLimited 判断这次失败是否为上游限流（HTTP 429）。
+// isRateLimited 判断这次失败是否属于**上游限流族**（HTTP 429）—— 含额度耗尽 quota_exhausted。
 //
 // 三个来源都要覆盖（现场踩过两个）：
-//  1. executor 分类后的 ErrorKind = rate_limited（正常路径）；
+//  1. executor 分类后的 ErrorKind = rate_limited / quota_exhausted（正常路径）；
 //  2. 包装层（FailoverRunner / 未来的远程执行器）只上抛 error，res 为 nil；
 //  3. 兜底文本匹配，防止某个实现漏了分类。
+//
+// quota_exhausted 必须进这一族（round 124 实测的漏项）：本函数决定是否走「冷却车道 + 退回队列等预算」
+// 这条路径，而 T78 的长等待预算就挂在那条路径上。漏掉它的后果（线上实测）：近 12 分钟 54 次
+// quota_exhausted 尝试、而「任务改走长等待预算」日志**一条都没有** —— 分级预算形同虚设，
+// 任务改从普通失败路径消耗 Attempts。两者同为 429 家族，只是恢复尺度不同（预算已由 kind 分级）。
 func isRateLimited(res *executor.Result, err error) bool {
-	if res != nil && res.ErrorKind == string(executor.KindRateLimited) {
+	if res != nil && (res.ErrorKind == string(executor.KindRateLimited) || res.ErrorKind == string(executor.KindQuotaExhausted)) {
 		return true
 	}
 	if err != nil {
