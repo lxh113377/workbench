@@ -727,6 +727,11 @@ func (e *Engine) Recover() error {
 	// 自主目标恢复（闭环续跑）：已有活跃目标直接复用；已完成则推导下一目标。
 	e.bootstrapAutonomy()
 	// 刷新路由/评估/链配置
+	//
+	// 启动期核对（round 124 · T79）：这里把 router 换成「手写的 config.Models」，正是事故路径 ——
+	// 我在 round 72 给这些 id 加了渠道前缀，而池账本用裸 id，结果 6 条路线在池里没有 spec，
+	// 失败记不到车道、冷却失效，一小时内空转 629 次且面板看着一切正常。只告警不拒启动。
+	e.checkConfiguredLaneIDs(cfg)
 	e.router.UpdateRoutes(cfg.Models)
 	e.eval.UpdateConfig(cfg.Eval)
 	e.gen.UpdateConfig(cfg.Chain)
@@ -2195,6 +2200,9 @@ func (e *Engine) ReloadConfig() {
 	if routes := e.poolRoutes(); len(routes) > 0 {
 		e.router.UpdateRoutes(routes)
 	} else {
+		// 回落到手写清单时同样要核对（round 124 · T79）：池还没同步时这分支才生效，
+		// 也正是「配置里写着池里不存在的 id」会真正上路跑的时机。
+		e.checkConfiguredLaneIDs(cfg)
 		e.router.UpdateRoutes(cfg.Models)
 	}
 	e.eval.UpdateConfig(cfg.Eval)
