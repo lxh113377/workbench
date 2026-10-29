@@ -105,6 +105,26 @@ func (e *Engine) materializeArtifacts(task *model.Task, finalText, taskDir strin
 		return rep
 	}
 
+	// 报告内容门禁（round 65 · T66）：结构没缺陷 ≠ 内容合格。
+	//
+	// 实测（2026-10-29）：两条通过验收的自主任务用的都是 Test-Path（文件存在即 pass），
+	// 其中一条的「## 证据」整节只写了「无。」——存在性判据分不出「写了」和「写对了」。
+	// 这里在**真实执行验收命令之前**先做内容检查：明显不合格就别浪费一次真实执行。
+	var reportProblems []string
+	for _, f := range res.Files {
+		reportProblems = append(reportProblems, reportGateProblems(f.Path, f.Body)...)
+	}
+	if len(reportProblems) > 0 {
+		rep := &model.VerifyReport{
+			Round: 1, Pass: false,
+			FailReason: "报告内容缺陷：" + strings.Join(reportProblems, "；"),
+			At:         model.Now(),
+		}
+		_ = config.WriteJSONAtomic(filepath.Join(taskDir, "verify.json"), rep)
+		e.log.Warn("报告内容缺陷", "taskId", task.ID, "problems", strings.Join(reportProblems, "；"))
+		return rep
+	}
+
 	// 真实验收
 	opt := verify.Options{DefaultTimeoutSec: 90, MaxOutputBytes: 64 << 10}
 	// 验收本身再套一层总超时，避免某条命令卡住整个调度（引擎侧另有 Stop 兜底）。
