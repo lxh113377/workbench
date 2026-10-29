@@ -22,7 +22,16 @@ param(
     # 仅用于回退读取 state.json 的 userQuit 字段（主判据是 user-quit.flag）。
     [string]$DataRoot = "",
     [switch]$Loop,
-    [int]$IntervalSeconds = 60
+    [int]$IntervalSeconds = 60,
+    # 进度看门狗（round 64 · T65）：进程存在 ≠ 在干活。
+    #
+    # 现场（2026-10-29）：01:47:02 启动后日志在 02:5x 停写，直到 14:17:03 才有下一条 ——
+    # 中间 11 小时 0 行日志、0 次尝试，而守护任务每分钟都在跑、Last Result=0。
+    # 根因：本脚本只用「进程是否存在」判活 ⇒ 进程挂死（或静默死亡后旧句柄仍在）时零动作。
+    # 引擎本身每 ~2 分钟写一条「模型路由表已更新」心跳 ⇒ 日志停写 ≥ StaleMinutes 即判挂死。
+    [int]$StaleMinutes = 8,
+    # 自检模式：只验看门狗判据本身（含负控），不碰真实进程。
+    [switch]$SelfTest
 )
 
 $ErrorActionPreference = "Stop"
@@ -36,6 +45,57 @@ $ErrorActionPreference = "Stop"
 #   末尾 try/catch 记录而非弹窗
 $ConfirmPreference = "None"
 $ProgressPreference = "SilentlyContinue"
+
+# 守护自身的持久日志（round 64 · T65）：本轮排查 11 小时静默时，最大的障碍是**守护没留痕** ——
+# 只能看到「Last Result=0」，无法区分「它在零动作」与「它根本没跑」。
+# 固定名 + 追加写：日志只增不删，出问题第一眼就有现场。
+$KaLog = Join-Path $RuntimeDir "keepalive.log"
+function Add-KaLog {
+    param([string]$Msg)
+    $line = "$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss') keepalive: $Msg"
+    Write-Host $line
+    try {
+        $dir = Split-Path -Parent $KaLog
+        if ($dir -and -not (Test-Path -LiteralPath $dir)) { New-Item -ItemType Directory -Force -Path $dir | Out-Null }
+        Add-Content -LiteralPath $KaLog -Value $line -Encoding UTF8
+    } catch { }
+}
+
+# 进度看门狗判据（纯函数，便于自检）：日志文件存在且最后写入时间距今 ≥ StaleMinutes ⇒ 判挂死。
+# 为什么以**日志停写**为判据而不是 CPU/端口：
+#   - 引擎无论有没有任务，都会每 ~2 分钟写一条心跳（"模型路由表已更新"，实测 22:36:04/22:38:04…）；
+#   - 端口与进程都可能在挂死状态下仍然存在（阻塞在锁上的 goroutine 不会关监听），
+#      所以它们是「活着」的必要条件、却不是「在干活」的充分条件。
+#   - StaleMinutes ≤ 0 表示**关闭**该判据（自检的负控也用它）。
+# 正常路径的周期留痕判据（round 64 · T65 补充）：本轮的 11 小时静默之所以查不动，
+# 正是因为"一切正常时守护一个字也不写"。每 EveryMinutes 写一条心跳，既证明守护真在跑，
+# 也给出"最后已知正常时刻"（出问题时可据此定界）。
+function Should-LogHeartbeat {
+    param([string]$KaLog, [int]$EveryMinutes = 10)
+    if ($EveryMinutes -le 0) { return $false }
+    if (-not $KaLog -or -not (Test-Path -LiteralPath $KaLog)) { return $true }
+    try {
+        $tail = Get-Content -LiteralPath $KaLog -Tail 60 -ErrorAction SilentlyContinue
+        $last = @($tail | Where-Object { $_ -match "心跳正常" } | Select-Object -Last 1)
+        if ($last.Count -eq 0) { return $true }
+        $m = [regex]::Match($last[0], "^(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})")
+        if (-not $m.Success) { return $true }
+        $t = [datetime]::ParseExact($m.Groups[1].Value, "yyyy-MM-dd HH:mm:ss", $null)
+        return (((Get-Date) - $t).TotalMinutes -ge $EveryMinutes)
+    } catch { return $true }
+}
+
+function Test-EngineStalled {
+    param([string]$LogPath, [int]$StaleMinutes)
+    if ($StaleMinutes -le 0) { return $false }
+    if (-not $LogPath -or -not (Test-Path -LiteralPath $LogPath)) { return $false }
+    try {
+        $age = ((Get-Date) - (Get-Item -LiteralPath $LogPath).LastWriteTime).TotalMinutes
+        return ($age -ge $StaleMinutes)
+    } catch {
+        return $false
+    }
+}
 
 function Get-PanelPort {
     $pf = Join-Path $RuntimeDir "panel.port"
@@ -151,6 +211,53 @@ if (Test-Path -LiteralPath $guardScript) {
     }
 }
 
+# 自检模式（round 64 · T65）：只验看门狗判据，不碰真实进程 —— 判据本身必须能被验收。
+#
+# 三个必须过的点：① 新鲜日志 ⇒ 不判挂死（否则会把在跑实例反复强杀）
+#                ② 陈旧日志 ⇒ 判挂死
+#                ③ StaleMinutes=0 ⇒ 判据关闭（负控：证明上面那条真读了这个参数，不是恒真）
+if ($SelfTest) {
+    if (-not $DataRoot) { $DataRoot = Join-Path (Split-Path -Parent $RuntimeDir) "workbench-output" }
+    $tmpLog = Join-Path $env:TEMP ("wb-stale-selftest-" + $PID + ".jsonl")
+    Set-Content -LiteralPath $tmpLog -Value '{}' -Encoding UTF8
+    $okAll = $true
+
+    (Get-Item -LiteralPath $tmpLog).LastWriteTime = Get-Date
+    $fresh = Test-EngineStalled -LogPath $tmpLog -StaleMinutes 8
+    if ($fresh) { $okAll = $false }
+    Write-Host ("selftest 1) 新鲜日志 ⇒ 期望 False 实得 " + $fresh)
+
+    (Get-Item -LiteralPath $tmpLog).LastWriteTime = (Get-Date).AddMinutes(-30)
+    $stale = Test-EngineStalled -LogPath $tmpLog -StaleMinutes 8
+    if (-not $stale) { $okAll = $false }
+    Write-Host ("selftest 2) 陈旧日志(30min) ⇒ 期望 True 实得 " + $stale)
+
+    $off = Test-EngineStalled -LogPath $tmpLog -StaleMinutes 0
+    if ($off) { $okAll = $false }
+    Write-Host ("selftest 3) StaleMinutes=0 ⇒ 期望 False 实得 " + $off)
+
+    Remove-Item -LiteralPath $tmpLog -Force -ErrorAction SilentlyContinue
+
+    # 心跳留痕判据（同族验收）：无日志文件 ⇒ 该写；刚写过 ⇒ 不该写。
+    $tmpKa = Join-Path $env:TEMP ("wb-ka-selftest-" + $PID + ".log")
+    Remove-Item -LiteralPath $tmpKa -Force -ErrorAction SilentlyContinue
+    $hbNoFile = Should-LogHeartbeat -KaLog $tmpKa -EveryMinutes 10
+    if (-not $hbNoFile) { $okAll = $false }
+    Write-Host ("selftest 4) 无守护日志 ⇒ 期望 True 实得 " + $hbNoFile)
+    Add-Content -LiteralPath $tmpKa -Value ((Get-Date -Format 'yyyy-MM-dd HH:mm:ss') + " keepalive: engine 心跳正常（自检）") -Encoding UTF8
+    $hbFresh = Should-LogHeartbeat -KaLog $tmpKa -EveryMinutes 10
+    if ($hbFresh) { $okAll = $false }
+    Write-Host ("selftest 5) 刚写过心跳 ⇒ 期望 False 实得 " + $hbFresh)
+    Remove-Item -LiteralPath $tmpKa -Force -ErrorAction SilentlyContinue
+
+    if ($okAll) { Write-Host "keepalive selftest: PASS"; exit 0 } else { Write-Host "keepalive selftest: FAIL"; exit 1 }
+}
+
+# 派生路径（自检之后才用得上，但放这里便于两条路径共用）：
+# 日志默认取 DataRoot\logs\workbench.jsonl —— 与产品侧写日志的位置同构。
+if (-not $DataRoot) { $DataRoot = Join-Path (Split-Path -Parent $RuntimeDir) "workbench-output" }
+$LogPath = Join-Path $DataRoot "logs\workbench.jsonl"
+
 do {
     $now = Get-Date -Format "HH:mm:ss"
     $port = Get-PanelPort
@@ -221,6 +328,35 @@ do {
 
     # stopped = 优雅停机后；idle = 从未启动。两者都拉回 running。paused 是主动暂停，不动。
     # 例外：用户主动退出（user-quit 标记）**不得**拉回 —— 否则托盘「退出工作台」形同虚设。
+    # ── 进度看门狗（round 64 · T65）────────────────────────────────────────
+    # 与「进程不在」分开处理：这里是**进程在、但没在干活**的形态。
+    # 判据 = 引擎日志停写 ≥ StaleMinutes（引擎每 ~2 分钟一条路由表心跳，停 8 分钟即异常）。
+    # 处置 = 强制重启：kill 掉挂死实例，随后**复用下面"进程不在"那条路径**拉起 + 拉起引擎。
+    # 取舍（写清）：强杀会打断在跑任务，但引擎有崩溃救援（CrashRescues）会把它救回来；
+    # 而放任挂死 11 小时（实测）连救援的机会都没有 —— 两害相权取其轻。
+    # 用户主动退出时**不**做这件事：那是用户意愿（进程本来就不该在）。
+    if ($proc -and -not $userQuit -and (Test-EngineStalled -LogPath $LogPath -StaleMinutes $StaleMinutes)) {
+        $ageMin = [Math]::Round(((Get-Date) - (Get-Item -LiteralPath $LogPath).LastWriteTime).TotalMinutes, 1)
+        Add-KaLog "engine 存活但日志停写 $ageMin 分钟（阈值 $StaleMinutes）⇒ 判定挂死，强制重启 pid=$($proc.Id)"
+        try {
+            Stop-Process -Id $proc.Id -Force -ErrorAction Stop
+            $deadline = (Get-Date).AddSeconds(30)
+            while ((Get-Date) -lt $deadline -and (Get-Process -Id $proc.Id -ErrorAction SilentlyContinue)) { Start-Sleep -Seconds 2 }
+            Add-KaLog "挂死实例已终止（pid=$($proc.Id)）"
+        } catch {
+            Add-KaLog "终止挂死实例失败 - $($_.Exception.Message)"
+        }
+        $proc = $null
+        $state = $null
+    }
+
+    # 正常路径的周期留痕：只在"进程在 + 日志新鲜"时写，且 10 分钟内只写一条。
+    if ($proc -and -not $userQuit -and -not (Test-EngineStalled -LogPath $LogPath -StaleMinutes $StaleMinutes) -and (Should-LogHeartbeat -KaLog $KaLog -EveryMinutes 10)) {
+        $ageMin = 0
+        if (Test-Path -LiteralPath $LogPath) { $ageMin = [Math]::Round(((Get-Date) - (Get-Item -LiteralPath $LogPath).LastWriteTime).TotalMinutes, 1) }
+        Add-KaLog "engine 心跳正常（日志距今 $ageMin 分钟，pid=$($proc.Id)，状态 $state）"
+    }
+
     if ($proc -and ($state -eq "stopped" -or $state -eq "idle") -and -not $userQuit) {
         $tok = Get-PanelToken -Port $port
         if ($tok) {
