@@ -124,6 +124,11 @@ func TestPlanStageRunsBeforeExecution(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.ReloadConfig()
+	// 前提显式化（2026-10-28 方案阶段改为**严格档位**后必须如此）：
+	// 方案阶段不再跨档位借执行车道，所以「要有方案」这个前提必须由测试自己给出 quality 车道。
+	// 此前本用例靠 Pick 的宽松兜底从 balanced/fast 里蒙到一条，测的其实不是它声称的时序。
+	// 路由表必须在 ReloadConfig **之后**设置：后者会用配置里的静态 models 重建路由表。
+	registerPlanLanes(e, "planner/thinker-x", "executor/agent-y")
 
 	task := &model.Task{ID: "task-plan-order", Title: "写个能跑的脚本", State: model.StateCandidate,
 		Prompt: "请写一个 python 脚本，能打印 ok", OutputFormat: "md"}
@@ -223,6 +228,10 @@ func TestPlanFailureDegradesToDirectExecution(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.ReloadConfig()
+	// 同 TestPlanStageRunsBeforeExecution：严格档位后，"方案确实跑过并且挂了"这个前提
+	// 必须由测试显式给出 quality 车道，否则测到的是"档位没有车道 ⇒ 立刻退化"，
+	// 那是另一条分支（另有用例专门钉它）。
+	registerPlanLanes(e, "planner/thinker-z", "executor/agent-w")
 
 	task := &model.Task{ID: "task-plan-degrade", Title: "写脚本", State: model.StateCandidate, Prompt: "写一个打印 ok 的脚本"}
 	runTask := prepareRunning(t, st, task)
@@ -238,4 +247,19 @@ func TestPlanFailureDegradesToDirectExecution(t *testing.T) {
 	if after.State == model.StateFailed {
 		t.Fatal("方案层失败不应把任务判死")
 	}
+}
+
+// registerPlanLanes 给测试引擎显式注册"方案车道 + 执行车道"。
+//
+// 为什么需要它（2026-10-28）：方案阶段改为 PickStrict（严格档位、不跨档位放宽）后，
+// 「PlannerTier=quality 但路由表里没有 quality 车道」不再静默借执行车道，而是立刻退化直执行。
+// 于是凡是需要"方案真的跑起来"的用例，都必须自己把前提写出来 —— 这也让用例测的东西
+// 与它声称的东西一致（此前它们靠宽松兜底蒙到车道，等于测了别的分支）。
+//
+// UpdateRoutes 是**整体替换**语义，所以执行车道必须一起给，否则执行阶段无车道可选。
+func registerPlanLanes(e *Engine, plannerModel, executorModel string) {
+	e.router.UpdateRoutes([]config.ModelRoute{
+		{Model: plannerModel, Provider: "our-free-model", Tier: "quality", Enabled: true, Weight: 100, MaxFail: 3, CooldownM: 30},
+		{Model: executorModel, Provider: "our-free-model", Tier: "balanced", Enabled: true, Weight: 100, MaxFail: 3, CooldownM: 30},
+	})
 }

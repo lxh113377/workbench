@@ -102,6 +102,14 @@ func runPlanSelftest() int {
 		c.Plan.Enabled = true
 		c.Plan.ReplanRounds = 2
 		c.Plan.AppendPlanToPrompt = true
+		// 方案档位显式指向**本临时环境真实存在的档位**（2026-10-28）。
+		//
+		// 为什么必须写这一行：方案阶段已改为严格档位（modelroute.PickStrict，不跨档位
+		// 放宽），而本自检用的是默认配置 —— 默认 3 条车道是 balanced/fast，**没有 quality**。
+		// 不写的话 planModelFor 会立刻返回空串并退化直执行，本自检的第 1/6/9 项（方案先于
+		// 执行、方案证据落盘、方案摘要与模型）必然判红 —— 那不是"自检发现缺陷"，是自检的
+		// 前提没跟上语义。此前它能过，靠的正是被本轮取消的静默换档。
+		c.Plan.PlannerTier = "balanced"
 		// 关掉自主链，避免自检里混入无关任务生成。
 		c.Autonomy.Enabled = false
 		// 关掉链式延伸：只验闭环本身。

@@ -174,17 +174,50 @@ func (r *Router) Health() []Health {
 
 // Pick 依据任务需求 tier 选一个模型。
 // excluded 是由调用方确认“刚刚失败过”的模型集合，会在本次选择中排除。
+//
+// 档位语义：先只在该 tier 内找；找不到会**放宽到任意档位**再选一个。
+// 执行阶段需要这个兜底（"任何一条能跑的车道都比没有强"）；方案阶段不能要它，见 PickStrict。
 func (r *Router) Pick(tier string, excluded map[string]bool) (string, error) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+	return r.pickLocked(tier, excluded, true)
+}
+
+// PickStrict 与 Pick 的唯一差别：**不做档位放宽**。
+// 指定档位内没有可用候选时直接返回错误，而不是退到"任意档位"再挑一个。
+//
+// 为什么必须单独有一个（2026-10-28 实测）：方案阶段配 plannerTier="quality"，
+// 而活实例路由表 18 条车道全是 balanced/fast —— 一个 quality 档都没有。Pick 的宽松
+// 兜底于是把**执行车道**当成方案车道用：24h 内方案阶段占所有尝试总时长 30.1%
+// （2.33h / 7.76h），其中 94% 是白烧（成功 8/140）。而车道与"能不能出方案"强相关：
+// z-ai/glm-5.3 + z-ai/glm-5.3-flash 合计 29 次尝试、产物面 0 份 blueprint。
+// 静默换档把"档位没配/配错"变成"烧掉并发槽且没人知道为什么"，所以方案阶段改走本方法。
+//
+// 想让方案跑在别的档位时**并不需要新开关**：把 plannerTier 配成那个档位，或用
+// PlannerModels 直接点名模型即可 —— 能力没被删，只是不再静默替换。
+func (r *Router) PickStrict(tier string, excluded map[string]bool) (string, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.pickLocked(tier, excluded, false)
+}
+
+// pickLocked 是 Pick / PickStrict 的公共实现。
+//
+// allowWiden=true：档位内无候选时放宽到任意档位（执行阶段的兜底语义）。
+// allowWiden=false：严格限定在请求档位内 —— 无候选即错误，绝不跨档位替换。
+func (r *Router) pickLocked(tier string, excluded map[string]bool, allowWiden bool) (string, error) {
 	now := time.Now().UnixMilli()
 	type cand struct {
 		model string
 		score float64
 	}
 	var cands []cand
-	// 先按请求的 tier 找；没有再放宽到任意 tier
-	for _, strict := range []bool{true, false} {
+	// 先按请求的 tier 找；allowWiden 时才会有第二轮"放宽到任意 tier"
+	passes := []bool{true}
+	if allowWiden {
+		passes = []bool{true, false}
+	}
+	for _, strict := range passes {
 		cands = cands[:0]
 		for _, rt := range r.routes {
 			if !rt.Enabled || excluded[rt.Model] {
@@ -208,6 +241,9 @@ func (r *Router) Pick(tier string, excluded map[string]bool) (string, error) {
 		}
 	}
 	if len(cands) == 0 {
+		if !allowWiden {
+			return "", fmt.Errorf("档位 %s 内没有可用模型（不跨档位放宽：该档位未配车道，或车道全部处于冷却/已禁用）", tier)
+		}
 		return "", fmt.Errorf("没有可用模型（tier=%s，可能全部处于冷却或已禁用）", tier)
 	}
 	total := 0.0

@@ -61,16 +61,37 @@ func (s *planStage) usable() bool {
 	return s != nil && s.Blueprint != nil && !s.Blueprint.IsZero()
 }
 
+// plannerTierOf 返回生效的方案档位（空则默认 quality）。
+//
+// 单独成函数是为了让"选型用的档位"与"退化原因里报的档位"共用同一口径 ——
+// 两处各写一遍就会出现"按 quality 选、失败文案却说是别的档位"的分叉。
+func plannerTierOf(cfg config.Config) string {
+	tier := strings.TrimSpace(cfg.Plan.PlannerTier)
+	if tier == "" {
+		tier = "quality"
+	}
+	return tier
+}
+
 // planModelFor 选一个模型来出方案。
 //
 // 选型顺序（每一步都有明确的兜底语义，不静默跳过）：
 //  1. 配置里显式指定的 PlannerModels（按顺序，取第一个可用）；
-//  2. 否则按 PlannerTier 从路由器选（Excluded=nil，不与执行模型互斥 ——
-//     同一个模型既出方案又执行是允许的，只是失去了"双角色"的收益）；
-//  3. 都不可用 -> 返回空串，由调用方退化直执行。
+//  2. 否则按 PlannerTier **在本档位内**选（PickStrict，不做跨档位放宽）；
+//  3. 都不可用 -> 返回空串，由调用方退化直执行（并留审计）。
 //
 // 为什么指定模型要单独判可用：配置里写的是模型 id，而模型池会因限流/探测失败
 // 把它们移出路由表。直接信配置就会出现"配了但永远选不到"的静默失效。
+//
+// 为什么第 2 步用 PickStrict 而不是 Pick（2026-10-28 实测 + 老大授权改为"产物内容可因
+// 车道选择变化而不同"）：宽选会把"档位没配"变成"静默拿执行车道出方案"。实测代价 ——
+// 活实例 plannerTier="quality" 而路由表 18 条车道全是 balanced/fast，方案阶段因此长期
+// 跑在执行型车道上：24h 内方案占全部尝试时长 30.1%（2.33h/7.76h），其中 94% 白烧
+// （成功 8/140）；产物面更狠，z-ai/glm-5.3 与 glm-5.3-flash 合计 29 次尝试留下 0 份
+// blueprint。档位对不上就快速退化直执行，比"烧满并发槽换一份出不了的方案"更接近意图。
+//
+// 想让方案改跑别的档位不需要新开关：把 plannerTier 配成那个档位，或用 PlannerModels
+// 直接点名模型 —— 能力没删，只是不再静默替换档位。
 func (e *Engine) planModelFor(cfg config.Config) string {
 	for _, id := range cfg.Plan.PlannerModels {
 		id = strings.TrimSpace(id)
@@ -82,24 +103,7 @@ func (e *Engine) planModelFor(cfg config.Config) string {
 			return id
 		}
 	}
-	tier := strings.TrimSpace(cfg.Plan.PlannerTier)
-	if tier == "" {
-		tier = "quality"
-	}
-	// 指定模型全不在表里时，仍按 tier 兜底：宁可换模型出方案，也不要静默退化成
-	// "没有方案"——那会让整条双角色链路在配置写错时无声失效。
-	if _, err := e.router.Pick(tier, nil); err != nil {
-		// tier 无候选时再放宽到任意档位（Pick 内部已有 strict->宽松的二次尝试，
-		// 这里只兜住"整池都不可用"的极端情况）。
-		if _, err2 := e.router.Pick("", nil); err2 != nil {
-			return ""
-		}
-	}
-	// 真正取一次（Pick 有加权随机，不能只判可行性）。
-	if id, err := e.router.Pick(tier, nil); err == nil {
-		return id
-	}
-	if id, err := e.router.Pick("", nil); err == nil {
+	if id, err := e.router.PickStrict(plannerTierOf(cfg), nil); err == nil {
 		return id
 	}
 	return ""
@@ -113,7 +117,10 @@ func (e *Engine) buildPlan(ctx context.Context, task *model.Task, cfg config.Con
 	st := &planStage{}
 	modelID := e.planModelFor(cfg)
 	if modelID == "" {
-		st.Err = fmt.Errorf("没有可用的方案模型（路由表为空或全部冷却）")
+		// 两种情形都不静默：① 配置档位内没有车道（方案阶段不做跨档位放宽）；② 整池冷却。
+		// 文案带上档位，是因为"配了 quality 但池里没有 quality 车道"是最容易被忽略的成因 ——
+		// 不报出来，下一个人只会看到"方案老是退化"而找不到为什么。
+		st.Err = fmt.Errorf("方案档位 %q 内没有可用模型（未跨档位放宽；请配置该档位车道或改用 PlannerModels 点名）", plannerTierOf(cfg))
 		return st
 	}
 	st.Model = modelID
