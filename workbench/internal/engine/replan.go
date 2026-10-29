@@ -22,6 +22,7 @@ import (
 
 	"workbench/internal/blueprint"
 	"workbench/internal/config"
+	"workbench/internal/executor"
 	"workbench/internal/model"
 )
 
@@ -81,7 +82,9 @@ func (e *Engine) scheduleReplan(task *model.Task, rep *model.VerifyReport, cfg c
 		}
 		t.Verified = false
 		t.Error = "验收未通过，进入第 " + fmt.Sprint(round) + " 轮重新规划"
-		t.ErrorKind = "replan"
+		// 类别取自枚举而非裸字符串（issue #9 收编）：值逐字仍是 replan ——
+		// cmd/workbench/plan_selftest.go 第 12 项按这个字符串断言，改名会让自检失效。
+		t.ErrorKind = string(executor.KindReplan)
 		return nil
 	}); err != nil {
 		e.log.Warn("写入重新规划状态失败", "taskId", task.ID, "err", err.Error())

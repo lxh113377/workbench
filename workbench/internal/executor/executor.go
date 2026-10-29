@@ -159,6 +159,14 @@ const (
 	KindPoolWaitCapped   Kind = "pool_wait_capped"
 	KindTaskPanic        Kind = "panic"
 	KindTransitionFailed Kind = "transition_failed"
+	// KindCrashLoop / KindVerifyFailed / KindReplan 是引擎侧「非模型原因的终态处置」类别
+	// （崩溃救援判死 / 验收未通过排返工 / 返工用尽排重规划）。此前它们只在 engine 里以裸字符串直写
+	// task.ErrorKind，两侧枚举都不认识 ⇒ ParseKind 收敛成 Unknown，而 Unknown.Retryable()==true
+	// ⇒ 判死类任务反而落进最宽的重试桶；面板中文标签与 Prometheus 基线也接不住（issue #9）。现与 retry.CrashLoop / VerifyFailed / Replan 同名收编，
+	// **字符串值逐字不变**（生产台账里已是这个值）。一致性由 internal/retry/kind_drift_test.go 双向对账。
+	KindCrashLoop    Kind = "crash_loop"
+	KindVerifyFailed Kind = "verify_failed"
+	KindReplan       Kind = "replan"
 )
 
 // ErrNoLane 是「池内无可用车道」的哨兵错误：模型池侧的调度器在候选链为空时返回它，
@@ -176,6 +184,11 @@ func (k Kind) Retryable() bool {
 	// 引擎侧三类确定性终态**不可**重试（与 retry.Retryable 同判）：
 	// 环境等待封顶判死 = 预算已耗尽；panic = 同因必再炸；状态迁移失败 = 本地状态机/磁盘问题。
 	case KindPoolWaitCapped, KindTaskPanic, KindTransitionFailed:
+		return false
+	// 引擎侧三类「终态处置」同样不可重试（与 retry.Retryable 同判）：
+	// crash_loop = 重投会把进程再弄死一次；verify_failed / replan 的再跑由返工环与重规划环负责，
+	// 不归重试策略 —— 否则同一件事被两套额度各记一次。
+	case KindCrashLoop, KindVerifyFailed, KindReplan:
 		return false
 	}
 	return false

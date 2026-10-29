@@ -239,7 +239,8 @@ const appJS = `(() => {
       missing_credential: '缺凭据', model_unavailable: '模型下线', boot_failed: '启动失败', cancelled: '已取消', done: '成功',
       not_served: '出口不服务', no_artifact: '无合规产物', no_lane: '池内无可用车道', rate_limited: '上游限流',
       transport_failed: '网络传输故障', stream_cut: '流被切断', pool_wait_capped: '环境等待封顶判死',
-      panic: '引擎内异常', transition_failed: '状态迁移失败' };
+      panic: '引擎内异常', transition_failed: '状态迁移失败',
+      crash_loop: '崩溃循环判死', verify_failed: '验收未通过待返工', replan: '返工用尽转重规划' };
     const failRes = await api('/api/failures').catch(function () { return { buckets: [], total: 0, empty: true }; });
     const failBody = failRes.empty
       ? emptyHint('没有失败任务 —— 保持这样最好。')

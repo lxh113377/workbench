@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"workbench/internal/config"
+	"workbench/internal/executor"
 	"workbench/internal/model"
 )
 
@@ -35,7 +36,9 @@ func (e *Engine) scheduleRepair(task *model.Task, rep *model.VerifyReport, workD
 		t.Verify = rep
 		t.Verified = false
 		t.Error = "验收未通过，第 " + fmt.Sprint(round) + " 轮返工"
-		t.ErrorKind = "verify_failed"
+		// 类别取自枚举而非裸字符串（issue #9 收编）：值逐字仍是 verify_failed，
+		// 生产台账里的历史读数不受影响；改名等于篡改历史。
+		t.ErrorKind = string(executor.KindVerifyFailed)
 		return nil
 	}); err != nil {
 		e.log.Warn("写入返工状态失败", "taskId", task.ID, "err", err.Error())

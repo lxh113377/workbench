@@ -16,6 +16,33 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **issue #9 收口：第三份隐性 kind 名单收编进枚举（crash_loop / verify_failed / replan），并纠正 issue 正文的危害方向**：
+  **现场**：三类 kind 是裸字符串直写 `Task.ErrorKind`（stuck_rescue.go 的 crashRescueKind、repair_schedule.go、
+  replan.go），不在 retry/executor 任何枚举里；生产台账实测 crash_loop 6 条、verify_failed 5 条（面 =
+  dist/workbench-output 的 attempts.jsonl，2467 行/633 文件；plan 类 1035 行占 42% —— 这组数字替换了
+  issue 里取不到口径的「近 24h 203 行」）。
+  **危害方向纠偏（子代理实测 + 我独立静态复核）**：issue 原文写「IsRetryable("crash_loop") 判 false 只因
+  不在枚举里」——**反了**。HEAD 版 retry.go:123 把 `Unknown` 列进 `return true` 分支，而 ParseKind 认不出的
+  字符串正是落成 Unknown ⇒ 三类收编前 IsRetryable=**true**：判死/返工/重规划这类终态处置反而落进**最宽**的
+  重试桶。收编后（executor.go:191 显式 `return false`）语义归位；三个写入点都在重试循环之外 ⇒ 既有生产
+  行为不变，关掉的是未来流入的口子。这条纠偏已写进各件注释，issue #9 将同步更正。
+  **改动（8 文件）**：retry.go +3 Kind 常量（值逐字不变 —— 生产数据已是这个字符串，改名=篡改历史）进
+  AllKinds/ParseKind、不进 Retryable，新增 `NonFailureLedgerKinds()={plan,done}` 显式旁路（台账"尝试类别"
+  与"失败类别"分家，plan 不入失败枚举）；executor.go 同名常量 + Retryable() 显式 false；stuck_rescue.go
+  的 crashRescueKind 改引用 `string(executor.KindCrashLoop)`（**类型保持 string**：它与 task.ErrorKind 比较、
+  4 个既有测试按 string 写，改类型会破坏比较语义）；repair_schedule/replan 两处裸字面量改引用枚举；
+  assets_script.go 面板补三条中文标签（19→22 键，unlabeled=0）；新建 collected_kind_test.go（逐类钉
+  可解析+不可重试+面板有中文）与 kind_writeback_contract_test.go（源文本三面：直写字面量必须落
+  「枚举∪旁路」、不得有第二处字面量来源、旁路与枚举互斥；解析面为空一律判红 = ㉑二，且按 plan≥2/done≥1
+  点名证明跨行 literal 真在抽 —— 防「靠别的文件勉强非零」）。
+  **Lead 独立复核（不采信自述）**：gofmt 四目录空；vet retry/executor/web/engine rc=0；retry 定向 9 PASS/0 FAIL、
+  web FailureLabel|Prom ok、executor+engine 全 ok；**我自己做了一次变异负控** —— 把 crashRescueKind 改回
+  裸 `"crash_loop"` ⇒ `TestCollectedKindsHaveSingleLiteralSource` 真红并**指名文件行**
+  （kind_writeback_contract_test.go:370），还原后 sha 逐位相同（810c9374250b）、复跑转绿、gofmt 空。
+  **本笔同时满足我自己那条「落地代码必须有条目」判据**（#10）：CHANGELOG 与 .go 同笔入库。
+  产物侧：assets_script.go 变了 ⇒ 本机 TestAssetsPresentInArtifact 判红 = 产物落后（归因实验：还原
+  HEAD 版即转绿），由本笔的 dist 重建收口，不是资产写错。子代理一处越界自查如实申报：中途跑过目录级
+  gofmt -w（后用 mtime 证明未改写白名单外文件，chain/templates 仍 10-26）。
 - **issue #12 收口：覆盖率基线全表按「双环境下界」重校 + CI coverage artifact 前置 + 机读余量判据**：
   **口径先纠两处（都是我自己的错，含一处我把加固写成修 bug）**：
   ① issue #12 正文写「15 条基线只有 3 条达标、其余 12 条虚设」——那句话在它写出的时刻是**对的**

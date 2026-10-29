@@ -3,6 +3,7 @@ package engine
 import (
 	"strconv"
 
+	"workbench/internal/executor"
 	"workbench/internal/model"
 	"workbench/internal/store"
 )
@@ -70,7 +71,15 @@ func decideRescue(crashRescues int, budget int) rescueAction {
 // 面板「失败原因分布」（/api/failures 按 ErrorKind 聚合）据此把这类问题
 // 与普通的执行失败区分开 —— 它意味着"任务本身会弄死进程"，需要人工看产物/prompt，
 // 而不是再重试。
-const crashRescueKind = "crash_loop"
+//
+// 为什么改成引用枚举而不是裸字符串（issue #9 收编）：此前 "crash_loop" 只有这一处字面量、
+// 两侧枚举都不认识 ⇒ ParseKind 收敛成 Unknown、Unknown.Retryable()==true（实测收编前
+// IsRetryable("crash_loop") 恒为 true，即判死任务被当成「不明原因、值得再试」）、面板标签与
+// Prometheus 基线也接不住。现在**同一字符串只有一处来源**（executor.KindCrashLoop，
+// 与 retry.CrashLoop 同名同值，由 internal/retry/kind_drift_test.go 双向对账）。
+// 类型保持 string（不是 Kind）：本常量参与与 task.ErrorKind（string 字段）的比较，
+// 且既有测试写成 got.ErrorKind != crashRescueKind —— 改类型会破坏既有比较语义。
+const crashRescueKind = string(executor.KindCrashLoop)
 
 // rescueInterrupted 处理一条 interrupted 任务：累加救援计数并按额度分流。
 // 返回要重新入队的任务（nil 表示已判死，不再入队）。

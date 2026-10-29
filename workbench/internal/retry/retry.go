@@ -81,7 +81,29 @@ const (
 	// 为什么单列：它既不是模型问题也不是任务内容问题，而是**本地状态机/存储**的事实。
 	// 落 unknown 会让人去查模型车道，正确动作是查台账与磁盘。判不可重试（同因必再失败）。
 	TransitionFailed Kind = "transition_failed"
-	Unknown          Kind = "unknown"
+	// ── WorkBench 的「第三份隐性 kind 名单」（issue #9）收编 ──────────────────
+	// 这三类此前是**裸字符串直写 task.ErrorKind**，不走 ParseKind、不在任何枚举里，三处危害：
+	//   ① 收编前 IsRetryable("crash_loop") 恒为 **true**（实测，见下）：ParseKind 把它收敛成 Unknown，
+	//      而 Unknown.Retryable()==true ⇒ 「不在枚举里」不等于「判死」，它反而落进**最宽**的重试桶 ——
+	//      判死类任务被重试层当「不明原因、值得再试」。这是比 issue #9 正文所说的「判 false」更危险的形态。
+	//      收编后显式登记并判不可重试 ⇒ IsRetryable 由 true 变 false（口径修正）；三个写入点都在重试循环
+	//      之外（判死/退回队列各走自己的分支），所以这次修正不改变既有生产行为，只关闭「未来流入」的口子。
+	//   ② Prometheus 侧靠「实测值并集」才没丢读数，若改成只输出 baseline 就静默丢；
+	//   ③ 面板中文标签只对账 AllKinds ⇒ 这几类在中文面板里裸显英文桶名。
+	// 收编时**字符串值逐字保持**（crash_loop / verify_failed / replan）：生产数据里已是这个值，改名等于篡改历史读数。
+	// 三者共同语义：「非模型原因的终态处置」——处置由引擎自己的救援/返工/重规划环负责，
+	// 所以都判**不可重试**（与 PoolWaitCapped 同判），也都**不进** modelpool.modelAttributable（不该冷却无辜车道）。
+	//
+	// CrashLoop = 崩溃救援额度耗尽后判死（engine.stuck_rescue.go 的 crashRescueKind、engine.runtime_rescue.go 孤儿判死）。
+	// 判不可重试：它本身就是「重投会把进程再弄死一次」的证据，再重试等于放回僵尸任务。
+	CrashLoop Kind = "crash_loop"
+	// VerifyFailed = 产物验收未通过、已排入下一轮返工（engine.repair_schedule.go）。
+	// 判不可重试：再跑一轮由返工环安排（RepairRounds 记账），重试策略若再叠一层会把两套额度混在一起。
+	VerifyFailed Kind = "verify_failed"
+	// Replan = 返工额度用尽、退回方案层重出方案（engine.replan.go；cmd/workbench/plan_selftest.go 第 12 项断言它）。
+	// 判不可重试：同 verify_failed —— 后续动作是重新规划，不是换一次执行。
+	Replan  Kind = "replan"
+	Unknown Kind = "unknown"
 )
 
 // AllKinds 是「非空类别」的单一权威清单（不含 None）。
@@ -94,8 +116,28 @@ func AllKinds() []Kind {
 	return []Kind{
 		Timeout, MissingKey, ModelDead, Upstream, Boot, Exit,
 		Transport, StreamCut, Cancelled, Stalled, NoArtifact, NotServed,
-		NoLane, RateLimited, PoolWaitCapped, TaskPanic, TransitionFailed, Unknown,
+		NoLane, RateLimited, PoolWaitCapped, TaskPanic, TransitionFailed,
+		CrashLoop, VerifyFailed, Replan, Unknown,
 	}
+}
+
+// NonFailureLedgerKinds 是「台账里出现、但**不是失败类别**」的 kind 名单（issue #9 第 3 条的显式旁路）。
+//
+// 为什么需要旁路而不是塞进 AllKinds：引擎在 store.AttemptRecord.Kind 上直写的字面量里，
+//
+//	· plan —— 是**尝试类别**（这一轮在跑方案层），不是失败原因。塞进失败枚举会带来三个实际损害：
+//	  Prometheus 会为它预置一条「失败」序列、面板会为它补一条中文失败标签、
+//	  Retryable()/白名单会被拉进一个永远用不到的分支。台账实测（数据根 dist/workbench-output，
+//	  savedAt 2026-10-24T16:09Z）：attempts.jsonl 共 2467 行，kind=plan 1035 行 = 量最大的一类（42%）
+//	  —— 把它当失败类别，面板「失败原因分布」与 Prometheus 失败序列会一起被带歪。
+//	· done —— 是成功行的占位（AttemptRecord 六处写入点「列同构」，成功也记一行）。
+//
+// 旁路名单的作用：源文本对账判据说「所有直写 ErrorKind / 台账 Kind 的字面量必须落在
+// 枚举 ∪ 本名单 里」，找不到判红。这样既不会把非失败类别混进失败枚举，
+// 也不放行「凭空新增一个裸字符串类别」（那正是本轮要消除的形态）。
+// 名单被 internal/retry/kind_writeback_contract_test.go 引用并强制对账。
+func NonFailureLedgerKinds() []string {
+	return []string{"plan", "done"}
 }
 
 // ParseKind 把任意字符串收敛成已知 Kind（未知值一律 Unknown，避免策略表漏配）。
@@ -103,7 +145,8 @@ func ParseKind(s string) Kind {
 	k := Kind(strings.TrimSpace(s))
 	switch k {
 	case Timeout, MissingKey, ModelDead, Upstream, Boot, Exit, Cancelled, Stalled, NoArtifact, NotServed, NoLane, Unknown,
-		Transport, StreamCut, RateLimited, PoolWaitCapped, TaskPanic, TransitionFailed:
+		Transport, StreamCut, RateLimited, PoolWaitCapped, TaskPanic, TransitionFailed,
+		CrashLoop, VerifyFailed, Replan:
 		return k
 	}
 	return Unknown
@@ -120,6 +163,9 @@ func (k Kind) Retryable() bool {
 	// RateLimited 在此列（429 等冷却/换车道就能过），与 executor 侧同判。
 	// PoolWaitCapped / TaskPanic / TransitionFailed **不在**此列：三者都是「同因必再失败」的确定性终态，
 	// 重试只会重演僵尸任务或反复 panic（对标 asynq SkipRetry 直接归档、不烧剩余重试）。
+	// CrashLoop / VerifyFailed / Replan 同样**不在**此列（issue #9 收编时定调，与 PoolWaitCapped 同判）：
+	// 三者的后续处置各有自己的环（崩溃救援已判死、返工环、重规划环），重试策略再叠一层只会
+	// 重复消耗 attempt 额度并掩盖真实处置路径。
 	case Timeout, Upstream, Exit, Stalled, NoArtifact, NotServed, Unknown, Transport, StreamCut, RateLimited:
 		return true
 	}
