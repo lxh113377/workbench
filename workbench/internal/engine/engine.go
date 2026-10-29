@@ -1674,6 +1674,18 @@ func minWordsOf(e *Engine, task *model.Task) int {
 	return 300
 }
 
+// quotaLanesCooling 回答「此刻池里是否有车道因免费额度耗尽而处于冷却」（round 125）。
+//
+// 为什么要单独有这个方法：pickErr 路径（整池无可用车道）上本轮没有 ErrorKind 可用，
+// 而额度耗尽恰恰最常把任务推到这条路径上 —— 只看 kind 会让分级预算形同虚设。
+// 判据取自池健康账本的 lastErr 前缀（由 CooldownByLane 写入），不猜、不看文本。
+func (e *Engine) quotaLanesCooling() bool {
+	if e.router == nil {
+		return false
+	}
+	return e.router.CountCoolingByKind(string(executor.KindQuotaExhausted)) > 0
+}
+
 // isRateLimited 判断这次失败是否属于**上游限流族**（HTTP 429）—— 含额度耗尽 quota_exhausted。
 //
 // 三个来源都要覆盖（现场踩过两个）：
@@ -1761,7 +1773,11 @@ func (e *Engine) requeueForPoolWait(taskID, chainID string) (capped bool) {
 // 判据只认调用方传进来的具名 kind（来自 executor 的分类），不在这里猜上游。
 func (e *Engine) requeueForPoolWaitKind(taskID, chainID, kind string) (capped bool) {
 	budget := poolWaitBudget
-	if kind == string(executor.KindQuotaExhausted) {
+	if kind == string(executor.KindQuotaExhausted) || e.quotaLanesCooling() {
+		// 第二个条件是关键补漏（round 125 线上实测）：额度耗尽把整池打进冷却后，
+		// 后续任务是在「无可用车道」的 pickErr 路径上退回的 —— 那里拿不到本轮 ErrorKind（根本没发起尝试），
+		// 于是只有 kind 一个条件时，48 次的长预算永远够不到（实测 30 次 quota 尝试、长预算日志 0 条、
+		// 判死仍是 budget=4）。用池账本判「此刻是否真有车道因额度耗尽而冷却」来补齐这条路径。
 		budget = quotaWaitBudget
 	}
 	// 无效重投封顶（round 60 · T54）：环境类退回**不计失败**是对的，但完全无上限会造出僵尸任务。
