@@ -20,3 +20,8 @@ f532df2  并行会话：modelpool service.go 改动，落地无条目
 9d44f44  并行会话：engine+autonomy 代码产物最小实质门禁 T73（planner.go 等 3 文件），落地无条目
 637a734  并行会话：engine 代码产物体量下限 64→16（report_gate.go），落地无条目
 406dcb7  并行会话：templates 模板库与引擎门禁同口径（defaults.go），落地无条目
+
+# 2026-10-29 20:30 追加（判据上线后 1 分钟，并行会话落地的 T74）：
+#   该判据当轮就把这笔判红（NEW）。不判红它的理由与存量 7 笔同源：属他人写面，判红 = 假红归因错人。
+#   处置 = 登记 + 由 owner 会话补条目后删本行；若它补了条目而本行未删，第 5) 条的 STALE 判据会判红。
+022cea5  并行会话：engine 报告落点门禁 T74（artifacts.go + report_gate.go），落地无 CHANGELOG 条目
