@@ -319,6 +319,19 @@ func (s *Service) probeSpecs(specs []Spec, gw Gateway) []ProbeResult {
 		base := strings.TrimRight(firstNonEmpty(sp.BaseURL, gw.BaseURL), "/")
 		res := ProbeResult{Model: sp.ID, At: nowMs()}
 		if !baseOK[base] {
+			// ⚠️ 模型级失败不得整组套用（2026-10-29 全池黑障事故，事故现场见 pool.json 的 health.lastErr）。
+			//
+			// 端点层探测为了省成本只取**组内第一条 spec** 代表整个 base（见上方 probeSpec := group[0]）。
+			// 可当那条 spec 的失败是**它自己 id** 的判定时（not_listed = 清单里没有这个模型 / model_rejected），
+			// 把结论套用到同 base 的其他模型就是错的：实测 group[0] 是 z-ai/glm-5.3（网关只服务 -flash 变体），
+			// 于是同 base 的 38 条车道**全被判 down、且 lastErr 一字不差**，整池黑障循环 30 分钟一轮。
+			// 正确处置：环境态/不可达才整组标记；模型级失败改为**逐模型探测**（各自 id + variants 比对清单）。
+			// 成本：仅在整组已判模型级失败时多打 N 次 GET /v1/models（每周期一次，毫秒级）。
+			if k := baseErr[base].Kind; k == "not_listed" || k == "model_rejected" {
+				r := s.prober.Probe(sp)
+				out = append(out, r)
+				continue
+			}
 			// 端点层失败：整组模型标记为端点不可达（不是模型本身的问题，但此刻不可用）。
 			kind := firstNonEmpty(baseErr[base].Kind, "unreachable")
 			res.Kind = kind
