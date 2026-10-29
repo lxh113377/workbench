@@ -1683,3 +1683,42 @@ agent 根 rev=ea34496（校验和一致、引擎 pid=37540）；T79 守卫告警
    即「不再写死」这一修复目前只有单测 + 负控 + 源文本守卫背书，**没有线上正例**；不宣称已线上验证。
 ```
 下一步（T80 登记）：把「分类→记账→判定」三层收敛成单一事实源（同一 kind 常量表驱动），而不是再逐处打补丁。
+### 附录 R125-126（round 125-126，2026-10-30 07:50）：T80 车道处置决策收敛成单一表（治理第 5 次同族事故）
+
+一、这一轮不是加功能，是把「同一契约多处实现」这个病根治掉
+```
+收敛前三处各自实现同一份「失败类别 → 如何处置」：
+  manager.go    ：no_artifact ⇒ maxFail1+600s；not_served ⇒ maxFail1+1800s；
+                  四个结构性 kind（model_unavailable/missing_credential/unreachable/bad_endpoint）⇒ 长冷却（全是裸字符串）
+  exec_health.go：另一份「探测不得翻案」的 kind 列表
+  boot_attribution / failover：又两份 kind 判定
+本会话已付过 3 次线上学费（T57 计数口径、T61 轮转只覆盖一档、T72 探测两处比对 + 记账字段写死），
+共同形态：新增/改名一个类别只改了其中一处 ⇒ 另一处判定静默失效，且表现是「日志一条都没有」而不是报错。
+结论：靠「记得改三处」扛不住 —— 把记忆变成交付门禁才是解。
+```
+
+二、做法（613d4b0）
+- lane_disposition.go：laneDisposition{oneStrike, minCooldownSec, longCooldown, probeCannotCure, note}；
+  每条登记必须带 note（600/1800 的量级依据留在表里，下一个人不必重新考古）；
+  不经车道账本的类别进 engineOnlyKinds 并必须写理由 —— 让「不进表」是决策而不是遗忘。
+- manager / exec_health 改查表（laneOneStrike / laneLongCooldown / laneProbeCannotCure），删掉裸字符串分支。
+- 测试三条判据：
+  · 总覆盖：executor 每个 Kind 必须在二者择一登记；漏 ⇒ 红；两边都登记 ⇒ 红（矛盾）；
+    Kind 值用 go/ast 从源码取（不用正则 —— 本仓踩过：正则把注释示例与别的常量算进来，口径失真）；
+    并设「取到 <15 个即判红」的哨兵，防空集蒙过；
+  · 等价性：probeCannotCure 集合与重构前逐项相等（防「表驱动」悄悄改掉冷却语义 —— 那比 T75 更隐蔽）；
+  · 行为抽验：isExecutionFailureKind 对 6 个该禁的返回 true、6 个不该禁的返回 false。
+
+三、负控两向均有牙：① 删掉 transport_failed 的登记 ⇒ 总覆盖判红；② 给 stream_cut 偷加 probeCannotCure ⇒ 等价性判红；
+还原态复跑绿（采信负控的前置条件）。全程只动我新建的两个文件与我自己接线的两处（diff 已逐行核对，无并行 WIP 混入）。
+
+四、判死读数的正确解读（避免误判成回归）：部署后尾部三条「任务失败」全是 budget=4 kind=rate_limited，
+且发生在 07:43:37（旧实例重启前）。这是默认预算的正确行为：上游回 too many requests / Provider returned error
+时分类仍是 rate_limited（只有 Sign up for free / Free usage limit reached 才判 quota_exhausted 并走 48 次长预算）。
+⇒ 既不说「仍是 4 次」是我的收敛坏了冷却，也不说 T78 已线上验证。
+
+五、级3（记账不再写死）的线上判据仍未取到：本窗口 quota_exhausted 尝试数 = 0 ⇒ 目前只有单测 + 负控 +
+源文本守卫背书，没有线上正例；已挂观察窗（后台作业）继续取。
+
+六、验证与部署：go build/vet rc=0；modelpool -count=3 绿；全仓 go test ./... -count=1 rc=0；
+agent 根 rev=613d4b0（校验和一致、引擎 pid=31924）。dist 根被并行实例占用 ⇒ 不抢该写面（如实记）。
