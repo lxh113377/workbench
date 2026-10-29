@@ -309,6 +309,9 @@ do {
     }
     if (-not $proc -and -not $userQuit) {
         Write-Host "$now keepalive: $Exe 进程不在，拉起"
+        # 持久留痕（round 66 · T68）：本条原先只走 Write-Host ⇒ 计划任务窗口一关就没了，
+        # 事后无法回答"这次实例是谁、什么时候拉起来的"（2026-10-29 排查"哪个二进制产出的草案"时正是这个缺口）。
+        Add-KaLog "进程不在，拉起 $Exe"
         # 优先用仓内共用件 lib_silent_launch.ps1（Lead 17:54 加：按 PE 子系统分流，
         # GUI 走 Win32_Process.Create 保持脱离作业对象；CONSOLE 走 Hidden）。
         # 不在时退回自带逻辑（Start-Process -WindowStyle Hidden，实测同样零弹窗）。
@@ -358,6 +361,7 @@ do {
             $port = Get-PanelPort
             $state = Get-EngineState -Port $port
             Write-Host "$now keepalive: 已拉起 pid=$($proc.Id)，端口 $port，状态 $state"
+            Add-KaLog "已拉起 pid=$($proc.Id)，端口 $port，状态 $state"
         }
     }
 
@@ -409,6 +413,7 @@ do {
             $state2 = Get-EngineState -Port $port
             if ($state2 -eq "running") {
                 Write-Host "$now keepalive: 引擎已启动（状态 running）"
+                Add-KaLog "引擎 $state → 已启动（running，pid=$($proc.Id)）"
             } else {
                 Write-Host "$now keepalive: start 后状态=$state2（未达 running）"
             }
