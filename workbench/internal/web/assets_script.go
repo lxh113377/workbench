@@ -1035,6 +1035,12 @@ const appJS = `(() => {
         top = '⛔ ' + label + '（IP ' + (lh.egressIp || '?') + '） ｜ 需等解封或换网络出口';
         color = 'var(--danger)';
         tip = (lh.reason || '') + '\n\n上游原文：' + (lh.evidence || '（无）');
+      } else if (rl.quotaExhausted) {
+        // 额度耗尽与「等冷却」必须分开说（round 95 · T77）：前者要**账号侧动作**，等到天亮也不会恢复。
+        // 面板原先一律显示「上游限流冷却中，剩余 N 秒」⇒ 给了错的 action（让人去等一个不会来的恢复）。
+        top = '⛔ 免费额度已耗尽（' + (rl.quotaLanes || 0) + ' 条车道因此冷却） ｜ 排队 ' + (s.queuedTasks || 0) + ' ｜ 需补额度/换 provider';
+        color = 'var(--danger)';
+        tip = rl.lastReason || '';
       } else if (rl.limited) {
         top = '⚠ 上游限流冷却中（剩余 ' + (rl.remainingSeconds || 0) + ' 秒） ｜ 排队 ' + (s.queuedTasks || 0);
         color = 'var(--warn)';

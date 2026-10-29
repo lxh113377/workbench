@@ -504,6 +504,50 @@ func (r *Router) CooldownByLane(laneKey string, d time.Duration, errKind, errMsg
 }
 
 // AvailableLanes 返回当前至少有一个模型可用的车道列表（去重）。
+// CountCoolingByKind 数「正在冷却且 lastErr 前缀为该 kind」的车道数（round 95 · T77）。
+//
+// 用途：面板要区分「等冷却」（等几百秒会自动好）与「等额度」（要账号侧动作、等多久都不会好）。
+// 两者混在一句「上游限流冷却中，剩余 N 秒」里，给出的就是**错的 action**。
+//
+// 判据只认账本里记的 lastErr 前缀（CooldownByLane / RecordFailure 写的都是 `kind: msg`），
+// 不去猜上游、也不跨账本推断 —— 面板报的是账本事实。
+func (r *Router) CountCoolingByKind(kind string) int {
+	if kind == "" {
+		return 0
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	now := time.Now().UnixMilli()
+	n := 0
+	// 只看**当前仍在冷却**的车道：冷却已到期的历史原因不算「现在还没恢复」。
+	// 按 routes 迭代（与 AvailableLanes 同口径），避免把已下架但残留 health 的条目算进来。
+	for _, rt := range r.routes {
+		if !rt.Enabled {
+			continue
+		}
+		h := r.health[rt.Model]
+		if h == nil || h.CooldownTo <= now {
+			continue
+		}
+		if hasKindPrefix(h.LastErr, kind) {
+			n++
+		}
+	}
+	return n
+}
+
+// hasKindPrefix 判断 lastErr 是否以 `<kind>:` 开头（账本格式由 trimMsg 统一写成 `kind: msg`）。
+func hasKindPrefix(lastErr, kind string) bool {
+	if len(kind) >= len(lastErr) {
+		return false
+	}
+	if lastErr[:len(kind)] != kind {
+		return false
+	}
+	// 必须是 `kind:`（而不是 `kindXyz` 这种前缀误命中）。
+	return lastErr[len(kind)] == ':'
+}
+
 func (r *Router) AvailableLanes() []string {
 	r.mu.Lock()
 	defer r.mu.Unlock()
