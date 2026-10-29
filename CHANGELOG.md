@@ -16,6 +16,56 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+### Fixed
+- **issue #11 缺陷②（取消污染车道）的取证路径收口：换用「静态顺序不变量 + 真实历史版本负控 + 可编译变异」，
+  并如实记录运行时构造在本引擎里立不起来（不硬凑）**：
+  **先更正我自己写进 CHANGELOG 的一处错判**：上一笔我写「缺陷②无生产证据的原因是车道计数是内存态、
+  无落盘件」—— 错。持久面确实存在：`engine.go:142` 用 `layout.RuntimeFile("models-health.json")`
+  构造路由器，`router.go:387` 在 `RecordFailure` 末尾 `saveLocked`。我勘查时只翻了
+  `workbench-output/models/` 就下结论，方向错。同理我一度用 **birthtime** 论证「文件是新进程写的」
+  也无效：`WriteJSONAtomic` 是 tmp+rename，rename 会刷新 birth ⇒ `Birth==Modify` 恒成立。
+  真正取不到的原因有两条（都实测）：① `healthFile{savedAt,health}` 整体覆盖、无历史副本 ⇒
+  23:11 那一刻的 router 计数已被覆写；② `router.load()` 有白名单（`if !ok continue`），
+  `config.json` 只 6 条带前缀的 models ⇒ 无前缀的执行车道每次重启计数必然归零，读数不是历史。
+  **运行时构造为什么立不起来（三轮实测，逐轮被自家守卫拦住，不是我没试）**：
+  · v4：dshExe 指向不存在的路径 ⇒ `cmd.Start()` 失败 ⇒ `boot_failed` 走 **requeue** 分支
+    （`:1196` 起），任务 attempt 恒 0、每 60 秒重跑、永不终态 ⇒ 正向对照等不到 ⇒ `NO_POSITIVE_CONTROL`。
+  · v5/v6：换成「存在但立刻 exit 3」的假 DSH ⇒ 确实 `kind=bad_exit`、258ms 失败，但引擎在
+    `:1150-1185` 判无可用车道后 failover 轮转车道（实测 `recursive/flint-v1.0:free` →
+    `z-ai/glm-5.3` → `openai/gpt-oss-20b`，35 条车道 ⇒ 35 分钟才判死），且隔离实例里
+    `/api/models` 的 `sum_failure` 恒为 0 ⇒ **正向对照（"真失败会记账"）在这台引擎上建立不起来**。
+  · 结论：继续改造探针去凑那个增量，就是把证据做成我想要的意思（#36）⇒ 不凑。
+  **换成的可复算路径（`workbench/internal/engine/cancel_order_invariant_test.go`，新增）**：
+  ① `TestCancelClassificationPrecedesLaneAccounting` 钉语句顺序 —— 缺陷②的本质就是旧代码先记账
+    后判取消。判据**先框定「runOne 的失败分支」区域**再取区域内最小行号（本轮实测过一次假绿：
+    拿全文件首个 `classifyCancellation` 比，结果 `:1003` 那个无关调用点让它永远绿）。区域锚点缺失、
+    区域过短、四类符号任一找不到 ⇒ 一律 `t.Fatal`，绝不"找不到 = 通过"（㉑二）。
+  ② 钉**两个面**：HEAD（CI 检出的就是它）与工作树。只钉 HEAD 会留假绿窗口 —— 有人本地把顺序
+    改坏、还没提交时 `go test` 依然绿。
+  ③ `TestLaneAccountingOrderRegressionIsDetected` 是**用真实历史版本做的负控**：同一套扫描跑在
+    `022cea5`（实测 `merge-base --is-ancestor 6953c76` = NO ⇒ 修复前）上，必须判出"记账先于取消"；
+    实测打印 `RecordFailure 第 1212 行、取消判定第 1219 行 ⇒ 差分面有效`。若它不判"旧序"，
+    上面那条绿灯就不成立。并前置校验「该 blob 不含 `classifyCancellation`」，前提变了会直接判失败。
+  ④ **可编译的顺序变异**（关键，前两次变异都没证到点子上）：把记账 if/else-if 整块（6 行）挪到
+    `if cancelled {` 之前 ⇒ `BUILD=0` ⇒ 判据报出具体行号并判红：
+    `classify=16 cancel=23 记账守卫=17 RecordFailure=19（要求 classify<cancel<守卫<RecordFailure）`；
+    还原后 engine.go sha 逐位相同（c010deb3009008e3）、复跑 `ok`、`gofmt -l` 空。
+    另记两次无效变异：第一次把锚点注释挪出区域 ⇒ 红在「找不到锚点」（没测到顺序比较）；
+    第二次只挪变量声明行 ⇒ 编译失败（不算"只改顺序"）。**"红了"不等于"按预期红"。**
+  ⑤ 局限写进注释、不冒充彻底：静态不变量只钉住这一处调用点；将来若新增第二条取消出口，
+    文本判据不会自动覆盖它 —— 那需要运行时读数配合，而运行时读数面正卡在上面的 ①② 两条限制上。
+  **同批收口 issue #13/#14**（`1515d6d`，CI 40912722000 三 job success）：#14 收口后现场又复发一次
+  并被自动抓到 —— 06:15 实测 `dist/SHA256SUMS` 整份缺失（并行会话 01:25 换装 `96c2bd5` 时没留清单），
+  本闸报 `FAIL 有产物但没有校验清单 —— 产物没走构建链` rc=1，归因文案正确；`sync_dist_manifest.ps1`
+  rc=0 重建后复验 rc=0 ⇒ 换装路径已受监控且一步可修。两 issue 均已带端到端证据关闭。
+  **顺手修掉探针的一处自伤**：`cancel_lane_pollution_probe.ps1` 失败路径提前 `exit` 导致它拉起的
+  `--headless` 实例无人收尾，实测泄漏 9 个孤儿（两轮）⇒ ① 收尾抽成 `Stop-Instance`（幂等）并在每个
+  exit 前调用；② 加**起盘前守卫**：检测到任何 `lane-probe` 实例活着就 `exit 2` 并点名 PID（被
+  `job_kill` 从外部打断时①跑不到，只有②能兜住）。守卫负控用真孤儿现场免费验到：`rc=2`+3 个 PID，
+  杀干净后放行且不误伤生产两个实例（`PRODUCTION_ALIVE=2`）。
+  另记一次读数自误：清理脚本第一版 WQL 写成 `Name=‘‘workbench.exe’’`（双单引号）⇒ 查询匹配不到
+  任何进程、报 `ORPHANS=0` 的**假零**；改 `Name="workbench.exe"` 并用 CIM/Get-Process 两面交叉
+  计数（都 = 8）后才动手 —— 与 #12 的 tab-vs-space 同族。
 - **issue #13 收口：`check_report_figures` 不再把并发在途件数当等式判据，并补上三条真牙（含我自己修出来的假红）**：
   **现场**：同一小时内「未跟踪 Go 测试数」实测 12→13→14→15→12→0→12，全由并行会话的在途件决定。
   把它当等式判据不是"数字错了"，而是两条更坏的后果：① **红灯无主**（谁在这一瞬修红就改成自己那瞬
