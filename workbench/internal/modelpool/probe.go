@@ -134,7 +134,7 @@ func (p *Prober) Probe(s Spec) ProbeResult {
 						// 主路径（下方 probeEndpoint 的清单检查）早就用了 variants，这条轮换重试路径漏了 —— 同一判据两处实现。
 						if listed, known := modelListed(body2, modelIDVariants(s)...); known && !listed {
 							res.State, res.Kind = StateDegraded, "not_listed"
-							res.Error = "网关清单里没有该模型（渠道被关闭或模型下线）"
+							res.Error = "网关清单里没有该模型（渠道被关闭或模型下线）" + listingDiag(body2, base, key, modelIDVariants(s))
 							return res
 						}
 						res.OK, res.State = true, StateHealthy
@@ -181,7 +181,7 @@ func (p *Prober) Probe(s Spec) ProbeResult {
 	// 网关会按车道给 id 加前缀（our-free-model/<id>），所以三种形态都要认。
 	if listed, known := modelListed(body, modelIDVariants(s)...); known && !listed {
 		res.State, res.Kind = StateDegraded, "not_listed"
-		res.Error = "网关清单里没有该模型（渠道被关闭或模型下线）"
+		res.Error = "网关清单里没有该模型（渠道被关闭或模型下线）" + listingDiag(body, base, key, modelIDVariants(s))
 		return res
 	}
 	res.OK, res.State = true, StateHealthy
@@ -205,11 +205,38 @@ func modelIDVariants(s Spec) []string {
 	return out
 }
 
-// modelIDVariants 返回一个模型在网关清单里可能出现的全部 id 形态。
+// listingDiag 给出「判 not_listed」那一刻的现场（round 68 · T72 的最小诊断）。
 //
-// 实测（2026-10-19 07:45）：网关把免费/EAC 车道广播成 our-free-model/<id>、
-// 地区受限成 our-free-model-region/<id>、网关自有车道保持 deepseek-official/<m> 原样。
-// 只比对裸 id 会 100% 误判成「清单里没有」。
+// 为什么写进 Error 而不是打日志：这条路径跑在后台周期探测里，modelpool 没有统一的日志注入点；
+// 而 Error 会原样落进 models/pool.json 的 health.lastErr —— 判据就从「翻日志」变成「读一个文件即可复算」。
+// 现场要素（缺一不可）：base（打到哪个网关）、钥匙指纹（哪把 key）、清单条数（200 但空或子集？）、
+// 样例 id（清单里到底有什么）、试过的形态（变体是否覆盖）。
+//
+// 起因（2026-10-29）：用**生产 spec** 在进程内探测得 34 healthy / 4 not_listed，而线上同一时刻 38/38 全 not_listed ——
+// 代码与数据都对得上，只能让生产自己把现场说出来。
+func listingDiag(body []byte, base, key string, tried []string) string {
+	var payload struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	n := -1
+	var sample []string
+	if jsonUnmarshalLoose(body, &payload) == nil && payload.Data != nil {
+		n = len(payload.Data)
+		for i, d := range payload.Data {
+			if i >= 3 {
+				break
+			}
+			sample = append(sample, d.ID)
+		}
+	}
+	fp := key
+	if len(fp) > 6 {
+		fp = fp[:6]
+	}
+	return fmt.Sprintf(" [base=%s key=%s… 清单条数=%d 样例=%v 试过=%v]", base, fp, n, sample, tried)
+}
 
 // modelListed 判断 /v1/models 的响应体里是否列出了指定模型。
 // known=false 表示响应体不是 OpenAI 清单形状（无法判断，交给上层其它信号）。
