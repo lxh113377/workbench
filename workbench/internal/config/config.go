@@ -401,7 +401,9 @@ func DefaultConfig() Config {
 				// task-66cf148146331039 = not_served 同样 attempt0 即 fail。
 				// 口径由 internal/retry/kind_drift_test.go 机器守护：凡 Retryable()==true 的类别
 				// 必须出现在本清单里（池封顶/panic/状态迁移失败三类本就不可重试，不在其列）。
-				RetryableKinds: []string{"timeout", "upstream_failed", "bad_exit", "stalled", "unknown", "transport_failed", "stream_cut", "no_artifact", "not_served", "rate_limited"},
+				// round 91 · T76 追加 quota_exhausted：Retryable() 判它可重试（等冷却），本白名单必须同步，
+				// 否则 Policy.allowed() = Retryable() **AND** 白名单 ⇒ 生产里它会一次即判死（本清单的空漏正是第 3 次同族事故）。
+				RetryableKinds: []string{"timeout", "upstream_failed", "bad_exit", "stalled", "unknown", "transport_failed", "stream_cut", "no_artifact", "not_served", "rate_limited", "quota_exhausted"},
 			},
 			ShutdownGraceSeconds: 20,
 			AppendProtocol:       true,

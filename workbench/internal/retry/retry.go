@@ -59,6 +59,13 @@ const (
 	// 逐条比对 executor 的 Kind 枚举，把这类漏登记变成必红（对标 river 的「枚举漏项即 panic」）。
 	// 语义：可重试 —— 429 是「等冷却再试」，不是「任务坏了」，与 executor 侧 Retryable 同判。
 	RateLimited Kind = "rate_limited"
+	// QuotaExhausted 对应 executor.KindQuotaExhausted（round 91 · T76）：**免费额度耗尽**，不是瞬时限流。
+	//
+	// 为什么要单列（现场 2026-10-29：近两小时 409 次 rate_limited 里 170+ 是额度耗尽原文，全部 ~3 秒即返回）：
+	// 它虽然同样「等冷却再试」，但冷却尺度是**小时级**（恢复要账号侧动作），而 RateLimited 是秒级。
+	// 混在一起 ⇒ 车道被按秒级冷却反复放回候选、每次都秒失败，同一分钟最多空转 13 次。
+	// 语义上仍**可重试**（等冷却），与 executor 侧 Retryable 同判 —— 但重试的间隔由冷却窗口决定，不是立刻。
+	QuotaExhausted Kind = "quota_exhausted"
 	// PoolWaitCapped 是「因环境（池不可用/限流）退回队列的次数到顶，任务判死」
 	// （engine.requeueForPoolWait，round 60 · T54 的封顶路径）。
 	//
@@ -116,7 +123,7 @@ func AllKinds() []Kind {
 	return []Kind{
 		Timeout, MissingKey, ModelDead, Upstream, Boot, Exit,
 		Transport, StreamCut, Cancelled, Stalled, NoArtifact, NotServed,
-		NoLane, RateLimited, PoolWaitCapped, TaskPanic, TransitionFailed,
+		NoLane, RateLimited, QuotaExhausted, PoolWaitCapped, TaskPanic, TransitionFailed,
 		CrashLoop, VerifyFailed, Replan, Unknown,
 	}
 }
@@ -145,7 +152,7 @@ func ParseKind(s string) Kind {
 	k := Kind(strings.TrimSpace(s))
 	switch k {
 	case Timeout, MissingKey, ModelDead, Upstream, Boot, Exit, Cancelled, Stalled, NoArtifact, NotServed, NoLane, Unknown,
-		Transport, StreamCut, RateLimited, PoolWaitCapped, TaskPanic, TransitionFailed,
+		Transport, StreamCut, RateLimited, QuotaExhausted, PoolWaitCapped, TaskPanic, TransitionFailed,
 		CrashLoop, VerifyFailed, Replan:
 		return k
 	}
@@ -166,7 +173,7 @@ func (k Kind) Retryable() bool {
 	// CrashLoop / VerifyFailed / Replan 同样**不在**此列（issue #9 收编时定调，与 PoolWaitCapped 同判）：
 	// 三者的后续处置各有自己的环（崩溃救援已判死、返工环、重规划环），重试策略再叠一层只会
 	// 重复消耗 attempt 额度并掩盖真实处置路径。
-	case Timeout, Upstream, Exit, Stalled, NoArtifact, NotServed, Unknown, Transport, StreamCut, RateLimited:
+	case Timeout, Upstream, Exit, Stalled, NoArtifact, NotServed, Unknown, Transport, StreamCut, RateLimited, QuotaExhausted:
 		return true
 	}
 	return false

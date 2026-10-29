@@ -130,6 +130,19 @@ const (
 	// KindNoArtifact 是「回答有内容、但没有产物块」的失败类别（round 22 实测：引擎台账曾落成 unknown）。
 	// 与 bad_exit 的区别：bad_exit 是「没有最终答案」，本类别是「有答案但不符合产物协议」。
 	KindNoArtifact Kind = "no_artifact"
+	// KindQuotaExhausted 是**免费额度耗尽**（round 91 · T76）：与瞬时 429 同属限流族，但恢复时间尺度完全不同。
+	//
+	// 为什么必须分开（现场实测 2026-10-29，近两小时 409 次 rate_limited）：
+	//   · 瞬时 429（`too many requests; retry later`）几秒到几十秒就能恢复 —— 整池冷却后重试是对的；
+	//   · 额度耗尽的三类原文写着要**人/账号侧动作**：
+	//       `Sign up for free to continue and explore 500 other models. Takes 2 minutes to sign up.`
+	//       `Free usage limit reached. Free models work in OpenCode (https://...)`
+	//       `Provider returned error`（携带 429 状态）
+	//     现场每次都恰在 ~3 秒返回（elapsedMs 中位 2.9s，333/409 落在 2.5–4s 桶）⇒ 引擎在**原地空转**：
+	//     冷却窗口一开就再试、每次都秒失败、再冷却 —— 同一分钟最多撞 13 次，白烧尝试预算与日志。
+	// 处置差异：额度耗尽 ⇒ 该车道**长冷却**（见 modelpool 侧 quota 处置）+ 不计入「模型可归因失败」，
+	// 避免把「账号没额度」错记成「这个模型不行」而把它永久踢出候选。
+	KindQuotaExhausted Kind = "quota_exhausted"
 	// KindRateLimited 是上游 429 限流（车道级，不是任务问题）。
 	// 引擎据此只冷却出问题的车道并把任务退回队列（不计失败）。
 	KindRateLimited Kind = "rate_limited"
@@ -180,6 +193,10 @@ func (k Kind) Retryable() bool {
 		return true
 	case KindRateLimited:
 		// 限流可重试：它不是模型下线（那个要长冷却 12h），只需整池冷却后重试。
+		return true
+	case KindQuotaExhausted:
+		// 额度耗尽同样可「重试」，但语义是**等额度窗口**而不是等几秒 —— 冷却长度由 modelpool 侧处置；
+		// 此处判 true：任务不该因账号没额度被判死，只让车道进长冷却。
 		return true
 	// 引擎侧三类确定性终态**不可**重试（与 retry.Retryable 同判）：
 	// 环境等待封顶判死 = 预算已耗尽；panic = 同因必再炸；状态迁移失败 = 本地状态机/磁盘问题。
@@ -736,6 +753,23 @@ func hasWorkspaceOutput(dir string) bool {
 	return found
 }
 
+// quotaExhaustedText 判定「这次 429 其实是**额度耗尽**」而不是瞬时抖动（round 91 · T76）。
+//
+// 判据只用**额度字样**（来自上游原文，2026-10-29 实测 reason 分布 409 次里的前两类）：
+//
+//	· `sign up for free` —— 免费额度用完，上游直接劝注册（要账号侧动作）；
+//	· `free usage limit` —— 明写「免费用量已满」。
+//
+// ⚠️ `provider returned error` **不能**算判据（本轮被既有测试当场纠正，见 TestKindFromStreamError）：
+// 它是 429 的通用外壳（`RATE_LIMIT: Provider returned error` 的 message 里没有任何关键词，靠 code 定性）。
+// 若把它当额度耗尽，会把**真正的瞬时限流**也判成小时级冷却 ⇒ 免费车道被无故雪藏。
+// 反例（必须不命中，仍按瞬时限流走整池冷却）：`too many requests; retry later`、单独的 `Provider returned error`。
+//
+// 判据纪律：只认「额度」这件事的**专有表述**，不认任何可能出现在普通限流里的通用词。
+func quotaExhaustedText(lower string) bool {
+	return strings.Contains(lower, "sign up for free") || strings.Contains(lower, "free usage limit")
+}
+
 func classify(stderr string, res *Result) Kind {
 	// 429 必须先判：现场实测 429 的文本里带 "dsh: RATE_LIMIT"，
 	// 若不前置，会被下面的 dsh: 分支吞成 boot_failed —— 于是引擎把它当模型故障，
@@ -744,6 +778,14 @@ func classify(stderr string, res *Result) Kind {
 		return KindRateLimited
 	}
 	lower := strings.ToLower(stderr)
+	// 额度耗尽与瞬时限流同族但处置不同 —— 必须先于下面的通用限流判定（round 91 · T76）。
+	//
+	// 判据用**原文特征**而不是「429」：两条原文本身就是上游给出的恢复条件说明书，
+	// 而 `too many requests; retry later` 是真正的瞬时抖动。只认「429/rate_limit」会把两者混为一谈，
+	// 于是额度耗尽也走「整池冷却后重试」⇒ 每 3 秒空转（现场 409 次、单分钟最多 13 次）。
+	if quotaExhaustedText(lower) {
+		return KindQuotaExhausted
+	}
 	// 文本兜底：结构化字段可能缺失（漏分类的实现）。
 	if strings.Contains(lower, "rate_limit") || strings.Contains(lower, "too many requests") ||
 		strings.Contains(lower, "429") {
