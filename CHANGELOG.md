@@ -17,6 +17,26 @@
 
 ### Fixed
 ### Fixed
+- **修掉我上一笔自己弄红的两道闸（纯净检出 + 零断言）：顺序不变量测试改为不依赖 git、断言收回 Test 体**：
+  入库的 `5be8713` 在 CI 与「纯净检出」闸**双双判红**，两条原因都是我的实现缺陷，不是判据误报：
+  ① **依赖 git 的判据在干净检出的面上必然炸**：我第一版用 `git show HEAD:…engine.go` + `git rev-parse
+     --show-toplevel` 去钉 HEAD，而 `check_snapshot_build.ps1` 是 `git archive` 导出的**无 .git 快照**、
+     CI 的某些面同理 ⇒ `git rev-parse` 直接 `exit status 128`，测试 Fail。日志原文点到我行号
+     （`cancel_order_invariant_test.go:65 git rev-parse --show-toplevel 失败`）。教训：**判据要声明它
+     能跑在哪些面上**，凡是"从 VCS 取内容"的测试，都必须先问一句「没有 .git 时我怎么办」——
+     上一轮我在 #12 才刚给自己立过「fetch-depth: 1 ⇒ 判据必须每笔提交可用」的同族规矩，这次又踩。
+     改法：主判据只读工作树 `os.ReadFile("engine.go")`（本仓源文本不变量的既有惯例），不再碰 git；
+     负控改用**合成样本**（正确序 / 颠倒序两段内联字符串）而非历史 blob —— 合成样本不依赖仓库状态，
+     反而更严格：它把「判据有牙」变成测试自己每次必跑的断言，而不是只在有 .git 时才成立的条件分支。
+  ② **断言放在辅助函数里 = 零断言**：`check_test_assertions.ps1`（正是我这轮刚换成 go/parser 后端的那条）
+     只认 Test 体内的 `t.Fatal*/t.Error*`，我把判定塞进 helper ⇒ 被判「无任何断言」。**这是判据按设计
+     生效、抓到了我**：不为此放宽判据、也不塞 `t.Log` 之类假断言应付，直接把循环与断言收回 Test 体。
+  验证：`gofmt -l` 空；`go vet ./internal/engine/` 干净；`TestCancelNotRecordedBeforeLaneAccounting` 与
+  `TestCancelOrderAnalyzerHasTeeth`（含合成负控：正确序放过、颠倒序判红且理由必须是「取消必须先于」）
+  均 PASS；`check_test_assertions.ps1` 回到 `测试断言合规：1044 个 Test 函数均有断言` rc=0。
+  另按 #10 既有口径把并行会话 `6572caf`（quota_exhausted 并入限流族，改 engine.go 未写条目）登记进
+  债务名册（不判红他人），CL 门禁复跑 rc=0：新增缺失 0 / 在册豁免 6。
+### Fixed
 - **issue #11 缺陷②（取消污染车道）的取证路径收口：换用「静态顺序不变量 + 真实历史版本负控 + 可编译变异」，
   并如实记录运行时构造在本引擎里立不起来（不硬凑）**：
   **先更正我自己写进 CHANGELOG 的一处错判**：上一笔我写「缺陷②无生产证据的原因是车道计数是内存态、

@@ -1,93 +1,37 @@
 package engine
 
-// 缺陷②的取证不靠「造一次取消然后看车道计数」—— 本轮实测证明那条路在真实引擎里立不起来
-// （bad_exit 走 requeue/failover、车道在 35 条间轮转、attempt 恒 0，60 秒窗口内取不到
-// RecordFailure 的记账增量；隔离实例的 /api/models 一直 sum_failure=0）。继续改造探针去凑
-// 那个增量，就是把证据做成我想要的意思（本仓 #36 禁止）。
+// 缺陷②（取消不该污染车道健康度）的取证不靠「造一次取消再看计数」—— 本轮实测证明那条路在真实
+// 引擎里立不起来：boot_failed 走 requeue、bad_exit 在 35 条车道间 failover 轮转、attempt 恒 0、
+// 隔离实例 /api/models 的 sum_failure 恒为 0。继续改造探针去凑那个增量，就是把证据做成我想要的
+// 意思（#36 禁止）。所以换轨：缺陷②的本质是**语句顺序**（旧代码先记账、后判取消），顺序是纯静态
+// 事实，可以钉死；并用合成样本证明这根钉子在顺序颠倒时会响。
 //
-// 换一条可复算、不赌时序的路：缺陷②的本质是**语句顺序**——旧代码先记账后判取消
-// （`022cea5:workbench/internal/engine/engine.go` 里 RecordFailure 在 :1212/:1215、
-// 取消判定在 :1219），新代码反过来（classifyCancellation 在记账之前、取消分支先 return）。
-// 顺序是纯静态事实，可以直接钉；并且把同一条判据跑在修复前的 blob 上必须判红 ——
-// 这才是"判据有牙"的证明（本仓 ⑧：无负控的判据视为无牙）。
+// ⚠ 为什么不依赖 git 取 HEAD（2026-10-30 实测教训）：第一版用 git show HEAD:… + git rev-parse 钉
+//   HEAD，结果「纯净检出」闸与 CI 双双判红 —— 干净检出里没有 .git，git rev-parse 直接 exit 128
+//   （日志原文：cancel_order_invariant_test.go:65 git rev-parse --show-toplevel 失败）。判据在自己
+//   机器上绿、在别的面上红，等于把环境差异做成测试失败。⇒ 主判据只读工作树（os.ReadFile，本仓
+//   源文本不变量的既有惯例），git 可得时再另行加验历史 blob。
 //
-// 为什么用 git blob 而不是工作树：工作树会被并行会话改动（本轮实测 HEAD 一小时内推进过
-// 多次），钉工作树会让判据随别人改动而红/绿。这里读 HEAD（本判据随修复一起入库 ⇒
-// HEAD 必然含修复），并且只在文件能取到时下结论；取不到一律 t.Fatal，不 skip 成绿。
+// ⚠ 断言为什么必须写在 Test 函数体内（同一轮实测）：本仓零断言判据（check_test_assertions.ps1，
+//   后端 workbench/cmd/assertionprobe）只认 Test 体内的 t.Fatal*/t.Error*。我第一版把断言放进辅助
+//   函数 ⇒ 被判「无任何断言」。不为此放宽判据、也不塞假断言，直接把判定收回 Test 体来自证。
 
 import (
 	"os"
-	"os/exec"
 	"regexp"
 	"strings"
 	"testing"
 )
 
-// headEngineSource 取 HEAD 版本的 engine.go 全文。取不到 ⇒ t.Fatal（不许当成"无违规"）。
-func headEngineSource(t *testing.T) string {
-	t.Helper()
-	cmd := exec.Command("git", "show", "HEAD:workbench/internal/engine/engine.go")
-	cmd.Dir = repoRootForSourceAssert(t)
-	out, err := cmd.Output()
-	if err != nil {
-		t.Fatalf("取不到 HEAD 版 engine.go（git show 失败 ⇒ 判据失去对照面，不能当通过）: %v", err)
-	}
-	if len(out) < 1000 {
-		t.Fatalf("HEAD 版 engine.go 内容异常短（%d 字节）⇒ 拒绝下结论", len(out))
-	}
-	return string(out)
-}
-
-// repoRootForSourceAssert 从测试工作目录（workbench/internal/engine）回溯到 git 顶层。
-func repoRootForSourceAssert(t *testing.T) string {
-	t.Helper()
-	out, err := exec.Command("git", "rev-parse", "--show-toplevel").Output()
-	if err != nil {
-		t.Fatalf("git rev-parse --show-toplevel 失败: %v", err)
-	}
-	return strings.TrimSpace(string(out))
-}
-
-// TestCancelClassificationPrecedesLaneAccounting 钉缺陷②的不变量：runOne 的失败分支里，
-// 「取消判定 + 取消分支 return」必须出现在 RecordFailure **之前**。
+// cancelOrderViolation 在「runOne 的失败分支」区域内检查：取消判定是否先于车道记账。
+// 返回 (说明, 是否违规)。找不到锚点、区域异常短也判违规 —— 判据失去对照面时必须响，
+// 不能「看不到就算通过」（本仓 ㉑二：解析面为空不得当成全部对齐）。
 //
-// 为什么不是简单比行号：engine.go 里 RecordFailure 有多个调用点（timeout/empty-final 等），
-// 而取消判定也出现在别处（finishCancelled 等）。必须先框定「runOne 的失败分支」这个区域，
-// 再在区域内取最小行号 —— 区域外的一律不参与比较。（本轮实测过一次假绿：拿全文件首个
-// classifyCancellation 与首个 RecordFailure 比，结果 :1003 那个无关调用点让判据永远绿。）
-func TestCancelClassificationPrecedesLaneAccounting(t *testing.T) {
-	// 两个面都钉：HEAD（CI 检出的就是它）与工作树（本地开发态）。
-	// 只钉 HEAD 会留一个假绿窗口：有人把顺序改坏、还没提交时本地 go test 依然绿。
-	for _, face := range []struct {
-		name string
-		src  string
-	}{
-		{"HEAD", headEngineSource(t)},
-		{"工作树", workingEngineSource(t)},
-	} {
-		t.Run(face.name, func(t *testing.T) {
-			assertCancelPrecedesAccounting(t, face.src)
-		})
-	}
-}
-
-// workingEngineSource 读工作树里的 engine.go（与 HEAD 版同一判据，覆盖未提交的改动）。
-func workingEngineSource(t *testing.T) string {
-	t.Helper()
-	b, err := os.ReadFile("engine.go")
-	if err != nil {
-		t.Fatalf("读不到工作树 engine.go（判据失去对照面，不能当通过）: %v", err)
-	}
-	if len(b) < 1000 {
-		t.Fatalf("工作树 engine.go 异常短（%d 字节）⇒ 拒绝下结论", len(b))
-	}
-	return string(b)
-}
-
-func assertCancelPrecedesAccounting(t *testing.T, src string) {
+// 为什么先框区域再取行号：engine.go 里 RecordFailure 有多个调用点（timeout / empty-final / KindBoot），
+// classifyCancellation 也在别处出现。实测过一次假绿：拿全文件首个 classifyCancellation 与首个
+// RecordFailure 比，:1003 那个无关调用点会让判据永远绿。
+func cancelOrderViolation(src string) (string, bool) {
 	lines := strings.Split(src, "\n")
-
-	// 区域锚点：失败分支的入口注释是本轮修复时写死的、语义唯一的一行。
 	start := -1
 	for i, l := range lines {
 		if strings.Contains(l, "只做分类，**先不记车道失败**") {
@@ -96,10 +40,9 @@ func assertCancelPrecedesAccounting(t *testing.T, src string) {
 		}
 	}
 	if start < 0 {
-		t.Fatal("找不到失败分支的区域锚点（注释被改/删 ⇒ 判据失去对照面，不能当通过）")
+		return "找不到失败分支的区域锚点（注释被改/删 ⇒ 判据失去对照面）", true
 	}
-	// 区域终点：该失败分支所在函数的结束（下一个顶层 func 或 runOne 之后的注释块）。
-	end := linesLen(lines)
+	end := len(lines)
 	for i := start + 1; i < len(lines); i++ {
 		if strings.HasPrefix(lines[i], "func ") {
 			end = i
@@ -108,96 +51,112 @@ func assertCancelPrecedesAccounting(t *testing.T, src string) {
 	}
 	region := lines[start:end]
 	if len(region) < 5 {
-		t.Fatalf("失败分支区域只有 %d 行，异常短 ⇒ 拒绝下结论", len(region))
+		return "失败分支区域只有 " + itoa(len(region)) + " 行，异常短 ⇒ 拒绝下结论", true
 	}
-
-	cancelAt, classifyAt, recordAt, evictAt := -1, -1, -1, -1
+	classifyAt, cancelAt, guardAt, evictAt := -1, -1, -1, -1
+	evictRe := regexp.MustCompile(`e\.router\.RecordFailure\(`)
 	for i, l := range region {
-		if strings.Contains(l, "// 真失败才归因到车道") {
-			if recordAt < 0 {
-				recordAt = i
-			}
-		}
 		if classifyAt < 0 && strings.Contains(l, "classifyCancellation(") {
 			classifyAt = i
 		}
 		if cancelAt < 0 && strings.Contains(l, "if cancelled {") {
 			cancelAt = i
 		}
-		if evictAt < 0 && regexp.MustCompile(`e\.router\.RecordFailure\(`).MatchString(l) {
+		if guardAt < 0 && strings.Contains(l, "真失败才归因到车道") {
+			guardAt = i
+		}
+		if evictAt < 0 && evictRe.MatchString(l) {
 			evictAt = i
 		}
 	}
 	for _, p := range []struct {
 		name string
 		idx  int
-	}{{"classifyCancellation", classifyAt}, {"if cancelled", cancelAt}, {"真失败才归因到车道", recordAt}, {"RecordFailure 调用", evictAt}} {
+	}{{"classifyCancellation", classifyAt}, {"if cancelled", cancelAt}, {"记账守卫注释", guardAt}, {"RecordFailure 调用", evictAt}} {
 		if p.idx < 0 {
-			t.Fatalf("失败分支区域内找不到 %s ⇒ 判据失去对照面（不能当通过）", p.name)
+			return "区域内找不到 " + p.name + " ⇒ 判据失去对照面（不能当通过）", true
 		}
 	}
-	if !(classifyAt < recordAt && cancelAt < recordAt && evictAt > recordAt) {
-		t.Errorf("取消必须先于车道记账：classify=%d cancel=%d 记账守卫=%d RecordFailure=%d（要求 classify<cancel<守卫<RecordFailure）",
-			classifyAt, cancelAt, recordAt, evictAt)
+	if !(classifyAt < guardAt && cancelAt < guardAt && evictAt > guardAt) {
+		return "取消必须先于车道记账：classify=" + itoa(classifyAt) + " cancel=" + itoa(cancelAt) + " 记账守卫=" + itoa(guardAt) + " RecordFailure=" + itoa(evictAt) + "（要求 classify<cancel<守卫<RecordFailure）", true
 	}
-	// 第二条独立佐证：取消分支里必须**先 return**，即记账守卫之后才出现 RecordFailure。
-	if strings.Contains(region[cancelAt], "if cancelled {") {
-		closed := false
-		for i := cancelAt; i < len(region); i++ {
-			if strings.Contains(region[i], "e.finishCancelled(") {
-				closed = true
-				break
-			}
-			if strings.Contains(region[i], "e.router.RecordFailure(") {
-				t.Error("取消分支内出现了 RecordFailure ⇒ 取消会污染车道（缺陷②回归）")
-				break
-			}
+	// 第二条独立佐证：取消分支内不得出现 RecordFailure（出现即缺陷②回归）。
+	closed := false
+	for i := cancelAt; i < len(region); i++ {
+		if strings.Contains(region[i], "e.finishCancelled(") {
+			closed = true
+			break
 		}
-		if !closed {
-			t.Error("取消分支里找不到 finishCancelled ⇒ 分支结构已变，判据需同步更新（不得静默放过）")
+		if evictRe.MatchString(region[i]) {
+			return "取消分支内出现 RecordFailure ⇒ 取消会污染车道（缺陷②回归）", true
 		}
 	}
+	if !closed {
+		return "取消分支里找不到 finishCancelled ⇒ 分支结构已变，判据需同步更新（不得静默放过）", true
+	}
+	return "", false
 }
 
-// TestLaneAccountingOrderRegressionIsDetected 是上面那条判据的**自证负控**：
-// 把同一套区域扫描跑在修复前的 git blob（022cea5，实测不含 6953c76）上，必须判定为
-// "顺序相反"。若它不红，说明扫描面根本没在比东西 —— 那上面那条绿灯就是假的。
-// 这是本仓 ⑧ 要求的负控，且用真实历史版本而不是构造样本。
-func TestLaneAccountingOrderRegressionIsDetected(t *testing.T) {
-	cmd := exec.Command("git", "show", "022cea5:workbench/internal/engine/engine.go")
-	cmd.Dir = repoRootForSourceAssert(t)
-	out, err := cmd.Output()
+func itoa(n int) string {
+	if n == 0 {
+		return "0"
+	}
+	var buf [24]byte
+	pos := len(buf)
+	for n > 0 {
+		pos--
+		buf[pos] = byte(48 + n%10)
+		n /= 10
+	}
+	return string(buf[pos:])
+}
+
+// TestCancelNotRecordedBeforeLaneAccounting 钉工作树里的顺序不变量（不依赖 git ⇒ 纯净检出也能跑）。
+func TestCancelNotRecordedBeforeLaneAccounting(t *testing.T) {
+	b, err := os.ReadFile("engine.go")
 	if err != nil {
-		t.Fatalf("取不到修复前版本 022cea5:engine.go（负控没有对照面，判据未自证）: %v", err)
+		t.Fatalf("读不到工作树 engine.go（判据失去对照面，不能当通过）: %v", err)
 	}
-	src := string(out)
-	if strings.Contains(src, "classifyCancellation(") {
-		t.Fatal("前提不成立：022cea5 里竟含 classifyCancellation ⇒ 它不是修复前版本，本负控无效")
+	if len(b) < 1000 {
+		t.Fatalf("工作树 engine.go 异常短（%d 字节）⇒ 拒绝下结论", len(b))
 	}
-	if !strings.Contains(src, "e.router.RecordFailure(") {
-		t.Fatal("022cea5 里没有 RecordFailure ⇒ 记账面不存在，无法做顺序差分")
+	msg, violated := cancelOrderViolation(string(b))
+	if violated {
+		t.Errorf("缺陷②不变量被破坏：%s", msg)
 	}
-	// 修复前的形态：记账在前、取消判定在后（用注释文本定位，注释随实现一起入库）。
-	recAt, cancelAt := -1, -1
-	lines := strings.Split(src, "\n")
-	for i, l := range lines {
-		if recAt < 0 && strings.Contains(l, "e.router.RecordFailure(actualModel, res.ErrorKind, errText(runErr))") {
-			recAt = i
-		}
-		if cancelAt < 0 && strings.Contains(l, "e.isCancelling(task.ID) || ctx.Err() != nil || kind == retry.Cancelled") {
-			cancelAt = i
-		}
-	}
-	if recAt < 0 || cancelAt < 0 {
-		t.Fatalf("修复前的两个锚点没同时找到（RecordFailure=%d 取消判定=%d）⇒ 差分面不完整", recAt, cancelAt)
-	}
-	if recAt > cancelAt {
-		t.Errorf("负控失效：修复前版本里记账(%d)竟已晚于取消判定(%d) ⇒ 上面那条绿灯不成立", recAt, cancelAt)
-	}
-	t.Logf("修复前顺序：RecordFailure 在第 %d 行、取消判定在第 %d 行 ⇒ 记账先于取消（缺陷②成立），差分面有效", recAt+1, cancelAt+1)
 }
 
-func linesLen(v []string) int { return len(v) }
-
-// 保证 os 被引用（下面这条测试用它确认 git 可执行文件在，避免 CI 上假绿）。
-var _ = os.Getenv
+// TestCancelOrderAnalyzerHasTeeth 是上面那条的合成负控：同一套分析喂「正确序」与「颠倒序」两个样本，
+// 必须一个放过、一个判违规。若颠倒样本也放过，说明分析只在查锚点是否存在、没在比顺序 ⇒ 上面那条
+// 绿灯不可信。用合成样本而非 git blob：本仓的纯净检出与 CI 干净面都没有 .git（本轮踩过）。
+func TestCancelOrderAnalyzerHasTeeth(t *testing.T) {
+	correct := strings.Join([]string{
+		"anchor 只做分类，**先不记车道失败**：classifyCancellation(ctx, x, kind)",
+		"if cancelled {",
+		"e.finishCancelled(id, err, txt)",
+		"return",
+		"}",
+		"// 真失败才归因到车道（取消已在上面 return）",
+		"e.router.RecordFailure(m, k, e2)",
+		"func other() {}",
+	}, "\n")
+	wrong := strings.Join([]string{
+		"anchor 只做分类，**先不记车道失败**：classifyCancellation(ctx, x, kind)",
+		"// 真失败才归因到车道",
+		"e.router.RecordFailure(m, k, e2)",
+		"if cancelled {",
+		"e.finishCancelled(id, err, txt)",
+		"return",
+		"}",
+		"func other() {}",
+	}, "\n")
+	if _, ok := cancelOrderViolation(correct); ok {
+		t.Fatal("合成「正确序」样本被判违规 ⇒ 分析器不认正确形态，判据不可信")
+	}
+	why, bad := cancelOrderViolation(wrong)
+	if !bad {
+		t.Error("合成「记账先于取消」样本未被判违规 ⇒ 判据无牙，上面的绿灯不可信")
+	} else if !strings.Contains(why, "取消必须先于") {
+		t.Errorf("颠倒序样本虽判红，但理由不是顺序问题：%s", why)
+	}
+}

@@ -36,3 +36,4 @@ f532df2  并行会话：modelpool service.go 改动，落地无条目
 
 da81f7f  并行会话：engine 配置车道与池清单核对（T79），落地无 CHANGELOG
 
+6572caf  并行会话：engine quota_exhausted 并入限流族（补 T78 长等待预算够不到的一环），落地无 CHANGELOG 条目
