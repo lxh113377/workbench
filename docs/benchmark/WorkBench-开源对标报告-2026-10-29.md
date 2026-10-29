@@ -176,9 +176,9 @@
 | M2 改造二 | keepalive 三条路径落持久日志 + 两条留痕自检 + 修回被吃掉的 BOM | `-SelfTest` 9/9 PASS + 4 道 ps1 门禁 rc=0 | 已完成 §6.2 |
 | M3 改造三 | 报告门禁加「必须分级」+ 更新 T66 旧基准的前提 | 11 子用例 PASS（含假阳性负控） | 已完成 §6.3 |
 | M4 改造四 | tier 测试断言由「恰好 1 次」改为「≥1 次执行且无方案调用」 | -race ×5 绿 + 变异判红 | 已完成 §6.4 |
-| M5 回归 | 全仓 `go vet` + `go test ./...` + `check_all` 37 段 + 产物重建 + e2e | 30 包 ok / VET_RC=0 / CHECK_ALL_RC=0 | 进行中（产物重建前 1 红为预期，见 §6.5） |
+| M5 回归 | 全仓 `go vet` + `go test ./...` + `check_all` + 产物重建 | **31 包 ok / VET_RC=0 / check_all 49 段 PASS**（RC=0；1 段 SKIP 需参数、1 段 UNVERIFIED 为长驻内存口径） | 已完成 |
 | M6 文档 | 本报告 + CHANGELOG + ARCHITECTURE 过期数字补正 + 记忆回写 | 门禁全绿、CHANGELOG Unreleased 居首 | 本文件 |
-| M7 部署 | 干净 worktree 构建 → 部署 → 线上验证（`--version` 与 SHA 对账 + unknown 桶复算） | 两根 hash==SHA256SUMS==HEAD；新判死行 kind=pool_wait_capped | 待执行（本轮下一步） |
+| M7 部署 | 干净 worktree（`f1addb9`）构建 → dist 与线上根换装 → 行为面取证 | 两根 sha256==`E8B661C6…`==SHA256SUMS、`vcs.revision==f1addb9`；新判死 kind 具名 | 已完成（§6.6） |
 
 ### 6.1 改造一实测（含负控）
 
@@ -241,8 +241,75 @@ $ gofmt -l internal cmd             -> 空
 唯一这一红**是本轮改动的预期后果**：我改了内嵌资产 `assets_script.go`（补全失败类别中文标签），
 而 `dist/workbench.exe` 还是上一轮产物 ⇒ 该门禁逐字比对源码块与产物，报「产物落后」（并精确指出
 差异在 appJS 第 231 行附近）。它不是代码缺陷，重跑 setup/build.ps1 即闭合 —— 已排进 M7。
+
+**重建后复核（M7 完成时）**：`go test ./... -count=1` **31 包全 ok、零 FAIL**；
+另用 `WB_ASSET_ARTIFACT` 直接指向新产物单测该判据亦 PASS ⇒ 该红确为「产物落后」而非代码缺陷，
+且门禁按预期把「源码改了、产物没跟上」这一类发布事故钉在构建链里。
 ```
 
+
+### 6.6 M7 部署与行为面取证（2026-10-29 17:3x–18:1x，实测）
+
+部署走「干净 worktree 构建」以保证 **产物 == HEAD**：主工作区有并行会话的未提交件，直接构建会把未提交内容打进产物。
+
+```text
+$ git worktree add --detach xtmp/rel-f1addb9 f1addb9 && pwsh -File setup/build.ps1     # 覆盖率均值 72.53%
+$ sha256sum dist/workbench.exe        -> e8b661c625761e08d1e5fe11768a2363d5a5e061313c6887fd999a54e423cdb0
+$ go version -m dist/workbench.exe    -> vcs.revision=f1addb94e2125d564b369fcbfbe0d27044aa759f
+$ tests/check_artifact_checksum.ps1   -> rc=0（清单读回自证：产物与 SHA256SUMS 逐字一致）
+```
+
+线上根（`D:/workbench-agent`，7×24 实例）的换装必须是**受控窗口**：`engine/stop` → `--quit`（落 user-quit 标记，
+守护据此**不**抢拉起）→ 备份 `workbench.exe.bak-round66-*` → 覆盖 → 经 `lib_silent_launch` 起 → `engine/start` → 复核。实测：
+
+```text
+STEP3 sha256=E8B661C6… / STEP3 vcs.revision=f1addb9
+STEP5 engine_state=running user_quit_marker_present=False
+   （Engine.Start 清标记是产品侧既定语义，本轮复核它确实生效 —— 没这条，守护会永久拒绝接管）
+二进制内含新类别（strings 计数）：pool_wait_capped=4、transition_failed=2、rate_limited=3
+```
+
+**行为面取证（关键：部署了 ≠ 生效了）**：换装后线上**没有**新的具名判死样本 ——
+最后一条 unknown 落在换装前 39 秒，此后 `pool_wait_capped` 0 条、unknown 0 新增。
+这只说明「窗口内没触发」，不构成生效证据（按 #36 禁止假完成）。因此另造隔离实例做受控复现：
+
+```text
+隔离做法：xtmp/round66-verify 自带数据根 + 端口 20912 + config 里 6 条车道全部 enabled=false
+          ⇒ Router.Pick 必失败 ⇒ 引擎走 requeueForPoolWait；自主/链式/方案/池同步一并关闭。
+          整条路径不发起任何模型调用（零额度、零 DSH 子进程），生产实例不受影响。
+实测（logs/workbench.jsonl + queue.json）：
+  18:08:09 / 18:08:27 / 18:08:45  三次 WARN「模型池冷却，调度暂停」（waitSeconds=15）
+  18:09:03 WARN  模型池重投次数到顶，判死以解锁自主供料   poolWaits=4 budget=4
+  18:09:03 ERROR 任务失败  kind="pool_wait_capped"  error="模型池连续 4 次不可用/限流，环境等待封顶判死"
+  任务面  state=failed / errorKind=pool_wait_capped / poolWaits=4
+⇒ 同一条判死路径：改造前落 unknown，改造后叫出自己的名字 —— 行为面实锤。
+```
+
+取证实例用毕回收（`KILLED 35392`），复核只剩生产实例 pid=11156（17891 HTTP 200、20912 DOWN），未留残件。
+
+> 换装后 unknown 读数：46 条**全部**早于换装时刻（`unknown_before_deploy=46 / after=0`）。历史数据不改写
+> （改它等于伪造证据）；面板上它们仍显示「未知错误」，但**从部署点起**同类判死会具名。
+> 复算：`node` 读 `queue.json` 按 `finishedAt` 与换装时刻切分（口径 = 任务面 errorKind，非尝试面）。
+
+### 6.7 改造二的 live 实证（守护留痕真的落盘了）
+
+```text
+$ tail -3 D:/workbench-agent/runtime/keepalive.log
+17:53:03 keepalive: engine 心跳正常（日志距今 4.7 分钟，pid=24868，状态 running）
+17:58:03 keepalive: 用户主动退出（进程不在）⇒ 本轮判定不拉起        ← 本轮新增的第三类留痕
+18:03:03 keepalive: engine 心跳正常（日志距今 4.7 分钟，pid=11156，状态 running）
+```
+
+17:58 那行正是**本轮换装期间**产生的：我为开窗跑了 `--quit`，而守护此前对这种判断一个字都不写
+（11 小时静默那场事故就是因此查不动）。现在它自己说明「这一轮为什么没动作」，18:03 的心跳又把新
+pid=11156 记下来 ⇒ 实例更替从此机读可查，不必靠人盯 pid 猜。
+
+### 6.8 本轮新增的一条工程纪律（由取证过程本身得出）
+
+隔离取证的实例**不会**被生产守护接管：`tests/keepalive.ps1` 按 CommandLine 匹配的是
+`dist\workbench.exe` / `D:\workbench-agent\workbench.exe`，取证的 `xtmp/round66-verify/workbench.exe`
+不匹配 ⇒ 用完必须**自己收**（已实测 `KILLED 35392`）。这是好设计（守护不会乱动取证实例），
+但也意味着取证脚本必须自带 teardown，否则每跑一次就留一个常驻进程。
 ---
 
 ## 7. 证据附录
@@ -269,7 +336,6 @@ $ gofmt -l internal cmd             -> 空
 `D:/workbench-agent/workbench-output`，不是仓内 `dist/workbench-output`）。
 
 ### 7.3 复算命令
-
 ```bash
 # 判死与 unknown 的一一对应（改造一的原始证据，修复前实测 39/39）
 L='D:/workbench-agent/workbench-output/logs/workbench.jsonl'
@@ -277,9 +343,17 @@ p=$(grep '"msg":"任务失败"' $L | grep -c '"kind":"unknown"')
 q=$(grep '"msg":"任务失败"' $L | grep '"kind":"unknown"' | grep -c '环境等待封顶判死')
 echo "unknown=$p cap=$q"; [ "$p" -gt 0 ] && [ "$p" -eq "$q" ] && echo OK_ALL_FROM_POOL_WAIT_CAP || echo MISMATCH
 
-# 部署后的正向判据（M7 要看的）：新产生的判死行必须叫出名字
-grep '环境等待封顶判死' $L | tail -3   # 期望 kind=pool_wait_capped，且不再出现 unknown
-```
+# 部署后的正向判据：新产生的判死行必须叫出名字（旧数据不算，按 §7.2 切点看 finishedAt）
+grep '环境等待封顶判死' $L | tail -3   # 期望 kind=pool_wait_capped；unknown 不应再新增
+
+# 行为面受控复现（入库件，可重复跑；零模型调用、独立数据根、自动收尾）
+#   前置：先把与待验代码一致的 workbench.exe 放到 xtmp/round66-verify/（或改脚本里的 $exe）
+pwsh -NoProfile -File tests/round66_live_verify.ps1
+#   期望末段：VERDICT_PASS | state=failed kind=pool_wait_capped poolWaits=4 … VERIFY_DONE
+
+# 守护留痕（改造二）：三条路径是否真的落盘 + 13 条自检
+pwsh -NoProfile -File tests/keepalive.ps1 -SelfTest        # 期望末行 keepalive selftest: PASS
+tail -3 D:/workbench-agent/runtime/keepalive.log          # 应能看到 拉起/引擎已启动/用户主动退出 类文案
 
 ---
 
@@ -292,6 +366,8 @@ grep '环境等待封顶判死' $L | tail -3   # 期望 kind=pool_wait_capped，
 | 3 | 新增面板标签对账判据时，先按「单引号切分」取键、再按行取冒号前 —— 两次都因为 JS 表**折行写**而解析不全，判据把自己跑红了 | 判据比被测面更红 ⇒ 按纪律先怀疑判据 | 对账式判据必须自带「解析面自证」：结果为空或明显偏少一律判红（本仓 ㉑二） |
 | 4 | PowerShell 自检里嵌套引号（形如 `[^"]` 的字符类）被 PS 当数组索引，脚本 ParserError | `check_ps1_syntax` 判红 rc=1 | 改 .ps1 必跑 check_ps1_syntax；引号判断改用 `-like` / `IndexOf` |
 | 5 | 往 CRLF 文件里追加了 LF 行，造成行尾混排（虽然 `check_ps1_eol` 按入库形态放行） | `diff --stat` 行数与预期不符，遂去数行尾 | 追加前先读原文件行尾风格，按原风格写 |
+| 6 | 第一次起隔离取证实例用 `spawn(detached)` 后被作业对象连坐回收，实例秒退、端口没起来，我先入为主以为是「产物起不来」 | 手跑 `--ui-probe` 看到 `UI_PROBE_READY` 后立刻 `UI_PROBE_EXIT`，才想起本仓为这个问题专门写了 `lib_silent_launch.ps1` | 凡拉起 workbench 实例一律走 `tests/lib_silent_launch.ps1`（按 PE 子系统分流、脱离作业对象），**不要自己 spawn** |
+| 7 | 取证实例用完没自动收：生产守护按 CommandLine 只匹配 dist / agent 根，不匹配 `xtmp/round66-verify` ⇒ 它一直占着内存 | 复核 `tasklist` 发现两个 workbench 进程，逐个定位 Path 才确认哪个是我留下的 | 取证脚本必须自带 teardown（本轮补记为 §6.8）；交付前 `tasklist` 复核实例数 |
 
 > 第 3、4 条的共性：**新写的判据本身要先被证明能红**。本轮每条新判据都配了负控实测，
 > 记录在 §6 各小节；没有负控证据的判据不写进完成标准。

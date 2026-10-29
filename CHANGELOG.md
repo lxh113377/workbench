@@ -16,6 +16,36 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **部署与行为面取证：判死类别在真实引擎路径上叫出名字（改造一的生效实证）**：
+  **部署**（干净 worktree 保证 产物==HEAD：主工作区有并行会话未提交件，直接构建会把未提交内容打进产物）：
+  `git worktree add --detach xtmp/rel-f1addb9 f1addb9` → `setup/build.ps1`（覆盖率均值 72.53%）→
+  `dist/workbench.exe` sha256=`E8B661C625761E08D1E5FE11768A2363D5A5E061313C6887FD999A54E423CDB0`、
+  `go version -m` 回 `vcs.revision=f1addb94e2125d564b369fcbfbe0d27044aa759f`、`check_artifact_checksum.ps1` rc=0
+  （清单读回自证）。线上根 `D:\workbench-agent`（7×24 实例）走**受控窗口**：`engine/stop` → `--quit`
+  （落 user-quit 标记，守护据此不抢拉起）→ 备份 `workbench.exe.bak-round66-20261029-175332` → 覆盖 →
+  经 `lib_silent_launch` 拉起 → `engine/start` → 复核 `engine_state=running`、`user_quit_marker_present=False`
+  （Engine.Start 清标记是产品侧既定语义，本轮复核它确实生效；没这条守护会永久拒绝接管）。
+  二进制内含新类别（strings 计数）：pool_wait_capped=4 / transition_failed=2 / rate_limited=3。
+  **行为面取证（关键纪律：部署了 ≠ 生效了）**：换装后线上**没有**新的具名判死 —— 最后一条 unknown 落在
+  换装前 39 秒，此后 `pool_wait_capped` 0 条、unknown 0 新增；这只说明「窗口内没触发」，**不构成生效证据**。
+  另造隔离实例受控复现（`xtmp/round66-verify`，自带数据根 + 端口 20912 + **6 条车道全部 enabled=false** ⇒
+  `Router.Pick` 必失败 ⇒ 走 `requeueForPoolWait`；自主/链式/方案/池同步全关 ⇒ 全程零模型调用、零额度、
+  零 DSH 子进程，生产实例不受影响）。实测：三次 WARN「模型池冷却，调度暂停」（18:08:09/27/45）→
+  `18:09:03` WARN「模型池重投次数到顶」poolWaits=4 budget=4 → **`18:09:03` ERROR 任务失败
+  `kind="pool_wait_capped"`**，任务面 `state=failed / errorKind=pool_wait_capped / poolWaits=4`
+  ⇒ 同一条判死路径改造前落 unknown、改造后具名，行为面实锤。
+  **改造二的 live 实证**（同一窗口顺手取到）：`D:\workbench-agent\runtime\keepalive.log` 新增
+  `17:58:03 keepalive: 用户主动退出（进程不在）⇒ 本轮判定不拉起` 与 `18:03:03 … pid=11156` —— 前者正是
+  本轮换装 `--quit` 触发的判断（此前这类判断一个字都不写，所以 11 小时静默那场才查不动），后者把实例更替
+  记成机读事实。
+  **两条如实记录的取证失误**（写进对标报告 §8）：① 第一次起取证实例用 `spawn(detached)`，被作业对象连坐
+  回收 ⇒ 实例秒退，我一度误判「产物起不来」；手跑 `--ui-probe` 看到 `UI_PROBE_READY` 后立刻 `UI_PROBE_EXIT`
+  才想起本仓为这个问题专门有 `lib_silent_launch.ps1`（**凡拉起实例一律走它，不要自己 spawn**）。
+  ② 取证实例用完不会自灭：守护按 CommandLine 只匹配 dist / agent 根，不匹配 xtmp 路径 ⇒ 必须自带收尾，
+  本轮实测 `KILLED 35392` 后复核只剩生产实例 pid=11156（20912 DOWN）。
+  **未改写历史数据**：换装后 unknown 仍 46 条，逐条按 `finishedAt` 复核**全部**早于换装时刻
+  （`unknown_before_deploy=46 / after=0`）。改历史等于伪造证据；归因窗口从部署点起算，
+  别拿旧数据判新功能没生效（复算口径 = 任务面 `queue.json` 的 `errorKind`，不是尝试面 —— 见 §7.2 三面警告）。
 - **失败具名分型补全 + 枚举漂移门禁：面板「未知错误」那一桶此前 39 条全部来自同一条路径（第五轮对标 · 改造一）**：
   **根因（三面读数，口径写死；面 · 分子/分母 · 切点）**：切点 = 2026-10-29 16:24:20（生产实例数据根
   `D:/workbench-agent/workbench-output`）。**日志面** `workbench.jsonl` 全量 238 条 ERROR「任务失败」逐条核对：
