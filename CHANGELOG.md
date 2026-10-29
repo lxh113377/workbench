@@ -16,6 +16,31 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **`check_test_assertions` 假红修正 + 判定面从文本扫描换成 go/parser（CI run 40889071988 的 repo-gates failure 根因）**：
+  **现场**：#9 入库后 CI 报「1 个 Test 无断言」点名
+  `internal/retry/kind_writeback_contract_test.go:407 TestKindWritebackGateHasTeeth`。读源码它**明明有**多处
+  `t.Fatalf`（:424/:428/:436/:440）⇒ 红的是判据，不是被测件。
+  **根因**：旧版把「下一个以 `func` 开头的行」当函数体边界，而该测试用 Go **raw string** 承载假源码
+  （`fake := ` + 反引号 + ` … func f() { … } ` + 反引号 + `），那行 func 恰好顶格 ⇒ 函数体被截成 2 行、
+  真断言不在扫描窗口内。隔离复现（xtmp/gateprobe 两用例）：未修版本报 **2 个红**，其中 raw_test.go 是纯假阳性。
+  **我第一版补救更危险，必须记下来**：改成「按行内反引号奇偶跟踪 raw string 状态」—— 双引号串里也能
+  合法含反引号（`"a`b"`），奇偶一旦被带偏，后续**真实** Test 会被当成"在串内"整体跳过 ⇒ 真零断言测试
+  永不报 = **假绿**（本仓口径：假绿比假红严重）。量化证据：奇偶版只数到 1030 个，比旧版 1035 **少 5 个**，
+  而少掉的 5 个全是真测试（artifact/protocol_test.go:42、engine/p3_offline_e2e_test.go:85、
+  engine/repair_test.go:72、engine/replan_boundary_test.go:68、modelpool/protocol_test.go:32），
+  不是假声明 ⇒ 文本层根本无法可靠判词法状态。
+  **正解**：新增 `workbench/cmd/assertionprobe/main.go`（纯 stdlib go/ast+go/parser），由它输出
+  `TEST|文件|行号|函数名|HAS|NONE|豁免`，PS 侧只做受理与报红。豁免口径**不放宽也不收紧**：
+  compiletime（`var _ Iface = …` 编译期断言）与 panicdoc（契约注释 + 体内无 fmt.Print*）。
+  实现豁免②时又抓到**我自己的第二处窄化**：`engine_smoke_test.go:276 TestFinishCancelledOnUnknownTask`
+  的「不 panic」写在**函数体内**（:278）而不是 func 上方，旧版扫 body+注释所以算豁免，我只扫上方注释
+  就把它判红 ⇒ 改用 AST 注释区间（doc 注释 ∪ 函数区间内任意注释）。
+  **端到端负控（双向，隔离仓 xtmp/gateprobe2，用完即删）**：真零断言件 ⇒ rc=1 并点名
+  `zero_test.go:5 TestTrulyNoAssertion`；同仓 raw string 带断言件 ⇒ 不再被报 ⇒ 判据有牙且假阳性消除。
+  真实仓现状：扫描 **1035 个 Test，0 个零断言，4 个属契约豁免**；`go vet ./cmd/assertionprobe/` rc=0、
+  `gofmt -l` 空（rc 一律先重定向再取，不接 `| head` —— 本轮第三次踩该坑并已绕开）。
+  顺带一条：本轮我一度用 TAB 去 grep 竖线分隔的输出，得到「NONE=0」的**假零**，随后自己发现并复算
+  ——「读数 0」先问「我的分隔符/面是否对得上」，与 #12 里 tab-vs-space 那次是同一形态。
 - **issue #9 收口：第三份隐性 kind 名单收编进枚举（crash_loop / verify_failed / replan），并纠正 issue 正文的危害方向**：
   **现场**：三类 kind 是裸字符串直写 `Task.ErrorKind`（stuck_rescue.go 的 crashRescueKind、repair_schedule.go、
   replan.go），不在 retry/executor 任何枚举里；生产台账实测 crash_loop 6 条、verify_failed 5 条（面 =

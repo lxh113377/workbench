@@ -107,7 +107,7 @@ while ((Get-Date) -lt $deadline) {
 }
 if (-not $tok) { Write-Host "RESULT=NO_TOKEN"; exit 2 }
 Write-Host ("TOKEN_FOUND len=" + $tok.Length)
-Invoke-WebRequest -Uri ("http://127.0.0.1:" + $Port + "/api/engine/start?token=" + $tok) -Method POST -Body "{}" -ContentType "application/json" -TimeoutSec 10 | Out-Null
+Invoke-WebRequest -UseBasicParsing -Uri ("http://127.0.0.1:" + $Port + "/api/engine/start?token=" + $tok) -Method POST -Body "{}" -ContentType "application/json" -TimeoutSec 10 | Out-Null
 Start-Sleep -Seconds 2
 $body = @{ title = "cancel-verify"; prompt = "验证取消归因：请勿执行任何实际操作" } | ConvertTo-Json
 $taskId = ""
@@ -137,10 +137,10 @@ try {
   if ($Signal -eq "shutdown") {
     # 停机信号：cancelAllRunning 走的是 causeEngineShutdown —— 生产那两条 kind=unknown 正是这条路径
     # （19:10 / 19:53 的部署停机），而**用户取消**在旧代码里本来就落 kind=cancelled（本轮差分实测）。
-    Invoke-WebRequest -Uri ("http://127.0.0.1:" + $Port + "/api/engine/stop?token=" + $tok) -Method POST -Body "{}" -ContentType "application/json" -TimeoutSec 12 | Out-Null
+    Invoke-WebRequest -UseBasicParsing -Uri ("http://127.0.0.1:" + $Port + "/api/engine/stop?token=" + $tok) -Method POST -Body "{}" -ContentType "application/json" -TimeoutSec 12 | Out-Null
     Write-Host "SHUTDOWN_REQUESTED"
   } else {
-    Invoke-WebRequest -Uri ("http://127.0.0.1:" + $Port + "/api/tasks/" + $taskId + "/cancel?token=" + $tok) -Method POST -Body "{}" -ContentType "application/json" -TimeoutSec 12 | Out-Null
+    Invoke-WebRequest -UseBasicParsing -Uri ("http://127.0.0.1:" + $Port + "/api/tasks/" + $taskId + "/cancel?token=" + $tok) -Method POST -Body "{}" -ContentType "application/json" -TimeoutSec 12 | Out-Null
     Write-Host "CANCEL_REQUESTED"
   }
 } catch { Write-Host ("CANCEL_FAIL " + $_.Exception.Message); exit 2 }
@@ -231,7 +231,7 @@ if ($true) {
 Write-Host ("VERDICT_" + $verdict + " | " + $reason)
 
 # 收尾：停引擎 + --quit + 按命令行精确复核进程清零（隔离实例不被生产守护接管，必须自己扫干净）
-try { Invoke-WebRequest -Uri ("http://127.0.0.1:" + $Port + "/api/engine/stop?token=" + $tok) -Method POST -Body "{}" -ContentType "application/json" -TimeoutSec 10 | Out-Null } catch { }
+try { Invoke-WebRequest -UseBasicParsing -Uri ("http://127.0.0.1:" + $Port + "/api/engine/stop?token=" + $tok) -Method POST -Body "{}" -ContentType "application/json" -TimeoutSec 10 | Out-Null } catch { }
 Start-Sleep -Seconds 3
 try { Start-Process -FilePath $exe -ArgumentList "--quit" -WindowStyle Hidden | Out-Null } catch { }
 Start-Sleep -Seconds 8
@@ -243,3 +243,4 @@ Write-Host ("STUB_PROCS=" + $dleft.Count)
 foreach ($p in $dleft) { try { Stop-Process -Id $p.ProcessId -Force -ErrorAction Stop } catch { } }
 Write-Host "VERIFY_DONE"
 if ($verdict -eq "PASS") { exit 0 } else { exit 1 }
+
