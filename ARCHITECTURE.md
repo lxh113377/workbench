@@ -36,7 +36,7 @@
 | 存储 | `store` | 原子写 JSON、WAL 事件重建、崩溃恢复、尝试台账 |
 | 调度 | `queue` / `engine` | 优先级队列 / 调度闭环、优雅停机、运行中取消 |
 | 执行 | `executor` | DSH 子进程、事件流、看门狗、**执行钩子（Hooks）+ RunnerContract 接口** |
-| 可靠 | `retry` | 错误分类（11 类）→ retry/fail/cancel 三分判定，指数退避 + 抖动 |
+| 可靠 | `retry` | 错误分类（类别清单以 `retry.AllKinds()` 为唯一权威源，勿在他处手抄计数）→ retry/fail/cancel 三分判定，指数退避 + 抖动 |
 | 决策 | `evaluate` / `chain` / `judge` | 三维评估 / 链式衍生 / 语义判分 |
 | 通道 | `modelroute` / `modelpool` / `dshprofile` | 模型健康度路由 / 池化 / 隔离 DSH_HOME 引导 |
 | 观测 | `logging` / `web` / `supervisor` | slog 结构化日志 / 面板 + /api/metrics / 资源采样自愈 |
@@ -47,7 +47,7 @@
 1. **单机便携优先**：不引 DB/Redis，存储用「原子 JSON 快照 ⊕ WAL 回放」——单 EXE 交付的硬约束，牺牲横向扩展换零依赖。
 2. **纯标准库**：`go.mod` 零 `require`，供应链干净、可离线、可重现构建。
 3. **执行层抽象**：`executor.RunnerContract` 接口 + `Hooks`，引擎不绑死具体执行器，未来可换远程队列/测试桩（对标 riverqueue/river 的插件钩子）。
-4. **错误必须分型**：executor 产出 11 类 `ErrorKind`，`retry.Policy` 据此决定重试/失败/取消——不可重试类别当次即停（对标 n8n 错误三分）。
+4. **错误必须分型**：executor 产出具名 `ErrorKind`（两侧枚举由 `internal/retry/kind_drift_test.go` 逐条对账，手抄计数会在测试里判红），`retry.Policy` 据此决定重试/失败/取消——不可重试类别当次即停（对标 n8n 错误三分）。2026-10-29 第五轮改造补记：此前此处写死的「11 类」已过期两次，改为指向权威清单。
 5. **并发按任务隔离 DSH_HOME**：OFM sealed 车道单写者语义，每任务独立 `runtime/dsh-home/tasks/<id>`，profiles 用 junction 共享。
 
 ## 数据流

@@ -232,7 +232,14 @@ const appJS = `(() => {
         }).join('') + '</tbody></table>'
       : emptyHint('还没有可用模型。到「更多 → 模型池」里同步或添加一个。');
 
-    const kindText = { timeout: '超时', upstream_failed: '上游失败', bad_exit: '异常退出', stalled: '卡死', unknown: '未知', missing_credential: '缺凭据', model_unavailable: '模型下线', boot_failed: '启动失败', cancelled: '已取消', done: '成功' };
+    // 失败类别中文标签（round 66 补全）：此前手抄 10 项，真实枚举已 17 项 —— 缺的那些在面板上
+    // 裸显英文原值（下一行的 kindText[b.kind] || b.kind 兜底），运维看到的是 rate_limited/no_artifact
+    // 这种半中半英的桶名。对齐口径由 TestFailureLabelsCoverBaselineKinds 机器守护（漏一个判红）。
+    const kindText = { timeout: '超时', upstream_failed: '上游失败', bad_exit: '异常退出', stalled: '卡死', unknown: '未知',
+      missing_credential: '缺凭据', model_unavailable: '模型下线', boot_failed: '启动失败', cancelled: '已取消', done: '成功',
+      not_served: '出口不服务', no_artifact: '无合规产物', no_lane: '池内无可用车道', rate_limited: '上游限流',
+      transport_failed: '网络传输故障', stream_cut: '流被切断', pool_wait_capped: '环境等待封顶判死',
+      panic: '引擎内异常', transition_failed: '状态迁移失败' };
     const failRes = await api('/api/failures').catch(function () { return { buckets: [], total: 0, empty: true }; });
     const failBody = failRes.empty
       ? emptyHint('没有失败任务 —— 保持这样最好。')

@@ -49,16 +49,61 @@ const (
 	NotServed Kind = "not_served"
 	// NoLane 对应「池内没有任何可用车道」（executor.KindNoLane）：它不是任务失败，而是整池此刻不可用，
 	// 引擎应退回队列等冷却（T19）。登记它是为了让台账不落成 unknown。
-	NoLane  Kind = "no_lane"
-	Unknown Kind = "unknown"
+	NoLane Kind = "no_lane"
+	// RateLimited 对应 executor.KindRateLimited（上游 429，车道级限流）。
+	//
+	// 为什么现在才补：executor 侧早有 KindRateLimited，retry 侧却没有对应常量 ⇒ ParseKind("rate_limited")
+	// 一律收敛成 Unknown，连「可重试表」（RetryableKinds）都管不到它。这是同一形态的**第四次**复发 ——
+	// 上面 transport/stream_cut、no_artifact、not_served、no_lane 四处注释写的都是同一句教训
+	// 「不进 ParseKind ⇒ 台账只写 kind=unknown」。前几次靠「谁撞上谁补」，本轮起由 kind_drift_test.go
+	// 逐条比对 executor 的 Kind 枚举，把这类漏登记变成必红（对标 river 的「枚举漏项即 panic」）。
+	// 语义：可重试 —— 429 是「等冷却再试」，不是「任务坏了」，与 executor 侧 Retryable 同判。
+	RateLimited Kind = "rate_limited"
+	// PoolWaitCapped 是「因环境（池不可用/限流）退回队列的次数到顶，任务判死」
+	// （engine.requeueForPoolWait，round 60 · T54 的封顶路径）。
+	//
+	// 现场（生产 logs/workbench.jsonl 全量复核，2026-10-29）：ERROR「任务失败」里 kind=unknown 共 39 条，
+	// **39 条全部**是这句「模型池连续 4 次不可用/限流，环境等待封顶判死」，0 条来自别处
+	// ⇒ 面板「未知错误」那一桶整个都是这条路径，据此排查方向被完全带偏。
+	// 对标：asynq 把租约过期这类基础设施事实也建模成具名 ErrLeaseExpired，river 的 unknown 是带字段的
+	// 具名类型（UnknownJobKindError），两家都不留 residual 桶。
+	//
+	// 判「不可重试」：本路径就是重试预算耗尽的产物（引擎靠它解锁自主供料），再重试等于放回僵尸任务；
+	// 也不归因到某条车道（不在 modelpool.modelAttributable 名单里，不该冷却无辜模型）。
+	PoolWaitCapped Kind = "pool_wait_capped"
+	// TaskPanic 是「执行任务时引擎内 panic，被 defer recover 兜住」。
+	//
+	// 对标 asynq 的 PanicError（recover 时带 file:line、单独成类型）：「代码炸了」与「原因不明」是两种事实，
+	// 混在一桶里就没法只对 panic 报警。判不可重试：panic 是确定性缺陷，重投只会再炸一次。
+	TaskPanic Kind = "panic"
+	// TransitionFailed 是「状态迁移失败」（store.Transition 返回非法迁移或写盘失败）。
+	//
+	// 为什么单列：它既不是模型问题也不是任务内容问题，而是**本地状态机/存储**的事实。
+	// 落 unknown 会让人去查模型车道，正确动作是查台账与磁盘。判不可重试（同因必再失败）。
+	TransitionFailed Kind = "transition_failed"
+	Unknown          Kind = "unknown"
 )
+
+// AllKinds 是「非空类别」的单一权威清单（不含 None）。
+//
+// 为什么要函数而不是各处各抄一份列表：本仓同一个枚举被抄过四处 —— retry 常量表、
+// executor 常量表、Prometheus 的 promFailureKindsBaseline、面板的中文标签表。抄写的地方
+// 每加一个类别都会漏（2026-10-29 实测：baseline 缺 not_served/no_artifact/no_lane，
+// 面板标签缺全部四个新类）。现在下游一律**从这个清单生成**，漏配在编译期之后必红。
+func AllKinds() []Kind {
+	return []Kind{
+		Timeout, MissingKey, ModelDead, Upstream, Boot, Exit,
+		Transport, StreamCut, Cancelled, Stalled, NoArtifact, NotServed,
+		NoLane, RateLimited, PoolWaitCapped, TaskPanic, TransitionFailed, Unknown,
+	}
+}
 
 // ParseKind 把任意字符串收敛成已知 Kind（未知值一律 Unknown，避免策略表漏配）。
 func ParseKind(s string) Kind {
 	k := Kind(strings.TrimSpace(s))
 	switch k {
 	case Timeout, MissingKey, ModelDead, Upstream, Boot, Exit, Cancelled, Stalled, NoArtifact, NotServed, NoLane, Unknown,
-		Transport, StreamCut:
+		Transport, StreamCut, RateLimited, PoolWaitCapped, TaskPanic, TransitionFailed:
 		return k
 	}
 	return Unknown
@@ -72,7 +117,10 @@ func (k Kind) Retryable() bool {
 	// 网络/传输与流中断**应当重试**（2026-10-19）：
 	// ETIMEDOUT/ENOTFOUND 多为瞬时；stream_cut 常是上游抖动。
 	// 这两类恰恰是「换模型/重试就能好」的典型场景，判死不合理。
-	case Timeout, Upstream, Exit, Stalled, NoArtifact, NotServed, Unknown, Transport, StreamCut:
+	// RateLimited 在此列（429 等冷却/换车道就能过），与 executor 侧同判。
+	// PoolWaitCapped / TaskPanic / TransitionFailed **不在**此列：三者都是「同因必再失败」的确定性终态，
+	// 重试只会重演僵尸任务或反复 panic（对标 asynq SkipRetry 直接归档、不烧剩余重试）。
+	case Timeout, Upstream, Exit, Stalled, NoArtifact, NotServed, Unknown, Transport, StreamCut, RateLimited:
 		return true
 	}
 	return false

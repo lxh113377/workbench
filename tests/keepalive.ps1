@@ -231,6 +231,58 @@ if (Test-Path -LiteralPath $guardScript) {
     }
 }
 
+# ── 留痕面判据的辅助件（round 66 · T68）──────────────────────────────────────
+# 现场成因：守护由计划任务以 conhost --headless 每分钟拉起，stdout 被丢弃。实测生产日志全文
+# 18 行里只有两类（心跳正常 12 条 + 判定挂死/已终止），grep「进程不在，拉起」「已拉起」「引擎已启动」
+# 全为 0 ⇒ 实例更替（2026-10-29 的 pid 28788→4016）在留痕面查不到，只能靠人盯 pid 猜。
+# 本组判据锁两件事：
+#   ① Add-KaLog 真把行写进**文件**（不是只打到 stdout）；
+#   ② 三类关键决策路径的源码里**确有** Add-KaLog 调用 —— 源文本不变量，参照本仓既有做法
+#      （quit_mutation_check.ps1 读自身文本定位变异点、失配即 throw，不放行"判据自己被改坏还绿"）。
+#
+# 为什么用源文本不变量而不是"跑一遍看日志"：三条路径要真拉起/真重启生产实例才能触发，
+# 自检不能拿生产实例当用例；而"下一轮有人把这条 Add-KaLog 删掉"正是**静默回归**，
+# 唯一能当场判红的就是源文本。
+#
+# ⚠️ 两条纪律（都是为了让判据有牙）：
+#   1) 断言针对**锚点文案**而非行号 —— 行号随任意加行漂移会把好代码判红；只有文案被改名才失配，
+#      而改名正是"机读关键词变了、下游 grep 静默失效"那一种，必须判红。
+#   2) 锚点必须**分段拼接**构造（Join-KaAnchor）—— 本脚本自己就是被检文本，锚点若以连续字面量写在
+#      自检块里，IndexOf 会先命中自检块自己的字符串、区段就把守护代码和自检文案混在一起，
+#      真调用被删也可能被自检文案洗成绿（判据失效于自身）。拼接后源码里不存在连续形态。
+function Join-KaAnchor {
+    param([Parameter(ValueFromRemainingArguments = $true)][string[]]$Parts)
+    return ($Parts -join "")
+}
+
+function Get-SelfSourceText {
+    # 读本脚本自身全文；读不到返回空串 ⇒ 所有锚点失配 ⇒ 自检判红（宁可假红，不假绿）。
+    $self = Join-Path $PSScriptRoot "keepalive.ps1"
+    try { return [IO.File]::ReadAllText($self) } catch { return "" }
+}
+
+function Test-TraceInSourceRegion {
+    param([string]$Text, [string]$FromAnchor, [string]$ToAnchor, [string[]]$Needles)
+    # 取 [$FromAnchor 之后, $ToAnchor 之前) 这段源码，断言每个 needle 都出现在其中。
+    # 为什么要限定区段而不是整文件 grep：三条路径的文案有交集（「拉起」同时出现在"不拉起"与"拉起"
+    # 两条分支），整文件匹配会让别处的 Add-KaLog 把真缺失洗成绿；区段内断言才等于"这条路径自己留了痕"。
+    if (-not $Text -or -not $FromAnchor) { return $false }
+    $from = $Text.IndexOf($FromAnchor, [StringComparison]::Ordinal)
+    if ($from -lt 0) { return $false }
+    $from += $FromAnchor.Length
+    $to = $Text.Length
+    if ($ToAnchor) {
+        $t = $Text.IndexOf($ToAnchor, $from, [StringComparison]::Ordinal)
+        if ($t -gt $from) { $to = $t }
+    }
+    $region = $Text.Substring($from, $to - $from)
+    foreach ($n in @($Needles)) {
+        if (-not $n) { return $false }
+        if ($region.IndexOf($n, [StringComparison]::Ordinal) -lt 0) { return $false }
+    }
+    return $true
+}
+
 # 自检模式（round 64 · T65）：只验看门狗判据，不碰真实进程 —— 判据本身必须能被验收。
 #
 # 三个必须过的点：① 新鲜日志 ⇒ 不判挂死（否则会把在跑实例反复强杀）
@@ -285,6 +337,97 @@ if ($SelfTest) {
     Write-Host ("selftest 7) 全终态 ⇒ 期望 False 实得 " + $pwNo)
     Remove-Item -LiteralPath $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
 
+    # 留痕面自检（T68 的第二半）：前 7 条验的是「判据对不对」，这两条验的是「判断结果有没有被留下来」。
+    # 为什么必须单独验：本轮 T68 的起因就是守护**跑过但什么都不写**（Last Result=0 分不清
+    # 「零动作」与「没跑」）。只测判据不测留痕，等于把同一个盲区重新留下。
+    $tmpKa2 = Join-Path $env:TEMP ("wb-ka-log-selftest-" + $PID + ".log")
+    Remove-Item -LiteralPath $tmpKa2 -Force -ErrorAction SilentlyContinue
+    $prevKa = $KaLog
+    try {
+        $KaLog = $tmpKa2
+        Add-KaLog "自检写入行"
+        $written = (Test-Path -LiteralPath $tmpKa2) -and ((Get-Content -LiteralPath $tmpKa2 -Raw) -match "自检写入行")
+        if (-not $written) { $okAll = $false }
+        Write-Host ("selftest 8) Add-KaLog 真落盘（非仅 stdout）⇒ 期望 True 实得 " + $written)
+    } finally {
+        $KaLog = $prevKa
+        Remove-Item -LiteralPath $tmpKa2 -Force -ErrorAction SilentlyContinue
+    }
+
+    # 源文本不变量（本仓既有范式，同 daily_count_source_test.go）：三类关键路径必须各有一条 Add-KaLog。
+    # 只认「该行同时含 Add-KaLog 与该文案」；Write-Host 不算 —— 那正是 T68 修掉的形态。
+    # 钉锚点文案而不是行号：行号会随任何一次编辑漂移，文案才是这些路径的身份证。
+    # 注意：这里刻意用 -match 的**纯子串**判断而不是正则 —— 上一版在双引号串里嵌套
+    # 字符类（形如 [^"] 的写法）被 PowerShell 当成数组索引，脚本直接 ParserError（本仓在册引号坑）。
+    $kaSrc = Get-Content -LiteralPath $PSCommandPath -Encoding UTF8
+    $anchors = @("进程不在，拉起", "经 lib_silent_launch 拉起 pid=", "已拉起 pid=", "引擎已启动（running", "用户主动退出（进程不在）")
+    $pathHits = 0
+    foreach ($needle in $anchors) {
+        foreach ($ln in $kaSrc) {
+            if ($ln -like ("*Add-KaLog*")) {
+                if ($ln.IndexOf($needle, [System.StringComparison]::Ordinal) -ge 0) { $pathHits++; break }
+            }
+        }
+    }
+    if ($pathHits -lt $anchors.Count) { $okAll = $false }
+    Write-Host ("selftest 9) 关键路径持久留痕齐备 ⇒ 期望 " + $anchors.Count + " 实得 " + $pathHits + "（少一条 = 留痕被删，事后又查不动）")
+
+    # ── 留痕面判据（round 66 · T68）：上面 8 验「真写文件」、9 整文件验三类路径都留痕；
+    # 10~12 把同一件事按**区段**拆开验（哪条路径缺痕直接指出来），13 验「判据自己没被改坏」。
+    # 锚点与文案一律用 Join-KaAnchor 分段构造（② 号纪律），每条 Write-Host 只打中文摘要、
+    # 不打锚点原文 —— 否则自检块自己就成了命中点，判据恒绿。
+    $selfText = Get-SelfSourceText
+    # 调用前缀同样分段构造：自检块里任何一行只要**同时**出现 Add-KaLog 与某条锚点文案，
+    # 就会替被删掉的真实留痕"顶名"命中（第 9 条整文件匹配尤其怕这个）。
+    $kaTraceCall = Join-KaAnchor "Add-Ka" "Log "
+    $kaQuit   = Join-KaAnchor "if (`$userQuit -and -not " "`$proc) {"
+    $kaLaunch = Join-KaAnchor "if (-not `$proc -and -not " "`$userQuit) {"
+    $kaEngine = Join-KaAnchor "if (`$proc -and (`$state -eq " "`"stopped`" -or `$state -eq `"idle`") -and -not `$userQuit) {"
+    $kaWatch  = Join-KaAnchor "# ── 进度" "看门狗"
+    $kaLoop   = Join-KaAnchor "if (`$Loop) " "{ Start-Sleep"
+
+    # 落盘本身（Add-KaLog 真写进文件、不只打到 stdout）已由上面第 8 条实测覆盖，不重复。
+    # 10) 拉起路径的五条结果路径都要留痕：进入拉起 / 经 lib 拉起得到 pid / 退回自带 Start-Process /
+    #    拉起失败（未检测到进程）/ 已拉起后的端口与状态。区段 = 拉起分支到看门狗注释之间。
+    # 每条 needle 都写成 $kaTraceCall + 文案片段：区段里要找的是「这一行真的调用了留痕函数」，
+    # 但**本自检块自己也在被检文本里**，任何一行只要同时出现 Add-KaLog 字面量与锚点文案，
+    # 就会替被删掉的真实调用顶名命中（第 9 条整文件匹配已实测踩到这个形态）。
+    $traceLaunch = Test-TraceInSourceRegion -Text $selfText -FromAnchor $kaLaunch -ToAnchor $kaWatch -Needles @(
+        (Join-KaAnchor $kaTraceCall "`"进程不在，拉起"),
+        (Join-KaAnchor $kaTraceCall "`"经 lib_silent_launch 拉起"),
+        (Join-KaAnchor $kaTraceCall "`"拉起方式=自带 Start-Process"),
+        (Join-KaAnchor $kaTraceCall "`"拉起失败（30s 内未检测到进程）"),
+        (Join-KaAnchor $kaTraceCall "`"已拉起 pid="))
+    if (-not $traceLaunch) { $okAll = $false }
+    Write-Host ("selftest 10) 拉起路径五条结果路径均有持久留痕 ⇒ 期望 True 实得 " + $traceLaunch)
+
+    # 11) 引擎 stop/start 调用的四条结果路径都要留痕：start 调用异常 / 达 running（引擎已启动）/
+    #     未达 running / 取不到 token 而跳过。区段 = 引擎分支到循环尾部。
+    $traceEngine = Test-TraceInSourceRegion -Text $selfText -FromAnchor $kaEngine -ToAnchor $kaLoop -Needles @(
+        (Join-KaAnchor $kaTraceCall "`"引擎start调用异常"),
+        (Join-KaAnchor $kaTraceCall "`"引擎已启动"),
+        (Join-KaAnchor $kaTraceCall "`"引擎start未达running"),
+        (Join-KaAnchor $kaTraceCall "`"引擎start跳过"))
+    if (-not $traceEngine) { $okAll = $false }
+    Write-Host ("selftest 11) 引擎 start 四条结果路径均有持久留痕 ⇒ 期望 True 实得 " + $traceEngine)
+
+    # 12) 「用户主动退出 ⇒ 不拉起」这条判断的落点也要留痕：留痕面查不到「这一轮为什么没动作」，
+    #     现场就只能靠 pid 变化反推守护跑没跑。区段 = 不拉起分支到拉起分支之间。
+    $traceQuit = Test-TraceInSourceRegion -Text $selfText -FromAnchor $kaQuit -ToAnchor $kaLaunch -Needles @(
+        (Join-KaAnchor $kaTraceCall "`"用户主动退出"))
+    if (-not $traceQuit) { $okAll = $false }
+    Write-Host ("selftest 12) 用户主动退出不拉起判定有持久留痕 ⇒ 期望 True 实得 " + $traceQuit)
+
+    # 13) 防「自己改坏自己」：源文本读得到、且上面五个区段锚点在文件里都在位。
+    #     为什么要单独一条：锚点失配时 10~12 也会红，但红的原因是「锚点找不到」而不是「留痕缺失」——
+    #     改名或挪动代码会把人引向错误结论。这条先红就说明是判据自身失配，须同步改锚点而不是补留痕。
+    $kaAnchorOk = ($selfText.Length -gt 1000)
+    foreach ($a in @($kaQuit, $kaLaunch, $kaEngine, $kaWatch, $kaLoop)) {
+        if ($selfText.IndexOf($a, [StringComparison]::Ordinal) -lt 0) { $kaAnchorOk = $false }
+    }
+    if (-not $kaAnchorOk) { $okAll = $false }
+    Write-Host ("selftest 13) 源文本可读且五个区段锚点在位（判据自身有效）⇒ 期望 True 实得 " + $kaAnchorOk)
+
     if ($okAll) { Write-Host "keepalive selftest: PASS"; exit 0 } else { Write-Host "keepalive selftest: FAIL"; exit 1 }
 }
 
@@ -305,7 +448,10 @@ do {
         # 用户已主动退出：进程不在是**预期**状态，不是故障。
         # 按用户意愿保持停机，等待用户自己点「启动引擎」/面板「开始」
         # （产品侧会在 Engine.Start 清除标记，之后本脚本恢复正常守护）。
+        # 持久留痕（T68）：这条判断是"本轮为什么没动作"的唯一答案。原先只有 Write-Host
+        # ⇒ keepalive.log 查不到它，现场只能靠 pid 变化反推守护到底跑没跑过这一轮。
         Write-Host "$now keepalive: 检测到用户主动退出标记，尊重用户意愿，不拉起"
+        Add-KaLog "用户主动退出（进程不在）⇒ 本轮判定不拉起"
     }
     if (-not $proc -and -not $userQuit) {
         Write-Host "$now keepalive: $Exe 进程不在，拉起"
@@ -321,9 +467,14 @@ do {
             try {
                 . $lib
                 $pid2 = Start-WBInstance -Path $Exe -Arguments "--silent"
-                if ($pid2 -gt 0) { $launched = $true; Write-Host "$now keepalive: 经 lib_silent_launch 拉起 pid=$pid2" }
+                if ($pid2 -gt 0) {
+                    $launched = $true
+                    Write-Host "$now keepalive: 经 lib_silent_launch 拉起 pid=$pid2"
+                    Add-KaLog "经 lib_silent_launch 拉起 pid=$pid2"
+                }
             } catch {
                 Write-Host "$now keepalive: lib 拉起失败，退回自带逻辑 - $($_.Exception.Message)"
+                Add-KaLog "lib 拉起失败 ⇒ 退回自带逻辑 - $($_.Exception.Message)"
             }
         }
         if (-not $launched) {
@@ -336,6 +487,10 @@ do {
             }
             $nullOut = Join-Path $env:TEMP ("wb-keepalive-out-" + $PID + "-$((Get-Date -Format 'HHmmss')).log")
             Start-Process -FilePath $Exe -ArgumentList "--silent" -WindowStyle Hidden -RedirectStandardOutput $nullOut -RedirectStandardError "$nullOut.err"
+            # 留痕（T68）：两条拉起通路的脱离作业对象语义不同（lib 走 Win32_Process.Create，
+            # 本路走 Start-Process 挂在调用会话作业对象上）。记下走的哪条，事后才能判"实例是谁拉起的、
+            # 会不会随计划任务退出而连坐"。
+            Add-KaLog "拉起方式=自带 Start-Process（未经 lib_silent_launch）"
         }
         # 运行时热修：源码在 Lead 写入口未改，这里每次拉起后重放修正
         #（删 reasoningEffort high + 注入协议修正；幂等）。
@@ -357,6 +512,7 @@ do {
         $proc = Get-WorkbenchProc
         if (-not $proc) {
             Write-Host "$now keepalive: 拉起失败（未检测到进程）"
+            Add-KaLog "拉起失败（30s 内未检测到进程）$Exe"
         } else {
             $port = Get-PanelPort
             $state = Get-EngineState -Port $port
@@ -407,18 +563,21 @@ do {
             } catch {
                 if ($_.Exception.Message -notmatch "Object reference") {
                     Write-Host "$now keepalive: start 调用异常 - $($_.Exception.Message)"
+                    Add-KaLog "引擎start调用异常 - $($_.Exception.Message)"
                 }
             }
             Start-Sleep -Seconds 2
             $state2 = Get-EngineState -Port $port
             if ($state2 -eq "running") {
                 Write-Host "$now keepalive: 引擎已启动（状态 running）"
-                Add-KaLog "引擎 $state → 已启动（running，pid=$($proc.Id)）"
+                Add-KaLog "引擎已启动（running，调用前 $state，pid=$($proc.Id)）"
             } else {
                 Write-Host "$now keepalive: start 后状态=$state2（未达 running）"
+                Add-KaLog "引擎start未达running（调用前 $state，调用后 $state2）"
             }
         } else {
             Write-Host "$now keepalive: 引擎 $state 但取不到 token，跳过"
+            Add-KaLog "引擎start跳过（$state 但取不到 token）"
         }
     }
 

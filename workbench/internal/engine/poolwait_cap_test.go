@@ -1,9 +1,12 @@
 package engine
 
 import (
+	"os"
+	"strings"
 	"testing"
 
 	"workbench/internal/model"
+	"workbench/internal/retry"
 )
 
 // TestPoolWaitBudgetCapsZombie 钉住「环境退回封顶判死」（round 60 · T54）。
@@ -50,8 +53,23 @@ func TestPoolWaitBudgetCapsZombie(t *testing.T) {
 	if after.State != model.StateFailed {
 		t.Fatalf("到顶后应落 failed（终态、解锁自主供料），实际 %s", after.State)
 	}
-	if after.ErrorKind == "" {
-		t.Error("判死必须留真实错误类别，不能空着（面板/统计要能区分环境问题）")
+	// 收紧（round 66 · 改造一）：原来只断言「非空」⇒ 写 unknown 也恒绿，
+	// 于是生产里 39 条判死全被归进「未知错误」而这条判据一次没红过（假绿判据，D10.2 同族）。
+	// 现在钉具体类别：环境问题必须叫出环境的名字。
+	if after.ErrorKind != string(retry.PoolWaitCapped) {
+		t.Fatalf("判死的错误类别必须是 %s，实际 %q（落 unknown 就等于没归因）",
+			retry.PoolWaitCapped, after.ErrorKind)
+	}
+	// 台账侧（audit.jsonl）没有读口，改用**源文本不变量**钉住「判死必须传具名类别」——
+	// 本仓既有范式（daily_count_source_test.go / report_gate_test.go 同款），零成本且永远有效。
+	src, err := os.ReadFile("engine.go")
+	if err != nil {
+		t.Fatalf("读 engine.go 失败: %v", err)
+	}
+	line := "e.failTask(taskID, fmt.Errorf(\"模型池连续 %d 次不可用/限流，环境等待封顶判死\", waits), retry.PoolWaitCapped)"
+	if !strings.Contains(string(src), line) {
+		t.Fatal("封顶判死必须把具名类别 retry.PoolWaitCapped 传给 failTask；写回 retry.Unknown 就是回归" +
+			"（生产 39 条判死全被归进「未知错误」，排查方向被整个带偏）")
 	}
 }
 

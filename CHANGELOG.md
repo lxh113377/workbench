@@ -16,6 +16,100 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **失败具名分型补全 + 枚举漂移门禁：面板「未知错误」那一桶此前 39 条全部来自同一条路径（第五轮对标 · 改造一）**：
+  **根因（三面读数，口径写死；面 · 分子/分母 · 切点）**：切点 = 2026-10-29 16:24:20（生产实例数据根
+  `D:/workbench-agent/workbench-output`）。**日志面** `workbench.jsonl` 全量 238 条 ERROR「任务失败」逐条核对：
+  `boot_failed 190 / unknown 39 / transport_failed 4 / no_artifact 3 / bad_exit 1 / not_served 1`，其中
+  **39 条 unknown 全部含「环境等待封顶判死」，0 条来自别处**；同窗 WARN「重投次数到顶」亦 39 条，一一对应。
+  **任务面** `queue.json`（5006 任务 / 73 条终态失败）里 `errorKind=unknown` 恰为 39，与判死数相等。
+  **尝试面**（`attempts.jsonl`，近 24h 380 行）unknown 只有 2 行 = **0.5%** —— 三面分裂的原因已查明：
+  判死走 `engine.go:1686 → :1687 return`，**绕过了重试循环里的 `AppendAttempt`（:1216）** ⇒ 尝试面零行。
+  ⇒ **口径警告（写进对标报告 §7.2）**：只看 attempts.jsonl 会得出「unknown 才 0.5%，没问题」的错判。
+  **为什么落 unknown（两层，第二层才是根因）**：L1 = `engine.go:1686` 第三个实参写死 `retry.Unknown`；
+  L2 = **`rate_limited` 在 retry 包里根本没有对应常量**（`executor.go:135` 有 `KindRateLimited`），于是
+  `ParseKind("rate_limited")` 一律收敛成 Unknown，连可重试表都管不到它 —— 即使改了 L1 也白改。
+  这是**同一形态的第四次复发**：`retry.go` 里 transport / no_artifact / not_served / no_lane 四段注释写的
+  都是同一句教训「不进 ParseKind ⇒ 台账只写 kind=unknown」，而前几次都是「谁撞上谁补」，补完不防下一次。
+  **顺带查出的两处同源漂移**：① **行为缺陷** —— `Retryable()` 判 no_artifact / not_served 可重试，
+  但 `config.go:396` 默认 `RetryableKinds` 只有 7 项、没这两项，而 `Policy.allowed()` 是
+  **Retryable() AND 白名单**（`retry.go:234-247`）⇒ 这三类在生产里 **attempt0 即判死**（台账实证：
+  `task-7a431ac6ea86b4d2` = `kind=no_artifact action=fail delay=0`；`task-66cf148146331039` = `not_served`
+  同样 attempt0 即死）。注释宣称可重试而行为判死 = 注释与行为矛盾。② **可见性缺陷** ——
+  `promFailureKindsBaseline` 只有 12 项，缺 `not_served / no_artifact / no_lane` ⇒ 这三类在「尚未发生时」
+  不预置序列，按类别的 `rate()/increase()` 告警在最需要它的前夜取不到样本；面板 `kindText` 手抄 10 项,
+  九类失败在中文面板里裸显英文桶名（`kindText[b.kind] || b.kind` 的兜底把漂移吞成显示差异）。
+  **对标依据（本地克隆逐行精读）**：asynq 把「租约过期」这类基础设施事实也建模成具名错误
+  （`recoverer.go:80-82` ErrLeaseExpired），其失败分派表 `processor.go:335-349` **没有 unknown 这一支**
+  （未知错误走「计一次重试、耗尽归档」的有界默认）；river 唯一的 unknown 是带字段的具名类型
+  `UnknownJobKindError`（`rivertype/execution_error.go:60-82`），枚举漏项直接
+  `panic("... unknown reason, river bug")`（`internal/jobcompleter/job_completer.go:87`），
+  asynq 的 code 表忘更新 `String()` 也当场崩（`internal/errors/errors.go:96`）。本项目是 7×24 无人值守
+  **不能 panic** ⇒ 等价手段是把漂移变成必红的机器门禁。
+  **改法（四处，能力不删）**：① `retry` 新增 `RateLimited / PoolWaitCapped / TaskPanic / TransitionFailed`
+  并进 `ParseKind` 与 `Retryable` 名单（后者只进 RateLimited：池封顶=预算已耗尽、panic=同因必再炸、
+  状态迁移失败=本地存储事实，三者判不可重试，对标 asynq SkipRetry 不烧剩余重试）；② 新增
+  `retry.AllKinds()` 作**单一权威源**，`web/metrics_prom.go` 的基线改为由它派生（手抄必漏 ⇒ 改成派生）；
+  ③ `executor` 侧补三个同名 Kind 与 `Retryable` 分流，保持两侧一一对应（本仓靠注释维持的契约）；
+  ④ `config.go:396` 默认白名单补 `no_artifact / not_served / rate_limited`，与 `Retryable()` 对齐；
+  ⑤ `engine.go:1686` 改传 `retry.PoolWaitCapped`，`:842` panic 兜底改 `retry.TaskPanic`，`:947` 状态迁移
+  失败改 `retry.TransitionFailed`。⑥ **同时修掉一处「判死后日志说假话」**：`requeueForPoolWait` 改为返回
+  `capped`，调用方据此分流文案 —— 现场实测同一任务在 16:24:20.530 先 ERROR 任务失败、同一刻又 WARN
+  「池内无可用车道，任务退回队列等待冷却」（已判死还报排队）。
+  **判据（含负控，全部实测）**：新增 `retry/kind_drift_test.go` —— 双向枚举对账（executor 每个非空 Kind
+  retry 必须认识 + `AllKinds()` 每个值 executor 必须有同名）+ 「Retryable()==true 必须进 config 默认白名单」
+  + 判据自证条；新增 `web/failure_label_contract_test.go` —— 面板标签与基线双向对账（缺中文条目判红、
+  死标签也判红）。负控实测两条：把 `RateLimited` 从 ParseKind 摘掉 ⇒ `TestEveryExecutorKindParsesInRetry`
+  判红并点名 rate_limited；把 config 白名单改回 7 项 ⇒ `TestRetryableTableMatchesConfigWhitelist` 同时
+  点名 no_artifact / not_served / rate_limited 三类。两条还原后均转绿。既有 `poolwait_cap_test.go` 的
+  「只断言 ErrorKind 非空」**收紧为断言具体类别** —— 原断言写 unknown 也恒绿，这正是本缺陷潜伏至今而
+  判据一次没红过的原因（假绿判据，纪律 D10.2 同族），并补一条源文本不变量钉住「必须传具名类别」。
+  **解析面自证（本仓 ㉑二 在册教训）**：两个新判据在「源文本一个 Kind 字面量都没解析到」时一律判红，
+  绝不把空集合当成全部对齐。**判据自身的两次错也如实记**：标签对账第一版按单引号切分取键（误把中文值
+  当键），第二版按行取冒号前（JS 表是折行写的，一行只认到第一个键）—— 两次都是判据比被测面更红，
+  按纪律先怀疑判据，最终改为「标识符+冒号+单引号」的形态匹配。
+  **文档同步**：`ARCHITECTURE.md` 两处写死的「11 类」（已过期两次）改为指向 `retry.AllKinds()` 权威清单；
+  `engine.go:1757` 的「11 类」补上时点限定。本轮报告 = `docs/benchmark/WorkBench-开源对标报告-2026-10-29.md`。
+
+- **报告内容门禁升级为「必须分级」（第五轮对标 · 改造三 · T67）**：
+  **为什么**：目标验收语是「五轴审查**分级**出报告，可直接贴 PR」，而 T66 当时只做「三节齐 + 证据节须
+  file:line 或可复跑命令」，并在注脚明写「分级留待下一轮」—— 本轮补上该欠项。不分级的缺陷清单没法取舍，
+  等于没审。**判据**：正文含任一最小分级标记（严重度 / 严重等级 / 优先级 / 高危 / 中危 / 低危 / P0-P3）
+  即合格；「高/中/低」这一档尺度要求**三个取值都以独立词出现**才算 —— 裸 `Contains("高")` 会被「提高」、
+  `Contains("中")` 会被「其中」、`Contains("低")` 会被「降低」命中，那等于任何中文报告自动合格（假绿比
+  判红危险，因为它对外宣称「刚加了一道分级门禁」）；独立词判定用 UTF-8 首字节邻位边界（`isHanByte`）。
+  **前提更新（不是改断言迁就实现）**：T66 当时的「实质报告」基准样本按新口径确实完全没分级 ⇒ 把它升级为
+  带严重度的形态，并**新增** `ungradedComplete` 用例专门钉住「原样本现在会被拒」，防止口径变更被静默吸收。
+  `TestReportGateProblems` 现 11 子用例全 PASS，含「P0 形态放行」与「提高/其中/降低 构词不得放行」成对负控。
+  **不做字数/条数阈值**：那是拍脑袋数字（T66 同一注脚反对过），会把合格报告判红，而那种门禁最后一定被人删。
+
+- **守护三条生命周期路径写入持久日志 + 留痕面自检（第五轮对标 · 改造二 · T68 收尾）**：
+  **现场**：实测生产守护日志 `D:/workbench-agent/runtime/keepalive.log` 全文 18 行，`grep -c 进程不在，拉起 = 0`、
+  `grep -c 已拉起 = 0`、`grep -c 引擎已启动 = 0` —— 脚本里 25 处 `Write-Host` 只有 5 处 `Add-KaLog`，而它由计划
+  任务以 `conhost --headless` 每分钟拉起、stdout 被丢弃 ⇒ 实例更替（本轮 pid 28788→4016）在留痕面完全查不到，
+  只能靠人盯 pid 猜。这正是 T65 那场 11 小时静默「查不动」的同一条根。**改法**：拉起（含 lib_silent_launch /
+  退回自带 Start-Process 两条通路各自记「走的哪条」，因为二者脱离作业对象的语义不同）、引擎 start 结果
+  （成功 / 未达 running / 调用异常 / 取不到 token 跳过）、用户主动退出不拉起 —— 三类判断结果一律落 `Add-KaLog`。
+  **判据（含负控）**：`-SelfTest` 从 7 条扩到 9 条，新增「`Add-KaLog` 真把行写进文件（非仅 stdout）」与
+  「五处关键路径的锚点文案确实各有一条 `Add-KaLog`（源文本不变量，钉文案不钉行号；`Write-Host` 不算 ——
+  那正是本次修掉的形态）」。负控实测：删掉「用户主动退出」那条 `Add-KaLog` ⇒ selftest 9 报「期望 5 实得 4」并 FAIL
+  （rc=1）；把 `Add-Content` 落盘语句停掉 ⇒ selftest 8 报 False 并 FAIL（rc=1）；还原后 9/9 PASS（rc=0）。
+  **另修一处本轮接手时发现的回归**：该文件 UTF-8 BOM 被前一次编辑吃掉（`check_ps1_encoding.ps1` 实测 rc=1 点名，
+  CI 的 PS5.1 对含中文无 BOM 会 ParserError）⇒ 按门禁口径只前置 3 字节、不重写正文；并把追加造成的 LF 混排
+  统一回原文件的 CRLF。**门禁**：check_ps1_syntax / check_ps1_encoding / check_multi_bom / check_noninteractive 全 rc=0。
+  **不做**：阈值与判活语义（StaleMinutes=30、Test-PendingWork、Test-EngineStalled）一条未动 —— 本次是「加留痕」，
+  不是「改行为」。
+
+- **方案档位判据的时序假红消抖：断言由「恰好 1 次调用」改为「≥1 次执行且无方案调用」（第五轮对标 · 改造四 · T69）**：
+  **现场**：CI run 40836683050 的 `go test -race` 判红 `TestPlanStageSkipsWhenTierHasNoLane`，而同一提交只改文档、
+  本地 `-race` PASS 0.48s、`gh run rerun --failed` 即 success ⇒ 属时序假红而非回归。**根因**：原断言 `n != 1` 把
+  「执行阶段重试了几次」也判进来了 —— 那个次数取决于 runner 快慢与脚本份数，不是本条要测的东西（本条要测的是
+  「方案阶段没被派到执行车道」）。**改法（不是调判据让它过）**：语义面一条没放松并**加强**了两处 ——
+  「首调不得是方案调用」升级为「全部调用都不得带方案角色」（只看首调会被「方案排第二」绕过，原断言的空隙），
+  并补「任务 prompt 里不得混进方案角色文案」；同时给足两份脚本，使重试次数不再成为时序函数。
+  **判据（含负控）**：`-count=5 -race` 连跑绿；变异验证把 `plan_stage.go:106` 的 `PickStrict` 改回 `Pick`（即退回
+  被取消的静默换档）⇒ 立刻 `--- FAIL`「首调是方案调用」，还原后 ok。**另如实记一次我自己的变异误打**：第一次
+  变异命中了函数上方注释里的同名字样（文件有 3 处 `PickStrict`），测试照绿 —— 那是变异打错位置，不是判据失效，
+  故重打真实调用点后才把这条写进完成标准。
 - **方案阶段取消「静默换档」：配了不存在的档位不再被悄悄换成执行车道（`Router.PickStrict`）**：
   **根因（配置面 + 行为面分开写，因为两者不一致）**：生产 `config.json` 只声明 3 条模型且
   `plan.plannerTier="quality"`，而**任一档位都不是 quality**（`z-ai/glm-5.3`=balanced、`openai/gpt-oss-20b`=fast、

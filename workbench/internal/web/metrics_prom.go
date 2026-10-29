@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"workbench/internal/model"
+	"workbench/internal/retry"
 )
 
 // promContentType 是 Prometheus 文本 exposition 的标准 Content-Type。
@@ -62,14 +63,23 @@ var promTaskStates = []string{
 	string(model.StateDegraded),
 }
 
-// promFailureKindsBaseline 是 executor.Kind 的非空枚举（含 unknown）。
-// 同样零值预置：错误分类进指标（对标 D2）的意义是"能按类别告警"，
+// promFailureKindsBaseline 是失败类别的零值预置清单。
+//
+// 为什么改成从 retry.AllKinds() 派生（round 66 · 改造一）：这份清单此前是手抄的 12 项，而真实枚举
+// 已有 17 项 —— 实测缺 not_served / no_artifact / no_lane（生产 queue.json 里 not_served 真有失败任务），
+// 这三类在「尚未发生时」不预置序列，按类别告警的 rate()/increase() 就取不到样本。
+// 手抄必漏 ⇒ 改成派生；两份枚举的一致性由 internal/retry/kind_drift_test.go 机器守护。
+//
+// 零值预置本身的意义不变（对标 D2）：错误分类进指标是为了「能按类别告警」，
 // 类别没发生时序列必须存在且为 0，否则 rate()/increase() 无从判定。
-var promFailureKindsBaseline = []string{
-	"timeout", "missing_credential", "model_unavailable", "upstream_failed",
-	"boot_failed", "bad_exit", "cancelled", "stalled", "rate_limited",
-	"transport_failed", "stream_cut", "unknown",
-}
+var promFailureKindsBaseline = func() []string {
+	kinds := retry.AllKinds()
+	out := make([]string, 0, len(kinds))
+	for _, k := range kinds {
+		out = append(out, string(k))
+	}
+	return out
+}()
 
 // promAttemptsScanMax 是尝试台账的扫描上限（条数）。
 // 台账是 tasks/<id>/attempts.jsonl，每次抓取都要按任务读文件；

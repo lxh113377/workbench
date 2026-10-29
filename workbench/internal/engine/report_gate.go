@@ -23,9 +23,14 @@ import (
 //  1. 只作用于 `docs/` 下的 `.md`（目标里"报告放指定地点"的那一类）；代码/配置产物不受影响；
 //  2. 必须含三节标题，逐字：`## 结论` / `## 证据` / `## 门禁建议`；
 //  3. 「证据」节必须给出 ≥1 条**可核查证据**：`文件:行号`（如 app/server.py:128）或可复跑命令
-//     （pytest / go test / npm / python / pwsh / node / Select-String 等识别词）。
+//     （pytest / go test / npm / python / pwsh / node / Select-String 等识别词）；
+//  4. （round 66 · T67 新增）必须**分级**：全文出现任一最小分级标记即合格 ——
+//     严重度 / P0-P3 / 高中低优先级。目标验收语是「五轴审查**分级**出报告，可直接贴 PR」，
+//     而 T66 当时只做三节 + 证据最小集，并在注脚明写「分级留待下一轮」，本轮补上这一欠项。
 //
-// 不做「字数下限」与「分级」硬性要求：前者是拍脑袋阈值，后者留待下一轮（先让最小门禁跑起来）。
+// 为什么只判「含标记」而不判条数/字数：分级写法很多（表格、行内、清单），但「一份分级报告必然
+// 写下严重度或优先级这个词族」是硬事实；字数与条数是拍脑袋阈值（T66 同一注脚反对过），
+// 会把合格报告判红 —— 那种门禁最后一定被人删掉。
 func reportGateProblems(path string, body []byte) []string {
 	if !isReportArtifact(path) {
 		return nil
@@ -43,7 +48,77 @@ func reportGateProblems(path string, body []byte) []string {
 	if hasSection(text, secEvidence) && !evidenceHasMarker(sectionBody(text, secEvidence)) {
 		problems = append(problems, "「"+secEvidence+"」节没有任何可核查证据（需 文件:行号 或可复跑命令）")
 	}
+	// 分级判据（round 66 · T67）：不分级的缺陷清单没法取舍，等于没审 —— 目标要求「分级出报告、
+	// 可直接贴 PR」，所以这里挡的是**完全没有分级**的产出，而不是排版。
+	if !hasSeverityGrading(text) {
+		problems = append(problems, "报告未分级（需 严重度 / P0-P3 / 高中低优先级 任一标记；目标是「五轴审查分级出报告，可直接贴 PR」）")
+	}
 	return problems
+}
+
+// severityMarkers 是分级标记的词族 —— 命中任意一个即认为报告分了级。
+//
+// 覆盖面刻意宽（表格、行内、清单都认）：要挡的是「压根没分级」，不是「排版不对」。
+var severityMarkers = []string{"严重度", "严重等级", "优先级", "高危", "中危", "低危", "P0", "P1", "P2", "P3", "p0", "p1", "p2", "p3"}
+
+// gradingScaleWords 是「高中低」这一档分级尺度的三个取值。
+var gradingScaleWords = []string{"高", "中", "低"}
+
+// hasSeverityGrading 判断报告是否真的分了级（round 66 · T67）。
+//
+// 两条路任一成立即合格：
+//
+//	① 词族命中：严重度 / 优先级 / 高危 / P0-P3 …
+//	② 「高」「中」「低」三个尺度词**都**以独立词出现（前一个字符不是汉字）。
+//
+// 为什么第 ② 条要判「三个齐全」且要求独立词：裸 Contains(高) 会被「提高」、Contains(中)
+// 会被「其中」、Contains(低) 会被「降低」命中 —— 那等于任何中文报告都自动合格（假绿，
+// 比判红危险得多，因为它对外宣称「刚加了一道分级门禁」）。三词齐全 + 独立词边界，
+// 才与「这是一套分级尺度」这件事同构（对标本仓 ㉑二：判据要与它所判的那个世界一致）。
+func hasSeverityGrading(text string) bool {
+	for _, m := range severityMarkers {
+		if strings.Contains(text, m) {
+			return true
+		}
+	}
+	for _, w := range gradingScaleWords {
+		if !hasStandaloneWord(text, w) {
+			return false
+		}
+	}
+	return true
+}
+
+// hasStandaloneWord 判断 word 是否以独立词形态出现在 text 里：命中位置的**前一个字符**
+// 不能是汉字（挡「提高/其中/降低」这类构词），后一个字符也不能是汉字（挡「高频/中央/低危」
+// 这类词组 —— 低危已由词族单独覆盖，这里不必放进来）。
+func hasStandaloneWord(text, word string) bool {
+	from := 0
+	for {
+		i := strings.Index(text[from:], word)
+		if i < 0 {
+			return false
+		}
+		at := from + i
+		before, after := byte(0), byte(0)
+		if at > 0 {
+			before = text[at-1]
+		}
+		if at+len(word) < len(text) {
+			after = text[at+len(word)]
+		}
+		// 汉字在 UTF-8 里首字节 >= 0xE0；只需看相邻字节是否落在汉字区即可判「是否成词」。
+		if !isHanByte(before) && !isHanByte(after) {
+			return true
+		}
+		from = at + len(word)
+	}
+}
+
+// isHanByte 判断一个字节是否可能是中文字符的一部分（UTF-8 三字节序列的首字节 0xE4-0xE9，
+// 以及后续续字节 0x80-0xBF —— 邻位只要落在这些区间就说明该词与汉字连写，不是独立词）。
+func isHanByte(b byte) bool {
+	return b >= 0x80
 }
 
 const (

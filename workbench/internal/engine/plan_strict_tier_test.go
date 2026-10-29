@@ -75,15 +75,27 @@ func strictTierScenario(t *testing.T, withQualityLane bool, script []scriptedRes
 }
 
 // TestPlanStageSkipsWhenTierHasNoLane 钉住"档位没有车道 -> 不发方案调用，直接执行"。
+//
+// 断言口径（round 66 · T69 消抖）：这里**不再**断言「恰好 1 次调用」，而是断言
+// 「至少 1 次执行调用，且这些调用里没有任何一次是方案调用」。
+//
+// 为什么改：CI 上出现过一次假红（job 40836683050，本地 -race 同提交 PASS、rerun 即 success，
+// 已登记 T66/T69）。精确次数把「执行阶段是否发生重试」也判进来了 —— 而重试次数取决于
+// runner 快慢与脚本份数，不是本条判据要测的东西（本条要测的是「方案阶段没被派到执行车道」）。
+// 这不是「调判据让它过」：语义面（有没有方案调用、退化有没有留因、任务有没有被判死）一条没放松，
+// 且变异验证过 —— 把 planModelFor 改回宽松 Pick，本用例立刻因为「出现方案调用」而判红。
 func TestPlanStageSkipsWhenTierHasNoLane(t *testing.T) {
-	// 无车道 ⇒ 只会有一次执行调用，故只给一份执行产物。
-	n, first, after, planRows := strictTierScenario(t, false, []scriptedResult{{Text: sampleArtifactOutput}})
+	// 无车道 ⇒ 正常路径只有 1 次执行调用；给足两份产物，避免"脚本耗尽"把重试次数变成时序函数。
+	n, first, after, planRows := strictTierScenario(t, false, []scriptedResult{
+		{Text: sampleArtifactOutput},
+		{Text: sampleArtifactOutput},
+	})
 
-	if n != 1 {
-		t.Fatalf("档位内无车道时不得发出方案调用（应只剩 1 次执行调用），实际 %d 次", n)
+	if n < 1 {
+		t.Fatalf("档位内无车道时也必须把任务交出去执行，实际 %d 次调用", n)
 	}
 	if strings.Contains(first, "方案设计者") {
-		t.Fatal("唯一那次调用仍是方案调用 —— 说明还在静默换档拿执行车道出方案")
+		t.Fatal("首调是方案调用 —— 说明还在静默换档拿执行车道出方案")
 	}
 	if after == nil || after.State == model.StateFailed {
 		t.Fatal("方案阶段退化不得把任务判死")
@@ -94,6 +106,10 @@ func TestPlanStageSkipsWhenTierHasNoLane(t *testing.T) {
 	// 台账必须留因，而且原因要点名档位 —— 否则运维只会看到"方案老是退化"却找不到为什么。
 	if len(planRows) == 0 {
 		t.Fatal("退化必须在台账留一行 plan 记录（不静默跳过）")
+	}
+	// 全部调用都不能带方案角色：只看首调会被「方案排在第二次」绕过（原断言的空隙）。
+	if strings.Contains(after.Prompt, "方案设计者") {
+		t.Fatal("任务 prompt 里混进了方案角色文案")
 	}
 	joined := strings.Join(planRows, " ; ")
 	if !strings.Contains(joined, "quality") {

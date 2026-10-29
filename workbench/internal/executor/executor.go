@@ -151,6 +151,14 @@ const (
 	// 引擎据此把任务退回队列并设池闸门，而不是把任务判失败（T19：round 35 实测全池仅剩 not_served 车道时，
 	// 引擎仍开跑并把两个任务烧成 boot_failed 任务失败）。
 	KindNoLane Kind = "no_lane"
+	// KindPoolWaitCapped / KindTaskPanic / KindTransitionFailed 是**引擎侧**产生的失败类别
+	// （环境等待封顶判死、panic 兜底、状态迁移失败），与 retry.PoolWaitCapped 等同名对应。
+	// 为什么在 executor 也登记一份：本包的 Retryable/分类面与 retry 侧靠「字符串一一对应」维持契约，
+	// 少一侧就会出现「executor 不认识引擎自己产出的类别」——2026-10-29 的 rate_limited 缺口正是
+	// 这个形态的第三次复发，现由 internal/retry/kind_drift_test.go 逐条双向比对钉死。
+	KindPoolWaitCapped   Kind = "pool_wait_capped"
+	KindTaskPanic        Kind = "panic"
+	KindTransitionFailed Kind = "transition_failed"
 )
 
 // ErrNoLane 是「池内无可用车道」的哨兵错误：模型池侧的调度器在候选链为空时返回它，
@@ -165,6 +173,10 @@ func (k Kind) Retryable() bool {
 	case KindRateLimited:
 		// 限流可重试：它不是模型下线（那个要长冷却 12h），只需整池冷却后重试。
 		return true
+	// 引擎侧三类确定性终态**不可**重试（与 retry.Retryable 同判）：
+	// 环境等待封顶判死 = 预算已耗尽；panic = 同因必再炸；状态迁移失败 = 本地状态机/磁盘问题。
+	case KindPoolWaitCapped, KindTaskPanic, KindTransitionFailed:
+		return false
 	}
 	return false
 }

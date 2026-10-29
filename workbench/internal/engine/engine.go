@@ -839,7 +839,9 @@ func (e *Engine) tick(ctx context.Context) {
 					e.mu.Lock()
 					e.lastErr = fmt.Sprintf("任务执行 panic: %v", r)
 					e.mu.Unlock()
-					e.failTask(task.ID, fmt.Errorf("执行 panic: %v", r), retry.Unknown)
+					// 具名类别 retry.TaskPanic（对标 asynq PanicError：panic 单独成类型，绝不落进
+					// 「原因不明」桶）—— 否则面板的 unknown 桶会混进「代码 bug」与「环境问题」两种事实。
+					e.failTask(task.ID, fmt.Errorf("执行 panic: %v", r), retry.TaskPanic)
 				}
 			}()
 			e.runOne(ctx, task)
@@ -944,7 +946,9 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 	running, err := e.store.Transition(task.ID, model.StateRunning, "engine", "开始执行")
 	if err != nil {
 		e.q.ReleaseChain(task.ChainID)
-		e.failTask(task.ID, fmt.Errorf("状态迁移失败: %w", err), retry.Unknown)
+		// 状态迁移失败是**本地状态机/存储**的事实（非法迁移或写盘失败），既不是模型问题也不是任务内容
+		// 问题；落 unknown 会把排查带去查车道。判不可重试：同因必再失败。
+		e.failTask(task.ID, fmt.Errorf("状态迁移失败: %w", err), retry.TransitionFailed)
 		return
 	}
 	e.runningIDs.Store(task.ID, true)
@@ -995,7 +999,8 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 			// 并给整池设置"下次可试时刻"，否则调度循环 3 秒后又会把同一批任务捞起来，
 			// 形成 queued→running→queued 空转（实测 394/400 行审计是这种迁移、0 产出）。
 			e.emitEvent(model.Event{Type: "warn", At: model.Now(), TaskID: task.ID, Msg: "模型池不可用，任务重新排队"})
-			e.requeueForPoolWait(task.ID, running.ChainID)
+			// 判死原因已由 requeueForPoolWait 自己写进台账与日志，这里不再补话（否则又是「已死还报排队」）。
+			_ = e.requeueForPoolWait(task.ID, running.ChainID)
 			return
 		}
 		modelID = picked
@@ -1141,9 +1146,15 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 		// `boot_failed` 任务失败。正确处置是：设池闸门 + 把任务退回队列等冷却。
 		if isNoLane(res, runErr) {
 			e.setPoolCooldown(rateLimitCooldownSeconds)
-			e.requeueForPoolWait(task.ID, running.ChainID)
-			e.log.Warn("池内无可用车道，任务退回队列等待冷却",
-				"taskId", task.ID, "waitSeconds", rateLimitCooldownSeconds)
+			capped := e.requeueForPoolWait(task.ID, running.ChainID)
+			// 判死与「退回队列等待冷却」是两种事实，必须分别说话（2026-10-29 实测同一刻既报失败又报排队）。
+			if capped {
+				e.log.Warn("池内无可用车道且环境等待到顶，任务已判死（见台账 kind=pool_wait_capped）",
+					"taskId", task.ID)
+			} else {
+				e.log.Warn("池内无可用车道，任务退回队列等待冷却",
+					"taskId", task.ID, "waitSeconds", rateLimitCooldownSeconds)
+			}
 			return
 		}
 		if isRateLimited(res, runErr) {
@@ -1172,7 +1183,13 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 				StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
 			})
 			remaining := e.router.AvailableLanes()
-			e.requeueForPoolWait(task.ID, running.ChainID)
+			// 判死时下面两条「冷却/切换车道」的措辞都不成立，直接按 capped 分流。
+			capped := e.requeueForPoolWait(task.ID, running.ChainID)
+			if capped {
+				e.log.Warn("上游限流且环境等待到顶，任务已判死（见台账 kind=pool_wait_capped）",
+					"taskId", task.ID, "model", modelID, "lane", lane)
+				return
+			}
 			if len(remaining) > 0 {
 				e.log.Warn("上游限流，仅冷却出问题的车道",
 					"taskId", task.ID, "model", modelID, "lane", lane,
@@ -1658,11 +1675,15 @@ const planAttemptCap = 2
 
 // requeueForPoolWait 把任务从 running 退回 queued（合法迁移），并给整池设置等待闸门。
 //
+// 返回值 capped=true 表示「环境等待次数到顶、任务已判死」——调用方据此**必须**改口：
+// 判死后若继续打印「任务退回队列等待冷却」，日志就在说假话（2026-10-29 生产实测：同一条任务
+// 16:24:20.530 先 ERROR 任务失败、同一刻又 WARN「池内无可用车道，任务退回队列等待冷却」）。
+//
 // 设计要点：
 //   - 只设置闸门，不 sleep、不占并发槽；
 //   - 闸门取"最早结束冷却的模型时刻 + 5 秒缓冲"，无可用信息时退化为 15 秒；
 //   - 任务本身不计失败（Attempts 不变），避免把环境问题算成任务问题。
-func (e *Engine) requeueForPoolWait(taskID, chainID string) {
+func (e *Engine) requeueForPoolWait(taskID, chainID string) (capped bool) {
 	// 无效重投封顶（round 60 · T54）：环境类退回**不计失败**是对的，但完全无上限会造出僵尸任务。
 	//
 	// 现场（2026-10-28，外置根实测）：唯一活任务 5134 在 47.7 分钟里被重投 47 次（attempts 只涨到 2/3），
@@ -1683,8 +1704,11 @@ func (e *Engine) requeueForPoolWait(taskID, chainID string) {
 		e.log.Warn("模型池重投次数到顶，判死以解锁自主供料", "taskId", taskID, "poolWaits", waits, "budget", poolWaitBudget)
 		e.emitEvent(model.Event{Type: "task", At: model.Now(), TaskID: taskID,
 			Msg: fmt.Sprintf("模型池连续 %d 次不可用，任务判死（可在面板重试）", waits)})
-		e.failTask(taskID, fmt.Errorf("模型池连续 %d 次不可用/限流，环境等待封顶判死", waits), retry.Unknown)
-		return
+		// 具名类别 PoolWaitCapped（改造一 · 2026-10-29）：这条路径此前写死 retry.Unknown，
+		// 生产 39 条 kind=unknown 的「任务失败」**全部**来自这里（逐条核对 workbench.jsonl），
+		// 面板「未知错误」桶等于把「环境等待封顶」伪装成了「不知道为什么」。
+		e.failTask(taskID, fmt.Errorf("模型池连续 %d 次不可用/限流，环境等待封顶判死", waits), retry.PoolWaitCapped)
+		return true
 	}
 	if q, err := e.store.Transition(taskID, model.StateQueued, "engine", "模型池冷却，退回队列"); err == nil {
 		e.q.Push(q)
@@ -1725,12 +1749,13 @@ func (e *Engine) requeueForPoolWait(taskID, chainID string) {
 	}
 	e.log.Warn("模型池冷却，调度暂停", "untilMs", waitUntil, "waitSeconds", (waitUntil-now)/1000)
 	e.emitEvent(model.Event{Type: "warn", At: now, Msg: fmt.Sprintf("模型池冷却中，%d 秒后重试", (waitUntil-now)/1000)})
+	return false
 }
 
 // failTask 记录失败并落真实错误类别。
 //
-// 改造前这里把 ErrorKind 硬编码成 "execution"，executor 算出的 11 类
-// 失败原因（超时/上游失败/缺凭据/模型下线…）在任务台账里全部丢失，
+// 改造前这里把 ErrorKind 硬编码成 "execution"，executor 当时算出的全部
+// 失败类别（超时/上游失败/缺凭据/模型下线…，2026-10-22 时点为 11 类）在任务台账里全部丢失，
 // 面板与统计无法区分"模型挂了"和"任务本身有问题"（P0-1 修复）。
 func (e *Engine) failTask(taskID string, err error, kind retry.Kind) {
 	e.runningIDs.Delete(taskID)

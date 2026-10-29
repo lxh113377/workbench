@@ -393,7 +393,15 @@ func DefaultConfig() Config {
 				// 网络抖动与流中断是「换模型/重试就能好」的典型故障，
 				// 若不在表内，executor 判出的类别到了重试层会被判成不可重试 ——
 				// 于是 ETIMEDOUT 一次失败即任务判死，浪费了故障转移的能力。
-				RetryableKinds: []string{"timeout", "upstream_failed", "bad_exit", "stalled", "unknown", "transport_failed", "stream_cut"},
+				//
+				// 2026-10-29 补齐 no_artifact / not_served / rate_limited（**同一形态的第二次显形**）：
+				// retry 侧 Kind.Retryable() 早已把这三类判为「可重试」，而本白名单没有它们，
+				// Policy.allowed() 是 Retryable() **AND** 白名单 ⇒ 生产里这三类**一次即判死**。
+				// 现场台账实证：task-7a431ac6ea86b4d2 = attempt0 kind=no_artifact action=fail delay=0；
+				// task-66cf148146331039 = not_served 同样 attempt0 即 fail。
+				// 口径由 internal/retry/kind_drift_test.go 机器守护：凡 Retryable()==true 的类别
+				// 必须出现在本清单里（池封顶/panic/状态迁移失败三类本就不可重试，不在其列）。
+				RetryableKinds: []string{"timeout", "upstream_failed", "bad_exit", "stalled", "unknown", "transport_failed", "stream_cut", "no_artifact", "not_served", "rate_limited"},
 			},
 			ShutdownGraceSeconds: 20,
 			AppendProtocol:       true,

@@ -12,9 +12,15 @@ import (
 // substantive 是同一批里那份带 file:line + 可复跑命令的。
 func TestReportGateProblems(t *testing.T) {
 	stub := "# 五轴审查-正确性\n\n## 结论\n暂无发现真实性错误。\n\n## 证据\n无。\n\n## 门禁建议\n继续保持项目规范。\n"
+	// 前提更新（round 66 · T66→T67，不是「改断言迁就实现」）：这份样本是 T66 当时的「实质报告」
+	// 基准；T67 把目标验收语里的「五轴审查**分级**出报告」变成硬判据 ⇒ 原样本（三节齐 + 证据足
+	// 但**完全没分级**）按新口径必须判红。这里把它升级成真正可贴 PR 的形态（带严重度），
+	// 并新增一条用例钉住「原来那份现在会被拒」，防止口径变更被静默吸收。
 	substantive := "# 五轴审查-缺陷报告\n\n## 结论\n上传类型只按后缀判断，存在任意文件执行风险。\n\n" +
-		"## 证据\n- file:app/server.py:128\n- 可复跑命令: `pytest -q tests/test_upload_security.py`\n\n" +
+		"## 证据\n- 严重度：高 ｜ file:app/server.py:128\n- 可复跑命令: `pytest -q tests/test_upload_security.py`\n\n" +
 		"## 门禁建议\n1. 引入 MIME 校验\n2. CI 增加该测试\n"
+	ungradedComplete := "# 五轴审查-缺陷报告\n\n## 结论\n有问题。\n\n" +
+		"## 证据\n- file:app/server.py:128\n- 可复跑命令: `pytest -q t.py`\n\n## 门禁建议\n修\n"
 	missing := "# 报告\n\n## 结论\n有问题。\n"
 	proseOnly := "# 报告\n\n本报告结构见 ## 证据 一节（正文里提到小节名，不算真的有小节）。\n"
 
@@ -25,7 +31,11 @@ func TestReportGateProblems(t *testing.T) {
 		wantSub string // 期望命中的问题关键字；空串表示应当没有问题
 	}{
 		{"stub 报告（证据节只有「无。」）必须被判不合格", "docs/五轴审查-正确性.md", stub, "证据"},
-		{"带 file:line 的实质报告必须通过", "docs/五轴审查-缺陷报告.md", substantive, ""},
+		{"带 file:line 且已分级的实质报告必须通过", "docs/五轴审查-缺陷报告.md", substantive, ""},
+		// T67 新增三条分级判据用例：缺分级要拒、词族命中要放行、构词假阳性不得放行（防假绿）。
+		{"三节齐、证据足但完全没分级 ⇒ 判不合格（T67 的核心欠项）", "docs/五轴审查-缺陷报告.md", ungradedComplete, "未分级"},
+		{"P0 形态算已分级", "docs/x-审查.md", gradedVariant("P0"), ""},
+		{"提高/其中/降低 这类构词不得当成已分级（假绿负控）", "docs/x-审查.md", gradedVariant("提高吞吐量，其中降低延迟"), "未分级"},
 		{"缺小节要指出缺哪节", "docs/x.md", missing, "缺少小节"},
 		{"正文提到小节名不算结构（文件名自述报告，故仍受门禁管）", "docs/审查报告-y.md", proseOnly, "缺少小节"},
 		{"docs/ 下的普通文档不受报告门禁约束（本次事故的形态，防回归）", "docs/hello.md", "# 外部目录成功\n", ""},
@@ -48,6 +58,12 @@ func TestReportGateProblems(t *testing.T) {
 			}
 		})
 	}
+}
+
+// gradedVariant 造一份「三节齐 + 证据足」的报告，把分级位置填成 grade 文本。
+// 用于成对验证分级判据：填真尺度（P0 / 严重度：高）应放行，填构词假阳性应判红。
+func gradedVariant(grade string) string {
+	return "# 审查报告\n\n## 结论\n结论。\n\n## 证据\n- file:a.py:1\n\n## 门禁建议\n修\n\n" + grade + "\n"
 }
 
 // TestReportGateWired 是接线守卫：内容门禁必须挂在 materializeArtifacts 里，且在真实执行之前。
