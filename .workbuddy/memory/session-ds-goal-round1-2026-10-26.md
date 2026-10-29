@@ -1352,3 +1352,17 @@ decisions.jsonl 尾部三条 evidence 变化：
 - config.json（前缀 id + quality 档）、pool.json（清冷却）——均有 .bak-r67-* 备份。
 ### 五、自误
 - 用注释文本判断二进制是否含修复（无意义；注释不进二进制）⇒ 改为看进程 rev。
+## round 68（同会话，2026-10-29 18:15-18:55）—— 真根因修复：模型级失败被整组套用 ⇒ 38/38 全灭；黑障解除（32 healthy）
+
+### 一、诊断先行
+- T72：`listingDiag` 把 base/钥匙指纹/清单条数/样例/试过形态写进 not_listed 的 Error（落 pool.json）；
+- 诊断立刻暴露：38 条车道 lastErr 一字不差、都在试 `z-ai/glm-5.3` ⇒ 生产给每条车道传了同一份 spec。
+### 二、真根因（`service.go probeSpecs`）
+- 端点级探测用组内第一条 spec 代表整 base；它的模型级失败（not_listed）经 baseOK=false 被套用到全组 ⇒ 38/38 down；
+- 修法（`f532df2`）：模型级失败改为逐模型探测；环境态/不可达仍整组标记；守卫测 + 负控 + 全仓 rc=0。
+### 三、live 验收
+- pool：**healthy×32 / degraded×6**（此前 38/38 down）；日志出现真实尝试（beam-free / cohere / deepseek-ai…）。
+### 四、前半段另两件真缺陷
+- 重试路径漏用 variants（aff53e8）；配置 id 缺 `our-free-model/` 前缀 + 缺 quality 档（已对齐，含备份）。
+### 五、遗留
+- 6 条 degraded（真的不在清单）；交付 pass 待观察；T67/T70/T62/T69 不变。
