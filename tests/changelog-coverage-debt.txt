@@ -27,3 +27,5 @@ f532df2  并行会话：modelpool service.go 改动，落地无条目
 022cea5  并行会话：engine 报告落点门禁 T74（artifacts.go + report_gate.go），落地无 CHANGELOG 条目
 
 8115beb  并行会话：modelpool exec_health 把 boot_failed 纳入不可翻案集合（T75），落地无 CHANGELOG 条目
+
+64459f1  并行会话：executor/retry/config 细分 quota_exhausted（T76 限流重试风暴），4 个生产 .go 落地无 CHANGELOG 条目
