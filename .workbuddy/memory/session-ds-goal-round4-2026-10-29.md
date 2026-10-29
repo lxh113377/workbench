@@ -49,3 +49,27 @@
 5. 假 DSH 先写成「.bat 改扩展名」—— Go 走 CreateProcess 起不来；改真 Go PE（xtmp/fakedshmod/dshstub.exe）。
 6. 验证件第一版 config 落点写成 `<root>/config/config.json`，实测 Layout 是 `<exe>/workbench-output/config.json`
    （internal/config/paths.go:12-16）⇒ 按源码改，不猜。
+
+## 后续收口（同日 22:4x–23:0x，覆盖上文「#11 只有一次性证据」与「NO_SAMPLE」的旧状态）
+
+- **#11 已拿到可复跑的 live 差分证据**：新增 `tests/cancel_cause_live_verify.ps1`（隔离实例 + 真 PE 假 DSH +
+  自建 config），两侧各跑一遍：新件 dist/f771474 `NAMED_TEXT=1 RAW_TEXT=1 LANE_POLLUTION=0` PASS；
+  旧件 dist/bak-pre-t9（ddded8，`git merge-base --is-ancestor 6953c76` 判假）同一路径 `NAMED_TEXT=0` PASS
+  （复现缺陷）⇒ 具名归因由**生产二进制对**做实差分，不再靠等自然样本。user / shutdown 两种信号结论一致。
+- **验证件自身也被验**：两条前置守卫负控 `GUARD_NEG_PASS`（DIRTY rc=2 refused=1、PORT_BUSY rc=2 refused=1）。
+  起因是真实污染：一次 run 被我的工具超时打断留孤儿实例 ⇒ 两实例共享 queue.json，那种 PASS 不能当证据 ⇒
+  改成清不掉/端口被占就 exit 2。另记一次**无效测试**：用 node 持句柄模拟脏根无效（libuv 默认
+  FILE_SHARE_DELETE 挡不住删除），正解是 PowerShell 的 FileShare.None。
+- **`check_test_assertions` 假红修掉**（commit `99bb121`）：红的是判据不是被测件 —— 它把「下一个 ^func」
+  当函数体边界，被 Go raw string 里的顶格 `func f()` 骗。我第一版补救（反引号奇偶）**更危险**：双引号串里
+  也能含反引号 ⇒ 真实 Test 会被整体跳过 = **假绿**；量化证据是奇偶版只数到 1030，少的 5 个全是真测试。
+  正解换成 `workbench/cmd/assertionprobe`（go/parser）。端到端负控双向过：真零断言判红、raw string 假阳性消除。
+  真实仓 1035 个 Test、0 零断言、4 契约豁免。**CI run 40895782299（head 99bb121）三 job success**
+  ⇒ f771474 / e64ed74 两次 repo-gates 红（我的假红 + 我缺 `-UseBasicParsing`）均已转绿。
+- **部署判定（不重复停机）**：`git diff --name-only f771474 HEAD -- workbench/cmd/workbench workbench/internal`
+  = **0 个文件**，且 `cmd/assertionprobe` 不被任何产品包 import ⇒ 线上 exe（vcs.revision=f771474）
+  **已含 #11 与 #9**，无需第三次换装。这条结论是查出来的，不是推的。
+- issue #12 已留更正评论（口径 + 真因），issue #9 已留更正评论（危害方向反了 + 实测读数 + 措辞自决）。
+
+## 本轮新增提交
+`d655156`(#12) → `f771474`(#9) → `e64ed74`(#11 验证件) → `99bb121`(闸假红修复) → `865552c`(守卫负控)，全部 push。

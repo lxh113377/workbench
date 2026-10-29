@@ -87,3 +87,31 @@ skip_reason：`#12 前置` = 写面冲突（build.ps1 同时被并行会话改�
    「前置缺失（无读数/证据只一侧）」、rc=1 表「虚设/基线过高/对照面失效」，段内不做任何归零改写。
 6. 单侧证据会给出**错的建议**（实测：CI-only 会说 browser 应设 28，而本机 browser 25.8 ⇒ 设了本机就红）
    ⇒ 判据改为「缺任一侧读数 ⇒ SKIP(3)」，不硬判。
+
+### round 4 实际收口（23:0x 回填）
+
+| 件 | 状态 | 可复算证据 |
+|---|---|---|
+| #12 前置 + 机读判据 | ✅ `d655156`，CI run 40886662475 三 job success | artifact `coverage-readings-40886662475`(574B) 内容 env=ci/head=d655156/31 包/avg 73.17；真两侧读数喂进判据 ⇒ rc=0「核对 15 条」|
+| #12 抬线 | ✅ 15 条余量全进 0..5pp | binding=min(CI,本机)：engine 71/web 49/executor 47/supervisor 53/shortcut 32/chain 88/cmd 12 + 微调 4 条 |
+| #9 隐性 kind 收编 | ✅ `f771474`，CI 40895782299 success | Lead 独立复跑 gofmt/vet/retry/web/engine + 自做变异负控（判红并指名 :370，还原 sha 810c9374250b）|
+| #11 live 证据 | ✅ 由「等自然样本」换成受控差分并取到 | 新件 NAMED_TEXT=1/RAW_TEXT=1/LANE_POLLUTION=0 PASS；旧件 ddded8 NAMED_TEXT=0 PASS（复现缺陷）|
+| 闸假红修复 | ✅ `99bb121` | 端到端负控双向：真零断言判红、raw string 假阳性消除；1035 个 Test 全合规 |
+| 守卫负控 | ✅ `865552c` | GUARD_DIRTY rc=2 refused=1、GUARD_PORT rc=2 refused=1 ⇒ GUARD_NEG_PASS |
+| 部署 | ✅ dist + 线上根 = `f771474`（含 #11/#9）| sha 6200428190… == SHA256SUMS；`git diff f771474 HEAD -- workbench/cmd/workbench workbench/internal` = 0 ⇒ 无需再停机 |
+
+### round 4 收尾负申报（未派件 + skip_reason，枚举内）
+
+- `#12 抬线与 artifact` = **写面冲突**：build.ps1 / ci.yml / .gitignore 同时被我本轮实现，派出去必与我自己撞（D7.2）。
+- `#11 差分取证` = **严格串行**：判据的输入是「旧 exe 与 new exe 各跑一次同一路径」，第二次依赖第一次读数。
+- `issue #9 / #12 正文更正评论` = **决策本体**：更正口径要进 GitHub 权威面，结论由 Lead 承担。
+- `check_report_figures 移动目标` → 未实施改动，改为提 **issue #13**（判据设计问题，需另行裁量，不属本轮目标）。
+
+### 三条我没做成/没做全的（如实记）
+
+1. **车道污染（#11 缺陷②）仍无 live 证据**：差分两侧 `lane.failure` 都是 0。查清原因（假 DSH 起得来 ⇒
+   executor 自标 cancelled ⇒ 走旧代码也有的 tier-4 兜底分支），**不硬凑时序**去造污染 ⇒ 该缺陷证据仍是单测面。
+2. **`#12` 的其余 17 包专项基线未纳入**：retention binding 63.0 / templates 63.6 距默认 55 只剩 8 点左右，
+   是否给专项线是判断，本轮未动（已在 issue #12 评论里登记）。
+3. **验证件不进 CI**：`cancel_cause_live_verify.ps1` 与既有 `round66_live_verify.ps1` 同等待 —— 只挂本地,
+   靠 `check_doc_refs`/`check_gate_coverage` 的引用面活着（不叫 check_*.ps1 故不入 $gates 清单）。
