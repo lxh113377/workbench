@@ -64,10 +64,16 @@ func reportGateProblems(path string, body []byte) []string {
 // verify 是 `python m.py` ⇒ 解释器能启动就 exit 0 ⇒ 判 pass。T66 的报告门禁只覆盖 `docs/*.md`，
 // 代码产物仍是「跑得起来就算过」。
 //
-// 阈值取 64 的依据（两个真实数据点，不是拍脑袋）：4 字节的 `m.py`（占位/截断）必须挡下；
-// 97 字节的 `check_env.py`（本仓里程碑交付物，真实可用的小脚本）必须放过。
+// 阈值取 16 的依据（**三个真实数据点**，不是拍脑袋）：
+//
+//	· 4 字节的 `m.py`（占位/截断形态）必须挡下；
+//	· 40 字节的容器 E2E 桩 `result.py`（`print("hello from workbench container e2e")`）必须放过 ——
+//	  第一版取 64 直接把这个确定性桩判红、把 Autonomy Container E2E 打挂（本轮实测事故）；
+//	· 97 字节的 `check_env.py`（本仓里程碑交付物，真实可用的小脚本）必须放过。
+//
 // 只按体量挡最明显的占位；「代码是否真有用」交给 verify 命令，不在这一层妄判。
-const codeArtifactMinBytes = 64
+// 教训：阈值的上界由**最该放过的真实样本**决定，不是由最该挡下的样本决定 —— 只盯下界会打挂既有验收。
+const codeArtifactMinBytes = 16
 
 // codeArtifactExts 是代码类产物扩展名（数据/配置类如 .json/.yaml/.csv 不设体量下限 —— 它们本来就可能很小）。
 var codeArtifactExts = []string{".py", ".js", ".ts", ".tsx", ".jsx", ".go", ".sh", ".ps1", ".sql", ".rb", ".java", ".rs", ".c", ".cpp"}

@@ -16,6 +16,9 @@ func TestCodeArtifactMinSubstance(t *testing.T) {
 	}{
 		{"4 字节占位脚本必须挡", "m.py", "pass", "代码产物过小"},
 		{"97 字节真实小脚本必须放过", "check_env.py", strings.Repeat("# c\n", 24) + "print(1)\n", ""},
+		// 容器 E2E 的确定性桩（40 字节）——第一版 64 字节下限把它判红、把 Autonomy Container E2E 打挂。
+		// 这条用例就是那次事故的回归护栏：阈值必须放过**最该放过的真实样本**。
+		{"容器 E2E 桩 result.py（40 字节）必须放过", "workspace/result.py", "print(\"hello from workbench container e2e\")\n", ""},
 		{"数据文件不设体量下限", "data.json", "{}", ""},
 		{"报告不受这条管（由报告门禁管）", "docs/x.md", "短", ""},
 		{"沙箱相对路径同样生效", "workspace/tool.go", "package main", "代码产物过小"},
