@@ -65,3 +65,33 @@ func TestNonQualityLadderUnchanged(t *testing.T) {
 		}
 	}
 }
+
+// TestEveryQualityStepRotates 钉住「轮转不只作用于体检」（round 66）。
+//
+// 现场复发形态（2026-10-29 15:54）：目标推进到阶段 2 后，「小步修」标题恒定 ⇒ 评估器 5 连拒 ⇒ 熔断 ⇒ 22 分钟零供料。
+// T61 当初只修了阶段 0 的「体检」，换个阶段就复发 —— 本用例就是那次复发的回归护栏。
+func TestEveryQualityStepRotates(t *testing.T) {
+	p := NewPlanner(PlanConfig{Words: 400, MaxDrafts: 2, DefaultDomain: "content"})
+	goal := &Goal{Title: "提升工作空间项目的全栈工程质量", Domain: "quality", Intent: "提升工作空间项目的全栈工程质量"}
+	titleOf := func(recent []string) string {
+		for _, d := range p.Plan(PlanContext{Goal: goal, StageIndex: 2, Recent: recent}) {
+			if strings.Contains(d.Title, "小步修（") {
+				return d.Title
+			}
+		}
+		return ""
+	}
+	t1 := titleOf(nil)
+	if t1 == "" {
+		t.Fatal("阶段 2 应产出「小步修（轴/第N轮）」形式的标题")
+	}
+	t2 := titleOf([]string{t1})
+	if t2 == "" || t2 == t1 {
+		t.Fatalf("阶段 2 的第二轮必须换轴换标题（否则复发「恒定标题被连拒」）：t1=%q t2=%q", t1, t2)
+	}
+	for _, d := range p.Plan(PlanContext{Goal: goal, StageIndex: 2}) {
+		if strings.Contains(d.Title, "小步修（") && !strings.Contains(d.Prompt, "只做「") {
+			t.Fatal("阶段 2 的 prompt 未限定本轴 —— 分轴推进就只是标题装饰")
+		}
+	}
+}

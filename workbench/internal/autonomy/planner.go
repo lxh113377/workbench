@@ -140,18 +140,34 @@ var domainLadder = map[string][]string{
 // 目标文本里的「正确性/可读性/架构/安全/性能」同一套口径 —— 分轴体检产出的是可直接贴 PR 的分级报告。
 var qualityAxes = []string{"正确性", "可读性", "架构", "安全", "性能"}
 
-// axisRotation 数 Recent 里已出现的分轴体检标题条数，作为下一轴的轮转号。
+// stepRotation 数 Recent 里**某一步**已出现的分轴标题条数，作为下一轴的轮转号。
 //
 // 为什么用 Recent 而不是计划器内部状态：计划器是纯函数式的（PlanContext 进出、无状态），
-// 而 Recent 由引擎按 ~24 条近期标题（含被拒草案）喂入 —— 正是「这条目标已经体检过几轴」的事实来源。
-func axisRotation(recent []string) int {
+// 而 Recent 由引擎按 ~24 条近期标题（含被拒草案）喂入 —— 正是「这一步已经推进过几轮」的事实来源。
+// 按步计数（token 区分）而不是按全局计数：不同阶段的轮次要各自独立，否则阶段切换会把轮次算歪。
+func stepRotation(recent []string, token string) int {
+	if token == "" {
+		return 0
+	}
+	needle := token + "（"
 	n := 0
 	for _, r := range recent {
-		if strings.Contains(r, "体检（") {
+		if strings.Contains(r, needle) {
 			n++
 		}
 	}
 	return n
+}
+
+// focusRest 取阶梯步文本里**冒号之后**的动作描述（没有冒号则返回原文）。
+// 例：「小步修：只改一个最小单元，改完…」→「只改一个最小单元，改完…」。
+func focusRest(focus string) string {
+	f := strings.TrimSpace(focus)
+	i := strings.IndexAny(f, "：:，,。；;")
+	if i < 0 {
+		return f
+	}
+	return strings.TrimSpace(strings.TrimLeft(f[i:], "：:，,。；;"))
 }
 
 // ladderFor 返回某领域的推进阶梯（未知领域回退到 content）。
@@ -226,21 +242,27 @@ func (p *Planner) Plan(ctx PlanContext) []Draft {
 		// 标题退化成目标标题本身。composeTitle 保证焦点段永不被裁掉。
 		title := composeTitle(goal.Title, shortFocus(focus))
 		rationale := fmt.Sprintf("目标处于第 %d 阶段，按领域推进阶梯执行「%s」", ctx.StageIndex, shortFocus(focus))
-		// 五轴轮转（round 62 · T61）：阶段 0 的「体检」在目标未推进时**标题恒定**，
-		// 于是评估器按重复门禁反复拒绝（2026-10-28 23:58 实测同秒 5 连拒 ⇒ 熔断让位模板），
-		// 目标永远停在第 0 阶段。破法：把体检按五轴轮转 —— 标题互不相同，且每一轮正好是
-		// 目标要的「正确性/可读性/架构/安全/性能」分轴审查（可直接贴 PR 的那种报告）。
-		// 轮转号取自 Recent 里体检类标题的条数（引擎喂入 ~24 条，含被拒草案）：
-		// 前 25 条内必然互不相同；饱和后由下面的兜底分支（保证唯一标题）接管，不会退回死循环。
-		if domain == "quality" && strings.HasPrefix(focus, "体检") {
-			n := axisRotation(ctx.Recent)
+		// 分轴轮转（round 62 · T61，round 66 推广到**每一步**）：
+		//
+		// 只要目标卡在某个阶段不推进，该阶段的标题就是恒定的，评估器便按重复门禁反复拒 ——
+		// 两次现场实测：2026-10-28 23:58 阶段 0「体检」同秒 5 连拒；2026-10-29 15:54 阶段 2「小步修」同样 5 连拒，
+		// 随后 22 分钟零供料（熔断让位模板、而模板也被限流压制）。T61 当初只修了「体检」这一步 ⇒ 换个阶段又复发。
+		// 破法（通用）：把**每一步**都按「五轴 + 轮次」参数化 —— 标题互不相同，且每一轮都聚焦一个轴，
+		// 正是目标要的「正确性/可读性/架构/安全/性能」分轴推进（可直接贴 PR 的分级报告）。
+		// 轮转号取自 Recent 里**本步**标题的条数（引擎喂入 ~24 条、含被拒草案）：前 25 条内必然互不相同；
+		// 饱和后由下面的兜底分支（保证唯一标题）接管，不会退回死循环。
+		if domain == "quality" {
+			token := shortFocus(focus)
+			n := stepRotation(ctx.Recent, token)
 			axis := qualityAxes[n%len(qualityAxes)]
-			focus = fmt.Sprintf("体检：只做「%s」这一轴 —— 扫当前工作目录的项目，列出带 文件:行号 的真实缺陷", axis)
+			round := n/len(qualityAxes) + 1
+			// 保留该步自己的动作描述（冒号之后那段），只把「做哪一轴」插到前面 —— 语义不缩水。
+			focus = fmt.Sprintf("%s：只做「%s」这一轴 —— %s", token, axis, focusRest(focus))
 			// ⚠️ 焦点段里的轴名与轮次之间**禁止再用 "·"**：duplicated() 取的是「最后一个 · 之后」的焦点段，
 			// 内层再来一个 · 会让「正确性·第1轮」与「可读性·第1轮」被截成同一个「第1轮）」⇒ 判重退回死循环。
-			// 这条是写这个修法时被测试当场抓出来的（诊断读数：第二轮退回兜底标题「…· 阶段1」）。
-			title = composeTitle(goal.Title, fmt.Sprintf("体检（%s/第%d轮）", axis, n/len(qualityAxes)+1))
-			rationale = fmt.Sprintf("阶段 0 分轴体检：%s（五轴轮转，避免恒定标题被判重）", axis)
+			// 这条是写 T61 时被测试当场抓出来的（诊断读数：第二轮退回兜底标题「…· 阶段1」）。
+			title = composeTitle(goal.Title, fmt.Sprintf("%s（%s/第%d轮）", token, axis, round))
+			rationale = fmt.Sprintf("阶段 %d 分轴推进：%s · %s（第 %d 轮，避免恒定标题被判重）", ctx.StageIndex, token, axis, round)
 		}
 		d := Draft{
 			Title:     title,
