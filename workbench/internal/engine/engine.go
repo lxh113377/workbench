@@ -1206,7 +1206,15 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 			})
 			remaining := e.router.AvailableLanes()
 			// 判死时下面两条「冷却/切换车道」的措辞都不成立，直接按 capped 分流。
-			capped := e.requeueForPoolWait(task.ID, running.ChainID)
+			//
+			// round 101-112 · T78：这里把**本轮分类**传进去 —— 额度耗尽走更长的等待预算（quotaWaitBudget），
+			// 否则「要账号侧动作、小时级恢复」的额度问题会在 20 分钟内把每条任务都判死（7×24 下等于一条不留）。
+			// kind 取自 res.ErrorKind（executor 具名分类写回），不在这里猜上游。
+			waitKind := string(res.ErrorKind)
+			if waitKind == string(executor.KindQuotaExhausted) {
+				e.log.Warn("免费额度耗尽：任务改走长等待预算", "taskId", task.ID, "budget", quotaWaitBudget)
+			}
+			capped := e.requeueForPoolWaitKind(task.ID, running.ChainID, waitKind)
 			if capped {
 				e.log.Warn("上游限流且环境等待到顶，任务已判死（见台账 kind=pool_wait_capped）",
 					"taskId", task.ID, "model", modelID, "lane", lane)
@@ -1705,6 +1713,17 @@ func isNoLane(res *executor.Result, err error) bool {
 // 独占自主供料门数小时。判死后若上游已恢复，任务会被下一条自主草案取代；人工重试同样可重开。
 const poolWaitBudget = 4
 
+// quotaWaitBudget 是「等待原因**明确是额度耗尽**」时的放宽预算（round 101-107 · T78）。
+//
+// 为什么需要分级（现场 2026-10-29/30）：36-38 条车道同时冷却、十余名任务 park（poolWaits 2-3）；
+// 而额度耗尽的原文写着要**账号侧动作**（Sign up for free… / Free usage limit reached…），恢复尺度是**小时级**。
+// 沿用 4 次（约 20 分钟）的预算 ⇒ 额度未恢复前**每条任务都会被判死**，7×24 下就是「一条也不留」。
+// 判死的初衷是「防僵尸独占供料」，而额度耗尽恰恰需要一个常驻任务占着位置等额度 —— 两者目标不同，预算就该不同。
+//
+// 取 48 的依据：按现场重投节奏（闸门 5-30 分钟一轮，含退避）约 6-12 小时，足够跨过一个额度周期；
+// 仍**不是无限**：到顶依旧判死（保留「换一条自主草案取代」的兜底），只是把「20 分钟就枪毙」改成「等半天再判」。
+const quotaWaitBudget = 48
+
 // planAttemptCap 是单个任务允许「调用思考模型出方案」的最大次数（round 63 · T64）。
 //
 // 取 2 的依据（现场实测，2026-10-29 近 90 分钟）：每任务实际 plan 调用 3~5 次、占全部台账行 ≈50%，
@@ -1724,6 +1743,17 @@ const planAttemptCap = 2
 //   - 闸门取"最早结束冷却的模型时刻 + 5 秒缓冲"，无可用信息时退化为 15 秒；
 //   - 任务本身不计失败（Attempts 不变），避免把环境问题算成任务问题。
 func (e *Engine) requeueForPoolWait(taskID, chainID string) (capped bool) {
+	return e.requeueForPoolWaitKind(taskID, chainID, "")
+}
+
+// requeueForPoolWaitKind 按**等待原因**分级预算（round 101-112 · T78）：
+// 额度耗尽（kind=quota_exhausted）走 quotaWaitBudget，其余环境抖动走 poolWaitBudget。
+// 判据只认调用方传进来的具名 kind（来自 executor 的分类），不在这里猜上游。
+func (e *Engine) requeueForPoolWaitKind(taskID, chainID, kind string) (capped bool) {
+	budget := poolWaitBudget
+	if kind == string(executor.KindQuotaExhausted) {
+		budget = quotaWaitBudget
+	}
 	// 无效重投封顶（round 60 · T54）：环境类退回**不计失败**是对的，但完全无上限会造出僵尸任务。
 	//
 	// 现场（2026-10-28，外置根实测）：唯一活任务 5134 在 47.7 分钟里被重投 47 次（attempts 只涨到 2/3），
@@ -1740,8 +1770,8 @@ func (e *Engine) requeueForPoolWait(taskID, chainID string) (capped bool) {
 			waits = cur.PoolWaits
 		}
 	}
-	if waits >= poolWaitBudget {
-		e.log.Warn("模型池重投次数到顶，判死以解锁自主供料", "taskId", taskID, "poolWaits", waits, "budget", poolWaitBudget)
+	if waits >= budget {
+		e.log.Warn("模型池重投次数到顶，判死以解锁自主供料", "taskId", taskID, "poolWaits", waits, "budget", budget, "kind", kind)
 		e.emitEvent(model.Event{Type: "task", At: model.Now(), TaskID: taskID,
 			Msg: fmt.Sprintf("模型池连续 %d 次不可用，任务判死（可在面板重试）", waits)})
 		// 具名类别 PoolWaitCapped（改造一 · 2026-10-29）：这条路径此前写死 retry.Unknown，
