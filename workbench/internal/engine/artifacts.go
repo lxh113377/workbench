@@ -156,6 +156,13 @@ func (e *Engine) materializeArtifacts(task *model.Task, finalText, taskDir strin
 			out.FailReason = "交付物实质不足：" + strings.Join(tiny, "；")
 			e.log.Warn("代码产物过小，不计数为通过", "taskId", task.ID, "problems", strings.Join(tiny, "；"))
 		}
+		// 落点门禁（round 71 · T74）：**自称是报告**的交付物必须在 `docs/` 下 ——
+		// 同样只在「已通过」时降级（失败原因不许被偷换）；判据按**内容**认报告，不按 format 一刀切。
+		if loc := reportLocationProblems(res.Files); len(loc) > 0 {
+			out.Pass = false
+			out.FailReason = "交付物落点不符：" + strings.Join(loc, "；")
+			e.log.Warn("自称报告的交付物未落 docs/，不计数为通过", "taskId", task.ID, "problems", strings.Join(loc, "；"))
+		}
 	}
 	_ = config.WriteJSONAtomic(filepath.Join(taskDir, "verify.json"), out)
 	if out.Pass {

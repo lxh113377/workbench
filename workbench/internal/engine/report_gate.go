@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+
+	"workbench/internal/artifact"
 )
 
 // reportGateProblems 检查「报告类产物」的内容是否够格交付（round 65 · T66）。
@@ -86,6 +88,54 @@ func isCodeArtifact(path string) bool {
 		}
 	}
 	return false
+}
+
+// reportLocationProblems 检查「报告类任务」的交付**落点**（round 71 · T74）。
+//
+// 现场（2026-10-29 19:52:37 新增一条 pass）：任务产物是**工作区根目录**的 `a.md`（8371 B），
+// 内容是英文泛论文章（Abstract/Introduction/…），既不在 `docs/`、也没有三节/证据/分级/合并结论。
+// 它在旧判据下算一次成功交付 —— 因为报告内容门禁（T66）只作用于 `docs/` 下的 `.md`，
+// 根目录的同名报告**压根不进那道门**。目标的验收语是「报告与优化建议**放置于指定地点**」，所以落点本身就是判据。
+//
+// 口径（**内容判定**，不是按 format 一刀切 —— 第一版正是被两条既有契约测试当场纠正）：
+//
+//	逐个看 `.md` 交付物「是否自称报告」（文件名或首部标题命中 报告/审查/review 词族，复用 claimsReport）：
+//	若自称报告却**不在 `docs/` 下** ⇒ 判问题；只要有一个报告落在 `docs/` 下即合格。
+//
+// 为什么不能按 `task.OutputFormat == "md"` 一刀切：`md` 同时覆盖**文章/长文类**模板（深度长文、闭环验证的 loop.md），
+// 把它们也逼进 docs/ 会打断既有契约（本轮实测打红 TestClosedLoopThroughRunOne 与 TestCompleteTaskDoneOnVerifyPass 两处）。
+// 目标要管的是「**报告**放指定地点」，不是「所有 markdown 都放 docs/」。
+// 内容门禁（三节/证据/分级）只在 docs/ 下生效 ⇒ 「自称报告却落在根目录」正是绕开 T66/T67 的那条路，落点因此是判据。
+//
+// 两遍扫描（顺序无关）：
+//
+//	第一遍：只要有一个 `.md` 落在 `docs/` 下 ⇒ 落点合格（同一交付里另有根目录文件不算问题）；
+//	第二遍：若有「自称报告却不在 `docs/`」的 `.md` ⇒ 判问题。
+//
+// 为什么必须两遍：第一版是单遍、遇到谁先判谁 —— 用例「docs/ 报告 + 根目录报告」当场抓出顺序依赖 bug
+// （先遍历到根目录那份就直接判红，后面那份合规的根本没看到）。
+func reportLocationProblems(files []artifact.File) []string {
+	for _, f := range files {
+		if isDocsMarkdown(f.Path) {
+			return nil
+		}
+	}
+	for _, f := range files {
+		low := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(f.Path), "\\", "/"))
+		if !strings.HasSuffix(low, ".md") {
+			continue
+		}
+		if claimsReport(f.Path, string(f.Body)) {
+			return []string{"自称报告的交付物未落在指定地点：`" + f.Path + "` 应在 `docs/` 下（目标要求「报告与优化建议放置于指定地点」；否则它会绕开报告内容门禁）"}
+		}
+	}
+	return nil
+}
+
+// isDocsMarkdown 判断路径是否为 `docs/` 下的 markdown（反斜杠与大小写都归一）。
+func isDocsMarkdown(path string) bool {
+	low := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(path), "\\", "/"))
+	return strings.HasPrefix(low, "docs/") && strings.HasSuffix(low, ".md")
 }
 
 // codeArtifactProblems 检查代码产物的最小实质（T73）。
