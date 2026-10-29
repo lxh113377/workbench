@@ -16,6 +16,48 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **issue #12 收口：覆盖率基线全表按「双环境下界」重校 + CI coverage artifact 前置 + 机读余量判据**：
+  **口径先纠两处（都是我自己的错，含一处我把加固写成修 bug）**：
+  ① issue #12 正文写「15 条基线只有 3 条达标、其余 12 条虚设」——那句话在它写出的时刻是**对的**
+    （当时基线 engine=65/web=34/…），但它只按 CI 面算，漏了 `setup/build.ps1:27-33` 本仓既有规则
+    「两个环境都要过 ⇒ 阈值取**下界**」。按 `binding = min(CI, 本机)` 重算 ⇒ 真正虚设 **7 条**
+    （web 18.2 / cmd/workbench 14.9 / executor 11.1 / shortcut 10.4 / engine 9.3 / supervisor 8.1 / chain 6.4），
+    另 8 条本已达标；shortcut/browser/judge/tray 的 binding 取的是**本机**值 ⇒ 只看 CI 会把它们误判虚设，
+    还会给出错建议（实测 CI-only 说 browser 应设 28，而本机 browser 只有 25.8 ⇒ 设了本机就假红）。
+  ② 我在 build.ps1 注释与本 CHANGELOG 前一笔里都写过「CI 上 `Test-Path` 判假 ⇒ 落盘块整段静默 no-op」——
+    **错的**。实证：HEAD 版在 run 40878099516 日志 13:05:22Z 打出
+    `覆盖率读数已落盘：avg=73.17% min=workbench/cmd/workbench=17.1% (ci)` ⇒ 那块在 CI 上一直真的执行、
+    文件也写成功（`.workbuddy/memory` 有 40 个受跟踪文件）。真因只有一条：写成功的件**没上传成 artifact**，
+    随 runner 蒸发（该 run 只有 workbench-exe 与 perf-trend 两件；本地 jsonl 的 `env=ci` 行数实测 **0**）。
+    `New-Item -Force` 替代 `Test-Path` 守卫仍做了，但理由是**健壮性**（不依赖"那目录恰好存在"），不是修 bug。
+  **抬线（binding − 3pp，只抬不降）**：engine 65→71、web 34→49、executor 39→47、supervisor 48→53、
+  shortcut 25→32、chain 85→88、cmd/workbench 2→12；微调 evaluate 67→68、modelroute 95→96、
+  dshprofile 74→75、browser 22→23 ⇒ 15 条余量全部落进 0..5pp。**唯一故意留宽**：cmd/workbench
+  binding 16.9 − 3pp = 14 而实设 12 —— 该包测试大多要真二进制/真 DSH 通道（见 issue #9、在册 T62），
+  环境一抖整段就掉，本机 16.9 vs CI 17.1 只差 0.2pp 属运气；12 仍能拦住"掉一半"（→8 会红）。
+  这是判断，所以把理由与数字一起写进 build.ps1 注释，不让下一个人以为又是漏校。
+  **前置与判据**：build.ps1 把逐包值另写 `coverage-readings/coverage-per-package.json`（`.gitignore` 加
+  `/coverage-readings/`）；ci.yml 新增 `Upload coverage readings`（`if: always()` —— 门禁判红时最需要逐包值，
+  只在成功时上传等于"只在不需要它的时候才有它"；name 含 run_id、retention 90，与 perf-trend 同规格）；
+  新增 `tests/check_cover_baseline_margin.ps1`（挂 check_all，`check_gate_coverage` rc=0）：两侧读数取 binding、
+  基线从 build.ps1 解析（不抄第二份），`margin>5 ⇒ FAIL 虚设`、`margin<0 ⇒ FAIL 会假红`、
+  `核对数=0 ⇒ FAIL 对照面失效`、`证据只一侧 ⇒ rc=3 SKIP`（不硬判）。rc=3 而非 rc=2 是刻意的：
+  check_all 把 rc=3 记为 SKIP，段内**不需要**把 rc=2 归零 —— 那个归零动作正是 check_all:55-57 记的洗绿洞。
+  **判据自证（五条负控全实测）**：双侧真数据 ⇒ rc=0「核对 15 条」；CI-only ⇒ rc=3；单侧 local ⇒ rc=3；
+  伪造包名 ⇒ rc=1「核对数为 0」；构造虚设+假红数据 ⇒ rc=1 并逐条点名（engine 83−71=12pp、web 49>40）。
+  **我自己的三处实现错，全被自家门禁/实测抓出**：① 新判据第一版假绿 —— 改条件行时漏改
+  `$prop.Value` 取值行 ⇒ 15 个包恒走「读数里没有」分支、`核对 0 条` 却 rc=0；这正是我在该文件里
+  引用的 ㉑二 规则，我自己违反了 ⇒ 补「零核对一律判红」。② 把 build.ps1 的 `if (Test-Path)` 换成
+  **裸 `{ }`** —— 实测（xtmp/blockprobe.ps1）PowerShell 裸花括号是 scriptblock 字面量、只求值不执行
+  （探针 `ran=False`）⇒ 会把「静默跳过」升级成「静默不执行」，比原缺陷更坏；改 `if ($true)`。
+  ③ 批量改注释缩进时 slice 位数算错 ⇒ 17 行 `  #` 变 `  ##`；连同本轮第 6 次弄丢 .ps1 的 UTF-8 BOM
+  （`check_ps1_encoding` 判红点名，按门禁口径只前置 3 字节修回）。
+  **顺带两条与 #12 无关的实测信号（登记不并入）**：`8115beb` 改 modelpool（实现 +8 行、测试 +25 行）
+  后 CI 逐包 modelpool 读数 a1fc828=70.2 → 8115beb=70.2 **零增益** ⇒ 那批测试未覆盖到新语句集；
+  另 `retention` binding=63.0、`templates` 63.6、`gov` 70.9 只走默认 55，前两者距默认线仅 8 点左右。
+  复算式（可跑）：`gh run view 40878099516 --log --job 123463258606 | grep -a "coverage: .* of statements"`
+  ⇒ 按包名去重 31 包（schedprobe 无测试不进门禁分母）均值 73.17，与 CI 自打的 `avg=73.17%` 逐位一致；
+  误把 schedprobe 计入分母得 70.88 与打印不符 ⇒ 31 这个分母不是随手取的。
 - **L3 收口（第二段）：modelroute 基线 47→95，依据是它**入库后**的 CI 实测 98.9%**：
   上一笔（aa69b8e）刻意把 modelroute 留在 47，理由是「补测文件未入库、CI 的 52.6 是**补测前**读数，
   抬基线就是拿本机数定 CI 阈值」。本轮该前提已解除：补测文件入库后 CI run 40874493501
@@ -25,9 +67,14 @@
   且没有一条是用降阈值换来的。
   **交叉自证用实测而非推算**：同一 job 日志按包名去重得 31 包（第 32 个 `cmd/schedprobe` 无测试文件、
   0.0% 不进门禁分母），均值 **73.17**；上一轮同口径 71.64 ⇒ 涨 +1.53，其中可归因于 modelroute 的是
-  (98.9 − 52.6)/31 = +1.49，余 +0.04 是其它包自然浮动 —— 不写成「正好等于」，因为**拿不到 CI 的 avg 行**
-  （build.ps1 的 avg= 只写进本机 `.workbuddy/memory/gate-readings.jsonl`，runner 上该目录不入库、
-  销毁即蒸发 ⇒ 正是 issue #12 的 artifact 缺口）。
+  (98.9 − 52.6)/31 = +1.49，余 +0.04 是其它包自然浮动 —— 不写成「正好等于」（当时我**没**去比对 CI 的 avg 行，
+  留着推算当结论；下一笔已补实测：CI 日志里其实**有**该行，见下方"更正"）。
+  **更正（round 72，同日 21:0x 实测，推翻本笔上面两句）**：我曾写「CI 日志里没有 avg 行」「runner 上
+  `.workbuddy/memory` 不入库」—— 两句都错。实测 run 40876282900 / job 123456954511 日志第 12:52:06Z
+  逐字有 `覆盖率读数已落盘：avg=73.17% min=workbench/cmd/workbench=17.1% (ci)`；而 `.workbuddy/memory`
+  实测有 40 个受跟踪文件（`git ls-files` 复算）⇒ CI checkout 后该目录**存在**，build.ps1:191 的
+  `Test-Path` 因此通过并真的落盘。issue #12 的缺口不是"没写"，而是「写了但**没上传成 artifact**，
+  runner 销毁即丢」+ 那行 `avg=` 我上一轮**没去 grep 到**就用推算下结论 —— 属 #36 家族（把未取证当结论）。
   复算式：`gh run view 40874493501 --log --job 123450755853 | grep "coverage: .* of statements"`
   → 去 ANSI、按包名去重求平均。
   **两条实测踩坑（都记进 build.ps1 注释以免重踩）**：① CI 逐包行里包名与耗时之间是 **tab**，
@@ -38,8 +85,8 @@
   编辑本身。补 BOM 后 parse_check 又报语法错（我把 BOM 重复前置把好文件写坏），最终 `git checkout`
   回 HEAD、改用**一次自管 BOM 的整体写入**重做两处改动（锚点命中校验 + PARSE_OK + ENC_RC=0 全复验通过）。
   固化纪律：**含中文的 .ps1 编辑后必须立刻复验头字节与 AST**，不能依赖"我记得先检查"。
-  本笔同时是 issue #12 的**部分**收口：其余 12 条虚设基线（web 空转 18.2、cmd/workbench 15.1、
-  shortcut 17.5 等）仍在册未动。
+  本笔同时是 issue #12 的**部分**收口。（此处原写「其余 12 条虚设…仍在册未动」—— 数字与状态均由
+  round 72 同一会话后续收口更正：按双环境下界重算是 **7 条**虚设，且**已全部抬完**，见下一条。）
 - **取消/停机的 ErrorKind 不再被下游泛错顶掉，且取消不再污染车道健康度（issue #11 · 改造：具名 cause）**：
   **现场（生产台账，可复算）**：`tasks/*/attempts.jsonl` 有 2 行 `kind=unknown / action=cancel /
   error="启动 DSH 失败: context canceled"`。真相是「取消」，呈现是「未知错误」—— 排查者会去查

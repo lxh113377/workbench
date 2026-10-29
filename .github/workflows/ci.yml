@@ -176,6 +176,22 @@ jobs:
         shell: pwsh
         run: ./setup/build.ps1 -Version 1.1.0
 
+      # 覆盖率逐包读数（issue #12 的机器判据前置）：build.ps1 把 binding 口径的每包值写进
+      # coverage-readings/coverage-per-package.json。命名含 run_id ⇒ 每次独立成件（同名会覆盖，
+      # 跨 run 的趋势就断了），retention 90 天与 perf-trend 同规格。
+      # if: always() 是刻意的 —— 覆盖率门禁判红时我**最**需要这份读数（红的原因就是某个包
+      # 掉到基线以下），若只在成功时上传就等于只在不需要它的时候才有它。
+      - name: Upload coverage readings
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-readings-${{ github.run_id }}
+          path: coverage-readings/coverage-per-package.json
+          retention-days: 90
+          # warn 而非 error：门禁若在落盘**之前**就 throw（如 go test 失败），此时本就没有读数；
+          # 那种情形由上一步的 throw 负责报警，不在这里二次判红。
+          if-no-files-found: warn
+
       - name: Verify artifact
         shell: pwsh
         run: |

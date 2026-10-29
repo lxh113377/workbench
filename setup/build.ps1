@@ -25,6 +25,28 @@ param(
   #   cmd/workbench 5.7->2 / evaluate 63.8->60 / modelroute 50.6->47 / shortcut 28.9->25
   #   chain 88.6->85 / judge 81.1->78 / single 71.4->68 / tray 见下 / dshprofile 77.8->74
   #
+  # **2026-10-29 round 72 · issue #12 全表重校（抬 9 条 + 微调 4 条，余量全部收敛 ≤5 点）**：
+  # 先纠正一处我自己的口径错：issue #12 正文写「15 条里 12 条虚设」是**只按 CI 算**出来的，
+  # 漏了下面已立的规则「两个环境都要过 ⇒ 阈值取**下界**」（tray/shortcut/browser/judge 实测
+  # 本机更低）。改用 binding = min(CI, 本机) 重算 ⇒ 真正虚设的是 **7 条**，另 8 条本已达标。
+  # 数据（同一 commit a1fc828 两侧现取）：CI run 40876282900/job 123456954511（avg=73.17%，
+  # 与我按包去重算出的 73.17 逐位一致 ⇒ 提取口径已自证）+ 本机 go test ./... -count=1 -cover。
+  # 抬（binding − 3pp）：engine 65→71、web 34→49、executor 39→47、supervisor 48→53、
+  #   shortcut 25→32、chain 85→88、cmd/workbench 2→12；微调 evaluate 67→68、modelroute 95→96、
+  #   dshprofile 74→75、browser 22→23。
+  # **唯一故意留宽**：cmd/workbench binding=16.9 − 3pp = 14，实设 **12**。理由不是拍脑袋 ——
+  #   该包的测试大多要真二进制/真 DSH 通道（silent_contract、plan_selftest 一类，见 issue #9
+  #   与在册 T62），环境一抖整段覆盖率就掉；本机 16.9 vs CI 17.1 只差 0.2pp 属运气不是稳定。
+  #   12 仍能拦住"掉一半"（→8 会红），又不把 CI 变成随机红灯。这是**判断**，故连理由一起写这儿。
+  # 配套机制修（issue #12）：原守卫 `if (Test-Path $readingsDir)` 换成自建目录 + 逐包值落固定路径，
+  #   由 ci.yml upload 成 artifact ⇒ tests/check_cover_baseline_margin.ps1 能机读对账「余量 ≤5」。
+  # ⚠️ 我第一版把改因写成「CI 上 Test-Path 判假 ⇒ 整块静默 no-op」，那是**错的**：本会话下载
+  #   run 40878099516 的 CI 日志实证该行存在（13:05:22Z `覆盖率读数已落盘：avg=73.17% … (ci)`），
+  #   即 CI 上这块**一直真的执行**。真因只有一条：写成功的文件**没上传成 artifact**，随 runner 蒸发
+  #   （本地 jsonl 里 env=ci 行数实测 0；该 run 只有 workbench-exe 与 perf-trend 两件 artifact）。
+  #   New-Item -Force 仍是该有的加固（不再依赖"目录恰好存在"），但它的理由是**健壮性**，不是修 bug。
+  #   不再依赖谁记得手工校（这才是 issue #12 要的机器判据）。
+  #
   # **2026-10-29 round 70 · L3 按 CI 口径重校（只动有两个数都有 CI 权威读数的两包）**：
   # 读数来源 = GitHub Actions run 40866494973 的 job `build + coverage gate`（step 内 build.ps1 逐包
   # 打印 coverage:），evaluate=70.7 / modelpool=70.2 / modelroute=52.6；自证：31 包求和 2220.7/31
@@ -60,7 +82,7 @@ param(
 # 起 Edge --app 或 rundll32 会真弹窗口/真起进程，单测里跑它们等于污染桌面，
 # 正是本包要在测试里守的纪律（见 headless_test.go 的 TestOpenDoesNothingWhenHeadless）。
 # 故按本仓「实测-3pp」惯例设 22，后续只许抬不许降。
-  [string[]]$PerPackageCover = @("workbench/internal/engine=65", "workbench/internal/web=34", "workbench/internal/executor=39", "workbench/internal/modelpool=67", "workbench/internal/supervisor=48", "workbench/cmd/workbench=2", "workbench/internal/evaluate=67", "workbench/internal/modelroute=95", "workbench/internal/shortcut=25", "workbench/internal/chain=85", "workbench/internal/judge=78", "workbench/internal/single=68", "workbench/internal/tray=18", "workbench/internal/dshprofile=74", "workbench/internal/browser=22")
+  [string[]]$PerPackageCover = @("workbench/internal/engine=71", "workbench/internal/web=49", "workbench/internal/executor=47", "workbench/internal/modelpool=67", "workbench/internal/supervisor=53", "workbench/cmd/workbench=12", "workbench/internal/evaluate=68", "workbench/internal/modelroute=96", "workbench/internal/shortcut=32", "workbench/internal/chain=88", "workbench/internal/judge=78", "workbench/internal/single=68", "workbench/internal/tray=18", "workbench/internal/dshprofile=75", "workbench/internal/browser=23")
 
 # dshprofile 阈值说明（2026-10-21 立、2026-10-23 复核更新）：该包原被判「只能真机跑」
 # （LocateDSH/resolveFromShim 探测、copyDir/linkOFM 复制、hiddenProcAttr 全是 IO 型）。
@@ -188,7 +210,19 @@ Mark "4/6 test+覆盖率"
     # 序列读数才能看出「在涨还是在跌」。落盘到 .workbuddy/memory/gate-readings.jsonl，
     # 与 check_untracked_go.ps1 的读数同一文件、同一 schema 风格（gate 字段区分来源）。
     $readingsDir = Join-Path $root '.workbuddy\memory'
-    if (Test-Path -LiteralPath $readingsDir) {
+    # 为什么不用原来的 `if (Test-Path -LiteralPath $readingsDir)` 守卫：
+    # 它本身在 CI 上**是能过的**（实证：HEAD 版在 run 40878099516 打出过 `avg=73.17% (ci)`，
+    # 即目录存在、块真的执行过）—— 所以这不是缺陷根因，别把加固写成修 bug。
+    # 换掉它的理由是**健壮性**：本件的正确性不该依赖"那个目录恰好在某处存在"这种隐式前提；
+    # CI 读数的真缺口是「写成功但没上传成 artifact，随 runner 蒸发」⇒ 由下面的 coverage-readings/
+    # 固定路径 + ci.yml 的 Upload coverage readings 步骤补上（issue #12）。
+    New-Item -ItemType Directory -Force -Path $readingsDir | Out-Null
+    # 为什么保留这个块而不是直接去掉一层缩进：块体里有 `continue` 之外的多步逻辑，缩进成对
+    # 修改风险高，故用 `if ($true)` 保持原有块结构与缩进不变。
+    # ⚠️ 不要用裸 `{ ... }` 代替 —— 实测（xtmp/blockprobe.ps1，pwsh 7）：裸花括号在 PowerShell 里是
+    #   **scriptblock 字面量，只求值不执行**，块内语句一条都不跑（探针输出 ran=False）。
+    #   那会把「静默跳过」升级成「静默不执行」，比原缺陷更坏。这里必须是有条件的 if。
+    if ($true) {
       $per = @{}
       foreach ($line in ($coverOut -split "`n")) {
         $mm = [regex]::Match($line, '^ok\s+(\S+)\s+[0-9.]+s\s+coverage:\s+([0-9.]+)%')
@@ -211,6 +245,14 @@ Mark "4/6 test+覆盖率"
           head = (& git rev-parse --short HEAD 2>$null)
         }
         Add-Content -LiteralPath (Join-Path $readingsDir 'gate-readings.jsonl') -Value ($rec | ConvertTo-Json -Compress) -Encoding UTF8
+        # 逐包值也要能机读（issue #12）：只存 avg/min 的话，「哪条基线虚设」仍然要人翻日志 ——
+        # 而本仓的护栏对账判据（tests/check_cover_baseline_margin.ps1）需要的是**每个包的值**。
+        # 落到仓内独立目录，由 ci.yml 的 Upload coverage readings 打成 artifact（含 run 号，
+        # 每次独立成件；同名会覆盖 ⇒ 趋势就断了，与 perf-trend 同规格）。
+        $pkgOut = Join-Path $root 'coverage-readings'
+        New-Item -ItemType Directory -Force -Path $pkgOut | Out-Null
+        $detail = [ordered]@{ at = $rec.at; env = $rec.env; head = $rec.head; run = if ($env:GITHUB_RUN_ID) { $env:GITHUB_RUN_ID } else { 'local' }; avgPct = $rec.avgPct; per = $per }
+        [IO.File]::WriteAllText((Join-Path $pkgOut 'coverage-per-package.json'), ($detail | ConvertTo-Json -Depth 5 -Compress), [Text.UTF8Encoding]::new($false))
         Write-Host ("    覆盖率读数已落盘：avg=" + $rec.avgPct + "% min=" + $rec.minPkg + "=" + $rec.minPct + "% (" + $rec.env + ")") -ForegroundColor DarkGray
       }
     }

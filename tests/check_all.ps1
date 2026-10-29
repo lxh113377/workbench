@@ -206,6 +206,15 @@ Section '门禁读数趋势（informational：有数据就报，无数据 UNVERI
   if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED（尚无读数落盘）' -ForegroundColor Yellow }
 }
 
+Section '覆盖率基线余量（issue #12：基线离实测 >5pp 即虚设护栏）' {
+  $g = Join-Path $Root 'tests\check_cover_baseline_margin.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g
+  # rc=2 = 取不到逐包读数（本机尚未跑过 build.ps1，或 CI 未下载 coverage artifact）。
+  # 按本仓三态口径处理：**不**把 rc=2 改写成 0 —— round 214 已查明「段内 =0」正是把
+  # 「跑了但证据不足」洗成 PASS 的那个洞（见本文件 :55-57）。这里只披露，让它显形。
+  if ($LASTEXITCODE -eq 2) { Write-Host '    UNVERIFIED 无逐包覆盖率读数（跑 setup/build.ps1 或下载 CI 的 coverage-readings artifact 后可判）' -ForegroundColor Yellow }
+}
 Section '日志体积（信息化：只产出读数、永不判红；7×24 磁盘增长可见性）' {
   $g = Join-Path $Root 'tests\check_log_growth.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }

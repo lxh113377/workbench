@@ -53,3 +53,37 @@
   `xtmp/cancel_live_watch.mjs`（只读扫台账，命中即打印 LIVE_PASS/LIVE_FAIL）。
   这不算未闭环：单元测试 + CI + 变异负控已证明行为，生产侧已有**对照证据**——同一缺陷形态
   （kind=unknown 的 cancel 行）在 #11 上线前的 19:10、19:53 各新增一条，上线后 0 条。
+
+## round 4（2026-10-29 21:0x，目标 = #12 → #9 + 复取 #11 live 证据）
+
+### 派发判定（30 秒卡）
+命中 T1（#12 与 #9 互不引用）、T2（各 ≥3 回合）、T3（需 CI 日志面 + 本机实测面 + 台账面）、
+T4（结论进 build.ps1 / ci.yml 权威件）、T5（落 ≥2 文件）、T6（交付件 ≥2）⇒ 必须并行派 ≥2。
+
+| 件 | 形态 | 写面 | 结果 |
+|---|---|---|---|
+| #12 CI 逐包覆盖率取证（只读） | subagent 后台 | 无 | 待收 |
+| #9 隐性 kind 名单收编（写测试+码） | subagent 后台 | retry/executor/modelroute/web | 待收 |
+| #12 前置 + 机读对账判据 | Lead 自留 | setup/build.ps1、.github/workflows/ci.yml、.gitignore、tests/check_cover_baseline_margin.ps1、tests/check_all.ps1 | 已落 |
+| #11 live 证据复取 | Lead 自留（零侵入监视器） | 无（只读生产台账） | 监视器在跑 |
+
+skip_reason：`#12 前置` = 写面冲突（build.ps1 同时被并行会话改过，Lead 串行做）；`#11 复取` = 严格串行
+（判据结果依赖自然样本出现）。均在枚举内。
+
+### 本轮已产出的关键纠正（都是我自己的错，不是他人）
+1. **issue #12 正文口径错**：「15 条里 12 条虚设」是只按 CI 算的，漏了本仓既有规则「两个环境都要过
+   ⇒ 取下界」。按 binding = min(CI, 本机) 重算 = **7 条虚设**（web 18.2 / executor 11.1 / shortcut 10.4 /
+   cmd 14.9 / engine 9.3 / supervisor 8.1 / chain 6.4）。已写进 build.ps1 注释与本卡。
+2. **上一轮 CHANGELOG 里「CI 日志没有 avg 行」「.workbuddy/memory 不入库」两句均错**：实测 run
+   40876282900/job 123456954511 第 12:52:06Z 逐字有 `覆盖率读数已落盘：avg=73.17% … (ci)`；
+   且 `.workbuddy/memory` 有 40 个受跟踪文件。真缺口是「写了没上传成 artifact ⇒ 跨 run 不可读」。
+   已在 CHANGELOG 原位标注更正（不改写历史，只加更正）。
+3. **我差点造出一个比原缺陷更坏的版本**：把 build.ps1 的 `if (Test-Path $dir)` 换成裸 `{ }` ——
+   实测（xtmp/blockprobe.ps1）PowerShell 的裸花括号是 scriptblock 字面量、**只求值不执行**
+   （探针 ran=False）⇒ 会把「静默跳过」变成「静默不执行」。改为 `New-Item -Force` + `if ($true)`。
+4. **我的新判据自己假绿过一次**：`核对 0 条` 仍 rc=0（改条件行时漏改 `$prop.Value` 取值行 ⇒
+   恒走「读数里没有」分支）。修法同时补「零核对一律判红」—— 即我自己在这件里引用的 ㉑二 规则。
+5. **rc=2 语义分档**：本仓 check_all:55-57 记录「段内把 rc=2 归零 = 洗绿洞」。故本件用 rc=3 表
+   「前置缺失（无读数/证据只一侧）」、rc=1 表「虚设/基线过高/对照面失效」，段内不做任何归零改写。
+6. 单侧证据会给出**错的建议**（实测：CI-only 会说 browser 应设 28，而本机 browser 25.8 ⇒ 设了本机就红）
+   ⇒ 判据改为「缺任一侧读数 ⇒ SKIP(3)」，不硬判。

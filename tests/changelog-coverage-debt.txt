@@ -25,3 +25,5 @@ f532df2  并行会话：modelpool service.go 改动，落地无条目
 #   该判据当轮就把这笔判红（NEW）。不判红它的理由与存量 7 笔同源：属他人写面，判红 = 假红归因错人。
 #   处置 = 登记 + 由 owner 会话补条目后删本行；若它补了条目而本行未删，第 5) 条的 STALE 判据会判红。
 022cea5  并行会话：engine 报告落点门禁 T74（artifacts.go + report_gate.go），落地无 CHANGELOG 条目
+
+8115beb  并行会话：modelpool exec_health 把 boot_failed 纳入不可翻案集合（T75），落地无 CHANGELOG 条目
