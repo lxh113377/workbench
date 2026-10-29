@@ -16,6 +16,78 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
+- **取消/停机的 ErrorKind 不再被下游泛错顶掉，且取消不再污染车道健康度（issue #11 · 改造：具名 cause）**：
+  **现场（生产台账，可复算）**：`tasks/*/attempts.jsonl` 有 2 行 `kind=unknown / action=cancel /
+  error="启动 DSH 失败: context canceled"`。真相是「取消」，呈现是「未知错误」—— 排查者会去查
+  「为什么未知」，而正确答案是「这是停机/终止的正常结果，本就不该算失败」。
+  **成因链（三层，逐层定位）**：① `modelpool/failover.go:212/221` 在「执行器返回空结果」时兜底写
+  `kind=unknown`；② executor 的包装层（`fmt.Errorf("启动 DSH 失败: %w", err)`）**不认识 context 错误**，
+  具名 `KindCancelled` 根本没机会被赋上；③ 真正写台账的 kind 取自 `res.ErrorKind` ⇒ 落 unknown。
+  **顺带查出第二个缺陷（行为级，比归因更贵）**：`RecordFailure` 原先排在取消判定**之前**
+  （engine.go 旧 :1212/:1215）⇒ **用户每点一次「终止」，就把那条无辜车道打成一次失败冷却**；
+  限流风暴期这个动作会被反复触发，等于自己在给池子降容量。
+  **对标依据（本地克隆逐行）**：`context.Canceled` 本身是歧义的（用户取消 / 停机 / 阶段超时 /
+  父 ctx 回收都可能是它），单看 error 文本分不开。river 给第二维 = `context.Cause`：
+  `job_executor.go:183-185` 在**写库前**用 cause 把落库原因换成真相（防 worker 泛错顶掉），
+  `:590-597 isSoftStopCancelError` 用 `cause==ErrStop ∧ errors.Is(err,Canceled)` 把停机从失败里精确摘出；
+  asynq 同向：停机/取消走 requeue，**既不写 ErrorMsg 也不吃重试次数**
+  （`processor.go:238-241` + `internal/rdb/rdb.go:598-619`，IsFailure 谓词 server.go:124-130）。
+  **改法（新增 internal/engine/cancel_cause.go）**：① 两个包内具名哨兵 `causeEngineShutdown` /
+  `causeUserCancel`（走 `errors.Is` 穿透 `%w`，不做字符串匹配）；② 任务 ctx 与引擎根 ctx 都改
+  `context.WithCancelCause`，停机 `cancel(causeEngineShutdown)` —— 子 ctx 的 `context.Cause` 继承父 cause，
+  停机路径无需逐任务传参就能归因；③ `classifyCancellation(ctx, 用户意图标记, executor 给的类别)`
+  按四级次序判定（cause 具名 > 用户意图标记 > ctx 已取消兜底 > executor 已具名 cancelled），
+  **超时明确不算取消**（`DeadlineExceeded` 原样交回失败路径，否则会吞掉一次真实失败）；
+  ④ `RecordFailure` 移到取消分流**之后** —— 取消直接 return，车道不被记失败；
+  ⑤ 台账文案改用 `cancelText + causeSuffix(lastErr)`：主因具名、原始泛错留作**尾注**
+  （"（原始错误: …）"）—— 两头都不丢：丢掉原文就失去了"死在哪一步"的线索。
+  ⑥ `taskCancels` 改存具名类型 `taskCanceler{cause}` 而非裸 func：① 取消时**强制给 cause**
+  （编译器挡住"静默无归因"）；② 裸 func 的类型断言失败时 `ok=false` 会**静默不取消**（零日志零报错，
+  「终止」按钮当场退化成空操作 —— 正是本仓在册的 P0-3 旧缺陷形态）。
+  **判据（cancel_cause_contract_test.go，三条 + 两条变异负控实测）**：
+  ① cause 分类表 7 个子用例（含「DeadlineExceeded 不得算取消」「无 cause 但有用户意图标记」
+  「非取消路径保持原类别」三条边界）；② 源文本不变量钉 `taskCancels` 的**存入类型 == 两处断言类型**
+  （`strings.Count(body,"v.(taskCanceler)")!=2` 判红）+ 禁止退回裸 func 存储 + 引擎根 ctx 必须 WithCancelCause；
+  ③ 行为判据三态对照：生产形态+用户取消 ⇒ 具名 cancelled 且车道 failure=0；无取消信号 ⇒
+  **保持诚实的 unknown（不许凭空命名取消）**且 failure=1；具名真失败 ⇒ failure=1。后两条是正控，
+  证明第一条的 0 不是恒真。变异 A（把 RecordFailure 挪回取消判定之前）⇒ 三条同时判红
+  （failure=2 的读数还直接暴露了双重记账）；变异 B（分类器直接判不取消）⇒ 5 子用例 + 行为用例全红。
+  还原后 engine 整包 `ok`（23.6s）、取消/停机相关 `-race -count=2` 全 `ok`。
+  **判据自身的两处错，都被自家判据当场抓出（如实记）**：
+  a) 探针第一版用 `e.router.UpdateRoutes` 注册车道，随后被 `e.ReloadConfig()` 用 `cfg.Models`
+  **整体替换**冲掉 ⇒ RecordFailure 打到另一条 modelID 上，「车道失败数」恒为 0 ——
+  其中「取消不记账」那条断言因此**假绿**（它 PASS 了，但量的是没人记过账的车道）。
+  修法是按生产形态把车道写进 `config.Models`，并加**对照面自证**（台账行的 model 必须是那条车道，
+  否则立刻判红并说明读数不可信）。这条自证是本轮最有价值的收获：**行为判据必须自证它量的是谁**。
+  b) 我在 cancel_cause.go 里一度把尾注括号写成半角 `( )`，与契约测试要求的全角 `（ ）` 不符 ⇒ 判红。
+  **注**：`ARCHITECTURE.md`「11 类」→ `retry.AllKinds()` 的补正在上一笔 f1addb9 已落地，本笔不重复计。
+
+- **L3 覆盖率按 CI 口径重定（evaluate / modelpool 基线上抬）+ modelroute 的 8 个 0% 函数补测到 100%**：
+  **权威读数（CI 侧，非本机）**：GitHub Actions run 40866494973 的 job `build + coverage gate` 逐包打印
+  `coverage:` 行 —— evaluate **70.7%** / modelpool **70.2%** / modelroute **52.6%**；六个 run 交叉核对读数恒定
+  （modelroute 在 2409b90 之前恒 50.6，之后 52.6，是阶跃不是噪声）。自证：31 包读数求和 2220.7/31
+  = 71.64，与 CI 自己打印的 `avg=71.64%` 逐位一致 ⇒ 提取口径可信。
+  **按本仓既有规则取值（CI 实测 − 3pp）**：evaluate 60→**67**（余量 3.7）、modelpool 55→**67**（余量 3.2），
+  两者同时满足 L3 的「≥65」。**禁止**拿本机数抬基线（本机 evaluate 77.8 / modelpool 72.4 系统性高 3-7pp，
+  因为 CI 无桌面会话/无网络/无真实 DSH ⇒ 走不同分支），也**禁止**降阈值糊过去。
+  **modelroute 不靠改阈值**：CI 面 52.6 距 65 差 12.4 点，只能补测。点名那 8 个 0% 函数
+  （`CooldownByProvider / AvailableProviders / ProviderOf / AllInCooldown / laneOf / CooldownByLane /
+  AvailableLanes / LaneOf`）—— 它们是 T43（车道偏好接线）与 T65（守护进度看门狗）的生产路径
+  （`engine.go:1168/1170`、`plan_stage.go:102`、`runtime_rescue.go:143`）却零测试，本仓长期只测了
+  「整池」一刀 ⇒ 「按 provider 一刀」「按 lane 一刀」两条降级路径完全没守卫。补 4 个测试文件
+  共 35 个 Test 函数（表驱动 37 行 / 断言 137 处，零 t.Skip），本机 **55.8% → 99.0%**，
+  那 8 个函数全部 100.0%；`-race -count=2`、`-count=10` 稳定绿。CI 读数待本轮 CI 出来后抬基线
+  （不许用本机 99.0 定基线）。
+  补测过程中子代理自己抓出并修掉的两件（如实记，均为判据质量而非覆盖率数字）：
+  ① 一条**加权随机**断言原写「200 次取样必命中」，而该车道理论命中率仅 ~0.7% ⇒ 全不中概率约 25%，
+  `-v` 那次真的假红过；改为 20000 次取样的**双向区间**判定（`hit==0` 红 = 不许永不选取；
+  `hit*20>samples` 红 = 不许归一成超大权重）。教训：**随机路径的判据必须给区间，不能给单点**。
+  ② 一处冷却断言原写 `CooldownTo >= now+4min` 恰好会把「漏读 CooldownM、退化成 30 分钟」这个实现缺陷
+  **判绿** —— 判据写反了；改成 4-6 分钟区间才真正上牙。
+  **顺带查出的更大盲区（登记 issue，不在本笔动）**：「基线==实测、余量≤5」按 CI 口径核对 15 条专项
+  基线，**只有 dshprofile 3.6 / judge 3.1 / single 3.4 三条达标**，其余 12 条虚设（cmd/workbench 空转 15.1、
+  web 18.2、shortcut 17.5、modelpool 15.2）—— 即「损失 15%+ 覆盖率门禁都不报」。只修三包会留 9 条
+  虚设护栏，故整表登记为在册待办（31 包 CI 读数已在 issue 里，可直接复算）。
 - **CHANGELOG 门禁新增第 5) 条「落地覆盖」判据 —— 实测 6→7 笔落地提交零条目而门禁一路 rc=0（issue #10）**：
   **缺陷（现取，口径 = 面/分子/分母/切点）**：面 = `git log --no-merges -n 25 --name-only` 的落地提交
   （改了 `workbench/**` 非测试 `.go`）；分母 = 可见 25 笔中落地 8 笔；分子 = 其中**只有 1 笔**写了 CHANGELOG

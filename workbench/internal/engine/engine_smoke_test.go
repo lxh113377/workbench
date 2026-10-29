@@ -275,6 +275,7 @@ func TestCancelAllRunningNoop(t *testing.T) {
 
 func TestFinishCancelledOnUnknownTask(t *testing.T) {
 	e, _, _ := newTestEngine(t)
-	// 不存在的任务：只记审计，不 panic
-	e.finishCancelled("no-such-task", context.Canceled)
+	// 不存在的任务：只记审计，不 panic。
+	// 第三参 reason 为空 ⇒ 走旧的 ctxCancelText 兜底推断（该兜底分支正是被这里覆盖的）。
+	e.finishCancelled("no-such-task", context.Canceled, "")
 }

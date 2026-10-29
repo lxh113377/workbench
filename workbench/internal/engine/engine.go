@@ -54,10 +54,12 @@ type Engine struct {
 	emit   Emitter
 	log    *logging.Logger
 
-	mu      sync.Mutex
-	phase   model.EnginePhase
-	ctx     context.Context
-	cancel  context.CancelFunc
+	mu    sync.Mutex
+	phase model.EnginePhase
+	ctx   context.Context
+	// cancel 带 cause（issue #11）：停机时把「引擎停机」写进上下文，
+	// 运行中任务经 context.Cause 继承同一原因 ⇒ 不再被下游泛错顶成 unknown。
+	cancel  context.CancelCauseFunc
 	wg      sync.WaitGroup
 	slots   chan struct{}
 	started int64
@@ -78,7 +80,7 @@ type Engine struct {
 
 	// taskCancels 保存每个运行中任务的取消函数（P0-3）。
 	// 改造前 CancelTask 对 running 任务只写审计、不取消子进程，等于空操作。
-	taskCancels sync.Map // taskID -> context.CancelFunc
+	taskCancels sync.Map // taskID -> taskCanceler（带 cause 的取消入口，见 cancel_cause.go）
 	// cancelling 记录"按用户意图正在取消"的任务，用于区分取消与真实失败。
 	cancelling sync.Map // taskID -> struct{}
 	// retryPol 是"失败之后怎么办"的策略对象（P0-2），由配置热更新。
@@ -438,7 +440,7 @@ func (e *Engine) Start() error {
 	}
 	// 用户点「开始」= 恢复运行 = 恢复正常守护语义（清掉主动退出标记）。
 	e.clearUserQuit()
-	e.ctx, e.cancel = context.WithCancel(context.Background())
+	e.ctx, e.cancel = context.WithCancelCause(context.Background())
 	e.phase = model.PhaseRunning
 	e.started = model.Now()
 	e.stopping.Store(false)
@@ -526,7 +528,9 @@ func (e *Engine) stop(selfHeal bool) error {
 	e.mu.Unlock()
 	e.stopping.Store(true)
 	if cancel != nil {
-		cancel() // 让调度循环退出，不再取新任务
+		// 具名 cause：让所有在跑任务经 context.Cause 读到「引擎停机」，
+		// 与「用户终止该任务」区分开（两者运维含义相反：一个要接续、一个不要）。
+		cancel(causeEngineShutdown) // 让调度循环退出，不再取新任务
 	}
 	if wasRunning {
 		done := make(chan struct{})
@@ -598,11 +602,14 @@ func (e *Engine) stop(selfHeal bool) error {
 // cancelAllRunning 取消所有在跑任务的执行上下文（停机兜底）。
 func (e *Engine) cancelAllRunning() {
 	e.taskCancels.Range(func(k, v any) bool {
-		if cancel, ok := v.(context.CancelFunc); ok {
+		// 断言类型必须与 :957 的 Store 一致（taskCanceler）—— 不一致时这里 ok=false，
+		// 表现为「按了终止但没取消」且零日志零报错。该一致性由
+		// cancel_cause_contract_test.go 的源文本不变量钉住（issue #11）。
+		if cancel, ok := v.(taskCanceler); ok {
 			if id, ok := k.(string); ok {
 				e.cancelling.Store(id, struct{}{})
 			}
-			cancel()
+			cancel.Cancel(causeEngineShutdown)
 		}
 		return true
 	})
@@ -939,9 +946,20 @@ func (e *Engine) supplyCandidates(ctx context.Context, cfg config.Config) {
 // runOne 执行单个任务的完整生命周期。
 func (e *Engine) runOne(parent context.Context, task *model.Task) {
 	cfg := e.cstore.Get()
-	// 并发取消：引擎停止时不再开新任务
-	ctx, cancel := context.WithCancel(parent)
-	defer cancel()
+	// 并发取消：引擎停止时不再开新任务。
+	// WithCancelCause（issue #11）：取消必须带具名原因 —— 停机/用户终止/超时三者在
+	// context.Canceled 这一个错误上是**混在一起**的，只靠 err 文本分不开（river 同判，
+	// 见 job_executor.go:590-597 用 cause 做第二维）。父 ctx 已带 cause 时，子 ctx 的
+	// context.Cause 会继承父的 cause ⇒ 停机路径无需逐任务传参就能归因。
+	ctx, cancel := context.WithCancelCause(parent)
+	// defer 释放：本 ctx 派生自引擎根 ctx，不调 cancel 会把它一直挂在父 ctx 的子表里
+	// （泄漏 + go vet lostcancel）。cancel(nil) 按 Go 文档等价于 cancel(context.Canceled)，
+	// 但它**只在 runOne 返回时**执行 —— 函数体内所有分类判定都已跑完，因此不会把正常收尾
+	// 误分类成取消（对照：TestCancellationDoesNotPenalizeLane 的「真失败」正控分支要求终态必须是
+	// failed/bad_exit，若这里语义被污染，那条立刻判红）。
+	// 具名 cause（停机 / 用户终止）都在返回**之前**由显式路径写入，而 cause 只记第一次，
+	// 所以这里的 nil 不会覆盖已写好的归因。
+	defer cancel(nil)
 
 	running, err := e.store.Transition(task.ID, model.StateRunning, "engine", "开始执行")
 	if err != nil {
@@ -952,8 +970,10 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 		return
 	}
 	e.runningIDs.Store(task.ID, true)
-	// 注册取消函数：面板"终止"能真正杀掉该任务的子进程树（P0-3）
-	e.taskCancels.Store(task.ID, cancel)
+	// 注册取消入口：面板"终止"能真正杀掉该任务的子进程树（P0-3）。
+	// 存具名类型 taskCanceler 而非裸 func：取消时强制给 cause（不许静默无归因），
+	// 且存取两侧形状唯一 —— 裸 func 的类型断言失败会**静默不取消**（最坏失效形态）。
+	e.taskCancels.Store(task.ID, taskCanceler{cause: cancel})
 	defer func() {
 		e.taskCancels.Delete(task.ID)
 		e.cancelling.Delete(task.ID)
@@ -979,7 +999,9 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 			}
 			select {
 			case <-ctx.Done():
-				e.finishCancelled(task.ID, lastErr)
+				// 退避期被取消：同样走具名归因（这里没有 res/runErr，cause 是唯一信息源）。
+				_, cText, _ := classifyCancellation(ctx, e.isCancelling(task.ID), lastKind)
+				e.finishCancelled(task.ID, lastErr, cText)
 				return
 			case <-time.After(delay):
 			}
@@ -1205,28 +1227,46 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 			return
 		}
 
-		// ── 失败：判定类别 → 策略决定重试/失败/取消 ───────────────
+		// ── 失败：先定类别 → 再判取消（取消优先于记账）→ 最后交给重试策略 ───────
+		// 只做分类，**先不记车道失败**：记账必须发生在「这是不是一次真失败」判定之后。
 		kind := retry.Unknown
 		if res != nil && res.ErrorKind != "" {
 			kind = retry.ParseKind(res.ErrorKind)
-			e.router.RecordFailure(actualModel, res.ErrorKind, errText(runErr))
 		} else if runErr != nil {
 			kind = retry.Boot
-			e.router.RecordFailure(actualModel, string(executor.KindBoot), errText(runErr))
 		}
-		lastKind = kind
-		// 调用方取消优先于一切分类：不重试、不计失败
-		if e.isCancelling(task.ID) || ctx.Err() != nil || kind == retry.Cancelled {
+
+		// 取消优先于一切分类（issue #11 一次修掉两个缺陷）：
+		//   ① 归因：以 context.Cause 为准。改造前 kind 直接取 res.ErrorKind，
+		//      而 executor.go:427 用 "启动 DSH 失败: %w" 包装 context.Canceled 时，
+		//      KindCancelled 根本没机会被赋上 ⇒ 台账落成 kind=unknown（生产实测 2 条）。
+		//   ② 记账次序：改造前 RecordFailure 在取消判定**之前** ⇒ 用户点一次「终止」
+		//      就把那条无辜车道打成一次失败冷却（限流风暴期尤其坏）。asynq 把「重试」与
+		//      「算不算一次失败」分成两件事（IsFailure 谓词 + rdb.go:920 在写库处单点决定），
+		//      river 停机走 interrupted 不写 attempt error —— 同一不变量：取消不污染统计。
+		cancelKind, cancelText, cancelled := classifyCancellation(ctx, e.isCancelling(task.ID), kind)
+		if cancelled {
+			lastKind = cancelKind
 			// 取消行同样带取证三件套：台账六处写入点**列同构**，读的时候不必再记「哪条有、哪条没有」。
 			stderrPath, producedRunes, dshCommand := attemptEvidence(res)
 			e.store.AppendAttempt(store.AttemptRecord{
-				TaskID: task.ID, Attempt: attempt, Model: actualModel, Kind: string(kind),
-				Action: "cancel", ElapsedMs: elapsed.Milliseconds(), Error: errText(lastErr),
+				TaskID: task.ID, Attempt: attempt, Model: actualModel, Kind: string(cancelKind),
+				Action: "cancel", ElapsedMs: elapsed.Milliseconds(),
+				// 台账文案用具名归因而非 lastErr 原文：lastErr 常是包装泛错
+				// （"启动 DSH 失败: context canceled"），与 kind=cancelled 自相矛盾 ⇒ 读台账的人仍然查不动。
+				Error:      cancelText + causeSuffix(lastErr),
 				StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
 			})
-			e.finishCancelled(task.ID, lastErr)
+			e.finishCancelled(task.ID, lastErr, cancelText)
 			return
 		}
+		// 真失败才归因到车道（取消已在上面 return，不会走到这里）。
+		if res != nil && res.ErrorKind != "" {
+			e.router.RecordFailure(actualModel, res.ErrorKind, errText(runErr))
+		} else if runErr != nil {
+			e.router.RecordFailure(actualModel, string(executor.KindBoot), errText(runErr))
+		}
+		lastKind = kind
 		dec := pol.Decide(kind, attempt, errText(lastErr))
 		// 失败台账带上取证两件套（stderr 落盘位置 + 产出体量，T15-④）。
 		stderrPath, producedRunes, dshCommand := attemptEvidence(res)
@@ -1834,10 +1874,18 @@ func (e *Engine) isCancelling(taskID string) bool {
 }
 
 // finishCancelled 把任务收敛为 cancelled 终态（取消不算失败，不计入失败率）。
-func (e *Engine) finishCancelled(taskID string, err error) {
-	msg := "用户取消"
-	if t := ctxCancelText(err); t != "" {
-		msg = t
+//
+// reason 由调用方从 classifyCancellation 取得（issue #11）：具名原因必须在**判定处**决定，
+// 这里不再从 err 文本反推 —— 反推正是本缺陷的旧形态（err 是包装泛错时推不出取消，
+// 只能落默认文案 + unknown 类别）。reason 为空时退回旧的文本推断，保证无 cause 的
+// 调用点（如测试直调）不会出现空文案台账。
+func (e *Engine) finishCancelled(taskID string, err error, reason string) {
+	msg := reason
+	if msg == "" {
+		msg = "用户取消"
+		if t := ctxCancelText(err); t != "" {
+			msg = t
+		}
 	}
 	// 留痕先于状态生效（2026-10-22 对标 asynq processor.go:336-338）。
 	// 取消是**调用方意图**，其痕迹优先级与失败等同：
@@ -1919,8 +1967,9 @@ func (e *Engine) CancelTask(id string) error {
 	// 改造前这里只写一条审计就返回，子进程继续跑到结束——面板上的"终止"是空操作。
 	e.cancelling.Store(id, struct{}{})
 	if v, ok := e.taskCancels.Load(id); ok {
-		if cancel, ok := v.(context.CancelFunc); ok {
-			cancel()
+		if cancel, ok := v.(taskCanceler); ok {
+			// 具名 cause = 用户意图，与停机区分开（两者后续处置不同）。
+			cancel.Cancel(causeUserCancel)
 		}
 	}
 	e.store.Audit(store.AuditRecord{At: model.Now(), TaskID: id, Actor: "user", Kind: "cancel", Message: "用户请求取消运行中任务，已取消执行上下文"})
