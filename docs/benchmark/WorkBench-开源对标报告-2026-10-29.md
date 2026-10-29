@@ -327,6 +327,23 @@ pid=11156 记下来 ⇒ 实例更替从此机读可查，不必靠人盯 pid 猜
 | 停机归因用 `context.Cause` 而不是猜字符串 | `river/internal/jobexecutor/job_executor.go:590-597` |
 | 作业内日志按 attempt 落库、双容量上限并**自报截断** | `river/riverlog/river_log.go:210-236` |
 
+### 7.1b 从 peer 提炼的可借鉴优势实现（本轮已吸收 / 待吸收）
+
+| peer 的优势实现 | 出处 | 为什么值得借鉴 | 本项目落点 |
+|---|---|---|---|
+| **失败分派表里没有 unknown 这一支**：未知错误一律走「计一次重试、耗尽即归档」的有界默认，绝不静默丢弃 | `asynq/processor.go:335-349` | 兜底桶会让「已建模的原因」伪装成「不知道」，诊断入口当场失效 | **已吸收**（改造一：三个引擎侧具名类别 + 判死具名；`Decide` 的三分支本就同构） |
+| **基础设施事实也做成具名错误**（租约过期 = `ErrLeaseExpired`） | `asynq/recoverer.go:80-82` | 「环境问题」不是低等信息，它决定该谁负责（运维 vs 任务作者） | **已吸收**（`PoolWaitCapped` / `TransitionFailed`） |
+| **枚举漏项即崩，不留 catch-all** | `river/internal/jobcompleter/job_completer.go:87`、`asynq/internal/errors/errors.go:96` | 一致性靠崩溃暴露，而不是靠人记得改第二处 | **已吸收（改造形态）**：本项目 7×24 不能 panic ⇒ 换成双向对账判据 `kind_drift_test.go`，等价强度、零停机 |
+| **重试与「算不算一次失败」分离**（`IsFailure` 谓词；不算失败就不吃次数、不污染错误率） | `asynq/server.go:124-130`、`internal/rdb/rdb.go:920` | 限流该重试，但不该被记成任务失败 —— 两件事混在一起会误导统计 | **部分已有**（`requeueForPoolWait` 不增 `Attempts` 正是此语义）；**待吸收** → issue #11 |
+| **停机/取消用 `context.Cause` 覆写落库原因**，防 worker 泛错顶掉真相 | `river/internal/jobexecutor/job_executor.go:183-185`、`:590-597` | `context canceled` 本身歧义（取消/超时/停机都可能是它），单看 error 文本必误判 | **待吸收** → issue #11（生产已实测 2 条 `kind=unknown action=cancel`） |
+| **作业内日志按 attempt 落库**，带 2MB/8MB 双上限并**自报截断与丢弃条数** | `river/riverlog/river_log.go:210-236` | stdout 汇聚日志在重试混排后无法按次还原；有损操作不自报，事后分不清「被截」与「本就没有」 | **待吸收**：本项目 `stderrPath` + `producedRunes` 已具备定位能力，缺「按 attempt 聚合的日志正文」 |
+| **生命周期事件名常量化 + 服务名前缀自动生成** | `river/rivershared/…/river_shared_maintenance.go:22-24`、`baseservice/base_service.go:59-62` | 事件名是查询接口；散写字符串会让 grep 与告警随措辞漂移失效 | **待吸收**：本项目 `logging.At("组件名")` 已是同方向，缺固定词表常量 |
+| **反例（明确不照抄）**：默认 logger 只写 `os.Stdout` + Warn 级，生命周期行整条丢弃 | `river/client.go:520-526`；`asynq/internal/log/log.go:75-88`（限流丢行） | 库可以「把落盘权交给宿主」，但本项目宿主就是自己，且是无人值守 ⇒ 丢弃 = 事故查不动 | **已反向吸收**（改造二：关键路径必须落 `keepalive.log`） |
+
+> 一条通用的吸收姿势（本轮第三次验证）：**取 peer 的不变量，不取 peer 的结构**。
+> river 用 Postgres 事务保证「状态与原因同批落库」，本项目用 `writeLedgerThenTransition` seam 达到同一不变量；
+> temporal 用多通道 + inflight 计数解饿死，本项目用有界 aging（第四轮）。照抄结构会破坏「单 EXE 零依赖」的硬约束。
+
 ### 7.2 三面统计口径警告（本轮新增，防后续误判）
 
 `attempts.jsonl`（尝试面）、`queue.json`（任务面）、`workbench.jsonl`（日志面）三面**不等价**：

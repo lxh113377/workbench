@@ -59,3 +59,18 @@ check_ps1_syntax / check_ps1_encoding / check_ps1_eol / check_multi_bom / check_
 | L3 覆盖率真实化 | 本轮 4 项名额用尽；且**禁止**降阈值糊过去 | 学习计划 §10.4 刷新：本机 77.8/55.8/72.3 与 CI 口径 60/47/55 不同构，须按 CI 实测重定 |
 | T62（无真实模型即红的测试） | 半阻塞于上游配额 | 报告 §4.4 登记最小动作：抽 `--plan-selftest` 模型来源为可注入接口 |
 | H-5 lanes.go 三个零引用导出符号 | 「删」与「补调用点」需分别判责 | 报告 §4.4 登记，不默认删 |
+
+## 收尾补记（同会话 18:3x）
+- **社区协作面**（目标第二段要求的「提交 issue」）：本轮识别的三项残余已提为 issue 并打标签 ——
+  [#9 隐性 kind 名单未收编](https://github.com/lxh113377/workbench/issues/9)（bug/reliability/test-coverage）、
+  [#10 check_changelog 缺「已落地必须有条目」判据](https://github.com/lxh113377/workbench/issues/10)、
+  [#11 取消/停机的 ErrorKind 被下游泛错顶掉](https://github.com/lxh113377/workbench/issues/11)。
+  过程如实记：GitHub API 当时 `graphql EOF`，落 `xtmp/round66_issue_retry.sh` 自动重试（8 次×3 件、间隔 25s）
+  ⇒ 网络恢复后自动补上，**没有**因为一次网络失败就把这件事丢回给人（#37）。
+  另：第一轮试打标签用了**不存在的标签名**（observability/ci/gates）⇒ `gh issue edit` 三条全部失败；
+  改用 `gh label list` 在册名（本仓有 flaky/test-coverage 等）后成功 —— 属「严禁猜标识符」P0.1 的当场自纠。
+- 报告补 §7.1b「从 peer 提炼的可借鉴优势实现」（目标明确要求的最后一项，原先只散在 §7.1）：
+  八条已吸收/待吸收 + 一条**反例**（river 默认 logger 只 stdout+Warn ⇒ 本项目反向吸收为「关键路径必须落盘」），
+  并固化「取 peer 的不变量、不取 peer 的结构」这条吸收姿势。
+- 清理：`git worktree remove xtmp/rel-f1addb9`（构建用毕不留残件）；取证实例已回收；
+  远端同步复核 `master...origin/master` 无偏差，本轮 4 个提交 CI 双 workflow 全 success。
