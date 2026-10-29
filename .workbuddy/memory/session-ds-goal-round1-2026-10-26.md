@@ -1366,3 +1366,11 @@ decisions.jsonl 尾部三条 evidence 变化：
 - 重试路径漏用 variants（aff53e8）；配置 id 缺 `our-free-model/` 前缀 + 缺 quality 档（已对齐，含备份）。
 ### 五、遗留
 - 6 条 degraded（真的不在清单）；交付 pass 待观察；T67/T70/T62/T69 不变。
+### 附录 R68 补（2026-10-29 18:58）：黑障解除后的第一条 pass 暴露新缺口 —— 登记 T73
+
+- 修复后 live 读数：池 `healthy×31 / degraded×5 / down×2`；尝试重新流动（ok×2、not_served×11、bad_exit×13、stalled×7、boot_failed×4、rate_limited×2）；
+- **verify 13→14、pass 3→4**：新增的 pass 是 `task-5412543998c15235`（18:45:17），产物 **`m.py` 只有 4 字节**；
+- ⇒ T66 的报告内容门禁只覆盖 `docs/` 下的 `.md`（报告类），**代码产物**仍是"跑得起来就算过" —— 4 字节的 py 文件同样 pass。
+
+**T73（登记）**：代码产物最小实质门禁。判据取向：`docs/` 之外的代码类产物（.py/.js/.ts/.go/…）设**最小体量**（如 ≥200 B）或要求 verify 命令**真跑行为**
+（如 `python x.py --help` / 单元测试 / 期望输出比对），而不是"解释器能启动就算通过"；配防回归用例与负控。
