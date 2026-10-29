@@ -20,11 +20,8 @@ package modelpool
 // 与此同期的有效产出只有 13 次 ok；把一次「连启动都没启动起来」的失败交给端点可达性翻案，等于每轮白烧一次尝试。
 // 判据依据：boot 失败的成因在**该车道侧的启动/装载**，端点探测（GET /v1/models 200）根本不是它的反证。
 func isExecutionFailureKind(kind string) bool {
-	switch kind {
-	case "stalled", "bad_exit", "timeout", "upstream_failed", "boot_failed":
-		return true
-	case notServedKind:
-		return true
-	}
-	return false
+	// 集合来源改成 laneDispositions（round 125 · T80）：原先这是独立的一份 kind 列表，与 manager.go
+	// 的处置判定各写各的，新增类别时极易只改一侧（本会话已付过三次学费）。
+	// 收敛必须**等价**：哪些类别在表里被标 probeCannotCure，由 lane_disposition_test.go 逐项对照钉住。
+	return laneProbeCannotCure(kind)
 }

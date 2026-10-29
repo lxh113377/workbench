@@ -521,23 +521,21 @@ func (m *Manager) MarkFailure(id, kind, msg string) {
 		// 能力性失败（协议不合规）**一击即冷却**：它不是偶发抖动，而是「这条车道不认产物协议」——
 		// 反复试它只会重复被判 no_artifact（round 22 实测同一次尝试内连续 3 条车道因此被拒；round 25 窗口内仍以它为主）。
 		// 阈值压到 1，并给比偶发失败更长的冷却，让它尽快退出执行阶段候选、把机会让给可能合规的车道（T18⑦）。
-		if kind == noArtifactKind {
+		// 一击即冷却与结构性长冷却统一查 laneDispositions（round 125 · T80）。
+		//
+		// 收敛前的形态是三处裸字符串判定：no_artifact⇒maxFail1+600s、not_served⇒maxFail1+1800s、
+		// 四个结构性 kind（model_unavailable/missing_credential/unreachable/bad_endpoint）⇒长冷却；
+		// 而 exec_health.go 里另有一份「探测不得翻案」的列表 —— 同一契约多处实现，本会话已因此出过 3 次线上事故
+		// （新增或改名的类别只在一处登记，另一处判定**静默失效**，面板上看不出来）。
+		// 现在唯一事实源是那张表；lane_disposition_test 的总覆盖守卫负责「executor 加了 Kind 而这里没决策 ⇒ 判红」。
+		// 逐条等价的处置理由（含 600/1800 的量级依据）写在 laneDispositions 的 note 字段里。
+		if one, minSec := laneOneStrike(kind); one {
 			maxFail = 1
-			if cooldownSec < 600 {
-				cooldownSec = 600
+			if minSec > 0 && cooldownSec < minSec {
+				cooldownSec = minSec
 			}
 		}
-		// 「上游在这条出口不服务该模型」是**出口级事实**（不是抖动，也不是端点连通性）：
-		// 一击即冷却，冷却抬到上限族（1800s）；恢复只能来自上游 availability 判定或一次真实执行成功（T17②-b）。
-		if kind == notServedKind {
-			maxFail = 1
-			if cooldownSec < 1800 {
-				cooldownSec = 1800
-			}
-		}
-		// 结构性错误直接长冷却（模型不存在/凭据缺失/端点不可达），
-		// 与「偶发超时」分层，避免风暴式重试把整池拖死。
-		long := kind == "model_unavailable" || kind == "missing_credential" || kind == "unreachable" || kind == "bad_endpoint"
+		long := laneLongCooldown(kind)
 		if consec >= maxFail || long {
 			mult := consec - maxFail
 			if mult < 0 {
