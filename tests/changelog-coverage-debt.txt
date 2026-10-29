@@ -1,0 +1,22 @@
+# CHANGELOG 落地覆盖债务名册（issue #10；2026-10-29 round 70 建立；与 deadcode-debt / gofmt-debt / css-token-debt 同构）
+#
+# 语义：登记「改了 workbench/** 非测试 .go，但 [Unreleased] 段内既无短 sha 锚点、该提交也未改 CHANGELOG.md」
+#       的**存量**提交。命中只打印 KNOWN 不判红；补了条目后必须删掉本行 —— 名册只增不减终将腐化成垃圾桶，
+#       故 tests/check_changelog.ps1 第 5) 条把「已可见条目却仍留豁免」判 STALE 并判红。
+# 格式：`<短sha>  <一句归因>`（两个空格分隔；sha 大小写不敏感）。
+#
+# 为什么这些不是我造成的：全是**并行会话**的落地提交（本会话自己的落地提交都当场改了 CHANGELOG.md，
+#   判据据此判 covered）。把别人的历史缺口直接判红 = 假红 + 归因错人（本仓在册禁例），
+#   所以走「存量登记 KNOWN + 增量必红」：新落地提交一律当场要求条目，存量由各会话自己清。
+#
+# 现取口径（2026-10-29 19:5x，D:/workdesktop，本地与 origin/master 同点）：
+#   探针 `python xtmp/viol_probe.py HEAD 25` ⇒ scanned=25 landing=8 covered=1 MISSING=7（逐笔如下）
+#   注：并行会话仍在推新落地提交 ⇒ 本表在我提交前会再增长；重建命令见上。
+
+3c180c8  并行会话：autonomy 分轴轮转推广到每一步（planner.go），落地无条目
+aff53e8  并行会话：modelpool 密钥轮换改走 modelIDVariants（probe.go），落地无条目
+a2b654b  并行会话：modelpool 探测 not_listed 现场写入错误（probe.go），落地无条目
+f532df2  并行会话：modelpool service.go 改动，落地无条目
+9d44f44  并行会话：engine+autonomy 代码产物最小实质门禁 T73（planner.go 等 3 文件），落地无条目
+637a734  并行会话：engine 代码产物体量下限 64→16（report_gate.go），落地无条目
+406dcb7  并行会话：templates 模板库与引擎门禁同口径（defaults.go），落地无条目
