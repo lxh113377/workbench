@@ -140,6 +140,22 @@
   本笔同时是 issue #12 的**部分**收口。（此处原写「其余 12 条虚设…仍在册未动」—— 数字与状态均由
   round 72 同一会话后续收口更正：按双环境下界重算是 **7 条**虚设，且**已全部抬完**，见下一条。）
 - **取消/停机的 ErrorKind 不再被下游泛错顶掉，且取消不再污染车道健康度（issue #11 · 改造：具名 cause）**：
+  **生产自然样本（23:11:00，同机同路径天然差分，比受控复现更强）**：并行会话把 agent 根换至 `64459f1`
+  （实测 `vcs.revision=64459f1`、`vcs.modified=false`、`git merge-base --is-ancestor 6953c76 64459f1` = YES ⇒
+  **含本笔代码**）时，优雅停机在真实台账里写下 2 行：
+  `kind=cancelled / action=cancel / error=引擎停机取消（非任务问题，不计车道失败）（原始错误: context canceled）`
+  （面 = `D:/workbench-agent/workbench-output/tasks/*/attempts.jsonl`，任务 task-02ec80451d3f2016 与
+  task-93b0940f9f7e796b，车道分别是 `kilo-auto/free`、`nvidia/nemotron-3-ultra-550b-a55b:free`）。
+  对照同一切点前的旧二进制读数：`20:53:04` 那行是 `kind=cancelled / error=context canceled`（**裸文案、无具名**，
+  且早于新实例启动 20:53:11，属改造前所写）⇒ 同一台机器、同一个停机动作、两种文案 —— **缺陷①的归因修复
+  在生产真实生效**，不是我构造出来的。
+  **缺陷②（取消不污染车道）本轮仍无生产证据，如实记不冒充**：想去读车道计数时查明 agent 进程
+  `StartTime=23:11:05`（晚于那 2 行写入），而车道 `failure/consecFail` 是**内存态**（`models/` 下无 health
+  落盘件，`router.go:97/137` 在 `r.path == ""` 时不写盘）⇒ 现在读到的 `failure=0` 是新进程的自然起点，
+  证明不了「取消没记账」。受控差分两侧也都是 `failure=0`（根因：假 DSH 起得来 ⇒ executor 自标 cancelled
+  ⇒ 走旧代码也有的 tier-4 兜底分支，要复现污染需取消正好落在 `cmd.Start()` 上）。⇒ 缺陷②的证据**只到
+  单测面 + 代码事实**（`RecordFailure` router.go:365 无条件 `h.Failure++` ⇒ 污染只能来自调用时机，
+  而时机已被「先判取消再记账」锁死）。
   **现场（生产台账，可复算）**：`tasks/*/attempts.jsonl` 有 2 行 `kind=unknown / action=cancel /
   error="启动 DSH 失败: context canceled"`。真相是「取消」，呈现是「未知错误」—— 排查者会去查
   「为什么未知」，而正确答案是「这是停机/终止的正常结果，本就不该算失败」。
