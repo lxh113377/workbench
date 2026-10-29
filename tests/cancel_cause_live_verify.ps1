@@ -58,7 +58,23 @@ $wantNamed = [bool]$ExpectNamed
 if (-not (Test-Path -LiteralPath $Exe)) { Write-Host ("RESULT=NO_EXE " + $Exe); exit 2 }
 if (-not (Test-Path -LiteralPath $stub)) { Write-Host ("RESULT=NO_FAKE_DSH_STUB（先 go build xtmp/fakedshmod）: " + $stub); exit 2 }
 # 干净起盘：删同名数据根，免得读到上一轮台账误判
-if (Test-Path -LiteralPath $base) { Remove-Item -LiteralPath $base -Recurse -Force }
+# ⚠️ 清不干净就**拒绝执行**（2026-10-29 实测教训）：原写法 Remove-Item 失败后脚本继续跑，于是
+#   两个实例共享同一个 workbench-output/queue.json —— 台账、状态、车道健康度全是混的，
+#   这种 run 出的 PASS **不能当证据**（本仓口径：环境不满足 ⇒ exit 2，不许硬跑）。
+#   触发场景就是本轮：上一次 run 被我自己的工具超时打断，留下孤儿实例占着该目录。
+if (Test-Path -LiteralPath $base) {
+  try { Remove-Item -LiteralPath $base -Recurse -Force -ErrorAction Stop }
+  catch {
+    Write-Host ("RESULT=DIRTY_ROOT 清不掉 " + $base + " ：大概率有实例还占着它（" + $_.Exception.Message + "）")
+    Write-Host "  先杀残留实例再跑：Get-CimInstance Win32_Process -Filter \"Name='workbench.exe'\" | Where-Object { $_.CommandLine -match 'cancel-verify' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }"
+    exit 2
+  }
+}
+# 端口预检：被占就不是「我的隔离实例」，读数会串到别的实例上（同一类污染）。
+try {
+  $probe = Test-NetConnection -ComputerName "127.0.0.1" -Port $Port -WarningAction SilentlyContinue
+  if ($probe.TcpTestSucceeded) { Write-Host ("RESULT=PORT_BUSY " + $Port + " 已被占用 ⇒ 换端口，别在别人的实例上取数"); exit 2 }
+} catch { }
 New-Item -ItemType Directory -Force -Path $base | Out-Null
 Copy-Item -LiteralPath $Exe -Destination ($base + "/workbench.exe") -Force
 Copy-Item -LiteralPath $stub -Destination ($base + "/dshstub.exe") -Force
