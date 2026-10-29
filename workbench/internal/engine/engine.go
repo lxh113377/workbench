@@ -1194,9 +1194,17 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 			// 现按 lane（真正的故障域）冷却，只有全部车道都不可用时才整池闸门。
 			lane := e.router.LaneOf(modelID)
 			if lane != "" {
+				// errKind 必须写**本轮真实类别**（round 125 的第三处漏项）：这里原先硬编码 KindRateLimited，
+				// 于是额度耗尽写进池账本的 lastErr 前缀永远是 rate_limited: ⇒ 下游按 quota_exhausted: 前缀
+				// 找的判定（Router.CountCoolingByKind / quotaLanesCooling）恒为 false，第二级补漏落空。
+				// 教训：记账字段被写死时，所有按该字段做的判定都会静默失效，且面板上完全看不出来。
+				laneKind := string(executor.KindRateLimited)
+				if res != nil && res.ErrorKind == string(executor.KindQuotaExhausted) {
+					laneKind = string(executor.KindQuotaExhausted)
+				}
 				e.router.CooldownByLane(lane,
 					time.Duration(rateLimitCooldownSeconds)*time.Second,
-					string(executor.KindRateLimited), "429 rate limited")
+					laneKind, "429 rate limited")
 			}
 			// 限流退回队列这条也要带取证三件套：它是**最常见**的台账行之一，缺了它「哪次经 DSH 无头跑过」就查不全。
 			stderrPath, producedRunes, dshCommand := attemptEvidence(res)
