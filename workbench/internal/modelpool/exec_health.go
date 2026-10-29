@@ -13,9 +13,15 @@ package modelpool
 //
 // round 33 补充 `not_served`（T17②-b）：它按 model_unavailable 记时，45 s 后就被探测周期治回 healthy，
 // 归因被抵消；把它纳入本集合后，「出口不服务该模型」不再被端点可达性翻案。
+//
+// round 72 补充 `boot_failed`（T75）：本文件上方注释自己写着「boot_failed 占全部尝试 71%」，
+// 而它**恰恰漏在本集合之外** ⇒ 探测一轮「端点可达」就把它治回 healthy，于是同一条车道被反复选中、反复启动失败。
+// 现场实测（2026-10-29 19:00–20:50，480 次尝试）：`beam-free` **48/48 全是 boot_failed**（约每 4 分钟一轮），
+// 与此同期的有效产出只有 13 次 ok；把一次「连启动都没启动起来」的失败交给端点可达性翻案，等于每轮白烧一次尝试。
+// 判据依据：boot 失败的成因在**该车道侧的启动/装载**，端点探测（GET /v1/models 200）根本不是它的反证。
 func isExecutionFailureKind(kind string) bool {
 	switch kind {
-	case "stalled", "bad_exit", "timeout", "upstream_failed":
+	case "stalled", "bad_exit", "timeout", "upstream_failed", "boot_failed":
 		return true
 	case notServedKind:
 		return true
