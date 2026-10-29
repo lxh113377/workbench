@@ -128,7 +128,11 @@ func (p *Prober) Probe(s Spec) ProbeResult {
 					key = k
 					code2, body2, err2 := p.doJSON(http.MethodGet, strings.TrimRight(base, "/")+"/models", key, nil)
 					if err2 == nil && code2 == http.StatusOK {
-						if listed, known := modelListed(body2, s.Model, s.ID); known && !listed {
+						// ⚠️ 必须走 modelIDVariants（2026-10-29 全池黑障事故）：网关按渠道给 id 加前缀，
+						// 本处原先只比对裸 `s.Model`（如 z-ai/glm-5.3-flash），而清单里是 `our-free-model/z-ai/glm-5.3-flash` ⇒
+						// 一律判 not_listed。本机实测：38/38 车道全灭、整池 30 分钟黑障循环，任务一次都没发出去。
+						// 主路径（下方 probeEndpoint 的清单检查）早就用了 variants，这条轮换重试路径漏了 —— 同一判据两处实现。
+						if listed, known := modelListed(body2, modelIDVariants(s)...); known && !listed {
 							res.State, res.Kind = StateDegraded, "not_listed"
 							res.Error = "网关清单里没有该模型（渠道被关闭或模型下线）"
 							return res
