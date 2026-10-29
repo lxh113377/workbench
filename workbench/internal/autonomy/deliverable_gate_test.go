@@ -17,7 +17,11 @@ func TestAutonomyPromptsCarryDeliverableGate(t *testing.T) {
 	ladder := p.buildLadderPrompt(goal, "对工作空间做一次五轴体检", PlanContext{StageIndex: 0})
 	derived := p.enrichPrompt(goal, "补齐上一轮缺失的证据与门禁建议", 1, []string{"证据不足"})
 
-	need := []string{"## 交付物门禁", "## 结论", "## 证据", "## 门禁建议", "docs/", "file:line"}
+	// 分级要求（round 69 对齐）：引擎侧的报告门禁会**拒绝未分级的报告**（T67，f1addb9 落地），
+	// 若提示词不同步要求分级，自主报告必然被自己的门禁判红 —— 提示词与门禁必须同口径。
+	// 断言**要求短语**而不是「分级」这个词：本轮负控实测，删掉整条要求后文里仍有「不分级的缺陷清单…」，
+	// 只查词会让判据变哑 —— 判据必须钉住「要求本身在不在」。
+	need := []string{"## 交付物门禁", "## 结论", "## 证据", "## 门禁建议", "docs/", "file:line", "报告必须**分级**", "P0 阻塞"}
 	for name, prompt := range map[string]string{"buildLadderPrompt": ladder, "enrichPrompt": derived} {
 		for _, k := range need {
 			if !strings.Contains(prompt, k) {

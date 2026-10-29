@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"bytes"
+	"fmt"
 	"regexp"
 	"strings"
 )
@@ -54,6 +56,42 @@ func reportGateProblems(path string, body []byte) []string {
 		problems = append(problems, "报告未分级（需 严重度 / P0-P3 / 高中低优先级 任一标记；目标是「五轴审查分级出报告，可直接贴 PR」）")
 	}
 	return problems
+}
+
+// codeArtifactMinBytes 是**代码类产物**的最小体量（round 69 · T73）。
+//
+// 现场（2026-10-29 黑障解除后第一条 pass）：`task-5412543998c15235` 的产物 `m.py` 只有 **4 字节**，
+// verify 是 `python m.py` ⇒ 解释器能启动就 exit 0 ⇒ 判 pass。T66 的报告门禁只覆盖 `docs/*.md`，
+// 代码产物仍是「跑得起来就算过」。
+//
+// 阈值取 64 的依据（两个真实数据点，不是拍脑袋）：4 字节的 `m.py`（占位/截断）必须挡下；
+// 97 字节的 `check_env.py`（本仓里程碑交付物，真实可用的小脚本）必须放过。
+// 只按体量挡最明显的占位；「代码是否真有用」交给 verify 命令，不在这一层妄判。
+const codeArtifactMinBytes = 64
+
+// codeArtifactExts 是代码类产物扩展名（数据/配置类如 .json/.yaml/.csv 不设体量下限 —— 它们本来就可能很小）。
+var codeArtifactExts = []string{".py", ".js", ".ts", ".tsx", ".jsx", ".go", ".sh", ".ps1", ".sql", ".rb", ".java", ".rs", ".c", ".cpp"}
+
+func isCodeArtifact(path string) bool {
+	low := strings.ToLower(strings.TrimSpace(path))
+	for _, e := range codeArtifactExts {
+		if strings.HasSuffix(low, e) {
+			return true
+		}
+	}
+	return false
+}
+
+// codeArtifactProblems 检查代码产物的最小实质（T73）。
+func codeArtifactProblems(path string, body []byte) []string {
+	if !isCodeArtifact(path) {
+		return nil
+	}
+	n := len(bytes.TrimSpace(body))
+	if n < codeArtifactMinBytes {
+		return []string{fmt.Sprintf("代码产物过小（%d 字节 < %d）：不是可交付实现，而是占位或截断", n, codeArtifactMinBytes)}
+	}
+	return nil
 }
 
 // severityMarkers 是分级标记的词族 —— 命中任意一个即认为报告分了级。

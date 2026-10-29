@@ -141,6 +141,22 @@ func (e *Engine) materializeArtifacts(task *model.Task, finalText, taskDir strin
 			Stdout: oc.Stdout, Stderr: oc.Stderr, Skipped: oc.Skipped,
 		})
 	}
+	// 代码产物最小实质（round 69 · T73）：**只在验收已通过时降级**。
+	//
+	// 为什么不能放在验收之前（本轮被既有契约测试当场纠正）：TestMaterializeArtifactsFail 用小脚本验
+	// 「失败必须因脚本真实退出码 2（判据不许被偷换）」—— 若体量门禁抢答，失败原因就从退出码变成「产物过小」，
+	// 那条语义被偷换了。所以这里只做「通过不算数」：4 字节的 .py 让 `python x.py` exit 0 不值得记一次交付。
+	if out.Pass {
+		var tiny []string
+		for _, f := range res.Files {
+			tiny = append(tiny, codeArtifactProblems(f.Path, f.Body)...)
+		}
+		if len(tiny) > 0 {
+			out.Pass = false
+			out.FailReason = "交付物实质不足：" + strings.Join(tiny, "；")
+			e.log.Warn("代码产物过小，不计数为通过", "taskId", task.ID, "problems", strings.Join(tiny, "；"))
+		}
+	}
 	_ = config.WriteJSONAtomic(filepath.Join(taskDir, "verify.json"), out)
 	if out.Pass {
 		e.log.Info("产物验收通过", "taskId", task.ID, "files", len(index), "checks", len(out.Outcomes))
