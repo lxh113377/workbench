@@ -29,7 +29,12 @@ param(
     # 中间 11 小时 0 行日志、0 次尝试，而守护任务每分钟都在跑、Last Result=0。
     # 根因：本脚本只用「进程是否存在」判活 ⇒ 进程挂死（或静默死亡后旧句柄仍在）时零动作。
     # 引擎本身每 ~2 分钟写一条「模型路由表已更新」心跳 ⇒ 日志停写 ≥ StaleMinutes 即判挂死。
-    [int]$StaleMinutes = 8,
+    # ⚠️ 阈值必须由**实测心跳间隔**推导（2026-10-29 自伤事故）：第一版取 8 分钟，当天 15:19 部署的健康实例
+    # 在 15:28 被自己的看门狗误杀（「日志停写 8.8 分钟」）。实测 3 天日志里「模型路由表已更新」心跳：
+    # 中位 0.6 分钟，但 **≥8 分钟的间隔有 53 次**（最长 131.8 分钟，且多数与停机期无关的静默都在 8 分钟以上）
+    # ⇒ 8 分钟远在正常抖动的分布之内。现取 30 分钟（≈中位值的 50 倍、比实测最大正常静默仍留余量），
+    # 并叠加"必须有待做工作"这道条件 —— 空闲是正常态，杀一个没活干的引擎只会制造噪声。
+    [int]$StaleMinutes = 30,
     # 自检模式：只验看门狗判据本身（含负控），不碰真实进程。
     [switch]$SelfTest
 )
@@ -83,6 +88,21 @@ function Should-LogHeartbeat {
         $t = [datetime]::ParseExact($m.Groups[1].Value, "yyyy-MM-dd HH:mm:ss", $null)
         return (((Get-Date) - $t).TotalMinutes -ge $EveryMinutes)
     } catch { return $true }
+}
+
+# 待做工作判据（round 64 · T65 修正，2026-10-29）：空闲引擎日志同样会静下来，
+# 那种情况重启没有收益（只是 churn）。只有"有任务在跑/排队、却长时间没有任何日志"才值得强杀。
+# 读 queue.json 快照的原始文本做状态正则（不解整个队列，避免大文件反序列化开销）；
+# 文件读不到 ⇒ 返回 false（**取不到证据就不杀**，与 T65 的保守取向一致）。
+function Test-PendingWork {
+    param([string]$DataRoot)
+    if (-not $DataRoot) { return $false }
+    $q = Join-Path $DataRoot "queue.json"
+    if (-not (Test-Path -LiteralPath $q)) { return $false }
+    try {
+        $raw = [IO.File]::ReadAllText($q)
+        return ($raw -match '"state"\s*:\s*"(running|queued)"')
+    } catch { return $false }
 }
 
 function Test-EngineStalled {
@@ -250,6 +270,21 @@ if ($SelfTest) {
     Write-Host ("selftest 5) 刚写过心跳 ⇒ 期望 False 实得 " + $hbFresh)
     Remove-Item -LiteralPath $tmpKa -Force -ErrorAction SilentlyContinue
 
+    # 待做工作判据（T65 修正的第二个条件）：有 running/queued ⇒ true；全终态 ⇒ false；文件缺失 ⇒ false（取不到证据不杀）。
+    # 注意：判据约定读的是 <DataRoot>\queue.json —— 用例必须**照约定**造文件（首版把临时文件
+    # 命名成别的名字，结果函数找不到 queue.json 返回 false，判据没问题、是用例错了）。
+    $tmpDir = Join-Path $env:TEMP ("wb-q-selftest-" + $PID)
+    New-Item -ItemType Directory -Force -Path $tmpDir | Out-Null
+    Set-Content -LiteralPath (Join-Path $tmpDir "queue.json") -Value '{"tasks":[{"id":"a","state":"running"}]}' -Encoding UTF8
+    $pwYes = Test-PendingWork -DataRoot $tmpDir
+    if (-not $pwYes) { $okAll = $false }
+    Write-Host ("selftest 6) 有 running 任务 ⇒ 期望 True 实得 " + $pwYes)
+    Set-Content -LiteralPath (Join-Path $tmpDir "queue.json") -Value '{"tasks":[{"id":"a","state":"done"}]}' -Encoding UTF8
+    $pwNo = Test-PendingWork -DataRoot $tmpDir
+    if ($pwNo) { $okAll = $false }
+    Write-Host ("selftest 7) 全终态 ⇒ 期望 False 实得 " + $pwNo)
+    Remove-Item -LiteralPath $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+
     if ($okAll) { Write-Host "keepalive selftest: PASS"; exit 0 } else { Write-Host "keepalive selftest: FAIL"; exit 1 }
 }
 
@@ -335,7 +370,7 @@ do {
     # 取舍（写清）：强杀会打断在跑任务，但引擎有崩溃救援（CrashRescues）会把它救回来；
     # 而放任挂死 11 小时（实测）连救援的机会都没有 —— 两害相权取其轻。
     # 用户主动退出时**不**做这件事：那是用户意愿（进程本来就不该在）。
-    if ($proc -and -not $userQuit -and (Test-EngineStalled -LogPath $LogPath -StaleMinutes $StaleMinutes)) {
+    if ($proc -and -not $userQuit -and (Test-EngineStalled -LogPath $LogPath -StaleMinutes $StaleMinutes) -and (Test-PendingWork -DataRoot $DataRoot)) {
         $ageMin = [Math]::Round(((Get-Date) - (Get-Item -LiteralPath $LogPath).LastWriteTime).TotalMinutes, 1)
         Add-KaLog "engine 存活但日志停写 $ageMin 分钟（阈值 $StaleMinutes）⇒ 判定挂死，强制重启 pid=$($proc.Id)"
         try {
