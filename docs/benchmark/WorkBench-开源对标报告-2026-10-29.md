@@ -179,6 +179,7 @@
 | M5 回归 | 全仓 `go vet` + `go test ./...` + `check_all` + 产物重建 | **31 包 ok / VET_RC=0 / check_all 49 段 PASS**（RC=0；1 段 SKIP 需参数、1 段 UNVERIFIED 为长驻内存口径） | 已完成 |
 | M6 文档 | 本报告 + CHANGELOG + ARCHITECTURE 过期数字补正 + 记忆回写 | 门禁全绿、CHANGELOG Unreleased 居首 | 本文件 |
 | M7 部署 | 干净 worktree（`f1addb9`）构建 → dist 与线上根换装 → 行为面取证 | 两根 sha256==`E8B661C6…`==SHA256SUMS、`vcs.revision==f1addb9`；新判死 kind 具名 | 已完成（§6.6） |
+| M8 复验 | 本轮五个提交的双 workflow 终局 + 生产实例存活复核 | CI / Autonomy Container E2E 全 success；线上引擎仍在写台账（19:40 尝试开始/结束）、守护心跳正常、无 user-quit 残留 | 已完成 19:4x |
 
 ### 6.1 改造一实测（含负控）
 
@@ -282,6 +283,9 @@ STEP5 engine_state=running user_quit_marker_present=False
   18:09:03 WARN  模型池重投次数到顶，判死以解锁自主供料   poolWaits=4 budget=4
   18:09:03 ERROR 任务失败  kind="pool_wait_capped"  error="模型池连续 4 次不可用/限流，环境等待封顶判死"
   任务面  state=failed / errorKind=pool_wait_capped / poolWaits=4
+  面板 /api/failures 自身读数  total=1  buckets=pool_wait_capped:1
+    （这一条最要紧：坏掉的正是「失败原因分布」这个诊断入口，修复后由它自己报出具名类别）
+  取证脚本退出码 0、末行 VERDICT_PASS（件已入库 tests/round66_live_verify.ps1）
 ⇒ 同一条判死路径：改造前落 unknown，改造后叫出自己的名字 —— 行为面实锤。
 ```
 
