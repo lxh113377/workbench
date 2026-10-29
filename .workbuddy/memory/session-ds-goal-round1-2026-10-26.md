@@ -1457,3 +1457,40 @@ decisions.jsonl 尾部三条 evidence 变化：
 
 **七、如实登记**：a.md 那类「文章体裁」的产物**不在 T74 覆盖范围**（它不自称报告）—— 那是**模板选题**层面的事
 （该任务来自文章/长文类模板，其产物本就不该按审查报告要求）；已记入待办，后续按需在模板层限定「报告类模板必须产报告」。
+### 附录 R72（round 72，2026-10-29 21:30）：T75 —— `boot_failed` 纳入「探测不得翻案」集合，止住同一条车道反复白烧尝试
+
+**一、先量再改（19:00–20:50 共 480 次尝试，按模型统计）**
+```
+  z-ai/glm-5.3                  n=58  ok=0   not_served:58（100%）
+  combo:auto-vision/free/main   n=117 ok=0   not_served:116
+  our-free-model/*（7 条）       n=42  ok=0   not_served:42（100%）
+  beam-free                     n=48  ok=0   **boot_failed:48（100%，约每 4 分钟一轮）**
+  deepseek-v4.1-flash-free      n=36  ok=0   rate_limited:36
+  有效产出 ok 合计 13（cohere/north-mini-code:free 9、gpt-oss-20b 3、dots-studio 1）
+```
+结论：**四道门禁线上 0 次触发**，而 `产物验收失败=6` ⇒ 当前瓶颈是**执行成功率**，不是判据松紧。
+
+**二、根因（一处漏项，注释自己都写了）**：`exec_health.go` 的 `isExecutionFailureKind` 决定 `ApplyProbe`
+能否把一条失败**翻案**（manager.go:651）。该文件上方注释明写「boot_failed 占全部尝试 71%」，而 `boot_failed`
+**恰恰漏在集合之外** ⇒ 探测一轮「端点可达（GET /v1/models 200）」就把它治回 healthy，同一条车道于是被反复选中、反复启动失败。
+判据依据：boot 失败的成因在**该车道侧的启动/装载**，端点可达根本不是它的反证。
+
+**三、修法与判据（`8115beb`）**：把 `boot_failed` 加入执行侧/出口级失败集合（只能由真实执行成功或被冷却到期的半开恢复清除）；
+并给这条判据补上**首个测试**（此前完全没有）：**双向**钉住 —— 执行侧/出口级失败（stalled/bad_exit/timeout/upstream_failed/boot_failed/not_served）不得被探测翻案；
+结构性故障（gateway_off/gateway_unauthorized/unreachable/not_listed/model_rejected）必须仍能被探测恢复。
+
+**四、负控（双向，都有牙）**：① 删掉 `boot_failed` ⇒ 判红；② 让函数恒真（结构性故障也回不来）⇒ 判红。
+（双向量判据的必要性：只钉一边会把「翻案逻辑整体失效」这种反向缺陷放过去。）
+
+**五、live 验收（这才是判据）**
+```
+部署前 30 分钟：91 次尝试 ｜ boot_failed 13（beam-free 12）｜ not_served 38 ｜ ok 1
+部署后 18 分钟：22 次尝试 ｜ **boot_failed 0** ｜ not_served 14 ｜ bad_exit 7 ｜ timeout 1
+⇒ 结构性「同一车道反复烧尝试」的循环消失；尝试总量从 91 降到 22（白烧的那部分被吃掉了）。
+池 healthy 32 / degraded 6；verify 16 / pass 5（本窗口内无新 pass）。
+```
+
+**六、下一步观察点（如实登记）**：`not_served` 仍在（14 次/18 分钟）—— 该类**已在**不可翻案集合内，
+仍被选中说明它们是在**冷却到期的半开恢复**时被放回来的（设计如此：给每条车道一次自证机会）。
+下一轮的取向是给这类车道加**退避升级**（连续 N 轮自证失败 ⇒ 冷却翻倍到上限）或在候选排序上按近期成功率加权，
+而不是再用一刀切禁用（那会误伤真正恢复的车道）。
