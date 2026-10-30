@@ -204,6 +204,17 @@ type Task struct {
 	// 实测 5134 台账行内 attempt 值序列 0,0,0,1,1,2,2,0，即 47 次循环只涨到 2/3。
 	// 拿它当重投预算等于没有预算，僵尸任务会永久占住在途位（见 engine.go 的 poolWaitBudget 注释）。
 	PoolWaits int `json:"poolWaits,omitempty"`
+	// PoolWaitCeil 是「本任务曾经拿到的最高重投预算」，只升不降（round 131 · T85）。
+	//
+	// 为什么需要它（线上实测，2026-10-30 10:42:22 → 10:52:09，同一个 task-1793327951210-75bc）：
+	// 该任务的一次尝试被分类为 quota_exhausted ⇒ 引擎当场算出 budget=48 并打了「改走长等待预算」；
+	// 但 10 分钟后同一任务再退回时，那一轮是 rate_limited ⇒ 重算得 budget=4 ⇒ 在 poolWaits=4 判死。
+	// ⇒ 长预算**被授予过又被收回**，等于没授予：额度耗尽的恢复尺度是小时级，4 次等待根本跨不过去。
+	// 修法不能是"每次都重新判断该给多少"，而必须是"一旦按更长尺度授予过，就一直按那个尺度活着"。
+	//
+	// 为什么不复用 PoolWaits 或 Attempts：那两个是**计数**（本轮加一），不是**尺度**；
+	// 把它们当尺度就会丢失「为什么曾经给到 48」这个事实（同 T54「不能拿 Attempts 当预算」的教训）。
+	PoolWaitCeil int `json:"poolWaitCeil,omitempty"`
 	// PlanAttempts 是「方案阶段已实际调用思考模型的次数」（round 63 · T64）。
 	//
 	// 为什么需要独立计数：attempt 循环里每一轮都会重走一次方案阶段（engine.go 的

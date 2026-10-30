@@ -9,21 +9,20 @@ import (
 	"testing"
 )
 
-// TestAuditReportCitationsResolve 钉住「报告的每条代码位置引用都必须逐字命中那一行」（round 130 · 元发现的机器化）。
+// TestAuditReportCitationsResolve 钉住「报告的每条代码位置引用都必须命中那一行」。
 //
-// 为什么必须有这条（本轮现场）：我把报告写完并过了内容门禁后，用 node 逐条对账引用，
-// 结果 **10 条里 8 条行号是错的** —— 不是当初写错，而是我随后几轮持续编辑 engine.go/manager.go，
-// 把行号改了而报告没跟着改。这类漂移对读者的伤害比"少写一节"更隐蔽：行号看着精确、点开是别的代码，
-// 而内容级门禁（三节/证据/分级）完全看不出来 —— 它只判"有没有 file:line 这种形状"，不判"对不对"。
-//
-// 判据形态：报告里形如  <路径>:<行号>   <代码片段>  的引用，要求该片段出现在**那一行 ±0 行**上。
-// 为什么要求精确到行而不是 ±3：我最初用 ±3 的宽容口径去查，结果把"行号漂 50 多行"全放过了
-// （报告第 31 行写 1706、真实位置 1763 —— ±3 判不出来）。宽容口径的判据等于没判（本会话第 N 次同构教训）。
+// 两轮现场叠加出来的判据：
+//  1. round 130：报告写完用 node 逐条对账，10 条里 8 条行号是错的 —— 不是写错，而是我随后几轮
+//     持续编辑 engine.go/manager.go，行号跟着漂而报告没跟着改。内容门禁（三节/证据/分级）结构上
+//     看不出这种错：它只判「有没有 file:line 这种形状」，不判「对不对」。
+//  2. round 132：我把这条判据写成「取最长 token 作锚」，于是**我自己 T85 改动造成的新漂移它看不见** ——
+//     报告引 `if waits >= budget {` 在 :1826，我在它上方插了 13 行把它顶到 :1839，而 :1826 变成
+//     `if budget > x.PoolWaitCeil {`；最长 token 是通用词 "budget" ⇒ 判据照样绿。
+//     并行子代理用「逐字 + 全 token」的独立判据抓到了它 ⇒ 判据强度不足 = 判据不存在。
+//     现在口径：整段逐字命中，或全部代码形态 token 命中（AND），两者都不满足即判红。
 func TestAuditReportCitationsResolve(t *testing.T) {
 	text := string(readAuditReport(t))
-	// 引用形态：路径 : 行号，后面同一行跟一段代码（用行号后的空白/制表分隔）
-	re := regexp.MustCompile(`(?m)^\s*(?:workbench/)?((?:internal|docs|tests|setup)[^\s:]*\.go):(\d+)\s+(.+?)\s*$`)
-	matches := re.FindAllStringSubmatch(text, -1)
+	matches := citationRe.FindAllStringSubmatch(text, -1)
 	if len(matches) < 8 {
 		t.Fatalf("只解析到 %d 条代码引用，口径可疑（判据可能被空集/正则失配蒙过）", len(matches))
 	}
@@ -33,20 +32,7 @@ func TestAuditReportCitationsResolve(t *testing.T) {
 		if aerr != nil {
 			t.Fatalf("行号解析失败 %q: %v", lineStr, aerr)
 		}
-		// 片段可能带尾部箭头说明（如 "…   ← 无 kind"），先截掉箭头之后的中文注释
-		if k := strings.Index(claim, "←"); k >= 0 {
-			claim = strings.TrimSpace(claim[:k])
-		}
-		// 取**最长**的那个 token 作核对锚，而不是第一个词。
-		// 负控实测暴露：取第一个词时 "const poolWaitBudget = 4" 变成只查 "const" ——
-		// 而 engine.go 里几十行都含 "const"（连注释都含），漂移到任意一行都可能被判绿，
-		// 判据强度形同虚设。最长 token（如 poolWaitBudget / laneOneStrike）才是有区分度的锚。
-		snip := longestToken(claim)
-		if snip == "" {
-			continue // 没有可核对的代码 token（纯说明行）
-		}
-		// go test 的 cwd = 包目录（workbench/internal/engine），上跳两级即模块根 workbench/；
-		// 第一版多拼了一层 "workbench" ⇒ 全部报"文件不存在"，是判据自身写错，不是报告写错。
+		claim = cleanClaim(claim)
 		p, err := filepath.Abs(filepath.Join("..", "..", rel))
 		if err != nil {
 			t.Fatalf("解析 %s 失败: %v", rel, err)
@@ -61,38 +47,84 @@ func TestAuditReportCitationsResolve(t *testing.T) {
 			t.Errorf("行号越界：%s:%d（该文件共 %d 行）", rel, line, len(lines))
 			continue
 		}
-		if !strings.Contains(lines[line-1], snip) {
-			// 报错要给出"该锚点的真实行号"，方便一次改对而不是回头再查
-			real := -1
-			for i, l := range lines {
-				if strings.Contains(l, snip) {
-					real = i + 1
-					break
-				}
+		at := strings.TrimSpace(lines[line-1])
+		if citationMatches(claim, at) {
+			continue
+		}
+		real := -1
+		for i, l := range lines {
+			if citationMatches(claim, strings.TrimSpace(l)) {
+				real = i + 1
+				break
 			}
-			t.Errorf("报告引用漂移：%s:%d 声称含 %q，实际该行是 %q；该片段真实位置=%s:%d",
-				rel, line, snip, strings.TrimSpace(lines[line-1]), rel, real)
 		}
+		t.Errorf("报告引用漂移：%s:%d 声称 %q，实际该行 %q；命中位置=%s:%d（改准或删除引用，不许放宽判据）",
+			rel, line, claim, at, rel, real)
 	}
 }
 
-// longestToken 取字符串里最长的、具标识符形态的词（长度 >=4），作为引用对账的锚。
-func longestToken(s string) string {
-	best := ""
-	for _, w := range strings.Fields(s) {
+// citationRe 抓「路径:行号 + 同行代码片段」。
+var citationRe = regexp.MustCompile(`(?m)^\s*(?:workbench/)?((?:internal|docs|tests|setup)[^\s:]*\.go):(\d+)\s+(.+?)\s*$`)
+
+// cleanClaim 去掉引用尾部的中文注解（"← 无 kind"、"（限频 60 秒…）"）与包裹反引号。
+// 必须先剥：第一版没剥，把 "func logSupplyBlockedOnce() {（限频…" 整段当锚去比一行纯代码，
+// 必然不等 ⇒ 误报漂移。那是判据自己的错，不是报告的错。
+func cleanClaim(claim string) string {
+	c := strings.TrimSpace(claim)
+	if k := strings.Index(c, "\u2190"); k >= 0 {
+		c = c[:k]
+	}
+	if k := strings.Index(c, "\uff08"); k >= 0 {
+		c = c[:k]
+	}
+	return strings.TrimSpace(strings.Trim(c, "`"))
+}
+
+// citationMatches：整段逐字命中，或全部代码形态 token 命中（AND）。
+// 没有代码 token 时（纯中文声称，如「连试 8 个模型」）只认逐字。
+func citationMatches(claim, line string) bool {
+	if claim == "" || line == "" {
+		return false
+	}
+	if strings.Contains(line, claim) {
+		return true
+	}
+	var toks []string
+	for _, w := range strings.Fields(claim) {
 		w = strings.Trim(w, "`.,;:()[]{}")
-		if len(w) < 4 || strings.HasPrefix(w, "//") {
+		if len(w) < 4 || !codeTokenRe.MatchString(w) {
 			continue
 		}
-		if !codeTokenRe.MatchString(w) {
-			continue
-		}
-		if len(w) > len(best) {
-			best = w
+		toks = append(toks, w)
+	}
+	if len(toks) == 0 {
+		return false
+	}
+	for _, w := range toks {
+		if !strings.Contains(line, w) {
+			return false
 		}
 	}
-	return best
+	return true
 }
 
-// codeTokenRe 认标识符/简单表达式形态的词（容忍 . () [] = 等尾巴）。
+// TestCitationGateIsStrongEnough 内建负控：通用词单独命中**不算命中**。
+// 这就是 round 132 我看不见自己 T85 漂移的确切原因 —— 把它写成测试，防止下次又退回去。
+func TestCitationGateIsStrongEnough(t *testing.T) {
+	const claim = "if waits >= budget {"
+	// 我 T85 插入后 :1826 的真实内容（含通用词 budget，但不是声称的那行）
+	decoy := "if budget > x.PoolWaitCeil {"
+	if citationMatches(claim, decoy) {
+		t.Fatal("判据仍把通用词命中当成命中 ⇒ 抓不到 T85 这类自我漂移（强度不足）")
+	}
+	if !citationMatches(claim, "if waits >= budget {") {
+		t.Fatal("逐字命中必须成立（否则判据过严会误报）")
+	}
+	// 全 token AND：三个 token 都在同一行才算命中
+	if !citationMatches("x.PoolWaits++", "x.PoolWaits++") {
+		t.Fatal("自等行必须命中")
+	}
+}
+
+// codeTokenRe 认标识符/简单表达式形态的词（长度>=4 且含代码特征）。
 var codeTokenRe = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_.\[\]()=<>!&|*+/-]{3,}$`)

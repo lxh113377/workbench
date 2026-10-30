@@ -1818,10 +1818,25 @@ func (e *Engine) requeueForPoolWaitKind(taskID, chainID, kind string) (capped bo
 	// 面板「重试」仍可人工重开（RetryTask 允许 failed→queued 并把 Attempts 归零）——
 	// 判死不是放弃任务，是把「永久独占供料」换成「可重开的一次失败」。
 	waits := 0
-	if _, err := e.store.Update(taskID, func(x *model.Task) error { x.PoolWaits++; return nil }); err == nil {
+	// T85：预算必须在**同一次 Update** 里授予并持久化（PoolWaitCeil 只升不降），不能每次调用重算。
+	// 线上实测（同一任务 10:42:22 得 48、10:52:09 又按 4 判死）：重算会收回已授予的长预算 ⇒
+	// 「额度耗尽走 48 次」在真实混合限流下等于没生效（下一轮往往只是 rate_limited）。
+	if _, err := e.store.Update(taskID, func(x *model.Task) error {
+		x.PoolWaits++
+		if budget > x.PoolWaitCeil {
+			x.PoolWaitCeil = budget // 授予：尺度只升不降（长预算一旦给过就一直按它活着）
+		}
+		return nil
+	}); err == nil {
 		if cur, ok := e.store.Get(taskID); ok {
 			waits = cur.PoolWaits
+			if cur.PoolWaitCeil > budget {
+				budget = cur.PoolWaitCeil // 本轮算得更短也不回收（比较用已授予的尺度）
+			}
 		}
+	}
+	if budget > poolWaitBudget {
+		e.log.Info("任务按长等待预算存活", "taskId", taskID, "budget", budget, "poolWaits", waits)
 	}
 	if waits >= budget {
 		e.log.Warn("模型池重投次数到顶，判死以解锁自主供料", "taskId", taskID, "poolWaits", waits, "budget", budget, "kind", kind)
