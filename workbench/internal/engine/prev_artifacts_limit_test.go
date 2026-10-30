@@ -5,56 +5,98 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"unicode/utf8"
+
+	"workbench/internal/model"
 )
 
-// TestReadPrevArtifactsRespectsLimit 是对"根因 B"的取证式测试（round 136）。
-// 我只从代码读出「limit 是累计口径」，按本会话纪律不能拿代码阅读当结论 —— 这条测试
-// 把两种可能行为钉成一种：越过累计阈值后是否还继续吸收后续文件。
-// 本轮只确证行为，不改行为；确证完才谈得上要不要加单文件上限。
-func TestReadPrevArtifactsRespectsLimit(t *testing.T) {
+// TestReadPrevArtifactsRespectsBudget 钉住 T91 的核心不变量：**total ≤ limit，一个字都不许超**。
+//
+// 旧实现是"先 append → 累加 → 再判 break"：越限那一个文件**整份**入内、其后文件才被丢，
+// 于是单文件可整份穿透预算，实测天花板 = limit(200KB) + 上游单文件闸(8MiB) ≈ 8.19 MiB/轮。
+// 我 round 137 写的测试只断"文件个数 ≤2"、没有合计上界 ⇒ 给的是虚假安全感（独立复核指出）。
+// 现在 limit 就是预算：每个 body 先压到剩余预算内（截断留标记），预算耗尽即停。
+func TestReadPrevArtifactsRespectsBudget(t *testing.T) {
 	dir := t.TempDir()
 	const limit = 2000
-	// 一个远超 limit 的大文件 + 三个小文件（big.md 字典序在前，先被读到）
-	huge := strings.Repeat("x", limit*5)
-	if err := os.WriteFile(filepath.Join(dir, "big.md"), []byte(huge), 0o600); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "big.md"), []byte(strings.Repeat("x", limit*5)), 0o600); err != nil {
 		t.Fatal(err)
 	}
 	for _, n := range []string{"s1.md", "s2.md", "s3.md"} {
-		if err := os.WriteFile(filepath.Join(dir, n), []byte("small-content-"+n), 0o600); err != nil {
+		if err := os.WriteFile(filepath.Join(dir, n), []byte("small-"+n), 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
 	got := readPrevArtifacts(dir, limit)
 	if len(got) == 0 {
-		t.Fatal("一个产物都没读到：测不到点上（先修测试，别改实现）")
+		t.Fatal("一个产物都没读到：测不到点上")
 	}
 	total := 0
 	for _, f := range got {
 		total += len(f.Body)
 	}
-	t.Logf("读回 %d 个产物，合计 %d 字节（limit=%d）", len(got), total, limit)
-	// 关键：越过 limit 后不得继续把后续文件全吸进来（否则返工 prompt 体积随工作区文件数增长）
-	if len(got) > 2 {
-		t.Fatalf("limit 没起到截断后续文件的作用：读到 %d 个产物，合计 %d 字节（limit=%d）", len(got), total, limit)
+	if total > limit {
+		t.Fatalf("合计 %d 超出预算 limit=%d ⇒ 预算形同虚设（T91 病灶复发）", total, limit)
 	}
-	// 合计上界（round 138 · 采纳独立复核指出的缺口）：原测试只断"文件个数"，**没有任何合计上界**
-	// ⇒ "加了单文件上限"根本不等于"prompt 体积有上界"，光有个数断言会给出虚假安全感。
-	// 这里的数学事实是：实现是"先 append → 累加 → 再判 break"（repair.go:113-116），
-	// 所以越限那一个文件整份入内、其后文件被丢 ⇒ 合法上界是 limit + 最大单文件。
-	// 为什么断"上界等于 limit+largest"而不是断 total<=limit：后者会判红当前实现 ——
-	// 单文件可击穿 limit 是**现状**（实测 CHANGELOG.md 277,803 B 整份进 prompt），
-	// 我这条判据的职责是把天花板钉成可复算事实，不是虚构一个还不存在的保证（那属 T91）。
-	// 可演进性：T91 真加了单文件上限 fileCap 后，本断言应收紧为 total <= limit + fileCap。
-	largest := 0
 	for _, f := range got {
-		if len(f.Body) > largest {
-			largest = len(f.Body)
+		if len(f.Body) > limit {
+			t.Fatalf("%s 单文件 %d > limit=%d ⇒ 单个大文件仍可整份穿透", f.Path, len(f.Body), limit)
 		}
 	}
-	if total > limit+largest {
-		t.Fatalf("合计 %d 超出机制天花板 limit(%d)+最大单文件(%d)=%d ⇒ 截断语义已变，天花板要重算",
-			total, limit, largest, limit+largest)
+	if !strings.Contains(got[0].Body, "已截断") {
+		t.Fatalf("截断后没有标记 ⇒ 模型会把残文件当完整文件改：%q", tailOf(got[0].Body, 80))
 	}
-	// 天花板本身要能被看见（供 T91 定阈值用，不参与判定）
-	t.Logf("本轮天花板：limit=%d 最大单文件=%d ⇒ 上界=%d B/轮", limit, largest, limit+largest)
+	if !utf8.ValidString(got[0].Body) {
+		t.Fatal("截断把 UTF-8 切成半个字（返工 prompt 会出现乱码）")
+	}
+	t.Logf("读回 %d 个产物、合计 %d B（limit=%d），首个被截到 %d B 且含标记", len(got), total, limit, len(got[0].Body))
+}
+
+// TestReadPrevArtifactsKeepsFailureEvidence 钉住"截断不许剪掉判据自己要的东西"：
+// 上一版产出被裁是允许的，但验收失败证据（退出码/命令）必须原样保留，
+// 否则返工任务失去"照着报错改"的唯一依据（T91 验收条款）。
+func TestReadPrevArtifactsKeepsFailureEvidence(t *testing.T) {
+	dir := t.TempDir()
+	big := strings.Repeat("文", 5000) // 多字节，兼验 rune 边界
+	if err := os.WriteFile(filepath.Join(dir, "huge.md"), []byte(big), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	prev := readPrevArtifacts(dir, 1000)
+	rep := &model.VerifyReport{Pass: false, FailReason: "验收命令 python m.py 退出码 9（期望 0）"}
+	p := repairPrompt(&model.Task{ID: "t-ev", Prompt: "原始要求"}, prev, rep, 2)
+	for _, need := range []string{"### 原始任务", "原始要求", "退出码", "python m.py", "已截断"} {
+		if !strings.Contains(p, need) {
+			t.Fatalf("返工 prompt 丢了 %q —— 截断把判据要用的证据剪掉了", need)
+		}
+	}
+	if !utf8.ValidString(p) {
+		t.Fatal("返工 prompt 含非法 UTF-8（rune 边界处理有洞）")
+	}
+}
+
+// TestTruncateWithMarkerNeverExceedsBudget 是纯函数兜底：极端预算也不许超。
+func TestTruncateWithMarkerNeverExceedsBudget(t *testing.T) {
+	body := strings.Repeat("a", 10000)
+	for _, budget := range []int{0, 1, 10, 100, 999, 1000} {
+		got := truncateWithMarker(body, budget, "x.md")
+		if budget <= 0 {
+			if got != "" {
+				t.Fatalf("budget=%d 应返回空串，实得 %d B", budget, len(got))
+			}
+			continue
+		}
+		if len(got) > budget {
+			t.Fatalf("budget=%d 实得 %d B ⇒ 标记把预算撑爆了", budget, len(got))
+		}
+	}
+	if got := truncateWithMarker("short", 100, "s.md"); got != "short" {
+		t.Fatalf("未超预算时不该改动内容，实得 %q", got)
+	}
+}
+
+func tailOf(s string, n int) string {
+	if len(s) <= n {
+		return s
+	}
+	return s[len(s)-n:]
 }

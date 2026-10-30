@@ -3,6 +3,7 @@ package engine
 import (
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"workbench/internal/config"
 	"workbench/internal/model"
@@ -98,6 +99,24 @@ func originalPromptOf(task *model.Task) string {
 	return task.Prompt
 }
 
+// readPrevArtifacts 读取上一版产出，**严格受总预算约束**（round 138 · T91）。
+//
+// 为什么改（现场实测，agent 根 6 份 prompt.repair-*.md）：
+//
+//	· 一份 689,618 B 的返工 prompt 里，「上一版产出」段占 687,472 B（99.7%），最大单文件 277,803 B；
+//	· 旧实现是"先 append→累加→再判 break"：越限那一个文件**整份**入内、其后文件才被丢，
+//	  于是这里传的 limit=200_000 名义上 200KB，实际天花板 = limit + 上游单文件闸(8MiB) ≈ 8.19 MiB/轮；
+//	· 而且我是"先 append 后判断"，连"这一份要不要收"都是事后才决定 —— 预算从来不是预算。
+//
+// 现在按预算执行，两步：
+//
+//	① 先把每个 body 压到**剩余预算**以内（超出部分截断并留显式标记）；
+//	② 预算耗尽即停，不再吸收后续文件。
+//
+// 为什么是截断而不是丢弃：模型要靠这份内容做针对性修正，整份丢掉等于让它盲改；
+// 截断 + 标记既保住开头与关键上下文，又把每轮成本钉死。
+// 为什么不新造阈值：沿用调用方给的 limit（repair_schedule.go 传 200_000）这一既有预算口径，
+// 保证 total ≤ limit 是**可断言的不变量**，而不是又一个需要解释的魔法数字。
 func readPrevArtifacts(workDir string, limit int) []artifactFile {
 	produced, names, err := collectOutputs(workDir)
 	if err != nil {
@@ -110,13 +129,57 @@ func readPrevArtifacts(workDir string, limit int) []artifactFile {
 		if len(body) == 0 {
 			continue
 		}
+		if limit > 0 {
+			remain := limit - total
+			if remain <= 0 {
+				break // 预算已用尽：其后文件一律不吸收（旧实现在这里还会整份塞一个）
+			}
+			if len(body) > remain {
+				body = []byte(truncateWithMarker(string(body), remain, n))
+			}
+		}
 		out = append(out, artifactFile{Path: n, Body: string(body)})
 		total += len(body)
-		if limit > 0 && total > limit {
-			break
-		}
 	}
 	return out
+}
+
+// truncateWithMarker 把 body 截到 ≤ budget 字节，并在尾部写明"截了多少、原文多大"。
+//
+// 注意三点（都会在判据里钉住）：
+//
+//	· 绝不切断 UTF-8 汉字（按 rune 边界回退），否则返工 prompt 里会出现半个字；
+//	· 返回长度**必须** ≤ budget —— 标记本身也占预算，所以先算标记再算能放多少正文；
+//	· 原文字节数写进标记，让模型与审计都知道"这份是残的"，不会把它当成完整文件去改。
+func truncateWithMarker(body string, budget int, name string) string {
+	if budget <= 0 {
+		return ""
+	}
+	if len(body) <= budget {
+		return body
+	}
+	marker := fmt.Sprintf("\n\n…[已截断：原文 %d 字节，此处仅保留前 %d 字节；完整文件请按名字自行读取]", len(body), budget)
+	// 标记比整份预算还长（极端小预算）⇒ 只留标记，宁可内容全丢也不超预算。
+	//
+	// ⚠️ 这里必须按**字节**裁，不能借 truncateRunes：那个函数的第二参是 rune 数不是字节数，
+	// 传给预算会得出"10 个 rune = 最多 30 字节"，反而撑爆预算。我这个错是
+	// TestTruncateWithMarkerNeverExceedsBudget 在 budget=10 处当场抓到的（实得 24 B）。
+	if len(marker) >= budget {
+		m := marker
+		if len(m) > budget {
+			head := budget
+			for head > 0 && !utf8.RuneStart(m[head]) {
+				head--
+			}
+			m = m[:head]
+		}
+		return m
+	}
+	head := budget - len(marker)
+	for head > 0 && !utf8.RuneStart(body[head]) {
+		head-- // 回退到 rune 边界，避免半个汉字
+	}
+	return body[:head] + marker
 }
 
 // shouldRepair 判断是否还值得再返工一轮。
