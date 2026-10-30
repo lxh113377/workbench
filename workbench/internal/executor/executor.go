@@ -832,6 +832,18 @@ func classify(stderr string, res *Result) Kind {
 	// 必须归 not_served —— 它是**出口配置事实**，T44 靠这个 kind 阻止探测把车道洗白。
 	case strings.Contains(lower, "does not serve"), strings.Contains(lower, "not_served"):
 		return KindNotServed
+	// 无产物块（round 146 · T102）：判据本由 judge 从**结构**上给（requireArtifacts 且无 ARTIFACTS 块），
+	// 但当它作为**错误文本**流过来时（实测原文「执行失败: no_artifact」），本函数此前没有任何分支 ⇒
+	// 落进 `dsh:`/`ExitCode` 兜底或 Unknown ⇒ 台账记为 unknown（面板显示「未知错误」）。
+	//
+	// 现场（agent 根 attempts.jsonl）：同一句原文共 4 行 —— 3 行正确记为 no_artifact（走 judge 结构判定），
+	// **1 行记为 unknown**（走文本兜底的那次，2026-10-26 19:00:53，action=retry）。这既是历史残留，
+	// 也是**审计盲区**：文本可判定的类别缺规则，归因一致性扫法（T101）就只能把它算作"判不了"而不计入分子
+	// ⇒ 缺陷会藏在"判不了"里。补上规则，让这一类既进审计分母，也能在文本路径上被正确归因。
+	//
+	// 判据取窄（只认这两条自家协议原文），且放在网络/出口/限流类之后 ⇒ 不会遮住更紧急的事实。
+	case strings.Contains(lower, "no_artifact"), strings.Contains(lower, "不含产物块"):
+		return KindNoArtifact
 	case strings.Contains(lower, "upstream"), strings.Contains(lower, "timeout"):
 		return KindUpstream
 	case strings.Contains(stderr, "dsh:"):
