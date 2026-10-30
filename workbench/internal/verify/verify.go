@@ -355,13 +355,30 @@ type limitedWriter struct {
 	max int
 }
 
+// Write 遵守 io.Writer 契约：**永远报告"全部收下"（返回 len(p)）**，超限部分直接丢弃。
+//
+// 为什么必须这样（round 143 修复，线上证据驱动）：os/exec 用 io.Copy 把子进程输出搬进本 Writer，
+// 而 io.Copy 内部有 `if nr != nw { err = io.ErrShortWrite }` —— 只要 Write 返回**短计数且 err=nil**，
+// 就会被判成 ErrShortWrite，接着 cmd.Run() 返回它、verify 又把它记成「启动失败」。
+// 旧实现正是"截断后返回 remain、err 返回 nil"，于是线上出现：
+//
+//	exit=-1 ｜ skipped="启动失败: short write" ｜ stdout 是超 64KB 的文件列表
+//
+// 两条后果：① 诊断误导（看着像解释器起不来，实际是输出洪泛）；
+//
+//	② 本该 exit 0 的验收命令只要刷出 > MaxOutputBytes 输出就被判失败 ⇒ **验收假阴性**。
+//
+// 截断上限的本意（防刷爆内存）不变：只保留前 max 字节，其余丢弃，但计数必须报全额。
 func (l *limitedWriter) Write(p []byte) (int, error) {
 	if l.w.Len() >= l.max {
 		return len(p), nil
 	}
 	remain := l.max - l.w.Len()
 	if len(p) > remain {
-		p = p[:remain]
+		if _, err := l.w.Write(p[:remain]); err != nil {
+			return 0, err
+		}
+		return len(p), nil // 关键：报全额，超限部分丢弃 —— 短计数会触发 io.Copy 的 ErrShortWrite
 	}
 	return l.w.Write(p)
 }
