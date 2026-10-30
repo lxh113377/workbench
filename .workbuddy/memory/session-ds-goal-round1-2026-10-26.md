@@ -2620,3 +2620,41 @@ T88：真触发条件（pass=true 且被要求交报告却没交任何 .md）仍
 `verify 23 / pass 8` 未变（额度墙仍在；本轮修的正是让"失败归因不准"的那条路径）。
 下一轮序：① 继续挂 T90-第2轮 / T88 真触发；② 若额度墙持续，继续从线上台账找"归因不准/误分类"类缺陷
 （本轮这类缺陷的价值已被量化为 6.7%–10% 的验收记录）；③ 把本轮模式（线上现场 → stdlib 语义 → 契约层+端到端判据 → 负控复现）沉淀成检查清单。
+### 附录 R144（round 144，2026-10-30 23:1x）：T98 —— 台账把「出口不服务该模型」写成「启动失败」（记录面误归因，行为面早已正确）
+
+**一、量化发现（agent 根全量扫 attempts.jsonl，2109 行）**
+```
+kind=boot_failed 共 191 行，其中 **190 行（99.5%）** 的 error 正文是
+  `dsh: SERVER: our free model does not serve "combo:auto-free" on this egress`
+⇒ 整个「启动失败」桶装的其实是"这条出口不服务该模型"；同一句原文还被分进 not_served 桶（53 行）⇒ 同因两桶。
+交叉表另暴露一处（登记 T99 未修）：unknown=24 里 23 行是「启动 DSH 失败: context…」（像取消），而 cancelled 桶另有 43+18 行。
+同时纠正我自己的读法：action=degraded 752 指的是**方案尝试降级**（engine.go:1119-1120 明写"退化直执行、不 return、不消耗重试"），
+  不是任务被判死 —— 差点据此再下一个错误结论。
+```
+**二、机制：行为面早对，记录面漏了同一处**
+```
+上游把类别预置成通用 boot（engine.go:1283 的兜底），而 failover 的补偿 bootAttributionKind（T17②）按 not_served 记**车道账**：
+  lane_disposition.go:68 not_served = oneStrike + minCooldownSec 1800 + probeCannotCure；
+  lane_disposition.go:80 boot       = 只有 probeCannotCure（**不冷却**）⇒ 所以冷却是对的。
+错的只有写回：res.ErrorKind 非空时旧逻辑只在"空值"回填 ⇒ 台账/面板/报告读者看到的全是「启动失败」。
+这与 2026-10-19 修过的那次是**同一条兜底**，当时只覆盖"ErrorKind 为空"的形态（failover.go:152-165 的注释就是那次的教训）。
+```
+**三、修法与判据**：补偿命中时把**补偿后的类别**写回 res.ErrorKind（写回条件改为"空值 或 类别被改准"）；
+重试行为不变（retry.NotServed.Retryable() 与 Boot 同列、且在 ParseKind 白名单内）。判据两条：
+  ① TestLedgerRecordsAttributedKind（预置 boot + 正文 does not serve ⇒ 必须记 not_served）；
+  ② TestLedgerKeepsBootForGenericFailure（泛化启动失败 ⇒ 必须保持 boot_failed，**防判据放宽误杀车道**）。
+负控第一次写成"删掉赋值"⇒ `writeBackKind` 未使用、编译失败 ⇒ 按纪律标为"变异无效"（编译失败≠判据有牙），
+  改成可编译变异（补偿赋值改回 kind）后才算数：判据红且逐字复现「实得 boot_failed」；还原字节一致、modelpool -count=2 + 全仓 rc=0。
+
+**四、线上判据（本轮可提前预告，因为 not_served 事件频发）**：部署后新产生的 attempts 行里，
+凡 error 正文含 `does not serve` 的，**kind 必须是 not_served**，且 `boot_failed` 桶不再新增这类行。
+下一轮直接按此对账 attempts.jsonl（无需等稀有样本）。
+
+**五、#44 收尾**：本轮未派发新件，skip_reason = **严格串行**（"线上台账取证 → 定位记录面 → 修 + 判据"单链，
+后一步输入是前一步输出）+ **决策本体**（改不改、改哪一侧由我自证后自决）。枚举内。
+
+**六、#40**：`5b9b49c`(T98) 已提交 → 部署 → 线上验证：rev==HEAD、INTEGRITY=OK、RESULT=ALIVE、CI 与容器 E2E 双绿、worktree 0。
+报告三条判据全绿（E26 八条引用逐字命中；本轮自动改准 3 条引用）；PR 汇总补 T98 行与 §2.9。
+`verify 23 / pass 8` 未变（额度墙仍在）。
+下一轮序：① 按新判据对账 attempts.jsonl（not_served 必须不再混进 boot_failed 桶）；
+② T99（unknown/cancelled 同因两桶）取证后修；③ 继续挂 T90-第2轮与 T88 真触发；④ 继续从台账找"归因不准"类缺陷。

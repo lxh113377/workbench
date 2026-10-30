@@ -171,3 +171,21 @@ T90 的"不嵌套"半边仍需第 2 轮样本；T95 属防患。
 
 **#44 负申报**：未派新件；skip_reason = **严格串行**（线上证据→根因→修+判据单链） + **决策本体**。
 **#40**：33a1e90 已提交+部署+线上验证（rev==HEAD / INTEGRITY=OK / ALIVE / CI+E2E 双绿 / worktree 0）。
+
+## Round 144 收口（2026-10-30 23:1x）
+
+**交付**：T98 —— 台账把「出口不服务该模型」写成「启动失败」。量化：boot_failed 桶 191 行里 **190 行（99.5%）** 的正文是
+`our free model does not serve ... on this egress`。行为面早已纠正（failover 的 bootAttributionKind 按 not_served 记车道账，
+一击+1800s 冷却），**记录面没有**：res.ErrorKind 非空时旧逻辑不回填 ⇒ 面板/台账/报告看到的都是「启动失败」。
+
+修法：补偿命中时把补偿后的类别也写回 res.ErrorKind（写回条件改为"空值 或 类别被改准"）；重试行为不变。
+判据两条（正面必须记 not_served + 保守面泛化启动失败必须保持 boot）；负控用**可编译**变异（第一次的"删赋值"编译失败已按纪律作废）。
+
+**另纠正我自己一处读法**：action=degraded(752) 是**方案尝试降级**，不是任务被判死（engine.go:1119-1120 明写"退化直执行、不 return"）。
+
+**登记 T99**：unknown 桶 23 行「启动 DSH 失败: context…」与 cancelled 桶同因不同桶，取证后再修。
+
+**线上判据（可提前对账）**：部署后 error 正文含 does not serve 的 attempts 行，kind 必须是 not_served，boot_failed 桶不再新增。
+
+**#44 负申报**：未派新件；skip_reason = **严格串行**（线上台账取证→定位记录面→修+判据单链）+ **决策本体**。
+**#40**：5b9b49c 已提交+部署+线上验证（rev==HEAD / INTEGRITY=OK / ALIVE / CI+E2E 双绿 / worktree 0）。
