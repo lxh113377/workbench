@@ -127,6 +127,11 @@ type Engine struct {
 	// 静默空转是 24/7 系统最坏的失效形态：熔断必须自己发声。
 	rejectBreakerMu sync.Mutex
 	rejectBreakerAt map[string]int64
+	// supplyBlockAt 是「供料门被挡」最近一次告警时刻（限频，见 supply_gate_log.go）。
+	// 现场（2026-10-30）：12 条 parked 任务把 q.Len()==0 的门永久挡住，tick 每 3 秒跳过一次规划，
+	// 每小时约 1200 次**零日志** —— 静默空转是 24/7 系统最坏的失效形态，门必须自己发声。
+	supplyBlockMu sync.Mutex
+	supplyBlockAt int64
 }
 
 // New 构造引擎。
@@ -829,6 +834,12 @@ func (e *Engine) tick(ctx context.Context) {
 	// 真值来源"的设计——补货不该改变已被观测到的队列长度。
 	if e.q.Len() == 0 {
 		e.supplyCandidates(ctx, cfg)
+	} else {
+		// 门被挡住时留一条限频痕迹（round 128 · T83 第一块砖）：**只观测、不改门条件**。
+		// 为什么要先观测：q.Len()==0 是有意设计（队列还有货就补一批，会让"闸门过期后任务是否
+		// 真被取走"无法观测，也违背"队列是唯一真值来源"）。T70 的修法（改成"无在跑任务即可补货"）
+		// 需要频率证据支撑，而本轮之前这条路径完全没有痕迹 —— 拿不到频率就没资格改门。
+		e.logSupplyBlockedOnce()
 	}
 	// 2) 尽可能填满并发槽
 	for {
