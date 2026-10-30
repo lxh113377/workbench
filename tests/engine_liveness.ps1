@@ -17,7 +17,10 @@
 param(
   [string]$Root = "",
   [int]$WindowMinutes = 10,
-  [switch]$SelfTest
+  [switch]$SelfTest,
+  # -Strict 把「交付完整性」并入退出码：校验和缺失/与实体不符 ⇒ 退 1。
+  # 默认不参与投票 —— 校验和文件陈旧不代表引擎没在跑（那是两件事，混投票会假报 DEAD）。
+  [switch]$Strict
 )
 
 $ErrorActionPreference = "Continue"
@@ -62,6 +65,31 @@ function Test-ChannelLog([string]$root, [int]$win) {
   return @{ alive = ($ageMin -le $win); detail = $d }
 }
 
+# 通道4（完整性，不参与存活投票）：exe 的 SHA256 是否等于同目录 SHA256SUMS 里的 token。
+//
+// 为什么需要它（2026-10-30 13:31 现场）：部署脚本用的是"若 dist 里有 SHA256SUMS 就一起拷贝"，
+// 而 setup/build.ps1 -SkipTests **不产**这个文件 ⇒ agent 根的 SUMS 停在几小时前的旧版，
+// 于是"校验和一致=False"。真因不是二进制错（vcs.revision 明摆着等于 HEAD），
+// 而是**验收用的对照物本身过期了** —— 拿一个过期的对照物去验，要么假红要么假绿。
+// ⇒ 把这件事做成一条可复算的通道：要么 OK，要么明确 STALE / MISSING，别靠人记得手工重算。
+function Test-ChannelIntegrity([string]$root) {
+  $exe = Get-EnginePath -root $root
+  $sums = Join-Path $root "SHA256SUMS"
+  if (-not (Test-Path $exe)) { return @{ state = "MISSING-EXE"; detail = "找不到可执行文件" } }
+  if (-not (Test-Path $sums)) { return @{ state = "MISSING"; detail = "无 SHA256SUMS 对照物" } }
+  $tok = ""
+  foreach ($line in (Get-Content $sums -ErrorAction SilentlyContinue)) {
+    $s = ("$line").Trim()
+    if ($s -match "^[0-9a-fA-F]{64}") { $tok = ($s -split "\s+")[0]; break }
+  }
+  if ($tok -eq "") { return @{ state = "MISSING"; detail = "SHA256SUMS 里没有可用的 64 位摘要" } }
+  $h = (Get-FileHash $exe -Algorithm SHA256).Hash
+  $ok = (0 -eq [String]::Compare($h, $tok, $true))
+  $age = [Math]::Round(((Get-Item $exe).LastWriteTime - (Get-Item $sums).LastWriteTime).TotalMinutes, 1)
+  if ($ok) { return @{ state = "OK"; detail = ("摘要一致（SUMS 比 exe 旧 " + $age + " 分钟）") } }
+  return @{ state = "STALE"; detail = ("exe=" + $h.Substring(0, 12) + "… SUMS=" + $tok.Substring(0, 12) + "…（SUMS 比 exe 旧 " + $age + " 分钟 ⇒ 部署时未随实体一起更新）") }
+}
+
 function Get-Verdict([string]$root, [int]$win) {
   $c1 = Test-ChannelProcess -root $root
   $c2 = Test-ChannelPanel -root $root
@@ -98,6 +126,33 @@ if ($SelfTest) {
   if ($y -ge 2) { $expect = "ALIVE" } elseif ($y -eq 0) { $expect = "DEAD" }
   if ($t.verdict -ne $expect) { Write-Host "自检4) 失败：投票结论与通道数不符"; $fail++ }
   else { Write-Host ("自检4) 通过：活通道 " + $y + "/3 => " + $t.verdict) }
+  # 自检5-7：完整性通道必须有牙 —— 造一个"实体新、对照物旧"的临时根（正是 13:31 的现场形态）
+  $tmp = Join-Path ([IO.Path]::GetTempPath()) ("wb-liveness-" + [Guid]::NewGuid().ToString("N"))
+  New-Item -ItemType Directory -Path $tmp -Force | Out-Null
+  try {
+    $fakeExe = Join-Path $tmp "workbench.exe"
+    [IO.File]::WriteAllBytes($fakeExe, [Text.Encoding]::UTF8.GetBytes("payload-v1"))
+    $h1 = (Get-FileHash $fakeExe -Algorithm SHA256).Hash
+    [IO.File]::WriteAllText((Join-Path $tmp "SHA256SUMS"), ($h1 + "  workbench.exe"))
+    $g1 = Test-ChannelIntegrity -root $tmp
+    if ($g1.state -ne "OK") { Write-Host ("自检5) 失败：一致的摘要被判 " + $g1.state); $fail++ }
+    else { Write-Host "自检5) 通过：摘要一致判 OK" }
+    # 换实体但不动 SUMS ⇒ 必须 STALE（这就是部署时忘记重算 SUMS 的形态）
+    [IO.File]::WriteAllBytes($fakeExe, [Text.Encoding]::UTF8.GetBytes("payload-v2-different"))
+    Start-Sleep -Seconds 1
+    $g2 = Test-ChannelIntegrity -root $tmp
+    if ($g2.state -ne "STALE") { Write-Host ("自检6) 失败：实体变了而对照物未变，应判 STALE，实得 " + $g2.state); $fail++ }
+    else { Write-Host "自检6) 通过：陈旧对照物被抓住（STALE）" }
+    Remove-Item (Join-Path $tmp "SHA256SUMS") -Force
+    $g3 = Test-ChannelIntegrity -root $tmp
+    if ($g3.state -notmatch "MISSING") { Write-Host ("自检7) 失败：缺对照物应判 MISSING，实得 " + $g3.state); $fail++ }
+    else { Write-Host ("自检7) 通过：缺对照物判 " + $g3.state) }
+  } finally {
+    # 临时件用完即删（写面纪律：不在仓库根、temp 里也不留残留）
+    if (Test-Path $tmp) { Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue }
+    if (Test-Path $tmp) { Write-Host "自检8) 失败：临时目录未清理"; $fail++ }
+    else { Write-Host "自检8) 通过：临时目录已清理" }
+  }
   if ($fail -gt 0) { Write-Host "SELFTEST FAIL"; exit 1 }
   Write-Host "SELFTEST PASS"
   exit 0
@@ -106,5 +161,12 @@ if ($SelfTest) {
 Write-Host ("=== 引擎存活体检（根 " + $Root + "）===")
 $r = Get-Verdict -root $Root -win $WindowMinutes
 Write-Host ("RESULT=" + $r.verdict)
+$i = Test-ChannelIntegrity -root $Root
+Write-Host ("  通道4 完整性 : " + $i.state + " ｜ " + $i.detail)
+Write-Host ("INTEGRITY=" + $i.state)
 if ($r.verdict -eq "DEAD") { exit 1 }
+if ($Strict -and $i.state -ne "OK") {
+  Write-Host "   Strict：交付完整性未过（校验和缺失或与实体不符 ⇒ 部署验收不成立，须重生成 SUMS）"
+  exit 1
+}
 exit 0
