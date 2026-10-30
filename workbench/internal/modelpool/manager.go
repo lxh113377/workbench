@@ -714,9 +714,10 @@ func (m *Manager) ApplyProbe(results []ProbeResult) ProbeSummary {
 	m.syncSpecStateLocked()
 	// 出口拓扑在**持锁期间**算好（721 行那次 m.log 已在 Unlock 之后，届时不能再裸读 m.specs）。
 	// 为什么要记它（round 132 · P0-2 更正）：实测本机池内 38 条车道的 baseUrl 全部是
-	// http://127.0.0.1:8326/v1 —— 一个明文回环出口。原先这个事实只写在 failover.go 的注释里，
-	// 而那条注释的前提（“各车道走不同网络路径”）在本部署下是**假的**，
-	// 据此做的归因（transport_failed 算到单条车道头上、逐条冷却）会把一个出口级故障摊成整池故障。
+	// http://127.0.0.1:8326/v1 —— 探测路径上是同一个回环端点。原先这个事实只写在 failover.go 的注释里，
+	// 而那条注释的前提（“各车道走不同网络路径”）未经核实 ⇒ 把能算的东西写成不可核对的断言。
+	// 注意执行面另有一条路（dsh 子进程自己选上游，见 egress.go 的适用面），
+	// 所以 transport_failed 该逐车道冷却还是整池熔断，要先取证执行面的占比（T86），不在此处下结论。
 	// 能算的就别靠注释说：把出口数放进每轮都有的低频摘要里，拓扑一旦变化立刻可见。
 	specCount := len(m.specs)
 	egressCount := len(egressGroups(m.specs, m.gatewayBase))
