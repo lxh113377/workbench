@@ -32,6 +32,15 @@ type laneDisposition struct {
 	// probeCannotCure = true 表示「端点可达」不构成反证，探测成功不得把它翻回 healthy
 	//（只能由真实执行成功或冷却到期的半开恢复清除）。这一列就是 exec_health 里那份列表的来源。
 	probeCannotCure bool
+	// stopSwitch = true 表示「换模型无意义」：失败发生在**通道/账号级**（限流、额度耗尽），
+	// 而不是某条模型的能力问题。FailoverRunner 必须在首次命中时就停止切换（failover.go 的 429 分支）。
+	// 为什么这一列也必须进表（round 131 · T84，本会话同族第 7 次）：现场实测某次限流时
+	// 「连试 8 个模型、每个约 3 秒，24 秒内打空整池并全部记失败，限流窗口因此拖到 50+ 分钟」，
+	// 于是加了那道拦截 —— 但它当时写的是 `kind == rate_limited` 裸字符串，
+	// 后来新增 quota_exhausted 时**没人回来改这里** ⇒ 额度耗尽照样把整池烧穿：
+	// 实测「尝试结束」里 quota_exhausted 一批 34 次，全是一次任务的多车道轮转。
+	// 所以「属不属于限流族」这件事只能有一个定义点，不能 engine 一份、failover 一份。
+	stopSwitch bool
 	// note 记录「为什么是这个处置」，让下一个改代码的人不必重新考古。
 	note string
 }
@@ -62,8 +71,8 @@ var laneDispositions = map[string]laneDisposition{
 	string(executor.KindUpstream):   {probeCannotCure: true, note: "上游失败：执行侧事实"},
 	string(executor.KindBoot):       {probeCannotCure: true, note: "启动失败：成因在该车道装载/启动，GET /v1/models 200 不是反证（T75，beam-free 48/48 被反复选中）"},
 	// 显式登记的「默认处置」类：会进车道账本但没有特殊策略（攒够 maxFail 才冷却、探测可翻案）。
-	string(executor.KindRateLimited):    {note: "瞬时限流：等短窗口即可，由 engine 侧按车道冷却处理，不在这里加长"},
-	string(executor.KindQuotaExhausted): {note: "额度耗尽：同样进车道账本但按 rate_limited 短冷却；长尺度由 engine 的等待预算分级承担（T78）"},
+	string(executor.KindRateLimited):    {stopSwitch: true, note: "瞬时限流：等短窗口即可，由 engine 侧按车道冷却处理，不在这里加长；**换模型无意义**（通道级）"},
+	string(executor.KindQuotaExhausted): {stopSwitch: true, note: "额度耗尽：账号级事实，**换模型同样无意义**（T84 补的正是这一格）；短冷却由车道账本承担，长尺度由 engine 的等待预算分级承担（T78）"},
 	string(executor.KindTransport):      {note: "网络瞬断（fetch failed/ETIMEDOUT 等）：默认处置，探测可翻案 —— 与 isExecutionFailureKind 原集合一致（本表逐项等价）"},
 	string(executor.KindStreamCut):      {note: "流被切断：多为上游抖动，默认处置，探测可翻案（同上，等价性由 lane_disposition_test 钉住）"},
 }
@@ -102,6 +111,13 @@ func laneOneStrike(kind string) (oneStrike bool, minCooldownSec int) {
 		return false, 0
 	}
 	return d.oneStrike, d.minCooldownSec
+}
+
+// laneStopSwitch 回答「这类失败还要不要换下一条模型」（failover 的唯一来源，round 131 · T84）。
+// 未登记的类别返回 false —— 即"默认继续换模型"，由总覆盖守卫保证不会出现漏登记。
+func laneStopSwitch(kind string) bool {
+	d, ok := dispositionOf(strings.TrimSpace(kind))
+	return ok && d.stopSwitch
 }
 
 // laneLongCooldown 回答「这是结构性错误吗，是否直接长冷却不等攒次数」（manager 的唯一来源）。

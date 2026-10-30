@@ -185,9 +185,15 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 		// 只会延长限流窗口（现场限流因此持续 50+ 分钟）。
 		//
 		// 注意：这里**不** MarkFailure —— 健康模型不该因为车道限流被冷却 30 分钟。
-		if kind == string(executor.KindRateLimited) {
+		// 判据改查 laneDispositions 的 stopSwitch 列（round 131 · T84，本会话同族第 7 次）。
+		//
+		// 此前这里是裸字符串 `kind == rate_limited`：后来新增 quota_exhausted（额度耗尽）时
+		// **没人回来改这一行** ⇒ 额度耗尽仍然继续换模型，实测一次任务把整池轮了一遍
+		// （quota_exhausted 的「尝试结束」一批 34 次），而它正是上面注释描述的同一个失效模式：
+		// 账号级失败换模型毫无意义，只会把限流窗口拖长。现在"属不属于限流族"只有一个定义点。
+		if laneStopSwitch(kind) {
 			f.mgr.log(logRecord{Kind: "skip", Model: id, State: kind,
-				Reason: "上游限流，停止换模型（车道级，非模型故障）"})
+				Reason: "限流族失败（车道/账号级），停止换模型"})
 			return lastRes, lastErr
 		}
 	}
