@@ -3,6 +3,7 @@ package engine
 import (
 	"context"
 	"testing"
+	"time"
 
 	"workbench/internal/model"
 )
@@ -12,6 +13,9 @@ import (
 // 「队列有货但无在跑任务」（旧位置读到的 inflight 只是"本 tick 还没 Pop"那一瞬）。
 //
 // 这条判据在修复前必然是红的：旧实现于取件循环之前观测，此处 Len=1、inflight=0 ⇒ 必报。
+//
+// 为什么每次断言前都 WaitInflight：tick 会**异步**起 runOne goroutine，日志与状态都在变动中；
+// 不等就既不确定、也让 `-race`（CI 用 race 跑）更难判。
 func TestSupplyBlockedObservationRunsAfterDispatch(t *testing.T) {
 	e, st, _ := newTestEngine(t)
 	cap := &captureLogs{}
@@ -33,6 +37,9 @@ func TestSupplyBlockedObservationRunsAfterDispatch(t *testing.T) {
 	e.q.Push(got)
 
 	e.tick(context.Background())
+	if !e.WaitInflight(5 * time.Second) {
+		t.Log("在途后台工作 5s 未排空（继续断言）")
+	}
 
 	// 前置断言（防空洞）：这一 tick 必须真的把它取走了 —— 否则下面的"没报警"可能只是 tick 提前返回。
 	if n := e.q.Len(); n != 0 {
@@ -62,6 +69,9 @@ func TestSupplyBlockedObservationFiresWhenNothingDispatchable(t *testing.T) {
 	e.q.Push(got)
 
 	e.tick(context.Background())
+	if !e.WaitInflight(5 * time.Second) {
+		t.Log("在途后台工作 5s 未排空（继续断言）")
+	}
 
 	if n := e.q.Len(); n != 1 {
 		t.Fatalf("前置不成立：非终态中间态不该被剔除，Len=%d want 1（若为 0 说明 T95 的保守面被破坏）", n)
@@ -78,6 +88,9 @@ func TestSupplyBlockedObservationSilentOnEmptyQueue(t *testing.T) {
 	e.SetLogger(newCaptureLogger(t, cap))
 
 	e.tick(context.Background())
+	if !e.WaitInflight(5 * time.Second) {
+		t.Log("在途后台工作 5s 未排空（继续断言）")
+	}
 
 	if hits := cap.find("供料门被挡"); len(hits) != 0 {
 		t.Fatalf("空队列不该报「供料门被挡」，实得 %d 条：\n%s", len(hits), cap.text())

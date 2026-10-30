@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -11,15 +12,31 @@ import (
 )
 
 // captureLogs 是 logging.Handler 的内存实现（面板 /api/logs 同一接口）。
+//
+// 为什么必须带锁（round 140 · CI 实测）：`go test -race` 报
+//
+//	DATA RACE at log_flush_test.go:18 —— Write by captureLogs.Handle / Read by captureLogs.find
+//
+// 触发者是本轮新增的观测点判据：它们调 e.tick()，而 tick 会**异步**起 runOne goroutine，
+// 那些 goroutine 在测试读 cap 的同时还在写日志。日志器本身是并发安全的（生产要求），
+// 是**这个测试替身**没按 Handler 的契约做成并发安全 —— 契约错在测试件这边，修这里。
 type captureLogs struct {
+	mu   sync.Mutex
 	recs []logging.Record
 }
 
-func (c *captureLogs) Handle(rec logging.Record) { c.recs = append(c.recs, rec) }
+func (c *captureLogs) Handle(rec logging.Record) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.recs = append(c.recs, rec)
+}
 
 func (c *captureLogs) text() string {
+	c.mu.Lock()
+	snap := append([]logging.Record(nil), c.recs...)
+	c.mu.Unlock()
 	var b strings.Builder
-	for _, r := range c.recs {
+	for _, r := range snap {
 		b.WriteString(r.Level)
 		b.WriteString(" ")
 		b.WriteString(r.Message)
@@ -37,8 +54,11 @@ func (c *captureLogs) text() string {
 }
 
 func (c *captureLogs) find(sub string) []logging.Record {
+	c.mu.Lock()
+	snap := append([]logging.Record(nil), c.recs...)
+	c.mu.Unlock()
 	out := []logging.Record{}
-	for _, r := range c.recs {
+	for _, r := range snap {
 		if strings.Contains(r.Message, sub) {
 			out = append(out, r)
 		}
