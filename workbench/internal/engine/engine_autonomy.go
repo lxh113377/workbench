@@ -157,7 +157,13 @@ func (e *Engine) supplyAutonomous(ctx context.Context, cfg config.Config) bool {
 			return false
 		}
 	}
-	recent := recentTitles(allTasks, 30)
+	// round 127 · T82：供料侧改用含「同目标未交付草案」的集合，否则轮转计数器不前进 ⇒ 恒定标题被连拒。
+	// 目标 id 在 154 行附近已取到（activeGoal）；无活跃目标时传空串，行为退化成只看 Done。
+	supplyGoalID := ""
+	if activeGoal != nil {
+		supplyGoalID = activeGoal.ID
+	}
+	recent := supplyRecentTitles(allTasks, supplyGoalID, 30)
 	draft, goal, ok := e.autonomy.NextTask(recent, e.lastCompletedTask())
 	if !ok || goal == nil {
 		// 目标完成/阻塞/预算耗尽：交由模板链路兜底，保证工作台仍有产出。
@@ -526,6 +532,39 @@ func (e *Engine) logRejectBreakerOnce(goalID string, streak int) {
 	msg := fmt.Sprintf("自主规划熔断：目标 %s 连续 %d 条草案被评估拒绝，暂停规划（等待评估口径修复或人工介入）", goalID, streak)
 	e.log.Warn("自主规划熔断", "goalId", goalID, "streak", streak)
 	e.emitEvent(model.Event{Type: "warn", At: now, Msg: msg})
+}
+
+// supplyRecentTitles 是给「自主供料」用的 Recent 集合（round 127 · T82）。
+//
+// 为什么不能直接用 recentTitles（只取 Done）——现场（2026-10-30 07:08→08:34）：
+// 目标阶段 2 的标题是 `小步修（正确性/第1轮）`，planner 的轮转号取自 ctx.Recent 里
+// 「小步修（」出现的次数（planner.go 里我自己在注释写着「含被拒草案」）。
+// 但 recentTitles 只收 State==Done ⇒ 一条从未交付成功的阶段（当前 c-done=2/阈值更高），
+// 计数器**永远为 0** ⇒ 每次规划都算出同一个标题 ⇒ evaluator 按精确指纹判重连拒，
+// 触发拒绝熔断 ⇒ 实测 07:08/07:48/08:22 各只放出 1 条、08:34 又连拒 5 次（约 35 分钟一个循环）。
+//
+// 口径：Done 照旧（不限目标），再补**同目标**的未交付草案（candidate/evaluating/rejected/
+// approved/queued/running）—— 只补同目标是因为轮转号属于该目标的阶梯进度，跨目标会互相污染。
+// 判重不受此处影响：evaluator 用的是它自己的 e.recent 缓存（含 Delivered 语义），两套集合不混用。
+func supplyRecentTitles(all []*model.Task, goalID string, limit int) []string {
+	if limit <= 0 {
+		limit = 20
+	}
+	out := make([]string, 0, limit)
+	for i := len(all) - 1; i >= 0 && len(out) < limit; i-- {
+		t := all[i]
+		if t == nil {
+			continue
+		}
+		if t.State == model.StateDone {
+			out = append(out, t.Title)
+			continue
+		}
+		if goalID != "" && t.GoalID == goalID && strings.TrimSpace(t.Title) != "" {
+			out = append(out, t.Title)
+		}
+	}
+	return out
 }
 
 // recentTitles 取最近 limit 条已完成任务标题（防重复规划）。
