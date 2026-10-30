@@ -712,13 +712,21 @@ func (m *Manager) ApplyProbe(results []ProbeResult) ProbeSummary {
 	m.lastProbe = summary
 	m.cycle++
 	m.syncSpecStateLocked()
+	// 出口拓扑在**持锁期间**算好（721 行那次 m.log 已在 Unlock 之后，届时不能再裸读 m.specs）。
+	// 为什么要记它（round 132 · P0-2 更正）：实测本机池内 38 条车道的 baseUrl 全部是
+	// http://127.0.0.1:8326/v1 —— 一个明文回环出口。原先这个事实只写在 failover.go 的注释里，
+	// 而那条注释的前提（“各车道走不同网络路径”）在本部署下是**假的**，
+	// 据此做的归因（transport_failed 算到单条车道头上、逐条冷却）会把一个出口级故障摊成整池故障。
+	// 能算的就别靠注释说：把出口数放进每轮都有的低频摘要里，拓扑一旦变化立刻可见。
+	specCount := len(m.specs)
+	egressCount := len(egressGroups(m.specs, m.gatewayBase))
 	pending := m.drainPendingLocked()
 	m.mu.Unlock()
 	for _, rec := range pending {
 		m.log(rec)
 	}
 	m.persist()
-	m.log(logRecord{Kind: "probe-cycle", Reason: fmt.Sprintf("本轮探测 %d 个：可用 %d / 下线 %d / 未知 %d", summary.Total, summary.OK, summary.Down, summary.Unknown)})
+	m.log(logRecord{Kind: "probe-cycle", Reason: fmt.Sprintf("本轮探测 %d 个：可用 %d / 下线 %d / 未知 %d ｜池 %d 条车道共用 %d 个出口", summary.Total, summary.OK, summary.Down, summary.Unknown, specCount, egressCount)})
 	m.NotifyRoutes()
 	return summary
 }
