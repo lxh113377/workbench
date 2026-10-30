@@ -58,10 +58,46 @@ func (e *Engine) scheduleRepair(task *model.Task, rep *model.VerifyReport, workD
 	} else {
 		e.log.Warn("返工入队失败", "taskId", task.ID, "err", err.Error())
 	}
+	// 体积画像（round 137 · T91 第一步：先可观测，再谈阈值）。
+	//
+	// 为什么要它：实测某轮返工 prompt 689,618 B，其中「上一版产出」段占 687,472 B（99.7%），
+	// 而本会话刚修的「原始任务」嵌套只占 1,533 B —— 主要矛盾不在我上一轮修的地方。
+	// 决定"单文件截断阈值该取多少"需要**分布数据**，不能拍脑袋：所以我上一轮登记的
+	// 「复用 artifact.Limits.MaxFileBytes」也被实测否证了 —— 它默认 2<<20 = 2MB，
+	// 对这里 271KB 量级的大文件根本不会触发（见 repairSizeProfile 注释与 T91）。
+	prof := repairSizeProfile(prev, newPrompt)
 	e.log.Warn("排入返工", "taskId", task.ID, "round", round,
-		"reason", truncateRunes(failReasonOf(rep), 200))
+		"reason", truncateRunes(failReasonOf(rep), 200),
+		"promptBytes", prof.total, "prevBytes", prof.prevTotal, "prevFiles", len(prev),
+		"largestFile", prof.largestPath, "largestBytes", prof.largest)
 	e.emitEvent(model.Event{Type: "warn", At: model.Now(), TaskID: task.ID,
 		Msg: fmt.Sprintf("第 %d 轮返工：%s", round, truncateRunes(failReasonOf(rep), 160))})
+}
+
+// repairSizeProfile 统计返工 prompt 的体积构成，用于决定截断阈值（T91）。
+//
+// 口径为什么是 prev 的**原始 body 长度**而不是"解析渲染后的 markdown 段"：
+// 我上一轮用正则去抠 ```file: 段，结果被嵌套内容里的同名围栏截断（算出 278,403 B，
+// 而真实段是 687,472 B）⇒ 解析式测量在"被测物自己含分隔符"时不可信。
+// prev 就是即将被嵌进去的那些 body，量它的原始字节数不需要解析，因此没有这个失效模式。
+type sizeProfile struct {
+	total       int // 整份返工 prompt 的字节数
+	prevTotal   int // 全部「上一版产出」body 的字节合计
+	largest     int // 最大单个文件的字节数
+	largestPath string
+}
+
+func repairSizeProfile(prev []artifactFile, newPrompt string) sizeProfile {
+	p := sizeProfile{total: len(newPrompt)}
+	for _, f := range prev {
+		n := len(f.Body)
+		p.prevTotal += n
+		if n > p.largest {
+			p.largest = n
+			p.largestPath = f.Path
+		}
+	}
+	return p
 }
 
 // mustJSONBytes 序列化为缩进 JSON（失败时返回占位串，不影响主流程）。
