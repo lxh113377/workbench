@@ -140,12 +140,25 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 		//   - 环境性：timeout / upstream_failed / stalled。
 		// bad_exit（尤其「无最终答案」）往往是任务/提示词层面的问题，
 		// 把它算到模型头上会让整池在几分钟内被打入长冷却（现场 6 个模型同时 down）。
+		// writeBackKind 是「要写回 res.ErrorKind 的类别」：默认就是 judge 判出的 kind，
+		// 但补偿命中时要换成补偿后的类别（T98，见下）。
+		writeBackKind := kind
 		if modelAttributable(kind) {
 			f.mgr.MarkFailure(id, kind, detail)
 		} else if atKind, hit := bootAttributionKind(kind, detail); hit {
 			// 上游原文写明「这条出口不服务该模型」⇒ 按 not_served 记：MarkFailure 对该类别一击即冷却 + 长冷却，
 			// 且探测**不得**把它治回（它是出口级事实，不是端点连通性问题）——round 33 T17② 归因被探测抵消的教训（T17②-b）。
 			f.mgr.MarkFailure(id, atKind, detail)
+			// 台账也要说 not_served（round 144 · T98）。
+			//
+			// 现场（agent 根全量扫 attempts.jsonl）：kind=boot_failed 共 191 行，其中 **190 行的 error 正文**是
+			//   `dsh: SERVER: our free model does not serve "combo:auto-free" on this egress`
+			// —— 即 99.5% 的「启动失败」桶装的其实是"这条出口不服务该模型"。行为侧早已纠正
+			//（MarkFailure 记的是 not_served：一击 + 1800s 冷却），但**显示侧没有**：
+			// res.ErrorKind 仍是非空的 boot_failed，下面那段写回逻辑只在"空值"时才填，于是面板/台账/报告读者
+			// 看到的都是「启动失败」，排查方向被带偏（本会话我自己就被这个桶误导过一次）。
+			// 与 2026-10-19 那次修的是**同一条兜底**，只是当时只覆盖了"ErrorKind 为空"的形态。
+			writeBackKind = atKind
 		} else {
 			f.mgr.log(logRecord{Kind: "skip", Model: id, State: kind,
 				Reason: "任务级失败，不计入模型健康度: " + trim(detail, 160)})
@@ -167,8 +180,10 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 		if res == nil {
 			res = &executor.Result{}
 		}
-		if strings.TrimSpace(res.ErrorKind) == "" {
-			res.ErrorKind = kind
+		if strings.TrimSpace(res.ErrorKind) == "" || writeBackKind != kind {
+			// 两种情形都要写：① 上游没给类别（原逻辑）；
+			// ② 补偿把类别改准了（T98）—— 此时即便原值非空也要覆盖，否则台账继续显示错误的类别。
+			res.ErrorKind = writeBackKind
 		}
 		lastRes, lastErr = res, err
 		// 推进 from：下一次切换是「从当前这个失败模型」换走，
