@@ -147,6 +147,21 @@ func (q *Queue) Pop() *model.Task {
 	}
 	q.sortTasks(list)
 	for _, t := range list {
+		// 终态残留顺手剔除（round 139 · T95，由独立复核的代码面取证指出）。
+		//
+		// 现场机制（不是推测，读代码即得）：Len() 计的是**全部条目**（queue.go:28），
+		// 而 Pop 对"非 queued"只 continue 不删除 ⇒ 一旦某个已入队的任务被别处改成终态
+		//（Remove 只有 CancelTask 一处调用，engine.go:2059），它就永久留在 items 里：
+		//   · 永远取不走（状态不符）；
+		//   · 却让 q.Len() 恒 > 0 ⇒ engine.go:835 的 `q.Len()==0` 供料门被**永久关死**，
+		//     自主规划与模板补货同时停摆，直到下次重启。
+		// 只剔终态（IsTerminal）而不剔"非 queued 的其它状态"是刻意保守：
+		// approved→queued 的中间态还在状态迁移路上，删了会让它永远不被派发。
+		// 剔除发生在 Pop 里 ⇒ 最迟下一 tick（3 秒）Len 就恢复真实，供料门随之打开。
+		if t.State.IsTerminal() {
+			delete(q.items, t.ID)
+			continue
+		}
 		if t.State != model.StateQueued {
 			continue
 		}
