@@ -718,7 +718,11 @@ func (m *Manager) ApplyProbe(results []ProbeResult) ProbeSummary {
 	// 而那条注释的前提（“各车道走不同网络路径”）未经核实 ⇒ 把能算的东西写成不可核对的断言。
 	// 注意执行面另有一条路（dsh 子进程自己选上游，见 egress.go 的适用面），
 	// 所以 transport_failed 该逐车道冷却还是整池熔断，要先取证执行面的占比（T86），不在此处下结论。
-	// 能算的就别靠注释说：把出口数放进每轮都有的低频摘要里，拓扑一旦变化立刻可见。
+	// 能算的就别靠注释说：把端点数放进每轮都有的低频摘要里，拓扑一旦变化立刻可见。
+	// 措辞刻意写「探测面 … → 网关端点」而不是「共用一个出口」（round 133 · T87）：
+	// 上一轮我自己就被"共用一个出口"这种写法误导过 —— 它读起来像"整机只有一条出网路",
+	// 而 egressKey 算的只是 spec.baseUrl 那一面；执行面由 dsh 子进程自连上游（见 egress.go 的适用面声明）。
+	// 文案要标明自己属于哪一面，否则下一个读日志的人会重犯我的错。
 	specCount := len(m.specs)
 	egressCount := len(egressGroups(m.specs, m.gatewayBase))
 	pending := m.drainPendingLocked()
@@ -727,7 +731,7 @@ func (m *Manager) ApplyProbe(results []ProbeResult) ProbeSummary {
 		m.log(rec)
 	}
 	m.persist()
-	m.log(logRecord{Kind: "probe-cycle", Reason: fmt.Sprintf("本轮探测 %d 个：可用 %d / 下线 %d / 未知 %d ｜池 %d 条车道共用 %d 个出口", summary.Total, summary.OK, summary.Down, summary.Unknown, specCount, egressCount)})
+	m.log(logRecord{Kind: "probe-cycle", Reason: fmt.Sprintf("本轮探测 %d 个：可用 %d / 下线 %d / 未知 %d ｜探测面 %d 条车道 → %d 个网关端点", summary.Total, summary.OK, summary.Down, summary.Unknown, specCount, egressCount)})
 	m.NotifyRoutes()
 	return summary
 }

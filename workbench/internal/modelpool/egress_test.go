@@ -78,8 +78,13 @@ func TestSharesOneEgressOnRealPoolShape(t *testing.T) {
 // probe-cycle 摘要必须同时带车道数与出口数 —— 只有车道数就看不出"是不是同一个出口"。
 func TestProbeCycleCarriesEgress(t *testing.T) {
 	src := readOwnManagerSource(t)
-	if !containsAll(src, "egressCount := len(egressGroups(m.specs, m.gatewayBase))", "共用 %d 个出口") {
-		t.Fatal("probe-cycle 摘要不再携带出口数 ⇒ 出口级故障会被误当成单车道问题（P0-2 的教训）")
+	if !containsAll(src, "egressCount := len(egressGroups(m.specs, m.gatewayBase))", "探测面 %d 条车道 → %d 个网关端点") {
+		t.Fatal("probe-cycle 摘要不再携带端点数 ⇒ 拓扑重新不可见（P0-2 的教训）")
+	}
+	// 措辞必须自带适用面（T87）：写「共用一个出口」会让人以为整机只有一条出网路，
+	// 而这里算的只是探测面 —— 执行面在 dsh 侧。上一轮我就被自己的文案误导过。
+	if strings.Contains(src, "\"｜池 %d 条车道共用 %d 个出口\"") {
+		t.Fatal("摘要措辞退回到「共用一个出口」⇒ 未标明适用面，会再次诱导跨面嫁接")
 	}
 	// 真正的不变量是**顺序**：egressCount 计算 → 恰好一次 Unlock → probe-cycle 日志。
 	// 即"在锁内算、在锁外写日志"（m.log 落在 Unlock 之后，届时若还去读 m.specs 就是数据竞争）。
@@ -116,6 +121,7 @@ func TestTopologyPremiseNotAssumedInComments(t *testing.T) {
 			t.Fatalf("读不到 %s：%v（判据失去对照面，判红而非跳过）", f, err)
 		}
 		if strings.Contains(string(b), "同池其他车道的网络路径不同") {
+			_ = strings.Contains
 			t.Errorf("%s 又出现「同池其他车道的网络路径不同」这句未核实的拓扑假设 ⇒ 必须改用 egressKey/egressGroups 算出来的事实", f)
 		}
 	}
