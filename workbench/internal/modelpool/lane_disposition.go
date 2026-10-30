@@ -41,6 +41,14 @@ type laneDisposition struct {
 	// 实测「尝试结束」里 quota_exhausted 一批 34 次，全是一次任务的多车道轮转。
 	// 所以「属不属于限流族」这件事只能有一个定义点，不能 engine 一份、failover 一份。
 	stopSwitch bool
+	// scopeByFingerprint = true 表示「这一类失败的层面（出口级 / 车道级）」**光看 Kind 分不出来**，
+	// 必须读上游正文指纹才能定（round 134 · T86）。
+	//
+	// 为什么这一列也必须进表（本会话同族第 8 次的预防）：egressScoped 如果自己去比
+	// kind == transport_failed 这类常量，就又造了一份"哪些 Kind 需要按正文分档"的私有清单，
+	// 将来新增网络形态的类别时只会改一处 ⇒ 另一处静默失效（T80/T84 同一个病）。
+	// 现在只有这张表能回答"要不要按正文定层面"。
+	scopeByFingerprint bool
 	// note 记录「为什么是这个处置」，让下一个改代码的人不必重新考古。
 	note string
 }
@@ -73,8 +81,8 @@ var laneDispositions = map[string]laneDisposition{
 	// 显式登记的「默认处置」类：会进车道账本但没有特殊策略（攒够 maxFail 才冷却、探测可翻案）。
 	string(executor.KindRateLimited):    {stopSwitch: true, note: "瞬时限流：等短窗口即可，由 engine 侧按车道冷却处理，不在这里加长；**换模型无意义**（通道级）"},
 	string(executor.KindQuotaExhausted): {stopSwitch: true, note: "额度耗尽：账号级事实，**换模型同样无意义**（T84 补的正是这一格）；短冷却由车道账本承担，长尺度由 engine 的等待预算分级承担（T78）"},
-	string(executor.KindTransport):      {note: "网络瞬断（fetch failed/ETIMEDOUT 等）：默认处置，探测可翻案 —— 与 isExecutionFailureKind 原集合一致（本表逐项等价）"},
-	string(executor.KindStreamCut):      {note: "流被切断：多为上游抖动，默认处置，探测可翻案（同上，等价性由 lane_disposition_test 钉住）"},
+	string(executor.KindTransport):      {scopeByFingerprint: true, note: "网络瞬断（fetch failed/ETIMEDOUT 等）：默认处置，探测可翻案 —— 与 isExecutionFailureKind 原集合一致（本表逐项等价）；但同一 Kind 里混着出口级（证书链）与车道级（对端超时），须按正文分档（T86）"},
+	string(executor.KindStreamCut):      {scopeByFingerprint: true, note: "流被切断：多为上游抖动，默认处置，探测可翻案（同上，等价性由 lane_disposition_test 钉住）；实测 45.1% 与他车道成功共存 ⇒ 多数是车道级，只有指纹命中才升为出口级（T86）"},
 }
 
 // engineOnlyKinds 是「设计上不经车道健康账本」的类别：它们是引擎自己的终态判定或任务级失败，
@@ -111,6 +119,13 @@ func laneOneStrike(kind string) (oneStrike bool, minCooldownSec int) {
 		return false, 0
 	}
 	return d.oneStrike, d.minCooldownSec
+}
+
+// laneScopeByFingerprint 回答「这类失败要不要按上游正文定层面」（T86 的唯一来源）。
+// 未登记的类别返回 false ⇒ 默认按车道级处置（保守：漏判只多试几条车道，误判会熔掉整池健康车道）。
+func laneScopeByFingerprint(kind string) bool {
+	d, ok := dispositionOf(strings.TrimSpace(kind))
+	return ok && d.scopeByFingerprint
 }
 
 // laneStopSwitch 回答「这类失败还要不要换下一条模型」（failover 的唯一来源，round 131 · T84）。

@@ -196,6 +196,19 @@ func (f *FailoverRunner) Run(ctx context.Context, task *model.Task, modelID stri
 				Reason: "限流族失败（车道/账号级），停止换模型"})
 			return lastRes, lastErr
 		}
+		// 出口级网络失败也停止换模型（round 134 · T86 第一档）。
+		//
+		// 判据是并行取证 + 我独立复算两条通路一致的结果（报告 E12）：证书链类失败与
+		// 「他车道同窗成功」的共存率 = 0/1799 = 0.0% ⇒ 整条出口都不通，换模型只会把
+		// 池里每条车道都白试一遍（实测一次任务轮遍 32 条车道）。
+		// 代价不对称决定了方向：这里"早停"最坏是少试几条车道，而"该停不停"会熔掉 21~33 条
+		// 健康车道 ⇒ 只把**出口级指纹命中**的升档，stream_cut 一类（45.1% 与成功共存）保持原样。
+		// 判定仍走表（scopeByFingerprint），不在这里比 Kind 常量。
+		if egressScoped(kind, detail) {
+			f.mgr.log(logRecord{Kind: "skip", Model: id, State: kind,
+				Reason: "出口级网络失败（正文指纹命中），停止换模型"})
+			return lastRes, lastErr
+		}
 	}
 	// 整链失败后返回：必须保证「失败信号」与「失败类别」同时可见（2026-10-19 现场）。
 	//
