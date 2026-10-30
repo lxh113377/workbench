@@ -3,6 +3,7 @@ package engine
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"workbench/internal/config"
 	"workbench/internal/executor"
@@ -31,6 +32,11 @@ func (e *Engine) scheduleRepair(task *model.Task, rep *model.VerifyReport, workD
 	_ = e.store.SaveTaskArtifact(task.ID, fmt.Sprintf("verify-round-%d.json", round), mustJSONBytes(rep))
 
 	if _, err := e.store.Update(task.ID, func(t *model.Task) error {
+		// 首轮返工时登记原文：此刻 task.Prompt 仍是用户/模板/规划器给的原始要求，没被返工污染。
+		// 只写一次 —— 后续轮次保留首轮那份，供 repairPrompt 嵌「### 原始任务」用（T90）。
+		if round == 1 && strings.TrimSpace(t.OriginalPrompt) == "" {
+			t.OriginalPrompt = task.Prompt
+		}
 		t.Prompt = newPrompt
 		t.RepairRounds = round
 		t.Verify = rep

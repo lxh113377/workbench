@@ -236,6 +236,17 @@ type Task struct {
 	// Verify 是真实执行的验收报告（P3）。Verified 为 true 才计入"今日产出"。
 	Verify   *VerifyReport `json:"verify,omitempty"`
 	Verified bool          `json:"verified"`
+	// OriginalPrompt 是任务最初的 prompt 原文，专给返工环用（round 136 · T90）。
+	//
+	// 为什么必须单独存一份（实测缺陷）：返工 prompt 会嵌入「### 原始任务」段，而它读的是 task.Prompt；
+	// 可 scheduleRepair 又把新 prompt 写回 task.Prompt ⇒ 第 2 轮的「原始任务」里装着第 1 轮的
+	// 整份返工 prompt（含上一版产出全文），于是体积**按轮数翻倍**。实测同一任务
+	// task-1793335397343-30a：prompt.repair-1.md = 675KB → prompt.repair-2.md = 1,347KB（其原始任务
+	// 是一份 331KB 的审查报告）。嵌套还让模型在同一 prompt 里看到同一份文件的两份副本，
+	// 返工质量与成本同时变差。
+	// 空值表示「未记录」（本字段上线前的旧任务）：此时回退用 task.Prompt，行为与改造前一致，
+	// 不会把「原始任务」变成空段 —— 宁可维持旧缺陷，也不引入新缺陷。
+	OriginalPrompt string `json:"originalPrompt,omitempty"`
 	// RepairRounds 记录已返工轮数（验收失败回灌重做）。
 	RepairRounds int `json:"repairRounds,omitempty"`
 	// PlanRounds 记录已"重新规划"轮数（方案层面错了，重出方案再执行）。

@@ -35,7 +35,10 @@ func repairPrompt(task *model.Task, prevFiles []artifactFile, rep *model.VerifyR
 	b.WriteString("你上一次的产出没有通过工作台的真实验收。请只修正导致失败的问题，\n")
 	b.WriteString("然后重新输出完整的产物块（不是 diff，是整个文件）。\n\n")
 	b.WriteString("### 原始任务\n")
-	b.WriteString(task.Prompt)
+	// 必须取原文而不是 task.Prompt（round 136 · T90）：task.Prompt 在上一轮返工时已被换成
+	// 返工 prompt，嵌它会让「原始任务」里再套一份完整返工 prompt（含上一版产出全文），
+	// 体积按轮数翻倍（实测同一任务 675KB → 1,347KB）。
+	b.WriteString(originalPromptOf(task))
 	b.WriteString("\n\n### 验收失败的证据\n")
 	if rep == nil {
 		// 无产物块是最常见的「没交」形态（弱车道只吐自家 tool-call 语法）：
@@ -83,6 +86,18 @@ func repairPrompt(task *model.Task, prevFiles []artifactFile, rep *model.VerifyR
 }
 
 // readPrevArtifacts 读取任务 workspace 里已有的产物文件（用于返工回填）。
+// originalPromptOf 取任务最初的 prompt：有记录用记录；没记录（字段上线前的旧任务）回退 task.Prompt。
+// 回退是刻意的 —— 把「原始任务」留空会让返工 prompt 丢掉任务本身，那比维持旧缺陷更糟。
+func originalPromptOf(task *model.Task) string {
+	if task == nil {
+		return ""
+	}
+	if s := strings.TrimSpace(task.OriginalPrompt); s != "" {
+		return task.OriginalPrompt
+	}
+	return task.Prompt
+}
+
 func readPrevArtifacts(workDir string, limit int) []artifactFile {
 	produced, names, err := collectOutputs(workDir)
 	if err != nil {
