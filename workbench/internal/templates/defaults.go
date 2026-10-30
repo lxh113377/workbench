@@ -35,7 +35,9 @@ func mkSpec(format string, sections []string, minWords, minBytes int) spec {
 //
 // 为什么在构造器单点注入而不是逐条改 prompt：模板库有近 30 条，手改必漏（本轮就是被审计逮到的）；
 // 单点注入 + `TestBuiltinMdTemplatesCarryDeliverableGate` 契约测试，才能保证「模板库整体与门禁同口径」不会再次漂移。
-const deliverableGateClause = "\n\n## 交付物门禁（硬性，与引擎判据同口径）\n" +
+// 标题前缀取 model.DeliverableGateMarker：引擎侧的交付物判定（T88）读的就是这个前缀。
+// 在这里写死字面量会让「注入侧改了、判定侧不知道」成为可能（本会话同族病的标准形态）。
+const deliverableGateClause = "\n\n" + model.DeliverableGateMarker + "（硬性，与引擎判据同口径）\n" +
 	"1. 交付物是**文件**不是聊天正文：按产物协议输出产物块，把报告写到 `docs/` 下（例：`docs/五轴审查-<主题>.md`）。\n" +
 	"2. 报告必须含三节，标题逐字一致：`## 结论`、`## 证据`、`## 门禁建议`。\n" +
 	"3. 「证据」节每条都要带 **文件:行号** 或一条**可复跑命令**；禁止「经检查」「可以发现」这类无证据表述。\n" +

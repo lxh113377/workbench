@@ -337,7 +337,8 @@ func (p *Planner) Plan(ctx PlanContext) []Draft {
 // 本条款把自主任务拉回「报告文件 + 内容判据」这条两类车道都做得动的窄路，并**顺带对齐目标要求**：
 // 报告落在 docs/（指定地点）、含结论/证据/门禁建议三节、证据带 file:line、可直接贴 PR。
 // 措辞复用产物协议第 4 条已由 live 证明有效的「.md 成果文件 + 原样命令」范式。
-const autonomyDeliverableGate = "\n\n## 交付物门禁（硬性）\n" +
+// 标题前缀同样取 model.DeliverableGateMarker（与 templates 注入侧、引擎判定侧同源，见该常量注释）。
+const autonomyDeliverableGate = "\n\n" + model.DeliverableGateMarker + "（硬性）\n" +
 	"1. 交付物是**文件**不是聊天正文：按上面的产物协议输出产物块，把报告写到 docs/ 下的 .md\n" +
 	"   （例：docs/五轴审查-<主题>.md）。\n" +
 	"2. 报告必须含三节，标题逐字一致：`## 结论`、`## 证据`、`## 门禁建议`。\n" +

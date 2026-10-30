@@ -163,6 +163,15 @@ func (e *Engine) materializeArtifacts(task *model.Task, finalText, taskDir strin
 			out.FailReason = "交付物落点不符：" + strings.Join(loc, "；")
 			e.log.Warn("自称报告的交付物未落 docs/，不计数为通过", "taskId", task.ID, "problems", strings.Join(loc, "；"))
 		}
+		// 交付物类型门禁（round 135 · T88）：被要求交报告（prompt 含引擎自己注入的交付物门禁），
+		// 却一个 .md 都没交 ⇒ 不算通过。现场有 3 条 pass=true 的任务只交了 explore.py：
+		// 模型在 manifest 里自报验收命令（`python explore.py`），跑通即 pass ⇒ 计数在涨而目标要的
+		// 五轴分级报告一条也没产出（E12）。同样只在「已通过」时降级（不许偷换真实失败原因）。
+		if kind := deliverableKindProblems(task.Prompt, res.Files); len(kind) > 0 {
+			out.Pass = false
+			out.FailReason = "交付物类型不符：" + strings.Join(kind, "；")
+			e.log.Warn("被要求交报告却未交任何 .md，不计数为通过", "taskId", task.ID, "problems", strings.Join(kind, "；"))
+		}
 	}
 	_ = config.WriteJSONAtomic(filepath.Join(taskDir, "verify.json"), out)
 	if out.Pass {
