@@ -30,6 +30,17 @@ func TestLaneCooldownKindNotHardcoded(t *testing.T) {
 	if !strings.Contains(body, "laneKind = string(executor.KindQuotaExhausted)") {
 		t.Fatal("缺少「本轮是额度耗尽则改写 laneKind」的分支：账本前缀会永远停在 rate_limited")
 	}
+	// 台账写入点同样不得写死（round 126 · T81 第一块砖）：此前限流路径的 AppendAttempt
+	// 把 Kind 写死成 rate_limited，于是额度耗尽的尝试在台账里全被记成限流 ⇒
+	// 面板「免费额度耗尽」这一类恒为 0，按 kind 做的统计/告警全部失真。
+	// 普查结论（7 处台账 Kind 实参）：plan/done 是旁路名单里的台账种类、
+	// cancelKind/kind/waitKind 都是变量 —— 字面量写死只有这一处，已修。
+	if !strings.Contains(body, "Model: actualModel, Kind: waitKind,") {
+		t.Fatal("限流台账的 Kind 又被写死：面板按 kind 的统计会失真（额度耗尽恒为 0）")
+	}
+	if strings.Contains(body, "Model: actualModel, Kind: string(executor.KindRateLimited),") {
+		t.Fatal("限流台账仍在写死 rate_limited（应与分级预算共用同一个 waitKind）")
+	}
 	// 记账调用不得同时携带写死的 rate_limited 实参
 	i := strings.Index(body, "e.router.CooldownByLane(lane,")
 	if i < 0 {

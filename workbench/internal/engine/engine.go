@@ -1208,8 +1208,17 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 			}
 			// 限流退回队列这条也要带取证三件套：它是**最常见**的台账行之一，缺了它「哪次经 DSH 无头跑过」就查不全。
 			stderrPath, producedRunes, dshCommand := attemptEvidence(res)
+			//
+			// 台账与分级预算共用**同一个** waitKind（round 126 · T81 第一块砖）：此前这里把 Kind 写死成
+			// KindRateLimited，而真实类别要到下面 requeue 前才取（waitKind）——于是额度耗尽的尝试在台账里
+			// 全部记成 rate_limited ⇒ 面板「免费额度耗尽」这一类恒为 0、按 kind 做的统计与告警全部失真。
+			// 进到这里说明确属限流族（isRateLimited 已把 quota_exhausted 收进来），故空值才回落到 rate_limited。
+			waitKind := string(res.ErrorKind)
+			if waitKind == "" {
+				waitKind = string(executor.KindRateLimited)
+			}
 			e.store.AppendAttempt(store.AttemptRecord{
-				TaskID: task.ID, Attempt: attempt, Model: actualModel, Kind: string(executor.KindRateLimited),
+				TaskID: task.ID, Attempt: attempt, Model: actualModel, Kind: waitKind,
 				Action: "requeue", ElapsedMs: elapsed.Milliseconds(),
 				// T51：runErr 在这条路径上常为 nil（执行器退出码 0 但被判限流），
 				// 旧写法只拼 runErr ⇒ 台账留下 `error=" | lane=…"` 这种「有 lane、没原因」的空壳。
@@ -1222,8 +1231,7 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 			//
 			// round 101-112 · T78：这里把**本轮分类**传进去 —— 额度耗尽走更长的等待预算（quotaWaitBudget），
 			// 否则「要账号侧动作、小时级恢复」的额度问题会在 20 分钟内把每条任务都判死（7×24 下等于一条不留）。
-			// kind 取自 res.ErrorKind（executor 具名分类写回），不在这里猜上游。
-			waitKind := string(res.ErrorKind)
+			// kind 复用上面同一个 waitKind（台账与预算同源，不再各取一次 —— 避免两处口径漂移）。
 			if waitKind == string(executor.KindQuotaExhausted) {
 				e.log.Warn("免费额度耗尽：任务改走长等待预算", "taskId", task.ID, "budget", quotaWaitBudget)
 			}
