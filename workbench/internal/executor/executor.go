@@ -771,6 +771,24 @@ func quotaExhaustedText(lower string) bool {
 }
 
 func classify(stderr string, res *Result) Kind {
+	// 额度耗尽必须排在**结构化 rate_limited 短路之前**（round 144 · T100）。
+	//
+	// 现场量化（agent 根全量扫 attempts.jsonl）：**114 行** kind=rate_limited 的 error 正文其实是
+	//   `RATE_LIMIT: Sign up for free to continue and explore 500 other models. Takes 2 minutes to sign up.`
+	// —— 它带 `RATE_LIMIT:` 前缀，于是上游的结构化字段先被定性成 rate_limited；
+	// 而下面那句 `if res.ErrorKind == rate_limited { return rate_limited }` 会在**额度原文判定之前**生效，
+	// 把账号级事实（额度用完、要账号侧动作）降级成瞬时限流：短冷却、还会被当成"这个模型不行"的可归因失败。
+	//
+	// 这与下方注释里写明的次序原则（"额度耗尽…必须先于下面的通用限流判定"）本是一件事，
+	// 只是结构化短路把它破掉了 —— 本轮把次序补回来：**专有措辞 > 结构化外壳 > 通用限流词**。
+	quotaProbe := strings.ToLower(stderr)
+	if res != nil {
+		// 文本可能只落在 res.LastError（结构化字段与 stderr 都可能缺一侧，见 pure.go 的双通道分类）。
+		quotaProbe += "\n" + strings.ToLower(res.LastError)
+	}
+	if quotaExhaustedText(quotaProbe) {
+		return KindQuotaExhausted
+	}
 	// 429 必须先判：现场实测 429 的文本里带 "dsh: RATE_LIMIT"，
 	// 若不前置，会被下面的 dsh: 分支吞成 boot_failed —— 于是引擎把它当模型故障，
 	// 8 路并发 x 失败即换模型，一分钟打爆车道（2026-10-19 事故根因）。
@@ -778,7 +796,7 @@ func classify(stderr string, res *Result) Kind {
 		return KindRateLimited
 	}
 	lower := strings.ToLower(stderr)
-	// 额度耗尽与瞬时限流同族但处置不同 —— 必须先于下面的通用限流判定（round 91 · T76）。
+	// 额度耗尽与瞬时限流同族但处置不同（round 91 · T76）。
 	//
 	// 判据用**原文特征**而不是「429」：两条原文本身就是上游给出的恢复条件说明书，
 	// 而 `too many requests; retry later` 是真正的瞬时抖动。只认「429/rate_limit」会把两者混为一谈，
