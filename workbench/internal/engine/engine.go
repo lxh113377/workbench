@@ -2086,6 +2086,18 @@ func (e *Engine) RetryTask(id string) error {
 	}
 	if _, err := e.store.Update(id, func(x *model.Task) error {
 		x.Attempts = 0
+		// 必须同时复位池等待计数与已授予的预算（round 139 · 独立复核指出，本轮修）。
+		//
+		// 现场病灶：任务因 `模型池重投次数到顶，判死以解锁自主供料` 失败时，事件里明写
+		// 「可在面板重试」，但旧实现只清 Attempts/Error ⇒ PoolWaits 仍停在封顶值（如 48）、
+		// PoolWaitCeil 也仍是 48，于是下一次池不可用事件里 `waits >= budget` **立刻**成立，
+		// 任务瞬间又被判死 —— 用户按提示重试，什么也修不好。
+		//
+		// 语义划界（刻意如此，不是顺手清零）：PoolWaits/PoolWaitCeil 是「自动重投」的预算，
+		// 供系统在限流墙里自己等；而 RetryTask 是**人**明确表达"这条再跑一次"。
+		// 人的决定不该被自动机制的计数否决 ⇒ 重试即从零重新计时，自动封顶逻辑下一轮照常生效。
+		x.PoolWaits = 0
+		x.PoolWaitCeil = 0
 		x.Error = ""
 		x.ErrorKind = ""
 		return nil
