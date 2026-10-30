@@ -39,6 +39,15 @@ func TestScanFindsAttributionMismatches(t *testing.T) {
 	if rep.Mismatched != 2 {
 		t.Fatalf("应检出 2 条不一致，实得 %d（%v）", rep.Mismatched, rep.Groups)
 	}
+	// 覆盖率读数（T103）：`bad_exit` + \"任务无最终答案\" 是 classify 判不出的文本 ⇒ 必须计入 Undecided。
+	// 这条断言的意义：若有人把"判不了"的行静默丢掉，分母会虚高、绿会变成自证。
+	if rep.Undecided != 1 {
+		t.Fatalf("判不了的行应记 1（bad_exit 那条），实得 %d ⇒ 覆盖率没被记账（不一致=0 可能是\"没判\"的假象）", rep.Undecided)
+	}
+	// 拆分也要记（T103）：只有总数说明不了该往哪查。
+	if rep.UndecidedKinds["bad_exit"] != 1 {
+		t.Fatalf("判不了应拆到 kind=bad_exit 上，实得 %v", rep.UndecidedKinds)
+	}
 	if rep.Groups["boot_failed → 应为 not_served"] != 1 {
 		t.Fatalf("第一簇应命中 1 条，实得 %v", rep.Groups)
 	}

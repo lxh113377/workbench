@@ -44,12 +44,24 @@ type Mismatch struct {
 }
 
 // Report 是扫描结果。
+//
+// Undecided 是 round 147 · T103 补的**覆盖率读数**：文本复算不出类别的行数。
+//
+// 为什么必须有它（T102 的教训）：原来的实现把这类行**静默排除**，于是"不一致=0"可能只是
+// "大部分行都没判"的假象 —— 而 T102 那个缺陷恰恰就藏在"判不了"里（no_artifact 当时没有文本规则）。
+// ⇒ 审计必须自报"我漏看了多少"，否则它的绿是自证的。
 type Report struct {
 	Rows       int            // 读到的行数
 	Judged     int            // 文本可判定的行数（分母）
+	Undecided  int            // 文本判不出类别的行数（覆盖率的补数，见上）
 	Mismatched int            // 不一致行数（分子）
 	Groups     map[string]int // "记录的kind → 应为的kind" 计数
-	Samples    []Mismatch     // 前若干条样本（便于人读）
+	// UndecidedKinds 把"判不了"按**台账记录的 kind** 拆开（round 147 · T103）。
+	//
+	// 为什么拆：光有一个总数（120）说明不了该往哪查；拆开才看得出是"取消文本（引擎侧类别，本就不进分类器）"、
+	// 还是"畸形文本（如 `error=" | lane=…"` 这类空壳）"、还是"某类别缺文本规则"。
+	UndecidedKinds map[string]int
+	Samples        []Mismatch // 前若干条样本（便于人读）
 }
 
 // SkipKinds 是不参与归因审计的台账类别（与 retry.NonFailureLedgerKinds 同义）。
@@ -62,7 +74,7 @@ var SkipKinds = map[string]bool{"plan": true, "done": true, "": true}
 // 坏行即停（与 store 的 WAL 回放口径一致：宁可少读到一行，也不静默跳过 —— 静默跳过会让
 // "不一致数下降"变成读取失败的假象）。
 func Scan(root string, sinceMs int64, maxSamples int) (Report, error) {
-	rep := Report{Groups: map[string]int{}}
+	rep := Report{Groups: map[string]int{}, UndecidedKinds: map[string]int{}}
 	tasksDir := filepath.Join(root, "tasks")
 	entries, err := os.ReadDir(tasksDir)
 	if err != nil {
@@ -94,7 +106,9 @@ func Scan(root string, sinceMs int64, maxSamples int) (Report, error) {
 			}
 			want := string(executor.ClassifyTextForAudit(row.Error))
 			if want == string(executor.KindUnknown) {
-				continue // 判不了 ≠ 判错了
+				rep.Undecided++ // 判不了 ≠ 判错了，但**必须记账**（否则"不一致=0"可能是"没判"的假象）
+				rep.UndecidedKinds[row.Kind]++
+				continue
 			}
 			rep.Judged++
 			if want == row.Kind {

@@ -20,6 +20,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"workbench/internal/ledgeraudit"
@@ -54,20 +56,31 @@ func main() {
 		fmt.Println(string(out))
 	} else {
 		fmt.Printf("扫描根: %s（since=%s）\n", *root, orNone(*since))
-		fmt.Printf("  行数=%d ｜ 文本可判定=%d ｜ 不一致=%d\n", rep.Rows, rep.Judged, rep.Mismatched)
+		fmt.Printf("  行数=%d ｜ 文本可判定=%d ｜ 判不了=%d ｜ 不一致=%d\n", rep.Rows, rep.Judged, rep.Undecided, rep.Mismatched)
 		for _, g := range rep.GroupsSorted() {
 			fmt.Printf("    %4d  %s\n", rep.Groups[g], g)
+		}
+		// 判不了的行按台账 kind 拆开（T103）：光有总数说明不了该往哪查。
+		if rep.Undecided > 0 {
+			parts := make([]string, 0, len(rep.UndecidedKinds))
+			for k, v := range rep.UndecidedKinds {
+				parts = append(parts, fmt.Sprintf("%s=%d", k, v))
+			}
+			sort.Strings(parts)
+			fmt.Printf("    判不了 %d 行，按记录 kind: %s\n", rep.Undecided, strings.Join(parts, " "))
 		}
 		for _, s := range rep.Samples {
 			when := time.UnixMilli(s.At).Format("01-02 15:04:05")
 			fmt.Printf("    [样本] %s %s kind=%s 应为 %s ｜ %.60s\n", when, s.TaskID, s.Kind, s.Want, s.Error)
 		}
 	}
+	// 机读行同时报"判不了"的行数（round 147 · T103）：覆盖率是判据的一部分 ——
+	// 只报 judged/mismatched 会让"不一致=0 但绝大多数行没判"看起来像全绿（T102 的缺陷正藏在"判不了"里）。
 	if rep.Mismatched == 0 {
-		fmt.Printf("LEDGER-ATTRIBUTION=OK judged=%d\n", rep.Judged)
+		fmt.Printf("LEDGER-ATTRIBUTION=OK judged=%d undecided=%d\n", rep.Judged, rep.Undecided)
 		return
 	}
-	fmt.Printf("LEDGER-ATTRIBUTION=MISMATCH judged=%d mismatched=%d\n", rep.Judged, rep.Mismatched)
+	fmt.Printf("LEDGER-ATTRIBUTION=MISMATCH judged=%d undecided=%d mismatched=%d\n", rep.Judged, rep.Undecided, rep.Mismatched)
 	if *strict {
 		os.Exit(2)
 	}
