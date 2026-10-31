@@ -93,18 +93,34 @@ func TestHomeScriptIsAutomaticAndGuarded(t *testing.T) {
 			t.Fatalf("阶段状态表缺少 %q", st)
 		}
 	}
-	// 自动触发必须只发生一次、且不再挂重复定时器（不得出现第二个 setInterval）。
-	if n := strings.Count(appJS, "setInterval("); n > 3 {
+	// 自动触发必须只发生一次，定时器不许失控（上限守卫）。
+	//
+	// 口径统一（round 159 · T111）：原先用 strings.Count(appJS, "setInterval(") —— 数的是**整份文本**，
+	// 于是注释里出现该字样也会被计入。同一条假红我在 round 155 已在 poll_guard_contract_test.go 修过
+	// （改成 codeSetIntervalCalls，剥注释行后再数），但**没同步这第二个计数器**：同一个"真实定时器"
+	// 概念在两份判据里口径不同 ⇒ 我往注释里写一句带 setInterval( 的说明，这份就会虚报（与 E35/R155 的
+	// 病灶同型：修了一处、漏了同族另一处）。⇒ 现在两条判据共用 codeSetIntervalCalls。
+	//
+	// 为什么不把这里也改成 == 2（与 poll_guard 完全一致）：两条判据分工不同 ——
+	//   poll_guard 钉「当前就是 2 个」（改定时器要显式同步它）；这里守「失控上限 > 3 直接判红」。
+	//   留一个较宽的上限是有意的：将来若有意新增第三个定时器，poll_guard 会先红逼我写清理由，
+	//   而这里兜住"失控"这一类，两道门的**语义**不该重复。本轮只统一**口径**（数什么），不改**阈值**（判多少）。
+	if n := codeSetIntervalCalls(appJS); n > 3 {
 		t.Fatalf("脚本里的定时器过多（%d），易造成重复请求与交互冲突", n)
 	}
-	// 按钮必须是开关：running/paused 两态不得被 paint 置为 disabled（lock:false），
-	// 否则文案写着「运行中/已暂停」却点不动，首页那条状态就是死的（实测问题 A）。
-	if strings.Contains(appJS, "running: { text: '运行中',   hint: '引擎运行中',   busy: false, lock: true  }") {
-		t.Fatal("运行态按钮被锁死（lock:true）：用户无法从首页暂停引擎")
-	}
-	if strings.Contains(appJS, "paused:  { text: '已暂停',   hint: '引擎已暂停',   busy: false, lock: true  }") {
-		t.Fatal("暂停态按钮被锁死（lock:true）：用户无法从首页继续")
-	}
+	// 按钮必须是开关：running/paused 两态不得被 paint 置为 disabled（lock:false）。
+	//
+	// ⚠️ 原先这里写的是两条**逐字字面量** Contains 断言（形如
+	//   "running: { text: '运行中',   hint: '引擎运行中',   busy: false, lock: true  }"），
+	//   本轮（T112）实测证明它是**死判据**：源码真实形态是
+	//   `running: { text: '工作台', hint: '工作台运行中，点击进入',   busy: false, lock: false }`
+	//   —— 文案与空格都对不上 ⇒ Contains 恒 false。
+	//   两实验取证：① 把源码改成判据期望的逐字形态（lock:true）⇒ 判据 FAIL（说明它只在
+	//     文案也刚好写成"运行中"时才生效）；② 把源码改成**真锁死但文案仍是"工作台"**
+	//     （lock:true，用户实际会遇到的形态）⇒ 判据 ok ⇒ **锁死了也不报**。
+	//   判据要的从来不是那一串字符，而是「running/paused 两态的 lock 必须为 false」。
+	//   ⇒ 换成解析式判据，见 state_lock_contract_test.go（按行取该态的 lock 值，
+	//     对文案/空格/对齐免疫，真锁死必抓）。这不是放宽：它覆盖旧判据抓不到的那一整类。
 }
 
 // TestLoadingRingOnlyVisibleWhenActuallyLoading 守护状态反馈的诚实性：
