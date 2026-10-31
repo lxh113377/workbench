@@ -171,6 +171,18 @@ var gradingScaleWords = []string{"高", "中", "低"}
 // 才与「这是一套分级尺度」这件事同构（对标本仓 ㉑二：判据要与它所判的那个世界一致）。
 func hasSeverityGrading(text string) bool {
 	for _, m := range severityMarkers {
+		// 词族里的 P0-P3 是**短码**，必须按独立词判（round 155 · T108）：原先一律 Contains，
+		// 于是「采用 P2P 网络」这类纯技术描述被判成「已分级」⇒ 门禁假绿。假绿比假红危险：
+		// 它对外宣称"刚加了一道分级门禁"，实际什么都没挡（与本文件 :168-171 对「提高/其中」
+		// 那三个尺度词的处理是同一个理由，只是当时只给了汉字词，漏了短码）。
+		// 边界只挡 **ASCII 字母数字**（P2P / P22 / 1P2），汉字与标点放行：
+		// 「P2级」「P2：」「(P2)」「P2/P3」都是真实分级写法，挡掉就是误伤。
+		if isSeverityCode(m) {
+			if hasStandaloneSeverityCode(text, m) {
+				return true
+			}
+			continue
+		}
 		if strings.Contains(text, m) {
 			return true
 		}
@@ -181,6 +193,47 @@ func hasSeverityGrading(text string) bool {
 		}
 	}
 	return true
+}
+
+// isSeverityCode 判断词族条目是否为 P0-P3 这类 ASCII 短码（需要按独立词判）。
+func isSeverityCode(m string) bool {
+	if len(m) != 2 {
+		return false
+	}
+	c := m[0]
+	return (c == 'p' || c == 'P') && m[1] >= '0' && m[1] <= '9'
+}
+
+// hasStandaloneSeverityCode 在 text 里找短码 m，并要求命中位置的**相邻字节都不是 ASCII
+// 字母或数字**：这样「采用 P2P 网络」「P22」不再被判成已分级（假绿），而「P2级」「P2：」
+// 「(P2)」「P2/P3」「【P0】」仍照常命中（不误伤 —— 汉字/标点都不是 ASCII 字母数字）。
+func hasStandaloneSeverityCode(text, m string) bool {
+	lower := strings.ToLower(text)
+	lm := strings.ToLower(m)
+	from := 0
+	for {
+		i := strings.Index(lower[from:], lm)
+		if i < 0 {
+			return false
+		}
+		at := from + i
+		var before, after byte
+		if at > 0 {
+			before = lower[at-1]
+		}
+		if at+len(lm) < len(lower) {
+			after = lower[at+len(lm)]
+		}
+		if !isASCIIAlnum(before) && !isASCIIAlnum(after) {
+			return true
+		}
+		from = at + len(lm)
+	}
+}
+
+// isASCIIAlnum 是否为 ASCII 字母或数字（0 字节视为"字符串边界"，不算）。
+func isASCIIAlnum(b byte) bool {
+	return (b >= '0' && b <= '9') || (b >= 'a' && b <= 'z') || (b >= 'A' && b <= 'Z')
 }
 
 // hasStandaloneWord 判断 word 是否以独立词形态出现在 text 里：命中位置的**前一个字符**
@@ -247,7 +300,17 @@ func claimsReport(path, text string) bool {
 
 // isReportArtifact：报告类 = docs/ 下的 .md（目标指定的报告地点与格式）。
 func isReportArtifact(path string) bool {
-	p := strings.ToLower(strings.TrimSpace(path))
+	// 反斜杠归一（round 155 · T108）：本函数原先只做小写与去空白，而**同文件的
+	// isDocsMarkdown(:137) 却做了 `\`→`/` 归一** —— 两个谓词对同一个路径的"是不是 docs 下的
+	// markdown"给出不同答案，后果不是"某一处判错"，而是**两道门同时失效**：
+	//   交付 `docs\报告.md`（单个反斜杠）时 内容门 isReportArtifact=false ⇒ 整道内容检查跳过；
+	//   而落点门第一遍见到 isDocsMarkdown=true 就 return nil（认为"报告已落在 docs/ 下"）⇒ 连
+	//   "自称报告却落在根目录"那条也一起放行。Lead 亲跑对照实测：单反斜杠 ⇒ 内容门 0/落点门 0；
+	//   同一份正文改成正斜杠 ⇒ 内容门报 4 个问题。差异只来自分隔符。
+	// 上游 artifact.SafePath(:627) 归一的是**双**反斜杠（源码里 "\\" 即两个字符），单反斜杠漏网，
+	// 所以这条路径确实能带着 `docs\x.md` 走到这里（不是理论担忧）。
+	// 落盘侧 filepath.FromSlash 对反斜杠是无操作 ⇒ 文件会真被写进 docs\ ，用户看得见、门禁看不见。
+	p := strings.ToLower(strings.ReplaceAll(strings.TrimSpace(path), "\\", "/"))
 	if !strings.HasSuffix(p, ".md") {
 		return false
 	}
