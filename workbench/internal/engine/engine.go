@@ -696,9 +696,16 @@ func (e *Engine) Recover() error {
 	// 为什么放在启动期而不是每 tick：裁剪要全量序列化一次快照（59MB -> 数 MB），
 	// 放 tick 里会周期性抖内存；启动期一次足够（一天最多重启几次，而记录增长是渐进的）。
 	// 失败不阻塞启动：裁剪是资源治理，不是正确性必需 —— 但必须留痕，不能静默。
+	// 裁剪前先把「当日计数」记下来：PruneTasks 会删终态记录，而 tasksToday() 数的正是这些记录
+	// ⇒ 重启会把当日额度凭空回收（round 148 实测 201→6）。裁剪后对比，回收了就发声（见 pruneBurnMessage）。
+	beforePrune := e.tasksToday()
 	if pr, perr := e.store.PruneTasks(e.cstore.Get().Retention, false); perr != nil {
 		e.log.Warn("终态任务记录裁剪失败（不影响启动，记录会继续增长）", "err", perr.Error())
 	} else if pr.RemovedByAge+pr.RemovedByCap > 0 {
+		if msg, burn := pruneBurnMessage(beforePrune, e.tasksToday(), e.cstore.Get().Eval.DailyCap); burn {
+			e.log.Warn(msg, "before", beforePrune, "after", e.tasksToday(), "dailyCap", e.cstore.Get().Eval.DailyCap)
+			e.emitEvent(model.Event{Type: "engine", At: model.Now(), Msg: msg})
+		}
 		// 只有真删了才记录一条事件，避免每次启动都刷一条「删了 0 条」的噪音。
 		e.emitEvent(model.Event{Type: "engine", At: model.Now(),
 			Msg: fmt.Sprintf("启动期裁剪终态任务记录：按龄 %d 条 + 按上限 %d 条，现存 %d 条，清孤立链 %d 条",

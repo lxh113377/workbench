@@ -94,6 +94,28 @@ func (e *Engine) logDailyCapBurn(cfg config.Config, startOfDay int64) {
 	e.emitEvent(model.Event{Type: "warn", At: now, Msg: msg})
 }
 
+// pruneBurnMessage 判断「启动期裁剪是否回收了当日额度」，并给出要记的告警文案（纯函数，便于判据）。
+//
+// 为什么需要（round 148 现场）：每日额度 `tasksToday()` 是按**队列里现存的任务记录**数的，而启动期
+// `PruneTasks` 会按 `maxTerminalTasks` 裁掉终态记录 —— 于是**重启一次就把当日计数回收掉**。
+// 实测：14:25 那次部署重启前，今日非 rejected 记录 201 条（已 ≥ DailyCap 200、两条供货链静默停机）；
+// 重启后 audit.jsonl 记「按上限删 41130 条、保留 5000 条」，同口径只剩 **6 条** ⇒ 额度凭空恢复，
+// 而没有任何一条日志说明"额度是被裁剪清掉的"。这既让 T104 的烧穿告警不会响（条件已不成立），
+// 也使"每日上限"在频繁重启（崩溃自愈 KeepAlive）下形同虚设。
+//
+// 本函数**只负责发声**，不改额度口径：改口径（另存当日计数）是行为改变，登记为 T105 等更多样本。
+// before 是裁剪前的当日计数，after 是裁剪后的；cap<=0 表示未启用上限（不告警）。
+func pruneBurnMessage(before, after, cap int) (string, bool) {
+	if cap <= 0 || before <= after {
+		return "", false // 没有回收（或无上限可言）
+	}
+	if after >= cap {
+		return "", false // 回收后仍在上限之上：上限本就该继续生效，不是"额度被清"
+	}
+	return fmt.Sprintf("启动期裁剪回收了当日额度计数：裁剪前 %d 条 → 裁剪后 %d 条（每日上限 %d）⇒ 停机可能因此静默解除，而这不是到了次日零点",
+		before, after, cap), true
+}
+
 func orNoneKind(s string) string {
 	if s == "" {
 		return "无（今日无环境性失败，额度是被正常产出/任务侧失败用完的）"
