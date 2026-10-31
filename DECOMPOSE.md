@@ -703,3 +703,20 @@ run_code 的 execSync 缺 GOCACHE/PATH 却拿 RC=0 当通过（UNVERIFIED 冒充
 **下一轮候选**（不展开）：① 收 abf51c9 的 CI 终态；② 8 个旧散件的最终处置（普查已判：全部无真实引用、
 explore/probe 族=move/delete，a.md 是模板文章可入 docs/archive）；③ CONTRIBUTING.md:30 的 WinLibs 说法
 与实测矛盾（gcc 不存在）二选一：装或改；④ T88/T90 线上正例续挂。
+
+## Round 172 处置卡（实测 2026-10-31 23:3x）：9 个仓库根散件终审移档 + 取证报告入库
+
+**散件普查结论（引用对账实测）**：9 个旧散件（a.md / check_env.py / explore.ps1 / explore.py /
+list_files.py / listing.txt / m.py / probe.ps1 / probe.py）在全仓（排除 .git/.workbuddy/xtmp/
+.dsh-ops/.probe/runtime 后）**零功能性引用** —— 全部命中只是 DECOMPOSE/审计报告/CHANGELOG 里
+对它们**作为 T114 病灶的点名**（如 code_artifact_gate_test.go 里的 m.py 是测试夹具的字符串
+字面量、不是对根文件的依赖）。词干 grep 的 30 万假命中（m.py 命中 305219）是子串匹配撞上
+常见词，锚点重算后归零族。
+
+**处置**：全部移档 xtmp/round171-evidence/root-strays-2026-10-31/（留档不销毁 —— 未跟踪文件
+git 还原不了，按取证纪律一律保全），并落 manifest.md 记录字节/mtime/归属。处置后仓库根
+未跟踪散件 = 0（T114 的根目录面清零；nul 已在前一轮删除并上了保留名门禁）。
+
+**取证报告入库**：docs/取证-未跟踪go测试文件-2026-10-31.md（40KB，12 文件逐文件裁定 +
+27 变异点台账 + 工具链口径）—— round 170/171 的 CHANGELOG 条目都点名它，滞留未跟踪会让
+权威件的引用悬空。它与本卡同批提交。
