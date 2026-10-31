@@ -425,3 +425,14 @@ C4（pool/gov 无 scroll 保态，appJS 有判据钉住；属一致性缺口、�
 **#40**：本轮改动内嵌 JS ⇒ 重建 dist（TestAssetsPresentInArtifact 由红转绿）；引用改准 7 条、未解决 0；
 web 全绿 + engine 三判据绿。C1 实测用独立程序、仓库零改动（tracked 脏=0 自证）。
 **#44**：本轮收上轮派件（1 件交付）并按 ⑧ 独立复跑 + 否证其 severity；本轮新增工作（判据+负控）为严格串行单链。
+
+### 更正一条我自己写下的"未等到终态"（实测 2026/10/31 17:50:13）
+
+R156-158 附录第八节写「主 CI 提交时 in_progress（收口时未等到终态，如实登记）」—— 那句在落笔时是真的，
+随后我确认到了终态，故在此补记而**不回头改原句**（原句记录的是当时的观测状态，改掉就是伪造观测）：
+  · `24358aa`（部署点）：CI=success(completed) + Autonomy Container E2E=success(completed)，实测于 run 列表 09:43:32Z 一组；
+  · 前一步 JSON 查询也已回 `"conclusion":"success","headSha":"24358aa…","status":"completed"`（两条）；
+  · 当前 in_progress 的那组属于随后推送的文档件 `fbef48d`，不是部署点。
+⇒ 顺手记一条读数教训（元发现 20 同族）：我为此发了三种 grep/tr 管道，其中 `grep -oE "(success|failure…)"`
+  这种带引号与或式的模式**返回空**，差点被我读成"CI 没跑/查不到"；有效形态一直是 `--json | head -c N` 或
+  `gh run list | cut -f1,2,4,9`。**空读数先怀疑自己的命令**（本轮第 2 次实践该纪律，第 1 次是 grep -vE "^\??"）。
