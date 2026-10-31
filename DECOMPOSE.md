@@ -785,3 +785,31 @@ rc=2 UNVERIFIED / 同副本在 PATH 有 git 时 rc=0。check_ps1_syntax rc=0（8
 
 **下一轮候选**：① 收本笔 CI；② 归档索引的「逐文件 KB 数」是否与实际一致（我按 statSync 算的，可复算）；
 ③ T88/T90 线上正例续挂；④ 把「判定配置键有效性须查二进制 + 对照组」写进 skill 清单。
+
+## Round 176 收口（实测 2026-11-01 01:1x）
+
+**本轮直接交付目标要求的产物本体**：`docs/五轴审查-分级-2026-11-01.md`（8,961 字节 / 135 行，774b020）。
+  前几轮做门禁修复与归档，本轮交付的是「五轴审查分级出报告 + 可直接贴 PR + 合并结论 + 门禁建议」本身。
+
+**分级结论**：P0 无 · P1 三项 · P2 四项。基线实测：533 .go / 81,778 行 / 35 包 / 1,147 测试函数 /
+  vet+test 全绿（32 包 ok）/ 聚合 49 段 0 FAIL。识别的实质问题全部带 file:line + 可复跑命令：
+  P1-1 超长函数 7 处（defaults.go:51 Defaults() 491 行 最大）；P1-2 168 处 _ = 抑制（manager.go 19 最多）；
+  P1-3 归档索引 KB 列应脚本生成；P2-4 项均不阻断（安全轴 14 处 exec.Command 零拼接、锁内 IO 0 命中、TODO 零残留）。
+
+**自证方式（方法收获）**：新增 `audit_report_graded_test.go` 直接调用**真实** `reportGateProblems`（report_gate.go:38）
+  验本报告 PASS，并加三条负控（缺分级/缺证据/缺整节必须判红）证明判据有牙；既有 `TestAuditReportCitationsResolve`
+  同时通过 ⇒ 报告每条 file:line 都被逐字命中校验。**报告不是自说自话，是被本仓机器判据验过的**。
+
+**我自己的事故（第 7 次同族，如实入账）**：我把新测试写进 `audit_report_gate_test.go`，那是 2026-10-30 已受跟踪件
+  （edf5fe2），内含别处依赖的 `readAuditReport` helper ⇒ 我的重写删了它、整包编不过。
+  发现路径：go test 报 `audit_report_citations_test.go:24: undefined: readAuditReport`，我用 git log -S 追到 edf5fe2，
+  再 git diff edf5fe2 看到自己的 `-` 行 ⇒ 确认是我覆盖的。已 checkout 恢复 + 新测试改独立文件名。
+  **教训：改文件前先 `git ls-files` 确认是否已入库。「看起来像我的临时文件」不等于没入库。**
+  本轮同族前科回顾：① 上一轮 CHANGELOG 用 indexOf 判断顺序被行内文本骗；② 本轮 SKIP 冒充 PASS（路径层级错）；
+  ③ 本轮 RUNID 取空当失败。都是「判据没作用在被检对象上」这一族。
+
+**现场**：master=774b020==origin；CI run 41223327893 与 41223327912 全绿；工作树 dirty=0。
+未跟踪件仅 .workbuddy 运行时读数 3 个（非本会话产出，按 #40 不并入）。
+
+**下一轮候选**：① 按 P1-1 拆 `Defaults()`（机械重构 + 现有测试兜底）；② P1-3 让归档索引 KB 列脚本化；
+③ P2-4 给规模读数加 benchmark 取证副本口径标注；④ T88/T90 线上正例续挂。
