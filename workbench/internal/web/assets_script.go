@@ -1008,6 +1008,15 @@ const appJS = `(() => {
   // 点「启动」时 Start() 持锁跨 bootstrapAutonomy（内含模型调用）可达数秒 —— 此时顶栏
   // 请求会排队。5s 一轮 + 无守卫 = 一次卡顿就堆一串在途，且旧响应后到会把顶栏往回拨。
   let topBusy = false;
+  // T107（round 154 前端面）：主体窗格的持续刷新此前**只有 SSE 一个驱动源**（见下方
+  // es.onmessage 的节流窗口），而顶栏另有 5 秒兜底轮询。
+  // ⇒ 流一断就变成"顶栏数字还在动、内容却冻结"：一种看起来活着的静默陈旧（全仓此前
+  //   没有任何 onerror / readyState 检查，已 grep 证实）。这里声明共享状态，赋值在下方
+  //   try 里做，兜底自愈放在 refreshTop 的 finally（复用它已有的 5 秒心跳，不再新起定时器）。
+  //   兜底范围与 SSE 窗口**一致**：只接 overview/queue —— outputs/templates/settings 本就
+  //   按需渲染，给它们加轮询会改语义、也凭空多打接口。
+  let sse = null;
+  let sseDownStreak = 0;
   async function refreshTop() {
     if (topBusy) { return; }
     topBusy = true;
@@ -1048,7 +1057,23 @@ const appJS = `(() => {
       }
       if (el) { el.textContent = top; el.style.color = color; el.title = tip; }
     } catch (e) { /* ignore */ }
-    finally { topBusy = false; }
+    finally {
+      topBusy = false;
+      // 兜底自愈：连续 3 个周期（15 秒）流未处于 OPEN 才接管 —— 首连接 CONNECTING 是正常态，
+      // 阈值防误伤；接管时 toast 一次，不让降级静默（与顶栏"停摆必须自证"同一原则：
+      // 陈旧不能冒充正常）。EventSource 构造失败时 sse 恒 null ⇒ 这里是唯一刷新来源，必须接管。
+      if (!sse || sse.readyState !== EventSource.OPEN) {
+        sseDownStreak++;
+        if (sseDownStreak === 3) { toast('实时流中断，窗格数据已降级为 5 秒轮询'); }
+        if (sseDownStreak >= 3) {
+          const active = document.querySelector('.tab.active');
+          const nm = active && active.getAttribute('data-tab');
+          if (nm === 'overview' || nm === 'queue') { render(nm); }
+        }
+      } else {
+        sseDownStreak = 0;
+      }
+    }
   }
 
   const btnPause = document.getElementById('btnPause');
@@ -1099,7 +1124,8 @@ const appJS = `(() => {
   });
 
   try {
-    const es = new EventSource('/events?token=' + encodeURIComponent(TOKEN));
+    sse = new EventSource('/events?token=' + encodeURIComponent(TOKEN));
+    const es = sse; // 保持 es.onmessage 锚点不变：既有判据（TestSSERenderIsThrottled / TestSSEHandlersThrottleTopBarRefresh）依赖它
     // 节流（2026-10-23 并发时序走查）：实测 SSE 峰值约 10 条/秒，原实现每条都对
     // overview/queue 做全量 innerHTML 重渲染。虽然当前长任务为 0（内容量小），但
     // 这是「事件频率 × 全量重建」的平方级浪费，内容一多就会掉帧。合并到 400ms 窗口：
