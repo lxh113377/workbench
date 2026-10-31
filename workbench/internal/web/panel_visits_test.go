@@ -7,6 +7,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"workbench/internal/logging"
 )
@@ -97,6 +98,25 @@ func TestPanelVisitCountsRealBrowser(t *testing.T) {
 	}
 	if h, _ := f["human"].(bool); !h {
 		t.Errorf("Chrome UA 应判 human=true，实得 %v ⇒ 名单把真人也挡了", h)
+	}
+	// firstAt：线上实测暴露过它恒为 0（单测当时只断 path/human/count/ua）⇒ 缺陷一路活到线上。
+	// 补断言，且要求它落在 [过去, 现在] 区间 —— 只断"非零"会被一个写死的正数骗过。
+	// 教训：**结构体里有字段 ≠ 运行时字段有值**；新字段必须逐个断言，不能只断好写的那几个。
+	fa, _ := f["firstAt"].(int64)
+	// 上下界一起判。只断 fa>0 会放过**单位错**：time.Now().Unix()（秒级）同样是正数，但比毫秒小四个
+	// 数量级 —— 这是实测出来的：我把赋值改成 Unix() 后，只判「>0」与「不晚于现在」的断言全绿。
+	low := time.Now().Add(-10 * time.Minute).UnixMilli()
+	if fa <= 0 {
+		t.Errorf("日志字段 firstAt=%d，应为正的毫秒时间戳 ⇒ 首次访问时刻根本没记上", fa)
+	} else if fa < low {
+		t.Errorf("firstAt=%d 早于 10 分钟前 ⇒ 多半记成了秒级时间戳（数量级错）；毫秒下界应为 %d", fa, low)
+	} else if fa > time.Now().UnixMilli()+5000 {
+		t.Errorf("firstAt=%d 晚于现在 ⇒ 记的是未来时刻", fa)
+	}
+	if one, _ := srv.visits.snapshot()["/admin"].(map[string]any); one != nil {
+		if got, _ := one["firstAt"].(int64); got <= 0 {
+			t.Errorf("快照 firstAt=%d ⇒ /api/status 对外会显示 0（线上实测正是这个形态）", got)
+		}
 	}
 	if c, _ := f["count"].(int); c != 1 {
 		t.Errorf("首次 count 应为 1，实得 %v", f["count"])

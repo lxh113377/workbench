@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 )
 
 // 面板使用计数（round 161 · T113）。
@@ -81,7 +82,7 @@ func cleanUAForLog(ua string) string {
 
 // note 记录一次页面访问，返回 (本次累计次数, 是否首次, 清洗后的 UA 是否像真人)。
 // 计数与"是否首次"一起返回，调用方据此决定要不要打那条一次性日志。
-func (p *panelVisits) note(path, ua string) (count int, first bool, human bool) {
+func (p *panelVisits) note(path, ua string) (count int, first bool, human bool, at int64) {
 	human = !isAutomatedUA(ua)
 	sanitized := cleanUAForLog(ua)
 	p.mu.Lock()
@@ -91,12 +92,15 @@ func (p *panelVisits) note(path, ua string) (count int, first bool, human bool) 
 	}
 	v := p.seen[path]
 	if v == nil {
-		v = &panelVisit{path: path, firstUA: sanitized}
+		// firstAt 必须在首次那次就填：线上实测（curl + PowerShell 探针）暴露过它恒为 0 ——
+		// 单测当时断言了 path/human/count/ua，唯独没断 firstAt ⇒ 字段一路是零值。
+		// 教训：结构体里"有字段"不等于运行时"字段有值"；单测必须逐个字段断言，不能只断好写的。
+		v = &panelVisit{path: path, firstUA: sanitized, firstAt: time.Now().UnixMilli()}
 		p.seen[path] = v
 		first = true
 	}
 	v.count++
-	return v.count, first, human
+	return v.count, first, human, v.firstAt
 }
 
 // snapshot 返回各页计数的副本（供 /api/status 暴露；不暴露内部指针，避免调用方改到状态）。
@@ -129,7 +133,7 @@ func (p *panelVisits) total() int {
 // recordVisit 是四个页面 handler 的统一入口：记一笔，并且只在**每页首次**落一条 Info。
 // logger 允许为 nil（未注入时用 logging.Nop 语义，emit 内已有 nil 保护）⇒ 单测与嵌入式调用都不会炸。
 func (s *Server) recordVisit(r *http.Request) {
-	count, first, human := s.visits.note(r.URL.Path, r.UserAgent())
+	count, first, human, at := s.visits.note(r.URL.Path, r.UserAgent())
 	if !first {
 		return
 	}
@@ -141,5 +145,6 @@ func (s *Server) recordVisit(r *http.Request) {
 		"path", r.URL.Path,
 		"ua", cleanUAForLog(r.UserAgent()),
 		"human", human,
-		"count", count)
+		"count", count,
+		"firstAt", at)
 }
