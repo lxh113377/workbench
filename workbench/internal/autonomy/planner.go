@@ -346,7 +346,9 @@ const autonomyDeliverableGate = "\n\n" + model.DeliverableGateMarker + "（硬�
 	"4. verify 至少 1 条**检查报告内容**的命令；不要拿「运行你自己刚写的脚本」当唯一验收 —— 免费车道写的脚本跑不过，会把整条任务拖成返工。\n" +
 	"5. 报告必须**分级**：每个发现都要标严重度（`P0 阻塞` / `P1 应改` / `P2 建议`，或 高/中/低）；\n" +
 	"   不分级的缺陷清单没法取舍，工作台的报告门禁会判它不合格。\n" +
-	"6. 不要输出你自己的工具调用语法（工作台不执行它们，只会判本方案/本产物不可用）。\n"
+	"6. 不要输出你自己的工具调用语法（工作台不执行它们，只会判本方案/本产物不可用）。\n" +
+	// 第 7 条（round 166 · T114）：正文与 templates 侧共用 model.GatePlacementClause ⇒ 不可能漂移。
+	"7. " + model.GatePlacementClause + "\n"
 
 func (p *Planner) buildLadderPrompt(goal *Goal, focus string, ctx PlanContext) string {
 	var b strings.Builder
