@@ -720,3 +720,14 @@ git 还原不了，按取证纪律一律保全），并落 manifest.md 记录字
 **取证报告入库**：docs/取证-未跟踪go测试文件-2026-10-31.md（40KB，12 文件逐文件裁定 +
 27 变异点台账 + 工具链口径）—— round 170/171 的 CHANGELOG 条目都点名它，滞留未跟踪会让
 权威件的引用悬空。它与本卡同批提交。
+## Round 172-173 收口（实测 2026-10-31 23:4x）
+
+- **c48344a**：取证报告入库（40KB，round 170/171 的 CHANGELOG 引用不再悬空）；9 个根散件终审移档
+  xtmp/round171-evidence/root-strays-2026-10-31/（manifest 保全，未跟踪件 git 还原不了故不销毁）；
+  仓库根散件清零。CI run 41215681143 completed::success。
+- **13a2193**：CONTRIBUTING 两处过期陈述修正（:30 WinLibs「实测可用」实为 gcc 不存在——三个路径探针全 miss；
+  :81 race checklist 补受理面=CI）。选改文档不装 gcc 的理由：装 WinLibs 动系统级 PATH/env，收益只是本机
+  race 而 CI 已承接；作为备选写入文档。CI 全绿（gh run watch RC=0）。
+- **现场终态**：未跟踪 .go = 0；根散件 = 0；工作树仅余 6 个非本会话件（3 个 .workbuddy 运行时读数 +
+  3 个并行会话的五轴文档，按 #40 不并入）；master=13a2193==origin。
+- **footer**：round 170-171 已落 2026-10-31.part25（[GATE:evolution-pass]）；172-173 另起新卷。
