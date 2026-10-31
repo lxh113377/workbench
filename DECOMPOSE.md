@@ -731,3 +731,26 @@ git 还原不了，按取证纪律一律保全），并落 manifest.md 记录字
 - **现场终态**：未跟踪 .go = 0；根散件 = 0；工作树仅余 6 个非本会话件（3 个 .workbuddy 运行时读数 +
   3 个并行会话的五轴文档，按 #40 不并入）；master=13a2193==origin。
 - **footer**：round 170-171 已落 2026-10-31.part25（[GATE:evolution-pass]）；172-173 另起新卷。
+
+## Round 174 收口（实测 2026-11-01 00:2x）
+
+**做了什么**：修两道门禁的 git 解析（`check_untracked_go.ps1:28` / `check_deadcode.ps1:27`）——
+两处都写了「取不到 git ⇒ rc=2 UNVERIFIED」但取 git 时裸调 `git`，Stop 偏好下抛异常击穿 rc 检查，
+实测旧版 rc=1 崩溃、聚合器判 FAIL；补 `$gitExe` 兜底后又踩第二个坑（`& $gitExe` 被 PS 按文档关联解释，
+报 "Cannot run a document in the middle of a pipeline" ⇒ 从崩溃变静默 0 结果，更隐蔽）；
+最终复用 `check_gate_coverage.ps1` 的 ProcessStartInfo 写法（UseShellExecute=$false + 显式 UTF-8 解码）。
+
+**判据（三态 + 负控）**：正常 PATH rc=0 / 无 git PATH 但有兜底 rc=0 / 负控（候选清空，git 真不存在）
+rc=2 UNVERIFIED / 同副本在 PATH 有 git 时 rc=0。check_ps1_syntax rc=0（85 脚本）。
+全仓聚合 AGG_RC=0（49 段、0 FAIL、2 SKIP 如实计缺）。
+
+**顺带**：round 170-171 改 supervisor.go 使 `dist/` 产物变旧，产物时效门禁报 FAIL(lag=3.5h)；
+按其自身提示重跑 build.ps1（BUILD_RC=0、7/7 门禁过、SHA256 读回自洽），重编后 artifactSoakFresh=PASS。
+`dist/` 被 .gitignore:21 忽略 ⇒ 该动作不产生提交，只是让本机门禁自洽。
+
+**教训（第三条，本轮最值钱）**：修复一个「静默失败」时，很容易把它换成一个**更静默**的失败。
+`& $gitExe` 那版比原始崩溃更难发现 —— 崩溃至少留下栈迹，静默 0 结果只会表现为「仓库看起来坏了」。
+⇒ 修静默类缺陷必须同时给出**正例读数**（如 deadcode 检查 533 个 .go），而不只是「不报错了」。
+
+**下一轮候选**：① 收 74563ed 的 CI 终态；② T88/T90 线上正例续挂；③ 三份并行会话五轴文档的归属；
+④ 给「修静默缺陷须附正例读数」这条写进审查清单（code-review skill 的候选改进）。
