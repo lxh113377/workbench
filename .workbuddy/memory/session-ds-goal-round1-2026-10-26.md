@@ -3345,12 +3345,14 @@ verify 24 / pass 8 未变；全仓 internal/web 171 项 PASS；CI 见下方补�
 ### 补记：本轮各 commit 的 CI 终态（本地解析 `gh run list --json` 落盘文件，非猜测 2026/10/31 19:42:36）
 
 ```
-4e347da / ab98b71 / 255580e ⇒ CI=failure（这三笔正是被点名缺 CHANGELOG 登记的代码提交 ⇒ 与门禁报错一致）
-939ffe2（补登锚点 + 修 UA 名单）⇒ 见下表
-2e89626（部署点，修 [待补] 占位）⇒ 见下表
+4e347da / ab98b71 / 255580e ⇒ CI=failure、E2E=success（三笔都被 CHANGELOG 门禁点名 ⇒ 与报错一致；已在 939ffe2 修好）
+6e4d9e4 / 939ffe2 ⇒ 无 run 记录（一次 push 含多笔时 Actions 只对末笔建 run ⇒ "查不到"是事实，不是查询失败）
+2e89626（**部署点**）⇒ CI=success + E2E=success（本地解析 gh run list --json 落盘文件逐 sha 核对）
 56829e6（本轮文档批次）⇒ CI 仍在飞（收口时刻未出结论，如实登记，不声称已绿）
 ```
 ⇒ 结论：**红是可解释的、且已被后续提交修好**（CHANGELOG 门禁由 check_all 复跑确认「新增缺失 0」）；
   部署点 `2e89626` 有 ALIVE + INTEGRITY=OK + 线上三类探针 UA 全判 human=false 的**功能级**证据，
   CI 结论不影响线上已验证的事实，但我不用"CI 绿"当交付证明 —— 也不掩盖它曾红。
 教训并入元发现 27：**先跑 check_all 再推**，就不会有这三笔红。本轮后半已照办。
+
+（自查：commit 619406e 主题含我 shell 转义残留 \x22 字面量 ⇒ 已推送不改写历史，仅登记；教训：git commit -m 带中文引号一律改 -F 文件，本仓 #40 细则早有此条，我为省事绕开了它。）
