@@ -754,3 +754,34 @@ rc=2 UNVERIFIED / 同副本在 PATH 有 git 时 rc=0。check_ps1_syntax rc=0（8
 
 **下一轮候选**：① 收 74563ed 的 CI 终态；② T88/T90 线上正例续挂；③ 三份并行会话五轴文档的归属；
 ④ 给「修静默缺陷须附正例读数」这条写进审查清单（code-review skill 的候选改进）。
+
+## Round 175 收口（实测 2026-11-01 00:5x）
+
+**做了什么**：三份自认未交付的「五轴审查」占位件归档（60c36c4）。
+  - 正确性.md 103B（证据节只有「无。」）/ 缺陷报告.md 1032B（无分级）/ 复盘覆盖度.md 305B（自述「状态：待填充」）。
+  - 它们正是 report_gate_test.go 与 probe_real_reports_test.go 里的**判红样本形态**（T67），却未跟踪躺在 docs 顶层 3~4 天。
+  - 处置：移入 docs/archive/2026-10/ 加「-占位未交付-<日期>」后缀；索引 73→76（计数与行数一致）；不删（是 T67 的现场证据）。
+
+**先查依赖再处置**（本轮最关键的一步）：git grep 显示三份被两个受跟踪测试引用，核对后确认是注释点名 +
+测试用例的**字符串常量**（stub/substantive 变量），不是磁盘固件；同文件唯一 os.ReadFile 读 artifacts.go。
+移走后 TestReportGate 系列 rc=0 ⇒ 不破坏 CI。**若跳过这一步就直接删/移，可能悄悄弄红 CI**。
+
+**顺带把上一轮的未取证面验掉了（重要）**：上轮我固化 git 的 `http.retryOnTransientError` 并自己标注
+「无法确认 git 2.53 是否识别、可能只是安慰剂」。本轮用**二进制实际比对**给出了结论：
+  · 被检对象一开始搞错（搜 git.exe），对照组 GIT_CURL_VERBOSE 也 0 命中 ⇒ 说明搜错了文件；
+  · 改搜 http 传输实现 git-remote-https.exe：GIT_CURL_VERBOSE=1、http.postBuffer=2（对照组有效），
+    而 retryOnTransientError=0 ⇒ **该键在本版本不存在，我上一轮那行配置确认是安慰剂**，已 --unset 清除。
+  · 同时纠正一处过度纠正：LOW_SPEED_LIMIT / LOW_SPEED_TIME 在二进制中确存在（=1），属有效的 libcurl 通道，
+    我把它们一并清掉是错的，已恢复。
+  教训：**判定「配置键是否有效」不能只看 git config --get 能读回，必须看被检二进制里有没有该串，且必须有对照组**
+  （对照组救了我两次：第一次证明方法失效，第二次证明被检对象错位）。
+
+**我自己的错（当场纠正）**：CHANGELOG 里我用 indexOf 判断 Added/Changed/Fixed 顺序，被行内文本骗到
+  （报了「顺序错」），改用**行级标题匹配**才看清真实顺序是 Added→Changed→Fixed，本来就对。
+  ⇒ 同一族教训（上一轮也犯）：判断结构必须按行/按锚点，不能按字符位置。
+
+**现场**：master=60c36c4==origin；工作树 dirty=0；未跟踪件仅剩 .workbuddy 运行时读数 3 个（非本会话产出）。
+门禁：check_doc_refs/repo_eol/gate_links/report_figures/changelog 全 rc=0。CI run 在飞（bash- 见 xtmp/r176_ci.txt）。
+
+**下一轮候选**：① 收本笔 CI；② 归档索引的「逐文件 KB 数」是否与实际一致（我按 statSync 算的，可复算）；
+③ T88/T90 线上正例续挂；④ 把「判定配置键有效性须查二进制 + 对照组」写进 skill 清单。
