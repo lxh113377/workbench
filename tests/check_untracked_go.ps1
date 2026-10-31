@@ -25,7 +25,21 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 $wb = Join-Path $root "workbench"
 
-$tracked = @(git -C $root ls-files "*.go")
+# git 解析必须显式兜底，不能裸调 git（2026-10-31 round 174 实测缺陷）：
+#   $ErrorActionPreference="Stop" 下，PATH 里没有 git 时 `git -C ...` 直接抛 CommandNotFoundException，
+#   击穿下一行 `if ($LASTEXITCODE -ne 0) ⇒ exit 2` 的 UNVERIFIED 设计 —— 脚本以 rc=1 崩溃，
+#   聚合器把它判成 FAIL（「跑了但错了」），而正确语义是 rc=2 UNVERIFIED（「没测成」）。
+#   同族样板 = check_gate_coverage.ps1 的 gitExe 解析；round 202 在册教训「try/catch 必备」的另一半：
+#   不让异常发生比接住异常更靠前。实测复现：run_code 的 execSync 通道（无登录 PATH）跑本脚本 ⇒ RC=1，
+#   补 gitExe 兜底后同通道 ⇒ RC=2 UNVERIFIED。
+$gitExe = (Get-Command git -ErrorAction SilentlyContinue).Source
+if (-not $gitExe) {
+  foreach ($cand in @("C:\Program Files\Git\cmd\git.exe")) { if (Test-Path $cand) { $gitExe = $cand; break } }
+}
+if (-not $gitExe) { Write-Host "UNVERIFIED: 找不到 git 可执行文件" -ForegroundColor Red; exit 2 }
+# 统一走 & $gitExe：即便 PATH 恢复异常（如中途被改），后续调用也不会再裸撞 PATH。
+
+$tracked = @(& $gitExe -C $root ls-files "*.go")
 if ($LASTEXITCODE -ne 0) { Write-Host "UNVERIFIED: 取不到 git ls-files" -ForegroundColor Red; exit 2 }
 $tracked = @($tracked | ForEach-Object { $_.Trim('"') })
 
@@ -34,7 +48,7 @@ $tracked = @($tracked | ForEach-Object { $_.Trim('"') })
 # 那会把 ' M path.go' 这类已跟踪修改行也匹配进来（实测首版即此 bug：
 # 把 41 个并行在途的 M 文件误报成「生产代码未入库」，FAIL 从 3 处虚增到 41 处）。
 $untracked = @()
-foreach ($line in @(git -C $root status --porcelain=v1 --untracked-files=all)) {
+foreach ($line in @(& $gitExe -C $root status --porcelain=v1 --untracked-files=all)) {
   if (-not $line.StartsWith('?? ')) { continue }
   $rel = $line.Substring(3).Trim('"')
   if ($rel -like '*.go') { $untracked += $rel }
@@ -53,8 +67,8 @@ function Get-TestCount([string[]]$rels) {
 # 计数的**修订版本**必须与声称的口径一致（2026-10-25 round 179 修正）：
 #   旧写法用 git ls-files 取**路径**再读**工作区内容** ⇒ 对「已跟踪但有未提交改动」的文件，数的是工作区版本，
 #   却被当成「提交的测试函数」，差额（只在本地跑的测试）因此被低估。现：脏文件从 HEAD blob 数，干净文件读工作区（等价且快）。
-$dirtyTracked = @(git -C $root diff --name-only --diff-filter=M HEAD -- "*.go" | Where-Object { $_ })  # 只取 HEAD 里存在且被改的；暂存新增件 git show HEAD: 必炸 fatal（2026-10-26 round 185 实测红）
-function Get-HeadTestCount([string[]]$rels) { $n = 0; foreach ($r in $rels) { $t = ""; try { $t = (& git -C $root show ("HEAD:" + $r) 2>$null | Out-String) } catch { $t = "" }; if ($t) { $n += ([regex]::Matches($t, "(?m)^func Test" + [char]92 + "w+")).Count } }; return $n } # try/catch 必备：Stop 下 2>$null 抑制不了 NativeCommandError（round 202 实测）
+$dirtyTracked = @(& $gitExe -C $root diff --name-only --diff-filter=M HEAD -- "*.go" | Where-Object { $_ })  # 只取 HEAD 里存在且被改的；暂存新增件 git show HEAD: 必炸 fatal（2026-10-26 round 185 实测红）
+function Get-HeadTestCount([string[]]$rels) { $n = 0; foreach ($r in $rels) { $t = ""; try { $t = (& $gitExe -C $root show ("HEAD:" + $r) 2>$null | Out-String) } catch { $t = "" }; if ($t) { $n += ([regex]::Matches($t, "(?m)^func Test" + [char]92 + "w+")).Count } }; return $n } # try/catch 必备：Stop 下 2>$null 抑制不了 NativeCommandError（round 202 实测）
 $cleanTracked = @($tracked | Where-Object { $dirtyTracked -notcontains $_ })
 $committed = (Get-TestCount $cleanTracked) + (Get-HeadTestCount $dirtyTracked)
 $worktree = (Get-TestCount @($tracked | Where-Object { Test-Path -LiteralPath (Join-Path $root $_) })) + (Get-TestCount $untracked)
@@ -74,7 +88,7 @@ if (-not $NoRecord) {
       committedTests = $committed
       worktreeTests = $worktree
       gapLocalOnly = $gap
-      head = (& git -C $root rev-parse --short HEAD 2>$null)
+      head = (& $gitExe -C $root rev-parse --short HEAD 2>$null)
     }
     $line = ($rec | ConvertTo-Json -Compress)
     Add-Content -LiteralPath (Join-Path $memDir 'gate-readings.jsonl') -Value $line -Encoding UTF8
@@ -177,7 +191,7 @@ if ($untrackedTests.Count -gt 0) {
           badPkgCount = $badPkgs.Count
           badPkgs = ((@($badPkgs) | ForEach-Object { $_ -replace '\\', '/' }) -join ';')
           untrackedTests = $untrackedTests.Count
-          head = (& git -C $root rev-parse --short HEAD 2>$null)
+          head = (& $gitExe -C $root rev-parse --short HEAD 2>$null)
         }
         Add-Content -LiteralPath (Join-Path $memDir2 'gate-readings.jsonl') -Value ($rec2 | ConvertTo-Json -Compress) -Encoding UTF8
       }

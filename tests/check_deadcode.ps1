@@ -24,7 +24,44 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 
 # 1) 收集受跟踪的 .go —— 用 -z 取 NUL 分隔，避免路径引号，省掉修引号的转义dance（round 158）
-$raw = (git -C $root ls-files -z "workbench/*.go")
+# git 解析显式兜底 + 显式进程调用（2026-10-31 round 174 缺陷族）：
+#   Stop 偏好下裸调 git 会抛 CommandNotFoundException，击穿下面「未取到 ⇒ exit 2 UNVERIFIED」
+#   的设计，让聚合器把它判成 FAIL（跑了但错了）而非 UNVERIFIED（没测成）。
+#   实测：无 git PATH 时旧版 rc=1 崩溃（git : The term 'git' is not recognized）。
+$gitExe = (Get-Command git -CommandType Application -ErrorAction SilentlyContinue | Select-Object -First 1).Source
+if (-not $gitExe) {
+  foreach ($cand in @('C:\Program Files\Git\cmd\git.exe')) { if (Test-Path $cand) { $gitExe = $cand; break } }
+}
+if (-not $gitExe) { Write-Host "UNVERIFIED: 找不到 git 可执行文件" -ForegroundColor Red; exit 2 }
+# 显式进程调用（在册正解，样板 = check_gate_coverage.ps1 的 Invoke-Git）：
+#   为什么不能用 `& $gitExe`：git 不在 PowerShell 的 PATH 里时，Get-Command 返回空、
+#   兜底拿到绝对路径后 & "$path.exe" 会被 PowerShell 按**文档关联**解释（实测报
+#   "Cannot run a document in the middle of a pipeline"），输出恒空、rc 也拿不到。
+#   UseShellExecute=$false + RedirectStandardOutput 才是可靠通道。
+# 为什么显式 UTF-8 解码：默认码页（本机 GBK / CI 的 437）会把多字节序列成对吞字节，
+#   连带吃掉相邻 ASCII（round 45 在册事故：8 个真挂载被解成"没有该引用"）。
+function Invoke-Git([string[]]$gitArgs) {
+  $psi = New-Object System.Diagnostics.ProcessStartInfo
+  $psi.FileName = $gitExe
+  $q = [string][char]34
+  $bs = [string][char]92
+  $psi.Arguments = (($gitArgs | ForEach-Object { if (($_.Contains($bs)) -or ($_.Contains(' '))) { $q + $_ + $q } else { $_ } }) -join ' ')
+  $psi.WorkingDirectory = $root
+  $psi.UseShellExecute = $false
+  $psi.CreateNoWindow = $true
+  $psi.RedirectStandardOutput = $true
+  $psi.StandardOutputEncoding = (New-Object System.Text.UTF8Encoding($false))
+  $psi.RedirectStandardError = $true
+  $proc = [System.Diagnostics.Process]::Start($psi)
+  $so = $proc.StandardOutput.ReadToEnd()
+  $se = $proc.StandardError.ReadToEnd()
+  $proc.WaitForExit()
+  return @{ rc = $proc.ExitCode; out = $so; err = $se }
+}
+
+$lsGo = Invoke-Git @('ls-files', '-z', 'workbench/*.go')
+if ($lsGo.rc -ne 0) { Write-Host ("UNVERIFIED: ls-files 失败: " + $lsGo.err.Trim()) -ForegroundColor Red; exit 2 }
+$raw = $lsGo.out
 $goFiles = @($raw -split ([char]0) | Where-Object { $_ -ne "" })
 if ($goFiles.Count -eq 0) { Write-Host "UNVERIFIED: 未取到受跟踪的 .go" -ForegroundColor Red; exit 2 }
 

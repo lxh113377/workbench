@@ -27,8 +27,27 @@
   待下轮先补断言。入库的 10 件此前不在任何受理面，现自动进入 CI 的 `go vet ./...` + `go test -race ./...`
   与 check_test_assertions / check_gofmt 扫描范围。本机复验：7 包 `go vet`+`go build`+`go test` 全 rc=0、
   `-race` 本机跑不了（gcc 缺失，CGO_ENABLED=0，如实登记为未取证面，交 CI 承接）；提交前暂存清单逐条显式 add
-  （禁 `git add -A`，防卷走他人 2 个在途 fix 件）、gofmt 零列出、暂存 .go 无 CRLF/无 BOM/无行尾空白。
+  （禁 `git add -A`，防卷走他人 2 个在途 fix 件）、gofmt 零列出、暂存 .go 无 CRLF/无 BOM/无行尾空白。### Fixed
+
 ### Fixed
+
+- **两道门禁的 git 解析补显式兜底 + 显式进程调用：Stop 偏好下的「UNVERIFIED 设计」此前是死代码（round 174，2026-10-31 会话）**：
+  `tests/check_untracked_go.ps1:28` 与 `tests/check_deadcode.ps1:27` 各自写了「取不到 git ⇒ rc=2 UNVERIFIED」，
+  但取 git 的那一行是**裸调** `git -C ...`，而两处都在 `$ErrorActionPreference="Stop"` 下 ⇒ PATH 里没有 git 时
+  直接抛 `CommandNotFoundException` 击穿下一行的 rc 检查。实测（round 170 与 round 174 各自复现）：
+  `PATH` 去掉 Git 时旧版 **rc=1 崩溃**（`git : The term 'git' is not recognized`），聚合器据此判 FAIL（「跑了但错了」），
+  而设计语义是 rc=2 UNVERIFIED（「没测成」）—— 三态被压成两态，正是本仓在册的「判据存在但语义被架空」形态。
+  同族样板其实早就在册：`check_gate_coverage.ps1:34` 的 gitExe 解析 + `Invoke-Git`（显式进程调用）。
+  **为什么不能只补 `$gitExe` 就用 `& $gitExe`**（本轮实测踩到的第二个坑）：git 不在 PowerShell PATH 时，
+  `Get-Command git` 返回空、兜底拿到绝对路径后 `& "C:\Program Files\Git\cmd\git.exe"` 会被 PS 按**文档关联**解释，
+  报 `Cannot run a document in the middle of a pipeline`、输出恒空 —— 我第一版修复正是这样，门禁从「崩溃」变成
+  「静默 0 结果」，比崩溃更隐蔽（deadcode 一度报「未取到受跟踪的 .go」）。正解是 `check_gate_coverage` 的写法：
+  `$psi.FileName=$gitExe; $psi.UseShellExecute=$false; RedirectStandardOutput + 显式 UTF-8 解码`。
+  判据（三态齐全，且负控有牙）：正常 PATH ⇒ rc=0（deadcode 检查 533 个 .go / untracked 差额 0）；
+  无 git 的 PATH 但兜底候选在 ⇒ rc=0（Invoke-Git 走绝对路径，读数仍正确）；git 真不存在（负控副本清空候选）⇒
+  **rc=2 UNVERIFIED**（不是 rc=1 崩溃、也不是 rc=0 假绿）。`check_ps1_syntax` rc=0（85 脚本全部可解析）。
+  全仓扫描顺带确认：其余裸调 git 的门禁（check_gate_links / check_gofmt / check_deadcode 的另几处）都**已包在**
+  try/catch 里，异常不会击穿 —— 这两处是唯一漏网的两条，属「同族只修了显眼的一半」的典型残留。
 - **两条「恒绿判据」补成真判据，并给 SelfHeal 加可测接缝（round 170-171，2026-10-31 会话）**：
   取证发现 12 个未跟踪 Go 测试里有 2 个「测不到实现」的恒绿件（入库=往 CI 塞假覆盖），本轮先修后入库，
   修完**四组变异实测全部真杀**（区分了「测试 FAIL」的真杀与「编译失败」的假杀，见下）。
