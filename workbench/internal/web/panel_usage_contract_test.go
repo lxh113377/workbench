@@ -6,28 +6,66 @@ import (
 	"testing"
 )
 
-// 本文件守「界面使用自证」这块（round 165 · 承接 T113 的三件事）：
-//   ① 显示口径必须把「有人来过」与「有【人】来过」分开 —— 本仓的 liveness / curl / node / 无头探针都会打这些
-//      页面，不分开就是拿机器活动对使用者谎称界面被用过（与顶栏「停摆必须自证」同一条原则）。
-//   ② appJS 写的每个静态 class 必须在 appCSS 有定义。我本轮就用了两个不存在的类（state-pending，以及指望
-//      usage-line 自带基础样式）：JS 与 CSS 是两份独立 blob，编译器不管这个接缝，肉眼对照 38 个类也不可读。
+// 本文件守「界面使用自证」这块（round 165 · 承接 T113）三件事：
+//   ① 显示口径必须把「有人来过」与「有【人】来过」分开 —— 本仓的 liveness / curl / node / 无头探针都会打
+//      这些页面，不分开就是拿机器活动对使用者谎称界面被用过（与顶栏「停摆必须自证」同一条原则）。
+//   ② 三份内嵌 JS 写的每个静态 class 都必须在样式源里有定义。我本轮就用了两个不存在的类
+//      （state-pending，以及指望 usage-line 自带基础样式）：JS 与 CSS 是各自独立的 blob，编译器不管
+//      这个接缝，肉眼对照几十个类也不可读完 ⇒ 变成闸。
 //   ③ humanLatest 必须取最近一次（max）而非任取：多页被访问时任取一条会更早，读数长期偏旧。
 //
 // 三条都不依赖浏览器渲染；② 纯 Go，③ 复用同包 helperRunNode / helperArrowBody（不新造 node 机制）。
 
-// cssDefinedClassSet 收集 appCSS 里所有被定义的类名（.foo 形式，含 .a:hover / .a .b 这类带伪类与空格的组合）。
-func cssDefinedClassSet() map[string]bool {
+// styleSources 返回**全部样式定义源**：appCSS + 模型池页的内联 style。
+//
+// 为什么必须两源合并（round 165 实测）：我第一版只把 appJS 对 appCSS 比 —— 覆盖面只有 1/3。
+// 把 govJS/poolJS 纳入后，若仍只看 appCSS 就会造出 **9 个假红**：poolJS 用的 pool-table-wrap、
+// pool-ops、pool-group-head、pool-group-stat、pool-row-actions、pool-inline、pool-group、
+// pool-group-actions、warn 实际定义在模型池页自己的内联 style 里。
+// 这里调 modelPoolPageHTML（运行时真值）而不是解析 Go 源码 —— 与本仓既有定规一致
+// （js_syntax_contract_test.go 注释：读字段值必须执行程序取运行时真值）。
+func styleSources(t *testing.T) string {
+	t.Helper()
+	var b strings.Builder
+	b.WriteString(appCSS)
+	page := modelPoolPageHTML("probe-token-not-logged")
+	for from := 0; ; {
+		a := strings.Index(page[from:], "<style>")
+		if a < 0 {
+			break
+		}
+		rest := page[from+a+len("<style>"):]
+		end := strings.Index(rest, "</style>")
+		if end < 0 {
+			t.Fatal("模型池页的 style 开标签没有闭合 ⇒ 页面模板被改坏，样式源取不全")
+		}
+		b.WriteString("\n")
+		b.WriteString(rest[:end])
+		from += a + len("<style>") + end + len("</style>")
+	}
+	out := b.String()
+	if len(out) < 30000 {
+		t.Fatalf("样式源合计只取到 %d 字节（appCSS %d 字节）⇒ 抽取退化，判据会在比空气", len(out), len(appCSS))
+	}
+	return out
+}
+
+// cssDefinedClassSet 收集样式源里被定义的类名（.foo 形式，含 .a:hover、.a .b 这类组合）。
+// 先 stripLineComments：被注释掉的定义不算在册，否则「删掉真定义、留一行注释」就能骗过判据。
+func cssDefinedClassSet(t *testing.T) map[string]bool {
+	t.Helper()
+	css := stripLineComments(styleSources(t))
 	out := map[string]bool{}
-	for i := 0; i+1 < len(appCSS); i++ {
-		if appCSS[i] != 46 { // 点号
+	for i := 0; i+1 < len(css); i++ {
+		if css[i] != 46 { // 点号
 			continue
 		}
 		j := i + 1
-		for j < len(appCSS) && isCSSNameByte(appCSS[j]) {
+		for j < len(css) && isCSSNameByte(css[j]) {
 			j++
 		}
 		if j > i+1 {
-			out[appCSS[i+1:j]] = true
+			out[css[i+1:j]] = true
 		}
 	}
 	return out
@@ -37,14 +75,15 @@ func isCSSNameByte(b byte) bool {
 	return (b >= 65 && b <= 90) || (b >= 97 && b <= 122) || (b >= 48 && b <= 57) || b == 45 || b == 95
 }
 
-// jsStaticClassUses 抽出 appJS 里 class="..." 的字面量类名（跳过含拼接符的，那类无法在此层判定）。
-func jsStaticClassUses() []string {
+// jsStaticClassUses 抽出指定 blob 里 class="..." 的字面量类名。
+// 跳过含拼接符/模板占位的写法：那类字面量在此层无法判定（不是漏判，是不越层猜测）。
+func jsStaticClassUses(js string) []string {
 	var got []string
-	for i := 0; i+7 < len(appJS); i++ {
-		if !strings.HasPrefix(appJS[i:], "class=") {
+	for i := 0; i+7 < len(js); i++ {
+		if !strings.HasPrefix(js[i:], "class=") {
 			continue
 		}
-		rest := appJS[i+6:]
+		rest := js[i+6:]
 		if len(rest) == 0 || rest[0] != 34 { // 双引号
 			continue
 		}
@@ -53,7 +92,7 @@ func jsStaticClassUses() []string {
 			continue
 		}
 		val := rest[1 : 1+end]
-		if strings.Contains(val, "+") || strings.Contains(val, "\u0024") || strings.Contains(val, "{") {
+		if strings.Contains(val, "+") || strings.Contains(val, "$") || strings.Contains(val, "{") {
 			continue
 		}
 		for _, w := range strings.Fields(val) {
@@ -65,32 +104,46 @@ func jsStaticClassUses() []string {
 	return got
 }
 
-// TestJSClassesAreDefinedInCSS 钉住「JS 用到的每个静态 class 都在 CSS 里有定义」。
-// 受理面哨兵先行：两侧集合都要非空且达到量级，否则「0 缺失」只是什么都没扫到（本会话在册形态）。
+// TestJSClassesAreDefinedInCSS 钉住「三份内嵌 JS 用到的每个静态 class 都在样式源里有定义」。
+//
+// 受理面哨兵：样式源字节量、类名总数、每个 blob 的用法数都要过阈值 —— 否则「未定义 0 个」
+// 可能只是什么都没扫到（本会话已在别处栽过 5 次，这条必须在判据内部防住）。
 func TestJSClassesAreDefinedInCSS(t *testing.T) {
-	defs := cssDefinedClassSet()
+	defs := cssDefinedClassSet(t)
 	if len(defs) < 30 {
-		t.Fatalf("appCSS 只解出 %d 个类名 ⇒ 解析口径退化，本判据此刻在比空气", len(defs))
+		t.Fatalf("样式源只解出 %d 个类名 ⇒ 解析口径退化，本判据此刻在比空气", len(defs))
 	}
-	used := jsStaticClassUses()
-	if len(used) < 30 {
-		t.Fatalf("appJS 只解出 %d 处 class 用法 ⇒ 抽取口径退化（class 写法变了要同步本判据）", len(used))
+	blobs := []struct {
+		name    string
+		js      string
+		minUsed int
+	}{
+		{"appJS", appJS, 30},
+		{"govJS", govJS, 10},
+		{"poolJS", poolJS, 10},
 	}
-	missing := map[string]int{}
-	for _, u := range used {
-		if !defs[u] {
-			missing[u]++
+	for _, bl := range blobs {
+		used := jsStaticClassUses(stripLineComments(bl.js))
+		if len(used) < bl.minUsed {
+			t.Errorf("%s 只解出 %d 处 class 用法（下限 %d）⇒ 抽取退化或该页 class 写法变了，须同步本判据", bl.name, len(used), bl.minUsed)
+			continue
 		}
+		missing := map[string]int{}
+		for _, u := range used {
+			if !defs[u] {
+				missing[u]++
+			}
+		}
+		for k, n := range missing {
+			t.Errorf("%s 用了 class %q（%d 处）但样式源没有 .%s ⇒ 该元素拿默认样式渲染，走查时不易察觉（我本轮就犯过）", bl.name, k, n, k)
+		}
+		set := map[string]bool{}
+		for _, u := range used {
+			set[u] = true
+		}
+		t.Logf("%-6s 样式源类名 %d 个 ｜ 该类静态用法 %d 处、去重 %d 个 ｜ 未定义 %d 个",
+			bl.name, len(defs), len(used), len(set), len(missing))
 	}
-	for k, n := range missing {
-		t.Errorf("JS 用了 class %q（%d 处）但 appCSS 没有 .%s ⇒ 该元素拿默认样式渲染，走查时不易察觉", k, n, k)
-	}
-	set := map[string]bool{}
-	for _, u := range used {
-		set[u] = true
-	}
-	t.Logf("appCSS 定义 %d 个类名；appJS 静态 class 用法 %d 处、去重 %d 个；未定义 %d 个",
-		len(defs), len(used), len(set), len(missing))
 }
 
 // TestPanelUsageLineSeparatesHumanFromMachine 钉住显示口径的三态与数据来源。
@@ -112,11 +165,11 @@ func TestPanelUsageLineSeparatesHumanFromMachine(t *testing.T) {
 		t.Error("humanPaths 不是由 firstHuman 筛出 ⇒ 机器访问会被显示成「有人在看界面」")
 	}
 	if strings.Contains(code, "state-pending") {
-		t.Error("仍在用 appCSS 未定义的 state-pending")
+		t.Error("仍在用样式源未定义的 state-pending")
 	}
 }
 
-// TestHumanLatestPicksNewest 在 node 里真跑 humanLatest（同包已有 helperRunNode，不新造机制）。
+// TestHumanLatestPicksNewest 在 node 里真跑 humanLatest（复用同包 helperRunNode，不新造机制）。
 func TestHumanLatestPicksNewest(t *testing.T) {
 	node, err := exec.LookPath("node")
 	if err != nil {
@@ -126,9 +179,13 @@ func TestHumanLatestPicksNewest(t *testing.T) {
 	if n < 4 {
 		t.Fatalf("humanLatest 只抽到 %d 行 ⇒ 抽取退化，断言会比空气", n)
 	}
-	src := body + "\nglobal.out = humanLatest({a:{firstAt:100},b:{firstAt:900},c:{}}, [\"a\",\"b\",\"c\"]);" +
-		"global.out2 = humanLatest({a:{firstAt:\"123\"},b:{}}, [\"a\",\"b\"]);" +
-		"process.stdout.write(\"=\" + global.out + \"=\" + global.out2)"
+	// 本文件不在 Go 原始字符串内（与 assets_*.go 相反），所以这里可以放心用反引号 raw string 写 JS 尾部：
+	// 不需要转义、也不会出现跨行双引号字面量 —— 本轮我在前两种写法上各写坏过一次文件。
+	src := body + `
+global.out = humanLatest({a:{firstAt:100},b:{firstAt:900},c:{}}, ["a","b","c"]);
+global.out2 = humanLatest({a:{firstAt:"123"},b:{}}, ["a","b"]);
+process.stdout.write("=" + global.out + "=" + global.out2)
+`
 	out, err := helperRunNode(t, node, "human_latest", src)
 	if err != nil {
 		t.Fatalf("humanLatest 跑不起来：%v（输出 %q）", err, out)
