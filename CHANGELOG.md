@@ -16,7 +16,31 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Fixed
-### Fixed
+- **T116 收尾：Windows 保留设备名卫生门禁从「挂了但把仓库改坏」推到三面挂载可用（round 169，2026-10-31 会话）**：
+  上一轮遗留的在飞改动有三处硬缺陷，本轮逐条实测复现后修掉 ——
+  ① `tests/check_all.ps1` 的挂载把可执行语句插在 `param()` **之前**（PowerShell 要求 param 是首条可执行语句），
+     且字符串里用了 markdown 反引号（PS 里反引号是转义符）⇒ `check_ps1_syntax.ps1` 报 `Missing closing }`，
+     整个本地总门禁文件当时**不可解析**；原 BOM 也被挤到第 13 行。修 = 恢复 HEAD 后按在册样板把 Section 追加到
+     最后一个 Section 之后、汇总之前，串用单引号、SKIP 分支置 rc=3（写 0 会把「没跑」洗成 PASS，round 61 事故）。
+  ② 新门禁 `tests/check_reserved_names.ps1` 的默认根写死 `D:/workdesktop`。本仓 repo-gates 跑在 windows-latest 的
+     **另一个检出路径** ⇒ 实测 `-Root <不存在路径>` 返回 rc=2，而 ci.yml 对 `rc≠0` 一律判失败 ⇒ **推上去 CI 必红**。
+     修法按在册样板 `check_gate_coverage.ps1:34`：默认根由 `$PSScriptRoot` 推导，不硬编码（2026-10-22 已在册的教训，
+     这条新门禁又踩了一遍 ⇒ 说明「教训写在注释里」不等于「被下一个人读到」）。
+  ③ 该脚本无 BOM + 纯 LF，而 `.gitattributes:25-27` 明载 2026-10-22 实测事故：**无 BOM 的 UTF-8 .ps1 含中文时，
+     CI 的 PS5.1 按 ANSI 解码直接 ParserError，本地 PS7 却正常**。它当时未跟踪 ⇒ `check_ps1_encoding`（只遍历受跟踪
+     文件）也抓不到 ⇒ 属「判据的覆盖面恰好绕过了唯一的新增件」这一族。修 = 补单 BOM + CRLF 入库。
+  判据与负控：在 %TEMP% 用 `\\?\` 扩展前缀造出真 `nul`（.NET 连创建都拒绝、node 走 libuv 可建），门禁对该根报
+  `FAIL ... 1 处`/rc=1，清空后 rc=0 ⇒ 判据有牙不是恒绿；残留用完即删（`nul` 只能由 node 的 `fs.unlinkSync` 删，
+  PowerShell 删不掉 —— 这正是本门禁立身的实测依据，见 docs/取证-项目根保留设备名文件-2026-10-31.md）。
+  我自己在修的过程中造的两处错也如实登记：补 BOM 时写出**双 BOM**（第 2 个落在行首使该行的 `#` 不再是注释起始，
+  param 块失效），以及用 latin1 写含中文的插入块**把中文写成乱码**进而破坏单引号闭合 —— 两次都是本仓编码类门禁
+  把我抓住的，不是我把它们抓住的。另登记一条测量纪律：用 `cmd | tail` 取退出码拿到的是 tail 的码，
+  我据此一度误判 `check_ps1_syntax`「报失败却返回 0 = 假绿」，单独取码实为 rc=1（判据有牙）⇒ 测退出码须让被检
+  命令站在管道末端，或先重定向再取 `$?`。
+  现场读数：聚合门禁 `AGG_RC=0`（49 段全跑、2 段 SKIP 如实计缺），`check_ps1_syntax` / `check_ps1_encoding` /
+  `check_multi_bom` / `check_gate_coverage`（48/48 零孤儿）/ `check_report_figures`（受跟踪 49 / CI 30 / check_all 49）/
+  `check_doc_refs` / `check_gofmt` / `check_changelog` 全 rc=0。
+
 - **面板访问计数的一个真缺陷：快照用被截断的 UA 重算人类/机器，与日志行给出相反答案**（round 167 端到端实测）：
   跑仓库自带的 CDP 探针（tests/ui/cdp_probe.mjs，起**真实 Edge 无头**）访问 /modelpool 与 /governance 后，
   同一次访问在 workbench.jsonl 里是 human=false（正确），但 /api/status.panelVisits 里却是 firstHuman=true。

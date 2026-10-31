@@ -439,6 +439,17 @@ Section '覆盖安全（禁止整文件覆盖丢改动）' {
   if ($Source -eq '' -or $Target -eq '') { Write-Host '    SKIP 需同时给 -Source 与 -Target'; $global:LASTEXITCODE =  3; return }
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Source $Source -Target $Target
 }
+# 工作空间卫生（round 169 挂载）：被审查目录树里不得有 Windows 保留设备名文件/目录（T116）。
+# 为什么必须挂进总门禁而不是留着让人记得跑：本仓在册失效形态「判据存在但没挂受理面」
+#   （round 50 为此专门写了 check_gate_coverage）。实测危害见脚本头部矩阵与
+#   docs/取证-项目根保留设备名文件-2026-10-31.md：一个 nul 就能让 PowerShell 系的备份/清理
+#   整轮失败，而 [IO.File]::Exists 返回 False ⇒ 「先判断再删」的脚本会静默跳过它（比报错更糟）。
+# 三态口径：SKIP 分支必须置 rc=3；写 0 会把「门禁没跑」洗成 PASS（round 61 实测事故）。
+Section '工作空间卫生（Windows 保留设备名不得出现在被审查目录树）' {
+  $g = Join-Path $Root 'tests\check_reserved_names.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Quiet
+}
 
 Write-Host '========================================'
 # 汇总措辞（round 63）：有 SKIP 时不许再说 all-gates-pass —— 「全过」这个词必须名实相符，

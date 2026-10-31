@@ -105,6 +105,7 @@ jobs:
             'tests/check_noninteractive.ps1',
             'tests/check_gate_links.ps1',
             'tests/check_gofmt.ps1',
+            'tests/check_reserved_names.ps1',
             'tests/check_deadcode.ps1',
             'tests/check_ps1_encoding.ps1',
             'tests/check_ps1_syntax.ps1',
