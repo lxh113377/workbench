@@ -27,7 +27,7 @@
 | 操作系统 | Windows 10/11（x64） |
 | Go | **1.27.x**（`go version` 确认；`go.mod` 写的是 `go 1.27.0`） |
 | PowerShell | 7+（`pwsh`），构建脚本用 PowerShell 写 |
-| 可选 | mingw gcc（`go test -race` 需要；本机已在 WinLibs 下实测可用） |
+| 可选 | mingw gcc（`go test -race` 需要。**本机当前未装**（2026-10-31 实测：`command -v gcc` 为空，`/ucrt64/bin`、`/mingw64/bin`、`C:/mingw64/bin` 均无 gcc.exe，`CGO_ENABLED=0`）⇒ 本机跑不了 `-race`，**该验证由 CI 的 windows-latest 承接**（ci.yml vet + test (race) job）；要恢复本机 race 能力需装 WinLibs 并 `go env -w CC=<gcc 绝对路径>` |
 | 可选 | `windres`（生成 EXE 图标与版本信息；缺失时构建脚本会跳过并告警） |
 
 ---
@@ -78,7 +78,7 @@ docker run --rm -v "D:\workdesktop:/src" -w /src golang:1.27-bookworm \
 
 - [ ] `go vet ./...` 通过
 - [ ] `go test ./...` 全绿
-- [ ] 改过并发/共享状态 ⇒ `go test -race` 全绿
+- [ ] 改过并发/共享状态 ⇒ `go test -race` 全绿（**受理面 = CI 的 windows-latest job**：本机未装 mingw gcc、`CGO_ENABLED=0`，本机跑不了 `-race`，见「二、环境要求」；推送后须核 CI 的 vet + test (race) 步骤为绿才算数）
 - [ ] 改过源码 ⇒ `setup/build.ps1` 覆盖率门禁通过
 - [ ] 改过 `CHANGELOG.md` ⇒ `pwsh -File tests\check_changelog.ps1` 通过（Unreleased 必须居首）
 - [ ] 新增/改动拉起 EXE 的脚本 ⇒ 经 `tests/lib_silent_launch.ps1`，禁止裸 `Win32_Process.Create`（见「十、零弹窗纪律」）
