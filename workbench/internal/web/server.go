@@ -21,6 +21,7 @@ import (
 	"workbench/internal/engine"
 	"workbench/internal/evaluate"
 	"workbench/internal/gov"
+	"workbench/internal/logging"
 	"workbench/internal/model"
 	"workbench/internal/modelpool"
 	"workbench/internal/store"
@@ -49,6 +50,16 @@ type Server struct {
 	// onQuit 是「整体退出」钩子，由 main 注入（做 eng.Stop + srv.Close + 退出）。
 	// 放在 web 层只做触发、不自己决定怎么退，避免 web 与 main 的退出语义分叉。
 	onQuit func()
+
+	// visits 是面板页面访问计数（round 161 · T113）：回答「这界面真被真人打开过吗」。
+	// 零值可用（note 内惰性建 map），不需要构造函数配合，因此 NewServer 不必改。
+	visits panelVisits
+	// log 由 SetLogger 注入。未注入时是 nil，而 logging.emit 首行即 `if l == nil || l.inner == nil`
+	// 直接返回（internal/logging/logging.go 的 emit 开头）⇒ 在 nil 上调 .Info 是安全空操作。
+	// 与 engine.SetLogger 同形（engine.go:197 注释：未注入时用 Nop，保证零配置可用）。
+	// ⚠️ 「不炸」不等于「有证据」：判据必须自己注入 Handler 捕获再断言（panel_visits_test.go），
+	//    否则这条会在没日志器的环境里静默走空 —— 本仓在册形态「判据存在但没挂受理面」。
+	log *logging.Logger
 }
 
 // NewServer 构造服务（token 每次进程启动随机生成）。
@@ -67,6 +78,12 @@ func (s *Server) SetQuitHook(f func()) { s.onQuit = f }
 
 // SetSupervisor 注入资源治理器（/api/metrics 读取其最近采样）。
 func (s *Server) SetSupervisor(m *supervisor.Manager) { s.supervisor = m }
+
+// SetLogger 注入日志器（面板访问计数用；未注入时计数仍在内存里，只是不落盘）。
+// 独立成方法而不是加进 NewServer 参数：与本包其余可选子系统（SetGovernance / SetModelPool /
+// SetQuitHook）保持一致，且 main 的构造点有 4 处（含 ui_probe / plan_selftest 子命令），
+// 改签名会把无关子命令一起牵进来。
+func (s *Server) SetLogger(lg *logging.Logger) { s.log = lg }
 
 // Token 返回本次进程的访问令牌（SPA 由服务端注入）。
 func (s *Server) Token() string { return s.token }
@@ -311,12 +328,17 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 		http.NotFound(w, r)
 		return
 	}
+	// 计数挂在 404 早退**之后**：NotFound 不是"有人打开面板"，把它记进去会让
+	// 这条证据失真（扫描器打一个错路径就能刷高计数）。
+	s.recordVisit(r)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = io.WriteString(w, indexHTML(s.token, s.engine.Phase()))
 }
 
 func (s *Server) handleAdmin(w http.ResponseWriter, r *http.Request) {
+	// 主管理面板（人真正在看的那一页）
+	s.recordVisit(r)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = io.WriteString(w, adminHTML(s.token))
@@ -363,6 +385,11 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 		// stallReason 把"为什么现在没有产出"归纳成稳定原因码 + 一句人话。
 		// With 版本复用 st：判据与文案不变，只是不再重算快照（由来见 StallReasonWith 注释）。
 		"stallReason": s.engine.StallReasonWith(st),
+		// panelVisits：四个面板页各自的访问计数与首次访问的 UA（T113）。
+		// 之所以进 /api/status 而不是新开接口：顶栏每 5 秒就在打这个接口，加字段零成本，
+		// 面板要显示"这界面有没有人开过"也不用改请求路径；且沿用同一条 guard 鉴权。
+		// 注意这里只回计数与清洗后的 UA，**不回 token**（URL 带 ?token=，绝不入日志也不入响应体）。
+		"panelVisits": s.visits.snapshot(),
 	})
 }
 

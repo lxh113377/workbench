@@ -19,6 +19,8 @@ func (s *Server) governanceAvailable(w http.ResponseWriter) bool {
 }
 
 func (s *Server) handleGovernancePage(w http.ResponseWriter, r *http.Request) {
+	// 治理页（govJS 那页）
+	s.recordVisit(r)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = w.Write([]byte(governanceHTML(s.token)))

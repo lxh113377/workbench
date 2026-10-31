@@ -1,0 +1,145 @@
+package web
+
+import (
+	"net/http"
+	"strings"
+	"sync"
+)
+
+// 面板使用计数（round 161 · T113）。
+//
+// 为什么需要（一手取证，非推测）：本会话连着两轮想回答「这两个页面真被人打开过吗」都取不到证据 ——
+//   · audit.jsonl 165,211 行里 actor 只有 engine / autonomy / system / user，**没有 panel 这种取值**；
+//     176 条 actor=user 全是 cancel+transition，其中今日 6 条实为我部署 --quit 的副作用（不是人点面板）；
+//   · withMiddleware(实测 server.go:183) 只做回环与 Origin 校验、不记访问；guard(实测 server.go:276) 只验 token、不记访问；
+//     全仓 grep accessLog / logRequest / 访问计数 = 0 处。
+// ⇒ 一个 7x24 无人值守工作台，**界面是否被真人使用过完全不可知**。后果不是"少个统计"，而是排期没有依据：
+//   面板 JS 里的重绘保态、表单不被 15 秒清空（C3/C4）这类改动，永远只能停在「机制成立、伤害率未取证」，
+//   既不能据实投入，也不能据实否决。本文件把这条证据补齐。
+//
+// 设计约束（四条都来自本仓已登记的事故，不是偏好）：
+//   ① 只落一条 Info、每页每进程一次（seen 去重）：withMiddleware 那圈中间件在每次资源请求都会跑，
+//      若在那里逐请求打日志，就是 engine.go:116 记过的「audit.jsonl 一夜涨到 2.3MB」同型事故；
+//   ② 绝不记 token：/admin 的 URL 带 ?token=，日志会落盘。logging.Redact 虽会按键名脱敏，
+//      但不能把安全寄托在"键名恰好命中脱敏名单"上 ⇒ 干脆不取 URL 查询串，只记 path 与 UA；
+//   ③ UA 是**攻击者可控字符串**：截到 80 字节并把 CR/LF 换成下划线 —— 否则一行日志能被伪造出
+//      后续整行（日志注入），甚至伪造出「有人用浏览器打开过面板」这条结论本身；
+//   ④ 排除自动化与资源型 UA（HeadlessChrome / python-requests / curl / go-http-client / PowerShell）：
+//      本仓自己的 CDP 探针（cmd/workbench/ui_probe.go）和测试脚本都会访问面板，不过滤的话
+//      计数器会把「我自己跑过探针」报成「老大打开过面板」—— 观测者效应必须显式处理。
+
+// panelVisit 是一个面板页的访问计数快照。
+type panelVisit struct {
+	path    string
+	count   int
+	firstUA string
+	firstAt int64
+}
+
+// panelVisits 保存各页的"首次访问时刻 + 累计次数"。零值可用，无需构造。
+type panelVisits struct {
+	mu   sync.Mutex
+	seen map[string]*panelVisit
+}
+
+// autoUASubstrings 是"这不是真人"的判据片段（小写比较）。
+// 名单来源：本仓实际会打面板的自动件 —— ui_probe/liveness 走 PowerShell(Invoke-WebRequest 的 UA 含
+// Microsoft)、CDP/headless 浏览器 UA 含 HeadlessChrome、Go 侧 http.Client 默认 UA 是 go-http-client、
+// 以及常见脚本库 curl/python-requests。真人浏览器 UA 一律记为 human=true。
+var autoUASubstrings = []string{
+	"headlesschrome", "headless", "go-http-client", "curl/", "python-requests",
+	"invoke-webrequest", "microsoft-web-services-client", "powershell", "wget/",
+	"phantomjs", "selenium", "puppeteer", "playwright",
+}
+
+// isAutomatedUA 判断 UA 是否来自自动件。空 UA 按自动处理：真人浏览器一定会带 UA，
+// 空值只可能是刻意抹掉或裸 HTTP 客户端 —— 宁可少记，不可把机器行为记成人的行为。
+func isAutomatedUA(ua string) bool {
+	if strings.TrimSpace(ua) == "" {
+		return true
+	}
+	low := strings.ToLower(ua)
+	for _, s := range autoUASubstrings {
+		if strings.Contains(low, s) {
+			return true
+		}
+	}
+	return false
+}
+
+// cleanUAForLog 把 UA 压成可安全入日志的短串：去 CR/LF（防日志注入伪造后续行）、
+// 截到 80 字节（防一行被塞进超长内容）、并去掉制表符以外的连续空白。
+func cleanUAForLog(ua string) string {
+	s := strings.ReplaceAll(ua, "\r", "_")
+	s = strings.ReplaceAll(s, "\n", "_")
+	s = strings.ReplaceAll(s, "\t", " ")
+	if len(s) > 80 {
+		s = s[:80]
+	}
+	return s
+}
+
+// note 记录一次页面访问，返回 (本次累计次数, 是否首次, 清洗后的 UA 是否像真人)。
+// 计数与"是否首次"一起返回，调用方据此决定要不要打那条一次性日志。
+func (p *panelVisits) note(path, ua string) (count int, first bool, human bool) {
+	human = !isAutomatedUA(ua)
+	sanitized := cleanUAForLog(ua)
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if p.seen == nil {
+		p.seen = map[string]*panelVisit{}
+	}
+	v := p.seen[path]
+	if v == nil {
+		v = &panelVisit{path: path, firstUA: sanitized}
+		p.seen[path] = v
+		first = true
+	}
+	v.count++
+	return v.count, first, human
+}
+
+// snapshot 返回各页计数的副本（供 /api/status 暴露；不暴露内部指针，避免调用方改到状态）。
+func (p *panelVisits) snapshot() map[string]any {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	out := make(map[string]any, len(p.seen))
+	for k, v := range p.seen {
+		out[k] = map[string]any{
+			"count":      v.count,
+			"firstAt":    v.firstAt,
+			"firstUA":    v.firstUA,
+			"firstHuman": !isAutomatedUA(v.firstUA),
+		}
+	}
+	return out
+}
+
+// total 返回所有页累计访问次数（判据与面板都用得上的单一读数）。
+func (p *panelVisits) total() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	n := 0
+	for _, v := range p.seen {
+		n += v.count
+	}
+	return n
+}
+
+// recordVisit 是四个页面 handler 的统一入口：记一笔，并且只在**每页首次**落一条 Info。
+// logger 允许为 nil（未注入时用 logging.Nop 语义，emit 内已有 nil 保护）⇒ 单测与嵌入式调用都不会炸。
+func (s *Server) recordVisit(r *http.Request) {
+	count, first, human := s.visits.note(r.URL.Path, r.UserAgent())
+	if !first {
+		return
+	}
+	// 直接在 s.log 上调：logging.emit 首行即 `if l == nil || l.inner == nil { return }`
+	// （internal/logging/logging.go 的 emit 开头）⇒ 未注入日志器（单测、CLI 子命令）时是安全空操作，
+	// 不会炸也不会假装记过了。判据侧要断言这条，必须自己注入 Handler 捕获（panel_visits_test.go）。
+	s.log.Info("面板页面首次被访问",
+		"component", "panel-visit",
+		"path", r.URL.Path,
+		"ua", cleanUAForLog(r.UserAgent()),
+		"human", human,
+		"count", count)
+}

@@ -7,6 +7,8 @@ import (
 
 // handleModelPoolPage 渲染模型池控制台。
 func (s *Server) handleModelPoolPage(w http.ResponseWriter, r *http.Request) {
+	// 模型池控制台（poolJS 那页；C3/C4 争议的就在这页，计数为它提供使用面证据）
+	s.recordVisit(r)
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	_, _ = io.WriteString(w, modelPoolPageHTML(s.token))

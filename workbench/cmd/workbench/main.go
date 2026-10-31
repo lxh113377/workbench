@@ -265,6 +265,10 @@ func runApp(args []string) error {
 	}
 
 	srv := web.NewServer(layout, cstore, eng, hub)
+	// 注入日志器：面板访问计数要落进 workbench.jsonl 才成为跨重启的证据（T113）。
+	// 不注入也不会崩（logging.emit 对 nil 安全），但那条 Info 会静默走空 ⇒ 只剩内存计数，
+	// 一次重启就归零 —— 那正是本会话刚查清的「每日额度被重启回收」同型陷阱，所以这里必须接。
+	srv.SetLogger(logger)
 	srv.SetModelPool(poolSvc)
 	if err := srv.Listen(); err != nil {
 		return err
