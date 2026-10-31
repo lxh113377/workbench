@@ -843,3 +843,34 @@ rc=2 UNVERIFIED / 同副本在 PATH 有 git 时 rc=0。check_ps1_syntax rc=0（8
 **下一轮候选**：① 若还要压 defaultsQuality，正确方向是抽「模板正文」为常量而非拆函数（数据与结构分离）；
   ② P1-2 里挑 autonomy/manager.go 的持久化写入面做逐处判定（19 处里预计 5-8 处该报错）；
   ③ P1-3 让归档索引 KB 列脚本化；④ T88/T90 线上正例续挂。
+
+## Round 178 收口（实测 2026-11-01 02:0x）
+
+**做了什么**：给 `autonomy.Store` 持久化加文件系统 seam（`storePersist`），并用**故障注入**验证
+「吞掉的写入错误会不会造成谎报成功」（87cc154 + fb531bb）。
+
+**为什么这是真问题**：五轴报告 P1-2 点名 `manager.go` 19 处 `_ =`，其中 16 处是 `Upsert`/`AppendDecision`
+（持久化写入）。但 Windows 上无法稳定构造「写 goals.json 失败」（config/atomic.go:33-37 已记录四方案实测失败），
+**没有 seam 就写不出故障测试 ⇒ 换台机器会静默 SKIP ⇒ 判据等于不存在**。这正是这些 `_ =` 至今未被验证的原因。
+
+**三条判据（齐备才算闭环）**：
+  ① seam 自证（Upsert 触发 1 次 persist）—— 防注入测试空转；
+  ② 注入全程失败 ⇒ `SetGoal` 必须返回 error，磁盘留空树（实测 goals=0 activeId=""）；
+  ③ **负向对照**：无注入 ⇒ 必须成功且真落盘（实测 goals=1 activeId=goal-1700000000000-68c85247）。
+
+**本轮最重要的一件事：我修正了自己上一轮的结论**。我曾判「createGoalLocked:198 吞 Upsert 错误 ⇒ 目标静默丢失」，
+实测**证伪**：SetActive（store.go:170-175）会二次落盘兜住，SetGoal 路径是安全的。
+新结论比旧猜测**更保守**，但它是可复算的 —— 这是本仓「结论必须有判据背书」的纪律，宁可推翻自己。
+
+**我自己的错（第 11-13 次同族）**：① 凭空写 NewManagerForTest（真实 NewManager(store, cfgFunc, log, now)）；
+  ② SetGoal 少传参数（真实三参）；③ 断言「注入失败后 goals.json 不该存在」而 OpenStore 会建空树（86 字节）
+  ⇒ 是**判据期望写错**不是实现错。
+  共同根因：**写代码前没读被调用方的真实签名与既有行为**。已定为稳定缺陷模式，下轮起改规矩：
+  **写任何调用之前先 grep 签名**（不凭记忆、不凭直觉）。
+
+**现场**：master=fb531bb==origin；build/vet/test 全 rc=0（32 包 ok）；autonomy 包 1.787s rc=0；
+  check_ignored_error rc=0；check_changelog rc=0（判据真跑）。CI run 41227077055 在飞。
+
+**下一轮候选**：① 收 CI；② 用同一 seam 补 `AppendDecision` 的失败面判据（台账留痕失败是否阻断，
+  目前 writeLedgerThenActivate 注释说「不阻断」，但那条设计意图**同样没有测试**）；
+  ③ P1-3 归档索引 KB 列脚本化；④ T88/T90 线上正例续挂。
