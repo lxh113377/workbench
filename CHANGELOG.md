@@ -46,6 +46,31 @@
   `-race` 本机跑不了（gcc 缺失，CGO_ENABLED=0，如实登记为未取证面，交 CI 承接）；提交前暂存清单逐条显式 add
   （禁 `git add -A`，防卷走他人 2 个在途 fix 件）、gofmt 零列出、暂存 .go 无 CRLF/无 BOM/无行尾空白。### Fixed
 
+- **给 autonomy.Store 的持久化加文件系统 seam，并用故障注入判据证明「吞掉的写入错误不会造成谎报成功」（round 178，2026-11-01 会话）**：
+  背景：五轴报告 P1-2 点名 `internal/autonomy/manager.go` 19 处 `_ =` 忽略返回值，其中 16 处是
+  `m.store.Upsert` / `m.store.AppendDecision`（**持久化写入**，非 defer 清理）。这些错误到底会不会让
+  「目标已建但磁盘上没有」的状态分叉静默发生，**此前无任何测试能回答** —— 因为 Windows 上无法稳定构造
+  「写 goals.json 失败」（`internal/config/atomic.go:33-37` 已记录同类实测：独占打开 / 只读属性 / 空目录 /
+  非空目录四种方案都构造不出，只能靠 seam）。没有 seam 的故障测试在别的机器会静默 SKIP ⇒ 判据等于不存在。
+  改法（与 `config` 包同一范式）：`store.go` 新增包级 `storePersist`（默认 `config.WriteJSONAtomic`），
+  `persistLocked` 只调它。生产语义逐字不变（同一函数、同一路径、同一 file）。
+  判据三条（`internal/autonomy/store_persist_failure_test.go`）：
+    ① `TestStorePersistSeamIsWired` —— 先自证 seam 真的被走到（Upsert 触发 1 次 persist），防「注入测试空转」；
+    ② `TestCreateGoalSwallowedPersistFailure` —— 注入全程失败时 `SetGoal` **必须返回 error**（实测：磁盘留空树
+       `goals=0 activeId=""`），调用方不会被骗；
+    ③ `TestCreateGoalSucceedsWithoutInjection` —— **负向对照**：无注入时同一路径必须成功且目标真落盘
+       （实测 `goals=1 activeId=goal-…`），否则上面那条可能恒真。
+  **本轮同时修正了我自己上一轮的判断**：我曾写「`createGoalLocked:198` 吞 Upsert 错误会造成目标静默丢失」——
+  实测证伪：`SetActive`（`store.go:170-175` → `persistLocked`）会二次落盘兜住，`SetGoal` 路径安全。
+  真正的问题是**这条安全性从未被验证过**（测试构造不出写盘失败），现在补上了。
+  我自己的错（第 11-13 次同族）：① 凭空写 `NewManagerForTest`（真实签名是
+  `NewManager(store, cfgFunc, log, now)`）；② `SetGoal` 少传一个参数（真实是 title/intent/domain 三参）；
+  ③ 断言「注入失败后 goals.json 不该存在」——`OpenStore` 会主动建**空树**（86 字节），
+  是**判据的期望写错**、不是实现错。三次同族根因：**写代码前没先读被调用方的真实签名与既有行为**。
+  验证：`go build`/`go vet`/`go test ./...` 全 rc=0（32 包 ok）、autonomy 包 1.787s rc=0、
+  `check_ignored_error` rc=0（172 个非测试 .go 无同名函数 strict/ignored 并存）。
+  `[PENDING_SHA]`
+
 ### Changed
 - **`Defaults()` 从 491 行拆成 12 行 + 9 个领域函数，用全字段指纹证明零行为变化（round 177，2026-11-01 会话）** `[8cc4c97]`：
   对应五轴报告 P1-1。原实现 29 个 `mk(...)` 条目全在同一个切片字面量里，函数内虽有 7 个「── 领域分组」注释但

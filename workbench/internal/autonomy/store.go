@@ -93,10 +93,25 @@ func OpenStore(goalsPath, decisionsPath string) (*Store, error) {
 func nowMs() int64 { return time.Now().UnixMilli() }
 
 // persistLocked 原子写 goals.json（调用方已持锁）。
+// storePersist 是「把当前内存态写进 goals.json」的唯一出口（2026-11-01 round 178 加的文件系统 seam）。
+//
+// 为什么需要 seam（与本仓 config/atomic.go 的 fsRename/fsRemove 同一范式）：
+//
+//	Store 的持久化失败（磁盘满 / 权限 / 只读挂载）**在 Windows 上无法稳定构造** ——
+//	config 侧为同类问题实测扫过四种方案（独占打开 / 只读属性 / 空目录 / 非空目录）都构造不出，
+//	只能靠 seam 精确控制成败。没有 seam 的故障测试在别的机器上会静默 SKIP，
+//	那种测试等于不存在（本仓在册的 vacuous pass 家族）。
+//	⇒ 有了这个 seam，manager 层「吞掉的持久化错误到底会不会造成状态分叉」才是**可测**的。
+//
+// 生产语义与改造前逐字一致：同一个 config.WriteJSONAtomic、同一个 goalsPath、同一个 s.file。
+var storePersist = func(path string, file GoalsFile) error {
+	return config.WriteJSONAtomic(path, file)
+}
+
 func (s *Store) persistLocked() error {
 	s.file.SchemaVersion = GoalsSchemaVersion
 	s.file.SavedAt = nowMs()
-	return config.WriteJSONAtomic(s.goalsPath, s.file)
+	return storePersist(s.goalsPath, s.file)
 }
 
 // Goals 返回目标列表副本（按创建时间升序）。
