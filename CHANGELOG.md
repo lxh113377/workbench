@@ -17,6 +17,19 @@
 
 ### Fixed
 ### Fixed
+- **面板访问计数的一个真缺陷：快照用被截断的 UA 重算人类/机器，与日志行给出相反答案**（round 167 端到端实测）：
+  跑仓库自带的 CDP 探针（tests/ui/cdp_probe.mjs，起**真实 Edge 无头**）访问 /modelpool 与 /governance 后，
+  同一次访问在 workbench.jsonl 里是 human=false（正确），但 /api/status.panelVisits 里却是 firstHuman=true。
+  根因：note() 用完整 UA 判完就丢弃结论，snapshot() 再拿 firstUA 重算 —— 而 firstUA 是 cleanUAForLog
+  **截到 80 字节之后**的形态，Edge 无头的 UA 里 `HeadlessChrome` 恰好落在第 84 字节之后 ⇒ 截断串看不见它。
+  ⇒ 两个谓词从不同输入推同一事实（与本仓 T108 的 isReportArtifact / isDocsMarkdown 不对称同族）。
+  后果正是本功能要防的那件事：**面板会对使用者谎称「有真人打开过界面」**，而那个"真人"是我的探针。
+  修法：结论在 note() 时用完整 UA 算出并存进结构体（firstHuman 字段），snapshot() 只取存量、不再重算。
+  为什么既有测试没抓到：单测用的样本 UA 短到不触发截断、或标记在 80 字节之前；curl/node 探针 UA 只有几十字节。
+  **只有真实浏览器长 UA 才暴露** ⇒ 这正是端到端验证的价值（我此前对 T113/T114 只验到产物字节与 HTTP 字段）。
+  新增判据 TestLongHeadlessUAAgreesAcrossBothReadouts：先用两条 Fatal 自证样本成立（长度 >80 且标记确在
+  第 80 字节之后），再断言「两个读法一致」+「都必须是 false」（一致但都判成"有人"同样是最坏结果）+ 入库 UA 不超 80。
+  负控：把 snapshot 改回重算 ⇒ 判据 RC=1 并两条各报分叉与谎称后果，与线上实测的形态逐字吻合；还原后字节一致。
 - **交付物门禁新增「探查产物落点」条款（T114）：引擎任务不再把临时脚本写进被审查项目根**（round 166）：
   根因取证 —— external 模式下任务 cwd 就是被审查项目根（`WorkRoot` 仅 external 赋值、`cmd.Dir = workDir`），
   而两处注入条款（templates 第 1-5 条 / autonomy 第 1-6 条）**没有一条**约束落点 ⇒ 项目根实测积了 10 个

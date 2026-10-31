@@ -35,6 +35,10 @@ type panelVisit struct {
 	count   int
 	firstUA string
 	firstAt int64
+	// firstHuman 是首次那次用**完整 UA** 判出的结论。必须存下来、不在 snapshot 里重算：
+	// firstUA 是 cleanUAForLog 截到 80 字节后的形态，而 Edge 无头浏览器的 UA 里
+	// HeadlessChrome 恰好落在第 84 字节之后 ⇒ 拿截断串重算会判成真人。
+	firstHuman bool
 }
 
 // panelVisits 保存各页的"首次访问时刻 + 累计次数"。零值可用，无需构造。
@@ -123,7 +127,8 @@ func (p *panelVisits) note(path, ua string) (count int, first bool, human bool, 
 		// firstAt 必须在首次那次就填：线上实测（curl + PowerShell 探针）暴露过它恒为 0 ——
 		// 单测当时断言了 path/human/count/ua，唯独没断 firstAt ⇒ 字段一路是零值。
 		// 教训：结构体里"有字段"不等于运行时"字段有值"；单测必须逐个字段断言，不能只断好写的。
-		v = &panelVisit{path: path, firstUA: sanitized, firstAt: time.Now().UnixMilli()}
+		// human 是上面用完整 ua 算出的结论，此刻就固化进快照（见结构体字段注释）
+		v = &panelVisit{path: path, firstUA: sanitized, firstAt: time.Now().UnixMilli(), firstHuman: human}
 		p.seen[path] = v
 		first = true
 	}
@@ -138,10 +143,11 @@ func (p *panelVisits) snapshot() map[string]any {
 	out := make(map[string]any, len(p.seen))
 	for k, v := range p.seen {
 		out[k] = map[string]any{
-			"count":      v.count,
-			"firstAt":    v.firstAt,
-			"firstUA":    v.firstUA,
-			"firstHuman": !isAutomatedUA(v.firstUA),
+			"count":   v.count,
+			"firstAt": v.firstAt,
+			"firstUA": v.firstUA,
+			// 取存量结论，不重算：重算用的是被截断的 firstUA，会与 note 时的答案分叉
+			"firstHuman": v.firstHuman,
 		}
 	}
 	return out
