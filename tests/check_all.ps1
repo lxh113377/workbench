@@ -445,6 +445,16 @@ Section '覆盖安全（禁止整文件覆盖丢改动）' {
 #   docs/取证-项目根保留设备名文件-2026-10-31.md：一个 nul 就能让 PowerShell 系的备份/清理
 #   整轮失败，而 [IO.File]::Exists 返回 False ⇒ 「先判断再删」的脚本会静默跳过它（比报错更糟）。
 # 三态口径：SKIP 分支必须置 rc=3；写 0 会把「门禁没跑」洗成 PASS（round 61 实测事故）。
+Section '归档索引 KB 列与实物一致（防人工填写漂移）' {
+  # 为什么挂进总门禁：docs/archive/2026-10/README.md 的 76 行索引带「NKB」列，原先靠人手/一次性脚本填写。
+  #   2026-11-01 实测已有 2 行失真（103B 与 305B 写成 1KB），而没有任何门禁会红。
+  # 处置方向不是「加判据看住人工」，而是**让 setup/gen-archive-index.ps1 生成**；本段只做漂移检测：
+  #   谁手工改了索引（或归档了新文件忘了跑生成器）⇒ 这里立刻红。
+  $g = Join-Path $Root 'setup\gen-archive-index.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 生成器不存在'; $global:LASTEXITCODE =  3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Check -Quiet
+}
+
 Section '工作空间卫生（Windows 保留设备名不得出现在被审查目录树）' {
   $g = Join-Path $Root 'tests\check_reserved_names.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE =  3; return }
