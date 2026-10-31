@@ -581,3 +581,36 @@ FAIL 读成无牙 PASS）⇒ 负控一律完整捕获 + 直接测退出码。
 
 **实现约束（我自己先定，不等件B 也成立）**：只**新增**条款、不改被逐短语断言的既有短语；新条款必须把
 「探查脚本/重定向产物」与「交付物（报告仍落 docs/）」在同一句里明确区分，避免模型把报告写进临时目录反被 T88 判红。
+
+## Round 168 收口（实测 2026/10/31 21:10:45）
+
+**方法论收获（比修的 bug 更值钱）**：我此前对 T113/T114 的线上验证只到「产物字节含新代码 + HTTP 字段对」两层。
+本轮第一次跑仓库自带的 CDP 探针（tests/ui/cdp_probe.mjs：真实 Edge --headless=new、直连 DevTools、每 target
+errors=0、退出码区分 fail/unverified、自带 --selftest-expect-fail 反证），**当场抓到 T115**：
+同一次无头浏览器访问，workbench.jsonl 里 human=false（对），而 /api/status.panelVisits 里 firstHuman=true
+⇒ 面板会对我谎称「有真人打开过界面」。
+
+**根因（两个谓词从不同输入推同一事实，与 T108 同族）**：note() 用完整 UA 判完就丢弃结论，snapshot() 再拿
+firstUA 重算 —— 而 firstUA 是 cleanUAForLog 截到 80 字节之后的形态，Edge 无头 UA 里 HeadlessChrome 恰在
+第 84 字节之后 ⇒ 看不见（实测入库 80 / 原 133）。既有测试全抓不到：单测样本短到不触发截断，curl/node UA
+只有几字节 ⇒ 只有真实浏览器长 UA 才暴露。修法：note 时固化结论、snapshot 只取存量（注释写明不能重算）。
+
+**判据与负控**：TestLongHeadlessUAAgreesAcrossBothReadouts 先用两条 t.Fatalf 自证样本成立（长度 >80 且标记
+确在第 80 字节之后 ⇒ 不拿空转样本比结论，「空集当通过」第 6 次堵在判据内部），再三断言（一致 / 都是 false /
+入库 UA≤80）。负控先校验命中=1：改回重算 ⇒ RC=1 两条各报「日志 false 而快照 true」「面板会谎称」，与线上
+逐字吻合；还原字节一致；全仓 RC=0/32 包。CDP 端到端复验 ok=23/fail=0，firstHuman 已由 true 回到 false。
+
+**我自己的三次错（都当场纠正）**：① 8d94489 推前只跑 go test、没跑 check_all（上轮刚立的规矩）⇒ 推后补跑
+AGG_RC=0/46 段 PASS，规矩没错是我没执行，已并入部署同一批动作；② 第四次凭构造写变异锚点（两空格 vs 实际
+单空格）⇒ 未命中即无效验证，先读实际字节 + 命中数打成 1 才落盘；③ 沿用上轮 owner-stub 的 overlay（owner 的
+文件早已入库）反而抽掉 helper 报 build failed，另一次我的 grep -E 把编译错误行滤掉只剩 FAIL —— 都是工具
+过期/模式错，不是代码错。
+
+**#40/#44**：8d94489 代码+判据+CHANGELOG+PR 同 sha → 推送 → 部署 rev==HEAD → 真实浏览器端到端复验通过；
+ALIVE、INTEGRITY=OK。派 0 件，skip_reason=**严格串行**（缺陷是跑出来的，无法预先拆并行件）；上轮两件取证
+仍未落盘 ⇒ 按 ⑦ 不重派、登记未取证。
+
+**现场**：verify 25 / pass 8（pass 未增）；报告级交付 1/32=3.1%；面板真人使用 **0 次且这次是干净的**
+（修复前那个 true 是我的探针造的假证据 ⇒ 修完才配当排期依据）。
+下一轮：① 核 8d94489 CI；② 收件A/件B 复算；③ 若低风险则处理 nul（Windows 保留名）与散件清理并把落点约束
+推进到引擎侧 scratch；④ T88/T90 线上正例续挂。
