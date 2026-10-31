@@ -28,8 +28,26 @@
   与 check_test_assertions / check_gofmt 扫描范围。本机复验：7 包 `go vet`+`go build`+`go test` 全 rc=0、
   `-race` 本机跑不了（gcc 缺失，CGO_ENABLED=0，如实登记为未取证面，交 CI 承接）；提交前暂存清单逐条显式 add
   （禁 `git add -A`，防卷走他人 2 个在途 fix 件）、gofmt 零列出、暂存 .go 无 CRLF/无 BOM/无行尾空白。
-
 ### Fixed
+- **两条「恒绿判据」补成真判据，并给 SelfHeal 加可测接缝（round 170-171，2026-10-31 会话）**：
+  取证发现 12 个未跟踪 Go 测试里有 2 个「测不到实现」的恒绿件（入库=往 CI 塞假覆盖），本轮先修后入库，
+  修完**四组变异实测全部真杀**（区分了「测试 FAIL」的真杀与「编译失败」的假杀，见下）。
+  ① `single/instance_test.go` —— 旧版把「副本端口起监听」放在邻居检查**之后** ⇒ 检查 base+1 时上方还是空的，
+     「从 base 向上连扫 10 端口」这版历史缺陷照样返回 false、测试照 PASS。修法 = 把 ln2 提到邻居检查**之前**，
+     让被查点上下两侧各有监听 ⇒ 一个检查同时咬死向上/向下两个方向的顺延；复验 `scan.json`(RC=1)/`scan_back.json`(RC=1)、
+     基线 RC=0，失败信息逐字点出「探测结果=副本端口 ⇒ 存在顺延」。
+  ② `supervisor/selfheal_relaunch_test.go` —— 旧版三个 Test **没有一个真的调用 SelfHeal**：Test1 只自己 exec 测试二进制
+     并忽略退出码（`WB_SELFHEAL_CHILD` 全仓零读者，是个虚构的自识别机制），Test2 只 Stat exe 目录，Test3 结尾 `_ = m`
+     ⇒ 把 SelfHeal 整个掏空仍 3/3 PASS。修法 = 在 `supervisor.go` 加包级接缝 `selfHealStart`（**只注入 cmd.Start**，
+     构造留在被测函数里），测试真的调用 `m.SelfHeal` 却只在「让进程落地」这步换替身 ⇒ cmd.Path/Args/Dir 都是被测函数
+     按生产口径构造的真实值，且不 fork 风暴（go test 里 os.Executable 就是测试二进制自身）。为什么只注入 Start 而不
+     注入 exec.Command 或「构造+启动」合一：注入后者会把 `--silent` 藏进注入点内部 ⇒ 「删 --silent」这类变异会存活
+     （我第一版正是这个缺陷，改成注入 Start 后 `sh_nosilent` 才翻红）。四断言各咬一类缺陷：calls=1（掏空/漏调 ⇒ `sh_gut` 杀）、
+     Args 含 --silent（丢参数弹控制台 ⇒ `sh_nosilent` 杀）、Dir=exe 目录（丢目录⇒数据根漂移，`sh_nosilent`/`sh_nodir` 杀）、
+     Start 失败必须上抛（吞错⇒上层以为自愈成功 ⇒ `sh_swallow` 杀）。生产语义零变化（同 exe、同 --silent、同 cmd.Dir、同 Start 失败包装）。
+  纪律复现（父级未采信子代理自述）：以上全部由我自己重跑变异取码 —— 且踩了一次「*_RC 是 tail 的码」的老坑并当场纠正
+  （改成被检命令站管道末端），另踩一次凭空写 `errorsIs` 这个不存在的标识符（改回标准 `errors.Is`）。
+  `supervisor.go` 属非测试 .go 改动 ⇒ 本条即 check_changelog 第 5 条要求的落地留痕。
 - **T116 收尾：Windows 保留设备名卫生门禁从「挂了但把仓库改坏」推到三面挂载可用（round 169，2026-10-31 会话）**：
   上一轮遗留的在飞改动有三处硬缺陷，本轮逐条实测复现后修掉 ——
   ① `tests/check_all.ps1` 的挂载把可执行语句插在 `param()` **之前**（PowerShell 要求 param 是首条可执行语句），

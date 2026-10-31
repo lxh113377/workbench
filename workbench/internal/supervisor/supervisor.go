@@ -216,6 +216,20 @@ func (m *Manager) evaluate(s Sample) {
 }
 
 // SelfHeal 记录自愈并拉起新进程，随后由调用方退出当前进程。
+// selfHealStart 是 SelfHeal 唯一的「让新进程落地」出口（2026-10-31 加，为补上可测接缝）。
+//
+// 为什么只注入 Start，而不注入 exec.Command 或整个「构造+启动」：
+//
+//	exec.Command 本身**不起进程**（只填一个 *exec.Cmd 结构体），真正落地的是 cmd.Start()。
+//	所以把接缝放在 Start 上，SelfHeal 仍按生产口径把 cmd 完整构造出来，测试注入的替身
+//	就能在**不落地**的前提下直接读 cmd.Path / cmd.Args / cmd.Dir 做断言 ——
+//	若注入的是「构造+启动」合一的函数，--silent 这个参数就藏在注入点内部，测试根本看不到，
+//	「删掉 --silent」这类变异会存活（我上一版正是这个缺陷，已改）。
+//	反过来，若完全不注入，测试里 os.Executable() 就是测试二进制自己，一调 SelfHeal 即 fork 风暴。
+//
+// 生产语义与改造前逐字一致：同一个 exe、同一个 --silent 参数、同样的 cmd.Dir、同样的 Start 失败包装。
+var selfHealStart = func(cmd *exec.Cmd) error { return cmd.Start() }
+
 func (m *Manager) SelfHeal(reason string) error {
 	exe, err := os.Executable()
 	if err != nil {
@@ -225,7 +239,7 @@ func (m *Manager) SelfHeal(reason string) error {
 	m.log.Warn("资源自愈触发", "reason", reason, "exe", exe)
 	cmd := exec.Command(exe, "--silent")
 	cmd.Dir = filepath.Dir(exe)
-	if err := cmd.Start(); err != nil {
+	if err := selfHealStart(cmd); err != nil {
 		return fmt.Errorf("拉起新进程失败: %w", err)
 	}
 	return nil
