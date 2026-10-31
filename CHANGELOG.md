@@ -16,6 +16,23 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Added
+- **交付首份「可直接贴 PR」的五轴分级审查报告，并用**真实门禁函数**自证（round 176，2026-11-01 会话）**：
+  `docs/五轴审查-分级-2026-11-01.md`（8,961 字节 / 135 行）—— 记录五轴（正确性/可读性/架构/安全/性能）实测读数
+  （533 个受跟踪 `.go` / 81,778 行 / 35 包 / 1,147 测试函数 / vet+test 全绿 / 聚合 49 段 0 FAIL），
+  **分级结论 P0 无 · P1 三项 · P2 四项**，附「贴 PR 用的短版」与合并结论。
+  本轮识别的实质问题（全部带 file:line 与可复跑命令）：P1-1 超长函数 7 处（`internal/templates/defaults.go:51`
+  `Defaults()` 491 行、`engine.go:983` `runOne` 361 行、`cmd/workbench/main.go:114` `runApp` 336 行等）；
+  P1-2 168 处 `_ =` 错误抑制（`autonomy/manager.go` 19 处最多，需逐处区分「defer 清理合法」与「持久化失败被吞」）；
+  P1-3 归档索引 KB 列应脚本生成而非人工填写；P2×4 均不阻断（安全轴 14 处 `exec.Command` 全固定参数、零拼接）。
+  **自证方式（这是本轮的方法收获）**：新增 `workbench/internal/engine/audit_report_graded_test.go`，
+  直接调用**真实的** `reportGateProblems`（`report_gate.go:38`）验本报告 PASS；并加三条**负向对照**
+  （缺分级 / 缺可核查证据 / 缺整节都必须判红）⇒ 证明判据有牙而非恒绿。既有已入库判据
+  `TestAuditReportCitationsResolve` 同时通过 ⇒ 报告里每条 `file:line` 都被**逐字命中**校验过。
+  **我自己的事故（如实入账）**：我先把新测试写进 `audit_report_gate_test.go`，而那是 **2026-10-30 已受跟踪**
+  的文件（`edf5fe2`），里面有被别处依赖的 `readAuditReport` helper ⇒ 我的重写把 helper 删了、整包编不过
+  （`audit_report_citations_test.go:24: undefined: readAuditReport`）。教训：**改文件前先 `git ls-files` 确认
+  是否已入库**；已 `git checkout --` 恢复该文件，新测试改独立文件名，随后 vet rc=0 / engine 包 34.6s rc=0 /
+  全仓 32 包 rc=0 / 聚合 AGG_RC=0。
 - **12 个滞留 12 天的未跟踪 Go 测试文件收口：独立复验后入库 10 个（round 170，2026-10-31 会话）**：
   取证（docs/取证-未跟踪go测试文件-2026-10-31.md，40KB，两子代理交叉 + 我独立复现）—— 这些是 2026-10-19 自动任务
   写完漏提交的真判据，非空转非重复：12/12 被测符号在册、26 个 Test 逐条有 t.Fatal 类断言、`go list TestGoFiles` 证
