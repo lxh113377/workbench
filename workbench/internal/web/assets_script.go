@@ -1104,20 +1104,38 @@ const appJS = `(() => {
     // overview/queue 做全量 innerHTML 重渲染。虽然当前长任务为 0（内容量小），但
     // 这是「事件频率 × 全量重建」的平方级浪费，内容一多就会掉帧。合并到 400ms 窗口：
     // 窗口内多条事件只渲染最后一帧（数据本来就是全量拉取，丢中间帧不丢信息）。
+    //
+    // ⚠️ 但当年这道闸门**只做了一半**（round 152 前端/性能面实测发现）：窗口只包住了 render()，
+    // 而 refreshTop() 留在窗口之外无条件执行 —— 它是一次 await api('/api/status')，
+    // 且按本文件 1007 行的注释，/api/status 要拿**引擎写锁**（Phase/LastError 都 e.mu.Lock）。
+    // 后果：节流省下的是"全量重建"，留下的却是"每条 SSE 一次带锁请求"，而且因为它写在
+    // 页签判断之前，连停在 settings/templates 页时也在打。SSE 峰值 10 条/秒 ⇒ 顶栏轮询
+    // 从设计的 5 秒一次退化成最高 10 次/秒，全打在引擎写锁上。
+    //
+    // 现在把两件事收进**同一个** 400ms 窗口：顶栏照旧任何页签都刷新（语义不变），
+    // 渲染仍只在 overview/queue 生效（语义不变）；窗口内多次事件只各做**一次**。
     let renderTimer = null;
     let renderPending = false;
+    let renderName = '';
+    let topPending = false;
     es.onmessage = function () {
-      refreshTop();
+      topPending = true; // 顶栏：任何页签都要更新，但要进闸门
       const active = document.querySelector('.tab.active');
       const name = active && active.getAttribute('data-tab');
-      if (name !== 'overview' && name !== 'queue') { return; }
-      renderPending = true;
-      if (renderTimer) { return; }
+      if (name === 'overview' || name === 'queue') {
+        renderPending = true;
+        renderName = name;
+      }
+      if (renderTimer) { return; } // 窗口已开：只置位，不重复登记
       renderTimer = setTimeout(function () {
         renderTimer = null;
+        if (topPending) {
+          topPending = false;
+          refreshTop();
+        }
         if (!renderPending) { return; }
         renderPending = false;
-        render(name);
+        render(renderName);
       }, 400);
     };
   } catch (e) { /* ignore */ }

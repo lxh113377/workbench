@@ -12,20 +12,19 @@ import (
 // 这是「事件频率 × 全量重建」的平方级浪费：当前内容量小所以长任务还是 0，
 // 但内容一多必掉帧。合并到 400ms 窗口（窗口内多条事件只渲染最后一帧）。
 func TestSSERenderIsThrottled(t *testing.T) {
-	i := strings.Index(appJS, "es.onmessage = function ()")
-	if i < 0 {
-		t.Fatal("找不到 SSE onmessage 处理")
-	}
-	end := i + 700
-	if end > len(appJS) {
-		end = len(appJS)
-	}
-	body := appJS[i:end]
+	// 锚点从「前 700 字节」改成「按大括号配对的完整函数体」（复用 onMessageBody）。
+	// 为什么必须改：round 152 我往这个处理器里加了**解释性注释**（说明当年闸门只做了一半），
+	// 固定窗口就被撑破 —— 判据把"注释变长"误判成"节流消失"。固定字节窗口是脆弱锚点，
+	// 而它此刻测的已经不是它想测的东西。
+	//
+	// 同时把窗口时长断言从 Contains("400") **收紧**为 Contains(", 400)")：
+	// 旧写法会被注释里的「400ms」字样满足 ⇒ 真删了节流定时器也可能假绿。收紧不是放宽。
+	body := onMessageBody(t)
 	if !strings.Contains(body, "renderTimer") {
 		t.Error("SSE onmessage 缺少节流定时器 —— 10 条/秒 × 全量重建会持续吃主线程")
 	}
-	if !strings.Contains(body, "400") {
-		t.Error("SSE 节流窗口缺失或变更（实测 400ms 足够跟上实时性）")
+	if !strings.Contains(body, ", 400)") {
+		t.Error("找不到节流窗口的 setTimeout 实参 400（实测 400ms 足够跟上实时性；若刻意改时长，需同步更新本判据与注释）")
 	}
 }
 
