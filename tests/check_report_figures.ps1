@@ -183,6 +183,82 @@ foreach ($ln in ($rep -split [char]10)) {
     continue
   }
 }
+# ---------------------------------------------------------------------------
+# 五轴审查报告的规模数字（2026-11-01 round 182 扩展）：同一类失效形态的第二个受理面。
+#
+# 为什么扩到这里（实证）：docs/五轴审查-分级-2026-11-01.md 写「533 个受跟踪 .go / 81,778 行 / 1,147 个
+# 测试函数」，而 round 181 实测已是 539 / 88,444 / 1,159 —— 报告数字静默失真，没有任何门禁会红。
+# 这正是本件头部注释说的「本仓第 8 类失效形态：报告数字靠人手同步」；之前只覆盖体检报告一份。
+#
+# 口径（与体检报告同规格，只核纯客观可复算的数）：报告里四行固定形态的表格行，N 必须等于实测；
+# 且四行必须全部存在（删行 ⇒ 判红），防判据被悄悄摘掉。文档其他地方的数字一律不判。
+$axisRel = 'docs/五轴审查-分级-2026-11-01.md'
+$axisPath = Join-Path $root ($axisRel.Replace('/', $bs))
+if (-not (Test-Path -LiteralPath $axisPath)) {
+  Write-Host ('NOTE 五轴审查报告不存在（' + $axisRel + '），跳过其数字校验') -ForegroundColor Yellow
+} else {
+  $axisTxt = [IO.File]::ReadAllText($axisPath)
+  $svg = Invoke-Git @('ls-files', 'workbench/**/*.go')
+  if ($svg.rc -ne 0) { Write-Host ('UNVERIFIED: 五轴报告·ls-files 失败') -ForegroundColor Red; exit 2 }
+  $axisGoN = @($svg.out -split [char]10 | Where-Object { $_.Trim() }).Count
+  $axisLn = Invoke-Git @('ls-files', '*.go')
+  if ($axisLn.rc -ne 0) { Write-Host ('UNVERIFIED: 五轴报告·ls-files(行数) 失败') -ForegroundColor Red; exit 2 }
+  $axisGoFiles = @($axisLn.out -split [char]10 | Where-Object { $_.Trim() })
+  $axisLines = 0
+  foreach ($f in $axisGoFiles) {
+    $fp = Join-Path $root $f
+    if (Test-Path -LiteralPath $fp) { $axisLines += @([IO.File]::ReadAllLines($fp)).Count }
+  }
+  # 包数：workbench 下含 .go 的目录数（与 go list 在本仓结构下等价，实测同为 35）；
+  # 测试函数数：受跟踪 *_test.go 里以 func Test 开头的行数（与 grep 等价）。
+  # 两者都用静态可算口径，避免本件变成需要跑 go 命令的慢门禁（慢门禁会被绕过）。
+  # 包数：受跟踪 .go 的「所在目录」去重数（与 go list ./... 在 workbench 下等价 —— 实测两者都是 35）。
+  # 2026-11-01 首版这里写错了：我用 $parts[0..n-2] 切分，`workbench/x.go` 这类只有两段的路径也被算成目录，
+  # 于是数出 42 而实测 35 —— 门禁先把自己的统计口径验准（先用 bash: sed "s|/[^/]*\.go$||" | sort -u | wc -l 对过 35）。
+  $axisPkgDirs = @{}
+  # 口径必须限定在 workbench/ 下（2026-11-01 第二轮实测修正）：
+  #   首版误用 $axisGoFiles（= ls-files *.go 全仓 550 个，含 tests/ 与 docs/benchmark/evidence 的实现副本）
+  #   ⇒ 数出 42 个目录，其中 7 个不是 Go 包（典型是 docs/benchmark/evidence）。
+  #   报告写的是「35 个 Glo 包」，与 `cd workbench && go list ./... | wc -l` 一致 ⇒ 判据必须按 workbench 范围算。
+  foreach ($f in @($svg.out -split [char]10 | Where-Object { $_.Trim() })) {
+    $idx = $f.LastIndexOf([char]47)
+    if ($idx -gt 0) { $dir = $f.Substring(0, $idx); if ($dir) { $axisPkgDirs[$dir] = $true } }
+  }
+  $axisPkgs = $axisPkgDirs.Count
+  $axisTests = 0
+  $tls = Invoke-Git @('ls-files', '*_test.go')
+  if ($tls.rc -ne 0) { Write-Host ('UNVERIFIED: 五轴报告·ls-files(_test.go) 失败') -ForegroundColor Red; exit 2 }
+  foreach ($f in @($tls.out -split [char]10 | Where-Object { $_.Trim() })) {
+    $fp = Join-Path $root $f
+    if (-not (Test-Path -LiteralPath $fp)) { continue }
+    foreach ($line in [IO.File]::ReadAllLines($fp)) {
+      if ($line.TrimStart().StartsWith('func Test')) { $axisTests++ }
+    }
+  }
+  $axisRows = 0
+  $ali = 0
+  foreach ($ln in ($axisTxt -split [char]10)) {
+    $ali++
+    $m = [regex]::Match($ln, '^\| workbench 受跟踪 \.go \| \*\*(\d+)\*\* 个')
+    if ($m.Success) { CheckFig '五轴报告·受跟踪 .go' $m.Groups[1].Value $axisGoN $ali; $axisRows++; continue }
+    $m = [regex]::Match($ln, '^\| 全仓 .go 代码行数 \| \*\*(\d+),?(\d*)\*\* 行')
+    if ($m.Success) {
+      $claimed = $m.Groups[1].Value; if ($m.Groups[2].Value) { $claimed = $claimed + $m.Groups[2].Value }
+      CheckFig '五轴报告·代码行数' $claimed $axisLines $ali; $axisRows++; continue
+    }
+    $m = [regex]::Match($ln, '^\| Go 包数（workbench） \| \*\*(\d+)\*\* 个')
+    if ($m.Success) { CheckFig '五轴报告·包数' $m.Groups[1].Value $axisPkgs $ali; $axisRows++; continue }
+    $m = [regex]::Match($ln, '^\| 测试函数数（workbench） \| \*\*(\d+),?(\d*)\*\* 个')
+    if ($m.Success) {
+      $claimed = $m.Groups[1].Value; if ($m.Groups[2].Value) { $claimed = $claimed + $m.Groups[2].Value }
+      CheckFig '五轴报告·测试函数数' $claimed $axisTests $ali; $axisRows++; continue
+    }
+  }
+  if ($axisRows -lt 4) {
+    $bad += ('五轴审查报告：可核对数字表只有 ' + $axisRows + ' 行（应为 4：受跟踪 .go / 代码行数 / 包数 / 测试函数数）⇒ 判据被删或被改写，规模声明不可核对')
+  }
+}
+
 # 新硬判据（issue #13 的正主）：未跟踪里出现**生产** .go ⇒ FAIL。
 # 它不是移动目标 —— 不要求某个数字相等，只要求「零」；而零在三个会话并行下也是稳定的。
 # 与 check_untracked_go.ps1 的分工：那件列出未入库生产件并给处置口径（该入库还是该删），
