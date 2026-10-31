@@ -1017,6 +1017,13 @@ const appJS = `(() => {
   //   按需渲染，给它们加轮询会改语义、也凭空多打接口。
   let sse = null;
   let sseDownStreak = 0;
+  // T110（round 156 同源走查复算）：顶栏自身的失败也要可见。本函数原先是
+  // try { ... } catch (e) { /* ignore */ } —— /api/status 持续失败（引擎重启、token 换了、
+  // 端口变了）时，顶栏会**冻结在最后一次的数值上**且零标记：那正是 round 154 立的规
+  // 「陈旧不能冒充正常」。同函数当时补了两半（finally 里的流状态接管 + 降级 toast），
+  // 这是漏掉的第三半 —— 请求本身失败的路径仍然静默。同文件 ping 早有 fails>=3 收敛，
+  // 说明"失败要计数并可见"在本文件是既有惯例，refreshTop 是唯一的例外。
+  let topFailStreak = 0;
   async function refreshTop() {
     if (topBusy) { return; }
     topBusy = true;
@@ -1056,7 +1063,22 @@ const appJS = `(() => {
         tip = rl.lastReason || '';
       }
       if (el) { el.textContent = top; el.style.color = color; el.title = tip; }
-    } catch (e) { /* ignore */ }
+      topFailStreak = 0; // 成功一次即归零（瞬时抖动不报警）
+    } catch (e) {
+      // 连续 2 次（= 10 秒）失败才标记顶栏：单次失败会被下一轮成功覆盖，立刻报警反而制造噪音。
+      // 阈值口径与本函数流状态那半一致（都是"连续若干周期才认定"）。
+      topFailStreak++;
+      if (topFailStreak === 2) { toast('顶栏数据刷新失败：' + e.message); }
+      if (topFailStreak >= 2) {
+        const el2 = document.getElementById('topStat');
+        if (el2) {
+          // 冻结值必须被**替换**而不是保留：读数标注失败时刻，用户才知道看到的是陈旧数据。
+          el2.textContent = '⚠ 顶栏刷新失败 ×' + topFailStreak + '（读数为最后一次成功值）';
+          el2.style.color = 'var(--danger)';
+          el2.title = String(e.message || e);
+        }
+      }
+    }
     finally {
       topBusy = false;
       // 兜底自愈：连续 3 个周期（15 秒）流未处于 OPEN 才接管 —— 首连接 CONNECTING 是正常态，
