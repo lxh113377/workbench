@@ -1,10 +1,14 @@
 package main
 
 import (
+	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
+
+	"workbench/internal/single"
 )
 
 // TestSilentDoesNotOpenPanel 守护「--silent 不弹面板」这条契约（黑盒 + 副作用判据）。
@@ -122,16 +126,33 @@ func TestNonSilentDeclaresPanel(t *testing.T) {
 	}
 	defer killTree(first.Process) // 收整棵进程树：只 Kill 直接子进程会留下占住 root 的后代
 	urlFile := filepath.Join(root, "runtime", "panel.url")
-	ready := false
-	for i := 0; i < 120; i++ {
-		if b, err := os.ReadFile(urlFile); err == nil && strings.Contains(string(b), "http") {
-			ready = true
+	// 就绪判据（2026-11-01 round 181 加固）：原来只判「文件里含 http」，两个问题：
+	//   ① panel.url 可能**正在被写**（读到半截也含 http）⇒ 拿到的 URL 不完整；
+	//   ② 只看到文件不等于端口**已可连**；第二实例走的是「实例已在运行」分支，
+	//      那一步要求能定位到面板地址，若端口尚未就绪就会打出「未能定位面板地址」而失败。
+	// 甲基实测（clean 检出 + 空载）连跑 3 次全 PASS、整包 1 次 PASS，只在聚合门禁并发跑到时红过一次
+	//   ⇒ 是时序敏感（flaky），不是固定缺陷。加固方向是**显式等真就绪**，而不是把断言放宽。
+	uri := ""
+	for i := 0; i < 200; i++ { // 20s 上限：比原来的 12s 宽，但判据更严（要求端口可连）
+		if b, err := os.ReadFile(urlFile); err == nil {
+			for _, line := range strings.Split(string(b), "\n") {
+				line = strings.TrimSpace(line)
+				if strings.HasPrefix(line, "http") { // 完整的一行 URL，而不是「文件里出现过 http」
+					uri = line
+				}
+			}
+		}
+		if uri != "" && panelPortReachable(uri) {
 			break
 		}
+		uri = ""
 		sleepMs(100)
 	}
-	if !ready {
-		t.Skip("首实例未在 12s 内就绪（环境限制），跳过")
+	if uri == "" {
+		t.Skip("首实例未在 20s 内写出完整 panel.url（环境限制），跳过")
+	}
+	if !panelPortReachable(uri) {
+		t.Skipf("首实例面板端口 %s 在 20s 内不可连（环境限制），跳过", uri)
 	}
 
 	second := hiddenTestCmd(installed)
@@ -173,4 +194,32 @@ func panelProcCount(t *testing.T) int {
 		n = n*10 + int(c-'0')
 	}
 	return n
+}
+
+// panelPortReachable 判断 panel.url 里的面板端口是否**真的可连**。
+//
+// 为什么要这一层（2026-11-01 round 181）：原判据只看出「panel.url 里含 http」——
+//
+//	① 文件可能正在被写，读到的是半截；② 文件存在 ≠ 端口已就绪。
+//	而第二实例走的是「实例已在运行」分支，那一步必须能定位到面板地址，
+//	端口没就绪就会打出「未能定位面板地址」⇒ 测试失败（实为时序敏感）。
+//
+// 复用**产品自己用的**探测函数 single.ProbeExactPort（internal/single/instance.go:66），
+// 而不是在测试里另写一个 net.Dial —— 否则测试与产品对「可达」的定义就会分叉
+// （本仓在册病「同一契约多处实现」）。
+func panelPortReachable(raw string) bool {
+	u, err := url.Parse(strings.TrimSpace(raw))
+	if err != nil || u.Host == "" {
+		return false
+	}
+	port, err := strconv.Atoi(u.Port())
+	if err != nil || port <= 0 {
+		return false
+	}
+	host := u.Hostname()
+	if host == "" {
+		return false
+	}
+	_, ok := single.ProbeExactPort(host, port)
+	return ok
 }
