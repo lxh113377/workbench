@@ -69,7 +69,7 @@
   是**判据的期望写错**、不是实现错。三次同族根因：**写代码前没先读被调用方的真实签名与既有行为**。
   验证：`go build`/`go vet`/`go test ./...` 全 rc=0（32 包 ok）、autonomy 包 1.787s rc=0、
   `check_ignored_error` rc=0（172 个非测试 .go 无同名函数 strict/ignored 并存）。
-  `[PENDING_SHA]`
+  `[87cc154]`
 
 ### Changed
 - **`Defaults()` 从 491 行拆成 12 行 + 9 个领域函数，用全字段指纹证明零行为变化（round 177，2026-11-01 会话）** `[8cc4c97]`：
