@@ -806,6 +806,10 @@ label:has(> input[type=checkbox]){min-height:36px;align-items:center;display:inl
 .status-line .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
 .status-line .dot.on{background:var(--accent-2);box-shadow:0 0 10px var(--accent-2)}
 .status-line .dot.off{background:var(--dim-2)}
+
+/* 界面使用自证行（round 165 · 承接 T113）：只加增量修饰，基础样式复用 .status-line。
+   margin-top 而非 margin-bottom：它跟在状态行下方、折叠块上方，需要自己的上间距。 */
+.usage-line{margin-top:-6px;margin-bottom:14px;font-size:var(--fs-sm)}
 .status-line code{font-family:var(--font-mono);font-size:var(--fs-small);color:var(--fg-2);background:rgba(255,255,255,.05);padding:1px 7px;border-radius:5px}
 
 /* 读取骨架：慢后端时占位不是空白，而是「正在读」的形状（判据卷：Loading 兜底不得永驻）。

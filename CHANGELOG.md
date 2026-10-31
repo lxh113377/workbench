@@ -17,6 +17,25 @@
 
 ### Fixed
 ### Fixed
+- **面板总览新增「界面使用自证」行，并把「有人来过」与「有【人】来过」分开显示**（round 165，承接 T113）：
+  T113 把访问计数落到日志后仍差一步 —— 计数只躺在 `workbench.jsonl` 里，使用者看不到就等于没有。
+  本轮在总览「系统状态」卡内补一行，三态：无人访问 / 只有自动探针访问（机器计数，明示不代表有人在看）/ 有真人打开过（含最近时刻）。
+  关键口径：本仓 liveness、curl、node、无头浏览器探针都会打这些页面，**不分开就是对使用者谎称界面被使用过**
+  （与顶栏「停摆必须自证」同一条原则）⇒ 人类分支只能由服务端 UA 分类结果 `firstHuman` 驱动。
+  顺带修两处我用错的地方：① 写了 CSS 里不存在的类 `state-pending`（改用在册 `.tag`）；
+  ② 指望自造的 `usage-line` 自带基础样式（`sep` 的样式写在 `.status-line sep` 下级规则里 ⇒ 容器改用
+  在册的 `status-line`，`usage-line` 只作增量修饰）。另修 Go 原始字符串里出现反引号会提前闭合本串一处
+  （本轮我第二次犯该形态）。
+  新增判据 `internal/web/panel_usage_contract_test.go` 三条：
+  ① `TestJSClassesAreDefinedInCSS` —— appJS 每个静态 class 必须在 appCSS 有定义（实测基线：CSS 242 个类名、
+     JS 218 处用法、去重 38 个、未定义 0 ⇒ 零误伤起步）。JS 与 CSS 是两份独立 blob，编译器不管这个接缝，
+     肉眼对照 38 个类不可读 ⇒ 这正是我本轮用错类却没被发现的原因，故把它变成永久的闸；
+  ② `TestPanelUsageLineSeparatesHumanFromMachine` —— 三态文案齐备 + 人类分支必须由 `firstHuman` 筛出
+     （改成按 count 筛就判红），并禁再用未定义类；
+  ③ `TestHumanLatestPicksNewest` —— 在 node 里真跑 `humanLatest`（复用同包 helperRunNode），断言多页时取
+     最近一次、字符串型时刻由 Number() 吸收；写成"取任一条"即判红。
+  负控三条各自精确咬住（缺类点名 `usage-line` / 人类筛法被换 / 取到 100 而非 900），变异前均先校验命中，
+  资产文件还原后字节一致。
 - **近八笔代码变更补登记（门禁逐条点名，我此前从未跑过 `check_changelog`）**（2026-10-31 round 163 实测）：
   聚合门禁 `tests/check_all.ps1` 报 `2 section(s) failed`，其中 CHANGELOG 结构段落逐个点名 8 个提交
   「改了非测试 Go 文件但 `[Unreleased]` 段内既无其短 sha、该提交也未改 CHANGELOG.md」⇒ 按 CONTRIBUTING §7

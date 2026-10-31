@@ -59,6 +59,17 @@ const appJS = `(() => {
   const stateCls = (s) => 'state-' + String(s || '');
   const STATE_TEXT = {candidate:'候选',evaluating:'评估中',rejected:'已拒',approved:'已批',queued:'排队',running:'执行中',done:'已完成',failed:'失败',timeout:'超时',cancelled:'已取消',interrupted:'中断'};
   const kpi = (l, v) => '<div class="kpi"><div class="v">' + esc(v) + '</div><div class="l">' + esc(l) + '</div></div>';
+  // humanLatest：真人访问过的那些页里，取最近一次访问的时刻（毫秒）。
+  // 为什么取 max 而不是取任意一条：多页被访问时任意取会显示一个更早的时刻，读起来像「好久没人看了」。
+  const humanLatest = (visits, paths) => {
+    let best = 0;
+    for (const p of paths) {
+      const v = visits[p] || {};
+      const at = Number(v.firstAt) || 0;
+      if (at > best) { best = at; }
+    }
+    return best;
+  };
   // 领域列中文化：表格不再裸显 code/content 这类内部枚举（老大不是技术人员，行话回潮判红）。
   const DOMAIN_TEXT = { content: '内容创作', code: '代码生成', knowledge: '知识整理', data: '数据处理', solution: '方案撰写', report: '报告生成', quality: '工程质量', frontend: '前端工程' };
   const domainText = (d) => DOMAIN_TEXT[d] || d || '-';
@@ -274,8 +285,28 @@ const appJS = `(() => {
         (stall.detail ? '<div class="muted">' + esc(stall.detail) + '</div>' : '') + '</div></div>'
       : '';
 
+    // 界面使用自证（round 165 · 承接 T113）：计数已在服务端，但只躺在日志里就仍然「无从查看」。
+    // 显示口径必须区分「有人来过」与「有【人】来过」—— 本仓自己的 liveness/curl/node/无头浏览器探针都会
+    // 打这些页面，若不分开，这块就会对老大谎称界面被使用过（与顶栏「停摆必须自证」同一条原则：
+    // 读数不能拿机器的活动冒充人的活动）。firstHuman 由服务端 UA 分类给出，前端只负责如实呈现。
+    const visits = st.panelVisits || {};
+    const vpaths = Object.keys(visits).sort();
+    const humanPaths = vpaths.filter(function (p) { return visits[p] && visits[p].firstHuman; });
+    const vTotal = vpaths.reduce(function (n, p) { return n + (Number(visits[p] && visits[p].count) || 0); }, 0);
+    const vLine = vpaths.length === 0
+      ? '<span class="tag">本次启动以来无人打开过界面</span>'
+      : (humanPaths.length
+        ? '<span class="state-done">有真人打开过</span> ' + esc(humanPaths.join(' / ')) + '（最近 ' + esc(fmtTime(humanLatest(visits, humanPaths))) + '）'
+        : '<span class="tag">只有自动探针访问</span> ' + esc(vpaths.join(' / ')) + ' —— 机器计数，不代表有人在看') +
+        '<span class="sep" aria-hidden="true">·</span>累计 ' + vTotal + ' 次';
+
     panes.overview.innerHTML = head +
       '<div class="card" style="margin-top:16px"><h3>系统状态</h3>' + stallBanner + statusLine +
+        // 容器用在册的 status-line：sep 的样式写在 .status-line .sep 这条下级规则里，
+        // 自造一个新类会让分隔符失样（CSS 里不存在的 state-pending 之类同理不可用 —— 用前先 grep 在册清单）。
+        // usage-line 只作增量修饰（间距/字号），不承载基础样式。
+        // 注：Go 原始字符串里不能出现反引号（会提前闭合本串），故类名不加引号包裹。
+        '<div class="status-line usage-line"><span class="dot off" aria-hidden="true"></span>界面使用：' + vLine + '</div>' +
         fold('模型健康度（' + models.length + ' 个）', modelBody) +
         fold('运行时资源', metBody) +
         fold('失败原因（最近 ' + (failRes.total || 0) + ' 条）', failBody) +
