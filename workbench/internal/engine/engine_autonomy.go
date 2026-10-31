@@ -104,6 +104,10 @@ func (e *Engine) supplyAutonomous(ctx context.Context, cfg config.Config) bool {
 	// 注意返回 false 而不是 true：自主链路此刻只是「今天不干活」，
 	// 不是「已处理完本轮的补货职责」—— 返回 true 会挡住模板链路。
 	if e.tasksToday() >= cfg.Eval.DailyCap && cfg.Eval.DailyCap > 0 {
+		// 决策点自己发声（round 148 · T104）：额度已耗尽 ⇒ 自主链路今天不干活。
+		// 现场一次风暴烧穿整日额度后，两条供货链同时 return，8.5 小时里日志只剩「路由表已更新」——
+		// 静默停机对 7×24 系统是最坏的失效形态（详见 supply_cap_log.go）。限频 10 分钟，不影响本行返回语义。
+		e.logDailyCapBurn(cfg, startOfToday())
 		return false
 	}
 	if !cfg.Autonomy.Enabled {

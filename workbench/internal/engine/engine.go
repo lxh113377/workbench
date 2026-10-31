@@ -132,6 +132,11 @@ type Engine struct {
 	// 每小时约 1200 次**零日志** —— 静默空转是 24/7 系统最坏的失效形态，门必须自己发声。
 	supplyBlockMu sync.Mutex
 	supplyBlockAt int64
+	// dailyBurnMu/dailyBurnAt 限频「每日额度被环境性失败烧穿」告警（round 148 · T104）。
+	// 现场：一次 transport 风暴 1.5 小时烧穿 200 的日额度，之后 8.5 小时整机零事件、零日志，
+	// 面板仍显示运行中 —— 静默空转必须由决策点自己发声（详见 supply_cap_log.go 的注释）。
+	dailyBurnMu sync.Mutex
+	dailyBurnAt int64
 }
 
 // New 构造引擎。
@@ -911,6 +916,7 @@ func (e *Engine) supplyCandidates(ctx context.Context, cfg config.Config) {
 	// 因此这里不再就地重算，统一走 tasksToday()。
 	daily := e.tasksToday()
 	if daily >= cfg.Eval.DailyCap {
+		e.logDailyCapBurn(cfg, startOfToday()) // 与自主链共用同一个限频告警（见 supply_cap_log.go）
 		return
 	}
 	// 选模板：优先从未使用/冷却结束的模板中选，避免同域扎堆
