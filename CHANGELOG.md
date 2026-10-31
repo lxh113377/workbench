@@ -40,6 +40,7 @@
   现场读数：聚合门禁 `AGG_RC=0`（49 段全跑、2 段 SKIP 如实计缺），`check_ps1_syntax` / `check_ps1_encoding` /
   `check_multi_bom` / `check_gate_coverage`（48/48 零孤儿）/ `check_report_figures`（受跟踪 49 / CI 30 / check_all 49）/
   `check_doc_refs` / `check_gofmt` / `check_changelog` 全 rc=0。
+  **CI 实证**（run 41208254224 全绿，`gh run watch --exit-status` RC=0）：repo-gates 日志逐字 `===== GATE: tests/check_reserved_names.ps1` → `保留名合规：扫描 1349 个条目（深度 4），0 处` → `GATE PASS` → `全部仓库门禁通过（30 项）`。扫到 1,349（本机 5,729）即「默认根推导在 CI 检出路径生效」的正证 —— 若仍写死 D:/workdesktop，CI 上只会走 rc=2 并把整个 repo-gates 判红（本轮修掉的缺陷②）；PS5.1 的 ANSI 解码坑未复发即 BOM+CRLF（缺陷③）到位。另核 8d94489/55615da：CI 与容器 E2E 均 success。
 
 - **面板访问计数的一个真缺陷：快照用被截断的 UA 重算人类/机器，与日志行给出相反答案**（round 167 端到端实测）：
   跑仓库自带的 CDP 探针（tests/ui/cdp_probe.mjs，起**真实 Edge 无头**）访问 /modelpool 与 /governance 后，
