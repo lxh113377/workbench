@@ -675,3 +675,31 @@ check_report_figures rc=0（受跟踪 49 / CI 30 / check_all 49）、check_doc_r
 **下一轮序**：① 核本轮提交的 CI 终态（新门禁首次上 CI，必须看它真的绿）；② 收 W4/W5 并按磁盘复算裁定；
 ③ 把 T116 的姊妹面「探查产物落点」从 prompt 约束推进到引擎侧 scratch（本轮未做，不扩大本轮范围）；
 ④ T88/T90 线上正例续挂。
+
+## Round 170-171 收口（实测 2026-10-31 23:2x，模型切换后接续）
+
+**目标回顾**：把 12 个未跟踪 Go 判据收口 + 修 2 个恒绿判据。全部完成。
+
+| 件 | 结果 | 证据 |
+|---|---|---|
+| 10 个 keep 件入库 | 78e3d0c 推送，CI 全绿（-race 由 CI 承接） | gh run watch RC=0；git rev-parse HEAD==origin |
+| 2 个 fix-then-keep 修复后入库 | abf51c9 推送，未跟踪测试 .go 清零 | 四枚变异真杀（REAL_KILL>=1 且 COMPILE_ERR=0）+ 基线 RC=0 |
+| 散件 workspace_scan.txt | 移档 xtmp/round171-evidence/（留档不销毁） | 23:18 探查输出、全仓零引用 |
+| 子代理 3 件 | 1 完整交付 / 1 交 6 件子集 / 1 死亡无产出（Lead 普查覆盖，未重派） | 40KB 报告落盘 docs/ |
+
+**方法收获（本轮最值钱的三条）**：
+1. 恒绿判据的验收必须带**变异对照**且区分「真杀」与「编译假杀」——只看 go test RC 会把编译错当击杀。
+2. 可测接缝放哪一层是判据能不能咬住的关键：注入 exec.Command 或「构造+启动」都会把 --silent 藏进替身 ⇒
+   「删参数」变异存活；注入 cmd.Start 才让测试看到生产口径构造的真实 cmd。第一版 seam 设计我造错了，
+   是靠「先想清楚变异会怎么活」才改对的。
+3. 测试里先起监听再检查的**顺序**本身就是判据的杀伤力（旧 instance_test 的豁口就是顺序豁口）。
+
+**我自己的错（都当场纠正）**：tail 吃退出码（第二次犯，纪律已进 CHANGELOG）；凭空写 errorsIs 不存在的标识符；
+run_code 的 execSync 缺 GOCACHE/PATH 却拿 RC=0 当通过（UNVERIFIED 冒充 PASS 的变体，改宿主通道+显式 PATH 后重跑）。
+
+**现场**：master=abf51c9（==origin）；未跟踪 .go 0；未跟踪根散件 9→9-1=8 个旧件 + 0 新件；
+本地聚合 AGG_RC=0；check_test_assertions 1147 全合规；CI watch（abf51c9）= bash-2962 在飞，收尾前收。
+
+**下一轮候选**（不展开）：① 收 abf51c9 的 CI 终态；② 8 个旧散件的最终处置（普查已判：全部无真实引用、
+explore/probe 族=move/delete，a.md 是模板文章可入 docs/archive）；③ CONTRIBUTING.md:30 的 WinLibs 说法
+与实测矛盾（gcc 不存在）二选一：装或改；④ T88/T90 线上正例续挂。
