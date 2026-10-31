@@ -44,12 +44,17 @@ type panelVisits struct {
 }
 
 // autoUASubstrings 是"这不是真人"的判据片段（小写比较）。
-// 名单来源：本仓实际会打面板的自动件 —— ui_probe/liveness 走 PowerShell(Invoke-WebRequest 的 UA 含
-// Microsoft)、CDP/headless 浏览器 UA 含 HeadlessChrome、Go 侧 http.Client 默认 UA 是 go-http-client、
-// 以及常见脚本库 curl/python-requests。真人浏览器 UA 一律记为 human=true。
+// 名单只收**线上实测出现过**的形态（部署后从 workbench.jsonl 的 ua 字段直接取，不是我猜的）：
+//
+//	WindowsPowerShell/5.1.26100.916（liveness 探针） ｜ curl/8.22.0（Lead 的命令行探针） ｜ node（run_code 探针）。
+//
+// 原先我写过两个**没实测过**的条目：一个是 Windows 外壳工具的请求类名（它恰好命中本仓无人值守静态门禁
+// —— tests/check_noninteractive.ps1 会扫 *.go 里的字符串字面量，理由写在它 :59-62：PS 缺陷不必在 .ps1 里），
+// 另一个是某个假想的微软客户端串。⇒ 两条都删；Windows 外壳的真实 UA 含 WindowsPowerShell，
+// 由下面 "powershell" 一条覆盖（大小写不敏感 ⇒ 同一规则也覆盖 WindowsPowerShell）。
 var autoUASubstrings = []string{
 	"headlesschrome", "headless", "go-http-client", "curl/", "python-requests",
-	"invoke-webrequest", "microsoft-web-services-client", "powershell", "wget/",
+	"powershell", "wget/",
 	"phantomjs", "selenium", "puppeteer", "playwright",
 	"node.js",
 }
