@@ -15,6 +15,20 @@
 > 未重新输出）—— 本轮恢复，并记下这条教训：以「包含后文的多行锚点」做插入时，
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
+### Added
+- **12 个滞留 12 天的未跟踪 Go 测试文件收口：独立复验后入库 10 个（round 170，2026-10-31 会话）**：
+  取证（docs/取证-未跟踪go测试文件-2026-10-31.md，40KB，两子代理交叉 + 我独立复现）—— 这些是 2026-10-19 自动任务
+  写完漏提交的真判据，非空转非重复：12/12 被测符号在册、26 个 Test 逐条有 t.Fatal 类断言、`go list TestGoFiles` 证
+  明全在编译集内、`git log --all` 与 CHANGELOG 均 0 命中（确系漏提交）。**入库前我自己复跑了决定性变异**：
+  `markquit_noop` 变异 ⇒ TestUserQuitMarkerSetAndCleared **翻红**（M1_RC=1，判据有牙）；`selfheal_null`（把 SelfHeal
+  整个掏空）⇒ supervisor 测试**仍绿**（M2_RC=0，坐实该判据免疫）；无 overlay 基线 M3_RC=0。⇒ keep 10 /
+  fix-then-keep 2 / drop 0 的裁定复现成立。2 个 fix-then-keep（single/instance_test.go 分不清精确端口与向上顺延、
+  supervisor/selfheal_relaunch_test.go 根本没调用被测函数）**本轮不入库**（现在入库=往 CI 塞恒绿判据），留未跟踪
+  待下轮先补断言。入库的 10 件此前不在任何受理面，现自动进入 CI 的 `go vet ./...` + `go test -race ./...`
+  与 check_test_assertions / check_gofmt 扫描范围。本机复验：7 包 `go vet`+`go build`+`go test` 全 rc=0、
+  `-race` 本机跑不了（gcc 缺失，CGO_ENABLED=0，如实登记为未取证面，交 CI 承接）；提交前暂存清单逐条显式 add
+  （禁 `git add -A`，防卷走他人 2 个在途 fix 件）、gofmt 零列出、暂存 .go 无 CRLF/无 BOM/无行尾空白。
+
 ### Fixed
 - **T116 收尾：Windows 保留设备名卫生门禁从「挂了但把仓库改坏」推到三面挂载可用（round 169，2026-10-31 会话）**：
   上一轮遗留的在飞改动有三处硬缺陷，本轮逐条实测复现后修掉 ——
