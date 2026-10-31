@@ -29,6 +29,24 @@
   `-race` 本机跑不了（gcc 缺失，CGO_ENABLED=0，如实登记为未取证面，交 CI 承接）；提交前暂存清单逐条显式 add
   （禁 `git add -A`，防卷走他人 2 个在途 fix 件）、gofmt 零列出、暂存 .go 无 CRLF/无 BOM/无行尾空白。### Fixed
 
+### Changed
+- **三份「五轴审查」占位件归档：它们自认未交付，却被磁盘形态混在交付件里（round 175，2026-11-01 会话）**：
+  `docs/五轴审查-正确性.md`（103B，「## 证据」节正文只有「无。」）、`docs/五轴审查-缺陷报告.md`（1032B，有 file:line
+  但通篇不分级）、`docs/五轴审查-复盘覆盖度.md`（305B，头一行写「**状态：待填充**（...无法取得 file:line 级证据）」，
+  自述原因是本次运行环境没有可用的仓库读取/命令执行工具）。
+  这三份正是 `workbench/internal/engine/report_gate_test.go` 与 `probe_real_reports_test.go` 里**被当成判红样本**的
+  形态（T67 判据：「三节齐 + 证据足但完全没分级 ⇒ 判红」），却以未跟踪状态在 docs 顶层躺了 3~4 天，
+  后续会话扫 `docs/` 时很容易把它们当成已完成交付 ⇒ 与目标「五轴审查**分级**出报告，可直接贴 PR」直接冲突。
+  **先查依赖再处置**（这一步不能省）：`git grep` 显示三份文件名被两个**受跟踪**测试引用，但我核对后确认那是
+  **注释点名 + 用例里的字符串常量**（`stub`/`substantive` 变量），不是从磁盘读固件 —— 同文件唯一的 `os.ReadFile`
+  读的是 `artifacts.go`。实测把三份移走后 `TestReportGate|TestReportGateRejectsRealPlaceholderForms` 仍 rc=0，
+  CI 干净检出也不会因缺文件变红 ⇒ 可以安全归档。
+  处置：移入 `docs/archive/2026-10/`，文件名加「-占位未交付-<日期>」后缀避免再次被误读为交付件；
+  归档索引 `docs/archive/2026-10/README.md` 计数与表格行同步 73 → 76（两者一致，防「计数改了表没改」的在册病）。
+  **不删**：这三份是 T67 判据的现场样本，删掉就失去「为什么需要这条判据」的证据；归档保留并标注性质。
+  判据：`check_doc_refs` rc=0（92 份活文档、171 处引用可解析）、`check_repo_eol` rc=0（2393 文件）、
+  `check_gate_links` rc=0、`check_report_figures` rc=0（稳定项逐字命中）、上述两条引擎测试 rc=0。
+
 ### Fixed
 
 - **两道门禁的 git 解析补显式兜底 + 显式进程调用：Stop 偏好下的「UNVERIFIED 设计」此前是死代码（round 174，2026-10-31 会话）**：
