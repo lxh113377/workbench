@@ -813,3 +813,33 @@ rc=2 UNVERIFIED / 同副本在 PATH 有 git 时 rc=0。check_ps1_syntax rc=0（8
 
 **下一轮候选**：① 按 P1-1 拆 `Defaults()`（机械重构 + 现有测试兜底）；② P1-3 让归档索引 KB 列脚本化；
 ③ P2-4 给规模读数加 benchmark 取证副本口径标注；④ T88/T90 线上正例续挂。
+
+## Round 177 收口（实测 2026-11-01 01:5x）
+
+**做了什么**：把五轴报告 P1-1 落地成真改动 —— `Defaults()` 从 **491 行拆成 12 行**（8cc4c97）。
+  新增 9 个领域函数：defaultsContent / defaultsCode / defaultsKnowledge / defaultsData / defaultsSolution /
+  defaultsReport / defaultsQuality / defaultsFiveAxis（各 25-27 行），quality 317 行（其中绝大部分是模板 prompt 长串）。
+  mk 闭包提升为包级 newMk(now)（单点定义，防「同一契约多处实现」漂移）；mkSpec 与 deliverableGateClause 一字未动。
+
+**零行为变化的证据（本轮最关键，不是「测试绿了」）**：新增 refactor_equiv_test.go，对 29 个模板的**全部 17 个
+  可观察字段**生成指纹、排序取集合 SHA256，与拆分前基线逐字比对。
+  基线取证：git worktree add -f xtmp/r11_baseline HEAD → 跑同逻辑临时测试 → BASELINE_HASH=57859219…fa2093c9 COUNT=29
+  → worktree remove --force（用完即删）。拆分后同法算出**同一哈希**。
+  为什么必须这样验：8 处既有契约测试只钉少数几个字段（chain 链 / 交付物门禁子句 / 编码教训），
+  **拆错 PriorityWeight / CooldownMinutes / CreatedAt 不会有任何测试变红**。
+
+**验证**：build rc=0 / vet rc=0 / test rc=0（32 包 ok）/ 聚合 AGG_RC=0（49 段 0 FAIL）/ 指纹判据 PASS；
+  CI run 41225446581 与 41225446503 均 completed success（含 go test -race 的真实 CI 面）。
+
+**我自己的错（第 8-10 次同族，如实入账，全部当场纠正）**：
+  ① 首版写 `model.Time` 这个不存在的类型（正撞「严禁猜标识符」）⇒ 查 `func Now() int64` 后改 8 处；
+  ② 指纹格式串 16 个动词对 17 个参数、sha256 括号未闭合 ⇒ vet 报 missing comma；
+  ③ 二次拆分把新函数体写进变量却没落盘（只移除了旧段）⇒ `undefined: defaultsFiveAxis`，补写才编过。
+  **共同根因：写完没有立刻编译验证**。「先落盘再验」这条我已在 DECOMPOSE 写过多次，这轮又犯三次。
+
+**现场**：master=8cc4c97==origin；工作树 dirty=0；CI 两笔全绿。
+函数长度分布：Defaults 12 行 / 8 个领域函数 25-27 行 / defaultsQuality 317 行（数据为主）。
+
+**下一轮候选**：① 若还要压 defaultsQuality，正确方向是抽「模板正文」为常量而非拆函数（数据与结构分离）；
+  ② P1-2 里挑 autonomy/manager.go 的持久化写入面做逐处判定（19 处里预计 5-8 处该报错）；
+  ③ P1-3 让归档索引 KB 列脚本化；④ T88/T90 线上正例续挂。

@@ -47,6 +47,28 @@
   （禁 `git add -A`，防卷走他人 2 个在途 fix 件）、gofmt 零列出、暂存 .go 无 CRLF/无 BOM/无行尾空白。### Fixed
 
 ### Changed
+- **`Defaults()` 从 491 行拆成 12 行 + 9 个领域函数，用全字段指纹证明零行为变化（round 177，2026-11-01 会话）** `[8cc4c97]`：
+  对应五轴报告 P1-1。原实现 29 个 `mk(...)` 条目全在同一个切片字面量里，函数内虽有 7 个「── 领域分组」注释但
+  形状上仍是一坨：改任一模板正文要滚动数百行才能确认上下文，评审 diff 无法一屏看全 ⇒ 漏看率高。
+  拆法（纯机械）：`mk` 闭包提升为包级工厂 `newMk(now)`（单点定义，防「同一契约多处实现」漂移）；`Defaults()` 只做
+  `append` 拼接；新增 `defaultsContent` / `defaultsCode` / `defaultsKnowledge` / `defaultsData` / `defaultsSolution` /
+  `defaultsReport` / `defaultsQuality` / `defaultsFiveAxis`（`review-five-axis` 从 quality 二次单列 —— 五轴报告是本仓
+  objective 的直接交付物，与其余四条卫生动作不同类）。`mkSpec` 与 `deliverableGateClause` 一字未动，
+  各条目求值顺序与正文逐字不变。停在此处不再按条目继续拆：`defaultsQuality` 317 行里绝大部分是模板 prompt 长字符串
+  （数据而非控制流），再拆成「5 个模板 5 个函数」收益递减、反增跳转成本。
+  **零行为变化的证据**（新增 `workbench/internal/templates/refactor_equiv_test.go`）：对 29 个模板的**全部 17 个**
+  可观察字段生成指纹、排序取集合 SHA256，与拆分前基线逐字比对。基线取证可复跑：
+  `git worktree add -f xtmp/r11_baseline HEAD` → 在该 worktree 跑同逻辑临时测试 → `BASELINE_HASH=57859219…fa2093c9`
+  `COUNT=29` → `git worktree remove --force`（用完即删）。拆分后同法算出**同一哈希**。
+  为什么必须这样验：8 处既有契约测试只钉少数几个字段（chain 链 / 交付物门禁子句 / 编码教训），
+  **拆错 PriorityWeight / CooldownMinutes / CreatedAt 不会有任何测试变红**。
+  验证：`go build`/`go vet`/`go test ./...` 全 rc=0（32 包 ok）、本地聚合 `AGG_RC=0`（49 段 0 FAIL）、
+  CI run 41225446581 与 41225446503 均 success（含 `go test -race`）。
+  **我自己的错（三次，共同根因 = 写完没立刻编译验证）**：① 写 `model.Time` 这个不存在的类型（实为 `func Now() int64`）；
+  ② 指纹格式串 16 个动词对 17 个参数 + `sha256.Sum256` 括号未闭合；③ 二次拆分把新函数体写进变量却没落盘，
+  只移除旧段 ⇒ `undefined: defaultsFiveAxis`。
+
+### Changed
 - **三份「五轴审查」占位件归档：它们自认未交付，却被磁盘形态混在交付件里（round 175，2026-11-01 会话）**：
   `docs/五轴审查-正确性.md`（103B，「## 证据」节正文只有「无。」）、`docs/五轴审查-缺陷报告.md`（1032B，有 file:line
   但通篇不分级）、`docs/五轴审查-复盘覆盖度.md`（305B，头一行写「**状态：待填充**（...无法取得 file:line 级证据）」，
