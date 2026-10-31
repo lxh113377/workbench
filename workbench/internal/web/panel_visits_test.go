@@ -204,6 +204,17 @@ func TestPanelVisitClassifiesAutomatedUA(t *testing.T) {
 		}
 	}
 	human := []string{chromeUA, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/605.1.15", "Mozilla/5.0 (X11; Linux x86_64) Firefox/121.0"}
+	// "node" 这一条是**线上实测抓出来的**（round 163）：部署 ab98b71 后我用 run_code 的 node 探针去复验 firstAt，
+	// 结果 /admin 的 firstHuman 被记成 true —— 也就是本功能要防的"把机器行为说成人类使用"被我自己触发了。
+	// 判定用整串相等（exactAutoUA），不用 Contains("node")：那样会误伤含 Node 字样的真人客户端 UA。
+	for _, ua := range []string{"node", "  node  ", "Node"} {
+		if !isAutomatedUA(ua) {
+			t.Errorf("UA %q 是 Node 运行时却被判成真人 ⇒ 探针会伪造人类使用", ua)
+		}
+	}
+	if isAutomatedUA("Mozilla/5.0 (Windows) NodeWikiClient/1.0 Chrome/120") {
+		t.Error("含 Node 字样的真人 UA 被子串规则误伤 ⇒ 整串判定不该扩大到 Contains")
+	}
 	for _, ua := range human {
 		if isAutomatedUA(ua) {
 			t.Errorf("UA %q 是真人浏览器却被判成自动 ⇒ 使用证据会被系统性低估", ua)

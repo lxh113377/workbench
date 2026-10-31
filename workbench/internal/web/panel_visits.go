@@ -51,12 +51,35 @@ var autoUASubstrings = []string{
 	"headlesschrome", "headless", "go-http-client", "curl/", "python-requests",
 	"invoke-webrequest", "microsoft-web-services-client", "powershell", "wget/",
 	"phantomjs", "selenium", "puppeteer", "playwright",
+	"node.js",
+}
+
+// exactAutoUA 是**整串相等**才算自动件的 UA：本仓自己的 run_code/探针经 fetch 发出的 UA 就是字面量 "node"。
+// 之所以不用 Contains("node")：真人 UA 里可能含 "…Node…" 这类词（例如某些内网客户端/插件串），
+// 子串匹配会误伤真人；而 "node" 作为完整 UA 只可能是 Node 运行时本身。
+//
+// 这条是**线上实测抓出来的**（round 163）：部署后我用 node 探针复验 firstAt，结果 /admin 的首次访问
+// 被记成 firstHuman=true —— 也就是本功能要防的"伪造人类使用"被我自己触发了。修复前它会把
+// "Lead 跑了个脚本"显示成"有人打开了管理面板"。
+var exactAutoUA = []string{"node"}
+
+func isExactAutoUA(ua string) bool {
+	low := strings.ToLower(strings.TrimSpace(ua))
+	for _, s := range exactAutoUA {
+		if low == s {
+			return true
+		}
+	}
+	return false
 }
 
 // isAutomatedUA 判断 UA 是否来自自动件。空 UA 按自动处理：真人浏览器一定会带 UA，
 // 空值只可能是刻意抹掉或裸 HTTP 客户端 —— 宁可少记，不可把机器行为记成人的行为。
 func isAutomatedUA(ua string) bool {
 	if strings.TrimSpace(ua) == "" {
+		return true
+	}
+	if isExactAutoUA(ua) {
 		return true
 	}
 	low := strings.ToLower(ua)
