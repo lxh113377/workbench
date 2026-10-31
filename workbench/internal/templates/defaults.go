@@ -48,9 +48,39 @@ const deliverableGateClause = "\n\n" + model.DeliverableGateMarker + "（硬性�
 
 // Defaults 返回内置的 29 条持续产出模板（7 领域；quality 领域 2026-10-24 round 88/90 新增，含五轴审查）。
 // 设计原则：每条都必须能独立产出真实可用的成果物，且彼此有逻辑递进关系。
+
+// Defaults 是内置模板的**组合入口**：只负责把各领域分组拼起来，不放具体条目。
+//
+// 为什么拆（2026-11-01 round 177，对应五轴报告 P1-1）：原实现是**单函数 491 行**，29 个 mk(...) 条目
+// 全在同一个切片字面量里。函数内其实已有 7 个「── 领域分组」注释，但形状上仍是一坨：改任一模板正文
+// 要滚动数百行才能确认上下文，评审 diff 时无法一屏看全 ⇒ 漏看率高。
+// 现在每个领域一个函数（defaultsContent / defaultsCode / …），本函数只做 append 拼接。
+//
+// 为什么这是**纯机械拆分**（可证）：mk 的构造逻辑原样提升为 newMk(now)，mkSpec / deliverableGateClause
+// 未动，各条目的**求值顺序与内容逐字不变** ⇒ 8 处既有契约测试（chain_link_contract / deliverable_gate_contract /
+// encoded_lessons_contract / placement_clause_contract / quality_pack_contract / templates_test 及 chain 包两处）
+// 继续按字段真值兜底。拆分只改变代码形状，不改变任何可观察行为。
 func Defaults() []tpl {
 	now := model.Now()
-	mk := func(id, name, domain, desc, prompt string, tags []string, valuePrior, costPrior float64, weigh int, out spec, chain []string) tpl {
+	var all []tpl
+	all = append(all, defaultsContent(now)...)
+	all = append(all, defaultsCode(now)...)
+	all = append(all, defaultsKnowledge(now)...)
+	all = append(all, defaultsData(now)...)
+	all = append(all, defaultsSolution(now)...)
+	all = append(all, defaultsReport(now)...)
+	all = append(all, defaultsQuality(now)...)
+	all = append(all, defaultsFiveAxis(now)...)
+	return all
+}
+
+// newMk 返回「用 now 固化创建/更新时间」的模板构造器。
+//
+// 为什么提成包级函数而不是各分组里重复定义闭包：29 个条目都走这一个构造器，
+// 交付物门禁子句（deliverableGateClause）与 TemplateParams 的默认值**只此一处**定义 ——
+// 若每个分组各写一份闭包，就会出现「同一契约多处实现」漂移（本仓在册病 T57/T61/T72/T80/T84/T86）。
+func newMk(now int64) func(id, name, domain, desc, prompt string, tags []string, valuePrior, costPrior float64, weigh int, out spec, chain []string) tpl {
+	return func(id, name, domain, desc, prompt string, tags []string, valuePrior, costPrior float64, weigh int, out spec, chain []string) tpl {
 		// 交付物门禁单点注入（round 70）：md 模板一律带上「落盘 docs/ + 三节逐字 + 证据形态 + 分级」四要件，
 		// 与引擎侧 T66/T67/T73 三道门禁逐条对齐 —— 模板要求的，正是门禁要查的。
 		if out.Format == "md" {
@@ -73,6 +103,12 @@ func Defaults() []tpl {
 			UpdatedAt:       now,
 		}
 	}
+}
+
+// defaultsContent 返回该领域的内置模板（仅供 Defaults 组合，不单独对外）。
+// 条目的求值顺序即声明顺序，与拆分前逐字一致。
+func defaultsContent(now int64) []tpl {
+	mk := newMk(now)
 	return []tpl{
 		// ── 内容创作 content ──────────────────────────────────────────
 		mk("content-deep-dive", "深度长文", "content",
@@ -97,7 +133,14 @@ func Defaults() []tpl {
 			"请围绕「{topic}」写出 15 条高质量常见问题与解答。要求：问题来自真实用户困惑而非凑数；答案准确、给具体做法而非空话；对易错点明确提示。直接在回答中输出完整问答内容。",
 			[]string{"FAQ", "答疑"}, 70, 30, 3,
 			mkSpec("md", []string{"问答"}, 800, 2000), nil),
+	}
+}
 
+// defaultsCode 返回该领域的内置模板（仅供 Defaults 组合，不单独对外）。
+// 条目的求值顺序即声明顺序，与拆分前逐字一致。
+func defaultsCode(now int64) []tpl {
+	mk := newMk(now)
+	return []tpl{
 		// ── 代码生成 code ───────────────────────────────────────────
 		mk("code-tool", "实用小工具", "code",
 			"产出一个可直接运行的脚本或命令行小工具",
@@ -120,7 +163,14 @@ func Defaults() []tpl {
 			"请为「{topic}」设计一份可执行测试方案：覆盖正常路径、边界值、异常输入、并发与恢复；每条用例给出输入、预期、判定方式；标注优先级。",
 			[]string{"测试", "方案"}, 78, 40, 3,
 			mkSpec("md", []string{"范围", "用例", "判定"}, 600, 1800), nil),
+	}
+}
 
+// defaultsKnowledge 返回该领域的内置模板（仅供 Defaults 组合，不单独对外）。
+// 条目的求值顺序即声明顺序，与拆分前逐字一致。
+func defaultsKnowledge(now int64) []tpl {
+	mk := newMk(now)
+	return []tpl{
 		// ── 知识整理 knowledge ──────────────────────────────────────
 		mk("knowledge-map", "知识地图", "knowledge",
 			"把领域拆成结构化知识地图",
@@ -143,7 +193,14 @@ func Defaults() []tpl {
 			"请围绕「{topic}」写一份实操手册：按步骤给出可执行流程，每步包含目的、具体操作、检查点、失败怎么补救。面向新手，不许省略关键细节。",
 			[]string{"手册", "落地"}, 85, 45, 4,
 			mkSpec("md", []string{"准备", "步骤", "检查点", "补救"}, 900, 2500), nil),
+	}
+}
 
+// defaultsData 返回该领域的内置模板（仅供 Defaults 组合，不单独对外）。
+// 条目的求值顺序即声明顺序，与拆分前逐字一致。
+func defaultsData(now int64) []tpl {
+	mk := newMk(now)
+	return []tpl{
 		// ── 数据处理 data ───────────────────────────────────────────
 		mk("data-analysis", "数据分析报告", "data",
 			"对给定数据做分析并给出结论",
@@ -165,7 +222,14 @@ func Defaults() []tpl {
 			"请围绕「{topic}」整理 SQL 实战手册：10 个典型场景，每个给出需求描述、可执行 SQL、执行计划注意点、常见错误。使用标准 SQL，注明方言差异。",
 			[]string{"SQL", "实战"}, 74, 40, 3,
 			mkSpec("md", []string{"场景"}, 700, 2000), nil),
+	}
+}
 
+// defaultsSolution 返回该领域的内置模板（仅供 Defaults 组合，不单独对外）。
+// 条目的求值顺序即声明顺序，与拆分前逐字一致。
+func defaultsSolution(now int64) []tpl {
+	mk := newMk(now)
+	return []tpl{
 		// ── 方案撰写 solution ───────────────────────────────────────
 		mk("solution-proposal", "方案设计", "solution",
 			"输出完整的方案设计与论证",
@@ -188,7 +252,14 @@ func Defaults() []tpl {
 			"请为「{topic}」写一份 SOP 文档：明确适用范围、角色职责、流程步骤（含输入输出）、异常处理、度量方式。要求任何人照着都能执行。",
 			[]string{"SOP", "流程"}, 80, 40, 3,
 			mkSpec("md", []string{"范围", "角色", "流程", "异常"}, 700, 2000), nil),
+	}
+}
 
+// defaultsReport 返回该领域的内置模板（仅供 Defaults 组合，不单独对外）。
+// 条目的求值顺序即声明顺序，与拆分前逐字一致。
+func defaultsReport(now int64) []tpl {
+	mk := newMk(now)
+	return []tpl{
 		// ── 报告生成 report ─────────────────────────────────────────
 		mk("report-weekly", "阶段性报告", "report",
 			"生成结构化的阶段性总结报告",
@@ -210,7 +281,14 @@ func Defaults() []tpl {
 			"请就「{topic}」产出一页决策摘要：用 5 句话讲清现状、2 个可选方案、推荐方案与理由、需要什么支持。全文不超过 600 字，但不许牺牲信息密度。上下文：\n{context}",
 			[]string{"摘要", "决策"}, 75, 25, 4,
 			mkSpec("md", []string{"现状", "方案", "推荐"}, 300, 900), nil),
+	}
+}
 
+// defaultsQuality 返回该领域的内置模板（仅供 Defaults 组合，不单独对外）。
+// 条目的求值顺序即声明顺序，与拆分前逐字一致。
+func defaultsQuality(now int64) []tpl {
+	mk := newMk(now)
+	return []tpl{
 		// ── 工程质量 quality（2026-10-24 round 88 新增领域）────────────────
 		// 为什么新增：本工作台的核心使命就是「提升被选中文件夹的工程质量」（objective 原话），
 		// 而既有 6 个领域（content/code/knowledge/data/solution/report）没有一条面向「工程质量」本身。
@@ -524,7 +602,20 @@ func Defaults() []tpl {
 				"autocrlf 无关，CRLF 来自就地写入。**实验若没有「必然改变字节」的力气，就没资格下因果结论。**",
 			[]string{"卫生", "清理"}, 80, 35, 3,
 			mkSpec("md", []string{"分类盘点", "ignore 条目", "验证", "前后对比"}, 500, 1500), nil),
+	}
+}
 
+// defaultsFiveAxis 返回「五轴审查报告」模板（本工作台 core 交付物之一，单列成函数便于定位）。
+//
+// 为什么从 defaultsQuality 再拆出来（2026-11-01 round 177 补）：首轮拆分后 defaultsQuality 仍 331 行，
+// 其中 review-five-axis 一条占约 13 行**长 prompt 正文**（五轴口径逐条写在模板里）。
+// 把它单列后，「四动作（体检/判据化/验证/固化）」与「五轴报告」在代码结构上也可区分 ——
+// 五轴报告是本仓 objective 的直接交付物，与其余四条卫生动作不是同一类东西。
+//
+// 求值顺序：Defaults() 中必须排在 defaultsQuality **之后**，与拆分前集合顺序一致。
+func defaultsFiveAxis(now int64) []tpl {
+	mk := newMk(now)
+	return []tpl{
 		mk("review-five-axis", "五轴审查报告", "quality",
 			"按正确性/可读性/架构/安全/性能五轴分级出报告，可直接贴 PR",
 			"请对「{topic}」做一次五轴审查，产出**可直接贴进 PR** 的审查报告。要求："+
