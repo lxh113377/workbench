@@ -232,4 +232,18 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-verify 一条（23382→24832，+1450）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [quality-verify]。
 //	⇒ 与记录 15 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "fc0438ea2049970213ab6fb1252590ab80900256d023c36707e32cdaeea8bbcd"
+//
+// 基线更新记录 17（round 231，2026-11-02）：fc0438ea… → fe741a69…。
+//
+//	给 quality-verify ㉔ 追加第 (f) 条：**别试图把「文本正确性」做成门禁 —— 已实测过，不可判**。
+//	r230 写了 check_text_pollution.ps1（判据：连续 ≥3 反斜杠 + 引号），跑出 5 处**全误报**：路径归一化、
+//	Prometheus 矩阵转义、JSON 内嵌转义、两处记录反斜杠事故的复盘文档 ⇒ 已删除并撤销。
+//	根因：用「形态相似」当判据 = 把正常态判红；判据要抓成因（多写一层转义），而它在静态文本上不可区分。
+//	结论更正：正确边界不是「门禁兜可判部分 + 人兜不可判部分」，而是「文本正确性整体不可机判，只能靠人回读」。
+//	附带通用分辨法：失败要分清「修不动」（技术障碍，可修）与「该撤」（判据方向错，只能撤）。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-verify 一条（24832→26197，+1365）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [quality-verify]。
+//	⇒ 与记录 16 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "fe741a692767cebb16b5e5c24d2a5021f5d7ebaa58be7df0f28cfec9bc4dc0fd"
