@@ -271,6 +271,24 @@
   `[87cc154]`
 
 ### Changed
+- **`runApp` 第二刀：抽出「已在运行」分支为 `handleAlreadyRunning`（324 → 285 行，round 208，2026-11-01）**：
+  这次是**真正按「有网才动」拆的** —— 依据是 round 207 更正后的结论（该分支的行为已有三条黑盒判据锁住），
+  而不是凭「行数长」动手：
+  · `TestSilentDoesNotOpenPanel`（编译真实二进制 + 起双实例 + 校验 `panelOpenedMarker` 未出现）；
+  · `TestNonSilentDeclaresPanel`（校验 marker 出现，防「点了没反应」）；
+  · `panel_url_test.go` 两条（优先采用 `panel.url` / 拒绝陈旧记录）。
+  **流程严格按 ㉓**：候选写到 `xtmp/main_candidate2.go` → `gofmt -e` 语法检查 → `GOFLAGS=-overlay` 跑
+  `go build` **与 `go test ./cmd/workbench/` 全包**（含黑盒判据，会真编译二进制）→ 两关都过才落盘 →
+  落盘后再跑**真实** build/test 复核。
+  **关键验证（这层最值钱）**：overlay 阶段用 `-v` 确认 6 条行为判据**真的执行并 PASS** —— `TestSilentDoesNotOpenPanel`
+  3.34s、`TestNonSilentDeclaresPanel` 3.14s（耗时本身就是「真的编译并启动了二进制」的证据），0 SKIP、0 FAIL。
+  只看 `ok` 不看明细是不行的：非 `-v` 输出不显示单测名，我一开始就抓不到它们到底跑没跑。
+  **抽取完整性逐项核对**（不是「看起来搬完了」）：新函数 42 行，`resolveRunningPanelURL` 1 处 /
+  `panelOpenedMarker` 2 处 / `single.ProbeExactPort` 1 处 / `config.NewStore` 1 处 / `return nil` 2 处 /
+  `silent` 5 处，与原分支逐一对应；`runApp` 侧只留 `return handleAlreadyRunning(layout, silent)` 一行调用。
+  **净效果**：`runApp` 324 → **285 行**（累计从 337 起降了 52 行）；新函数单一职责（「已在运行」的处理路径），
+  返回 `nil` 表达「这属于正常退出路径、不是错误」。验证：全仓 build rc=0、`cmd/workbench` 包测试 ok、gofmt 零列出。
+### Changed
 - **更正「runApp 覆盖率 0% ⇒ 无法验证等价」的结论：那是有牙的黑盒判据，覆盖率口径不含子进程（round 207，2026-11-01）**：
   本轮做候选①（建第二块网）时核查发现，我上一轮的判断前提**不成立** —— `runApp` 其实已有三条**进程级行为判据**：
   · `TestSilentDoesNotOpenPanel`：**编译真实二进制 + 起双实例 + 校验 `panelOpenedMarker` 未出现** ⇒ 锁住 `--silent`

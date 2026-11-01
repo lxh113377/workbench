@@ -133,6 +133,64 @@ func parseSilentFlag(args []string) bool {
 	return silent
 }
 
+// handleAlreadyRunning 处理「实例已在运行」分支（runApp 抽出，round 208）。
+//
+// 为什么抽：这是 runApp 里行为面**已有黑盒判据锁住**的一块 ——
+//
+//	· TestSilentDoesNotOpenPanel：编译真实二进制 + 起双实例 + 校验 panelOpenedMarker 未出现（锁 --silent 不污染桌面）
+//	· TestNonSilentDeclaresPanel：校验 marker 出现（防「点了没反应」）
+//	· panel_url_test 两条：优先采用实例自写的 panel.url / 拒绝陈旧记录
+//
+// ⇒ 抽它属于「有网才动」，符合 ㉓。
+//
+// 语义（原注释保留要点）：面板地址只认两处权威来源 —— 实例自写的 runtime/panel.url；其次配置里的精确端口。
+// 端口顺延扫描是历史缺陷（17890 主实例 / 17891 压测副本 ⇒ 二次启动指向副本，副本一死页面全失败）。
+// --silent 必须覆盖本分支：守护进程/压测/自愈都用它拉起自身，撞上「已在运行」时不得往桌面弹窗。
+//
+// 返回 nil 表示「已在运行」属于正常退出路径（不是错误）。
+func handleAlreadyRunning(layout config.Layout, silent bool) error {
+	// 面板地址只能用**精确**的实例自报地址来定位，不能用端口顺延扫描。
+	//
+	// 现场（2026-10-19 老大：快捷方式打开显示「重试」）：
+	//   原实现 ProbeRunning(host, basePort, 10) 从 basePort 起连扫 10 个端口，
+	//   任何监听成功的端口都被当成「工作台面板」。实测 17890 是主实例、
+	//   17891 是压测副本（wbsoak26.exe），于是二次启动把浏览器指向了副本；
+	//   副本一死 URL 成死端口，页面 fetch 全失败 -> 按钮落进 error 态「重试」。
+	//   语义错误在于：端口号相邻 ≠ 同一实例。
+	//
+	// 现在只认两处权威来源：实例自写的 runtime/panel.url；其次配置里的精确端口。
+	//
+	// --silent 必须覆盖本分支（2026-10-19 实测事故）：守护进程/压测/自愈都会用
+	// --silent 拉起自身，一旦它们撞上"已在运行"，原实现仍然会往桌面弹一个面板窗口 ——
+	// 服务化启动污染桌面，正是老大反复反馈"一直在跳这个"的来源之一。
+	if url := resolveRunningPanelURL(layout); url != "" {
+		if shouldOpenPanel(silent) {
+			// 先声明意图再动手：输出即契约，黑盒测试据此判定
+			// 「服务化启动有没有污染桌面」，不依赖浏览器是否真的起来。
+			fmt.Println(panelOpenedMarker + url)
+			openPanel(url)
+		}
+		fmt.Println("工作台已在运行：" + url)
+		return nil
+	}
+	preCfg, _ := config.NewStore(layout.ConfigFile)
+	basePort := 17890
+	if preCfg != nil {
+		basePort = preCfg.Get().Server.Port
+	}
+	if p, ok := single.ProbeExactPort("127.0.0.1", basePort); ok {
+		url := fmt.Sprintf("http://127.0.0.1:%d/", p)
+		if shouldOpenPanel(silent) {
+			fmt.Println(panelOpenedMarker + url)
+			openPanel(url)
+		}
+		fmt.Println("工作台已在运行：" + url)
+	} else {
+		fmt.Println("工作台已在运行，但未能定位面板地址（panel.url 缺失且精确端口不通）")
+	}
+	return nil
+}
+
 func runApp(args []string) error {
 	silent := parseSilentFlag(args)
 
@@ -150,46 +208,7 @@ func runApp(args []string) error {
 		return err
 	}
 	if alreadyRunning {
-		// 面板地址只能用**精确**的实例自报地址来定位，不能用端口顺延扫描。
-		//
-		// 现场（2026-10-19 老大：快捷方式打开显示「重试」）：
-		//   原实现 ProbeRunning(host, basePort, 10) 从 basePort 起连扫 10 个端口，
-		//   任何监听成功的端口都被当成「工作台面板」。实测 17890 是主实例、
-		//   17891 是压测副本（wbsoak26.exe），于是二次启动把浏览器指向了副本；
-		//   副本一死 URL 成死端口，页面 fetch 全失败 -> 按钮落进 error 态「重试」。
-		//   语义错误在于：端口号相邻 ≠ 同一实例。
-		//
-		// 现在只认两处权威来源：实例自写的 runtime/panel.url；其次配置里的精确端口。
-		//
-		// --silent 必须覆盖本分支（2026-10-19 实测事故）：守护进程/压测/自愈都会用
-		// --silent 拉起自身，一旦它们撞上"已在运行"，原实现仍然会往桌面弹一个面板窗口 ——
-		// 服务化启动污染桌面，正是老大反复反馈"一直在跳这个"的来源之一。
-		if url := resolveRunningPanelURL(layout); url != "" {
-			if shouldOpenPanel(silent) {
-				// 先声明意图再动手：输出即契约，黑盒测试据此判定
-				// 「服务化启动有没有污染桌面」，不依赖浏览器是否真的起来。
-				fmt.Println(panelOpenedMarker + url)
-				openPanel(url)
-			}
-			fmt.Println("工作台已在运行：" + url)
-			return nil
-		}
-		preCfg, _ := config.NewStore(layout.ConfigFile)
-		basePort := 17890
-		if preCfg != nil {
-			basePort = preCfg.Get().Server.Port
-		}
-		if p, ok := single.ProbeExactPort("127.0.0.1", basePort); ok {
-			url := fmt.Sprintf("http://127.0.0.1:%d/", p)
-			if shouldOpenPanel(silent) {
-				fmt.Println(panelOpenedMarker + url)
-				openPanel(url)
-			}
-			fmt.Println("工作台已在运行：" + url)
-		} else {
-			fmt.Println("工作台已在运行，但未能定位面板地址（panel.url 缺失且精确端口不通）")
-		}
-		return nil
+		return handleAlreadyRunning(layout, silent)
 	}
 	defer lock.Release()
 
