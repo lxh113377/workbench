@@ -119,4 +119,14 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  长度变化**恰好 2 条**（quality-verify 20293→21955、+1662 = ㉒ 字节；quality-gate-spec 13513→14845、
 //	  +1332 = ㉓ 字节）；其余 27 条逐字节不变；hashChanged 恰为这两条。
 //	⇒ 单点可控。出现第 3 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "4fc81ec203cc289d50461f90e1645ef1cab0ffc6e2ef7f7902bd9eb243c0fbd9"
+//
+// 基线更新记录 7（round 201，2026-11-01）：4fc81ec2… → f1fb6258…。
+//
+//	给 quality-verify 追加教训 ㉓（大函数抽取先 overlay 挂载验证再落盘 —— 本轮抽取 runOne 失败处理段时
+//	直接改真文件连翻三次车、留了编译不过的工作树；改用 overlay 后三次错误全在挂载阶段暴露、工作树零污染）。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化**只有 quality-verify 一条**（21955→23382，+1427 = ㉓ 字节）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [quality-verify]。
+//	⇒ 与记录 6 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "f1fb6258ed6a1b351d3e9f88c5960c5eabbdc0cc9a8169453d5240a15059744d"
