@@ -125,6 +125,10 @@ func TestEncodedLessonsSurviveRender(t *testing.T) {
 			"内容型长",                                   // ⑥：长在字面量上 ⇒ 拆了没收益
 			"promptLines / commentLines / codeLines", // ⑥：动手前先量三类行数占比
 			"搬家式重构",                                  // ⑥：看起来在改进但无收益
+			"无顺序耦合",                                  // ⑦：三者缺一即保留原样（迁移/初始化/状态机交织 = 有顺序耦合）
+			"把修过三次的坑重新挖开",                            // ⑦：Normalize 反例 —— 94% 覆盖也不该拆的理由
+			"宁可留长函数，不动顺序",                            // ⑦：动作要求 —— 宁留长函数不破顺序
+			"把拒绝理由写进报告",                              // ⑦：Runner.run 同批被否，拒绝理由留档供后人复用
 		}},
 	}
 	for _, w := range wants {

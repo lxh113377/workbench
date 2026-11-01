@@ -139,4 +139,14 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 review-five-axis 一条（2746→4567，+1821 = ⑥ 字节）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [review-five-axis]。
 //	⇒ 与记录 7 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "c363b6bd0276dc33afc958ec9a896b0e20c708859b7cc098a49655d5c4559637"
+//
+// 基线更新记录 9（round 210，2026-11-01）：c363b6bd… → 8f8d24b3…。
+//
+//	给 review-five-axis 追加教训 ⑦（可拆三条件：结构型长 + 有回归网 + **无顺序耦合**；本轮 Normalize 覆盖率
+//	94% 却因中间夹着三段迁移逻辑而不该拆、Runner.run 7 defer/6 goroutine/19 return 且相关测试 0 也不该拆）。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 review-five-axis 一条（4567→6674，+2107 = ⑦ 字节）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [review-five-axis]。
+//	⇒ 与记录 8 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "8f8d24b32beaadbf3d7986bab283c3541420c82473e111d467a7345128ed83d5"
