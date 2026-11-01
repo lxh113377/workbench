@@ -99,4 +99,14 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	⇒ 单点改动、单条受影响，不存在"顺手改到别处"的可能。若 hashChanged 出现第 2 条，就是改坏了。
 //	契约侧同步：encoded_lessons_contract_test.go 为 quality-gate-spec 加 3 个片段（㉒ 的三个可判要素），
 //	TestEncodedLessonsSurviveRender 实测「编码教训 14 条全部到位」。
-const wantDefaultsSetHash = "cf197d392b052fb5b5dd0850ad8a967ae382b13cd4a4bb4a6894c55cfbe80850"
+//
+// 基线更新记录 5（round 196，2026-11-01）：cf197d39… → e03d3d80…。
+//
+//	给 quality-verify 追加教训 ㉑（负控之前必须先跑「健康态为绿」—— 本轮我自己造出一组「三条读数看着
+//	全对、实际变异一次都没执行」的 vacuous 负控，根因是空 PATH 子壳里被测工具根本没启动）。
+//	更新依据同样是单条隔离增长证明（git worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条模板的
+//	17 个非 prompt 字段 + prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化**只有 quality-verify 一条**（18861→20293，
+//	  +1432 = ㉑ 文本字节数），其余 28 条逐字节不变；hashChanged 恰为 [quality-verify]。
+//	与记录 4 同规格。若 hashChanged 出现第 2 条或任何长度变化，说明改坏了别处，应回滚重做而不是改基线。
+const wantDefaultsSetHash = "e03d3d80056ae26f99f70aa3e4e2c39c4d88ef73bd0b61c13c66ca85114e51b9"
