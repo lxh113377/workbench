@@ -159,4 +159,15 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 review-five-axis 一条（6674→8854，+2180 = ⑧ 字节）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [review-five-axis]。
 //	⇒ 与记录 9 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "2eb75ec1636ee4001f4840fbc0ebed9b77c278e582dea5f7987f7c8cd11c6cdf"
+//
+// 基线更新记录 11（round 219，2026-11-02）：2eb75ec1… → fbe6c425…。
+//
+//	给 quality-audit 追加教训 ㉔（「判据覆盖面 < 事实散布面」三族：规模数 vs 细节数 / 数字 vs 口径 / 表格 vs 散文）。
+//	本轮与上两轮的实证：exec.Command 14→19（细节数无判据，静默 35 轮）、全仓口径 47 vs 报告 44（口径说明无判据）、
+//	结论段「49 段」实为 51（散文无判据）。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-audit 一条（5396→7614，+2218 = ㉔ 字节）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [quality-audit]。
+//	⇒ 与记录 10 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "fbe6c4252721cd9222c452e28e3a591beba7014e264d67bff88d6e6c911f7de6"
