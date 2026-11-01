@@ -13,6 +13,73 @@
 // 泛型函数整个跳过（函数名后紧跟 [ 不是 (），导致长函数漏报。泛型函数必须进候选。
 const fs = require("fs");
 const cp = require("child_process");
+// SIG = Go 顶层/方法函数签名，允许接收者 (…) 与泛型参数列表 […]。
+// 泛型段是 round 193 修的盲区；这里复用已验证的正则字面量（重打易错）。
+const SIG = /^func (\([^)]*\) )?([A-Za-z_][A-Za-z0-9_]*)(\[[^\]]*\])?\(/;
+// bodyLen = 从第 i 行起按花括号配平找到函数体结束行的行数（含两端）。纯内存，自检与扫描共用。
+function bodyLen(lines, i) {
+  let depth = 0, started = false, end = i;
+  for (let j = i; j < lines.length; j++) {
+    for (const c of lines[j]) {
+      if (c === "{") { depth++; started = true; } else if (c === "}") depth--;
+    }
+    if (started && depth === 0) { end = j; break; }
+  }
+  return end - i + 1;
+}
+
+// sigLines = 对一个行数组跑签名匹配 + 配平，返回 > 阈值者。纯函数，自检走它。
+function sigLines(lines, TH) {
+  const hits = [];
+  for (let i = 0; i < lines.length; i++) {
+    const m = lines[i].match(SIG);
+    if (!m) continue;
+    const len = bodyLen(lines, i);
+    if (len > TH) hits.push({ name: m[2], start: i + 1, len: len });
+  }
+  return hits;
+}
+
+// selfTest = 内置夹具回归（不读仓库文件、不依赖 git）。锁死 round 193 泛型签名盲区：
+// 若有人把 SIG 的泛型段 ([[^]]*])? 删掉或写错，这里 NewClient/Tiny 立刻消失 ⇒ 退出码 1。
+function selfTest() {
+  const fx = [
+    "package x",
+    "",
+    "func Small() {",
+    "  return 1",
+    "}",
+    "",
+    "func NewClient[TTx any](d D) (*Client[TTx], error) {",
+    "  a := 1",
+    "  if a == 1 {",
+    "    b := 2",
+    "  }",
+    "  return nil, nil",
+    "}",
+    "",
+    "func Tiny[T any](x T) {",
+    "  _ = x",
+    "}"
+  ];
+  const all = sigLines(fx, 0).map(function (h) { return h.name; });
+  const nc = sigLines(fx, 0).filter(function (h) { return h.name === "NewClient"; })[0];
+  const checks = [];
+  checks.push(["generic NewClient counted (round193 blind-spot regression)", all.indexOf("NewClient") >= 0]);
+  checks.push(["NewClient brace-pair len == 7", !!nc && nc.len === 7 && nc.start === 7]);
+  checks.push(["short generic Tiny also in candidates", all.indexOf("Tiny") >= 0]);
+  checks.push(["plain func Small still recognized", all.indexOf("Small") >= 0]);
+  checks.push(["non-func lines not miscounted", sigLines(["// func Fake() {", "var x = 1"], 0).length === 0]);
+  let fail = 0;
+  for (const c of checks) {
+    if (c[1]) console.log("SELFTEST ok    " + c[0]);
+    else { console.log("SELFTEST FAIL  " + c[0]); fail++; }
+  }
+  if (fail > 0) { console.log("SELFTEST: " + fail + " item(s) failed (SIG regex or bodyLen broken)"); return 1; }
+  console.log("SELFTEST PASS (" + checks.length + " checks, locks round193 generic-signature blind spot)");
+  return 0;
+}
+if (process.argv[2] === "--self-test") { process.exit(selfTest()); }
 const TH = Number(process.argv[2] || 180);
 const files = cp.execSync('git ls-files "workbench/**/*.go"', { encoding: "utf8" })
   .replace(/\r/g, "").trim().split("\n").filter(f => f && !f.endsWith("_test.go"));
@@ -20,14 +87,9 @@ const hits = [];
 for (const rel of files) {
   const L = fs.readFileSync(rel, "utf8").replace(/\r/g, "").split("\n");
   for (let i = 0; i < L.length; i++) {
-    const m = L[i].match(/^func (\([^)]*\) )?([A-Za-z_][A-Za-z0-9_]*)(\[[^\]]*\])?\(/);
+    const m = L[i].match(SIG);
     if (!m) continue;
-    let depth = 0, started = false, end = i;
-    for (let j = i; j < L.length; j++) {
-      for (const ch of L[j]) { if (ch === "{") { depth++; started = true; } else if (ch === "}") depth--; }
-      if (started && depth === 0) { end = j; break; }
-    }
-    const len = end - i + 1;
+    const len = bodyLen(L, i);
     if (len > TH) hits.push({ name: m[2], file: rel, start: i + 1, len });
   }
 }

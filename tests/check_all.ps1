@@ -461,6 +461,22 @@ Section '工作空间卫生（Windows 保留设备名不得出现在被审查目
   & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Quiet
 }
 
+# 扫描工具自检（round 194 挂载）：把「校验工具自己的盲区」变成永久回归。
+# 为什么挂总门禁：2026-11-01 round 193 实测事故 —— setup/long-func-scan.js 初版签名正则把泛型函数
+#   （func NewClient[TTx any]( 名字后紧跟 [ 不是 (）整个跳过，导致我误判五轴报告 P2-4 的「258 行引用
+#   不成立」。校验工具的盲区会产出**看起来有证据支撑的错误结论**，比没门禁更有害。故把事故形态编成
+#   纯内存夹具（--self-test，5 断言）挂进聚合；破坏性负控实测：删掉 SIG 泛型段 ⇒ 3 断言翻红 rc=1。
+# 零级联设计：不新增 tests/check_*.ps1 —— 那会级联牵动「报告数字一致性」门禁的受跟踪 49 / CI 30 /
+#   check_all 49 三个稳定项与 gate_coverage 计数。这里直接调 node + 纯夹具 ⇒ figures 三数全不动。
+# 三态：node 找不到 ⇒ rc=3 SKIP（测不了≠不合格，也不许把它写成 rc=0 洗成 PASS —— round 61 在册事故）。
+Section '长函数扫描工具自检（泛型签名盲区回归）' {
+  $s = Join-Path $Root 'setup\long-func-scan.js'
+  if (-not (Test-Path $s)) { Write-Host '    SKIP 扫描工具不存在'; $global:LASTEXITCODE = 3; return }
+  $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
+  if (-not $nodeCmd) { Write-Host '    SKIP 找不到 node（本段无从判定）'; $global:LASTEXITCODE = 3; return }
+  & node $s --self-test
+}
+
 Write-Host '========================================'
 # 汇总措辞（round 63）：有 SKIP 时不许再说 all-gates-pass —— 「全过」这个词必须名实相符，
 # 否则又回到 round 61 那个缺陷的语言版（门禁没跑却报通过）。SKIP 只说明「跑不了」，
