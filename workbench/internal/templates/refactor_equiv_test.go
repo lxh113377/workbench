@@ -258,4 +258,16 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-verify 一条（26197→26207，+10）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [quality-verify]。
 //	⇒ 与记录 17 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "86cda13f8b30a8dc74473d33a24b3ec7cc523909cff3a38debd862154afe50d1"
+//
+// 基线更新记录 19（round 233，2026-11-02）：86cda13f… → 4e784b3d…。
+//
+//	扩写 review-five-axis 的第 ⑤ 条（不是新立编号）：在「二元性（有无证据）」之外补「梯度性（证据强度 ⇒ 措辞强度）」。
+//	实证：r232 把「必然判错」校正为「会稳定误报」——9 处误报能支撑「会稳定误报」，撑不起「必然」。
+//	为什么归并而非另立：⑤ 管「没证据不许写成事实」，本轮管「证据有多强 ⇒ 话能说多重」，同属「断言与证据的匹配」族；
+//	另立编号会让读者面对两条部分重叠的规则（与 r224 ㉔(f)「优先减少碎片」一致）。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 review-five-axis 一条（8854→9886，+1032）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [review-five-axis]。
+//	⇒ 与记录 18 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "4e784b3d64582c46f46e17cb6f30db8ba8c7b73c45e5ccec94acdb549d76033c"
