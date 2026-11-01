@@ -246,4 +246,16 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-verify 一条（24832→26197，+1365）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [quality-verify]。
 //	⇒ 与记录 16 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "fe741a692767cebb16b5e5c24d2a5021f5d7ebaa58be7df0f28cfec9bc4dc0fd"
+//
+// 基线更新记录 18（round 232，2026-11-02）：fe741a69… → 86cda13f…。
+//
+//	复核「过强断言」时改掉 quality-verify ⑮ 的一句：原文写「靠单行关键字推断块结构/守卫，**必然判错**」，
+//	但同段实测记录的是「真正可炸的活体是 0 个」—— 那是**误报**，不是「判错」，且「必然」把单行启发式整体否定了
+//	（它在很多场景下有用，只是不能用来推断块结构）。改为「**会稳定误报**」，有 9 处实测支撑且不过度概括。
+//	只动 10 字节，其余 28 条模板逐字节不变。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-verify 一条（26197→26207，+10）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [quality-verify]。
+//	⇒ 与记录 17 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "86cda13f8b30a8dc74473d33a24b3ec7cc523909cff3a38debd862154afe50d1"
