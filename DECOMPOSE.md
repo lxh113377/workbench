@@ -1450,3 +1450,28 @@ CI：bb51707 双 workflow success（实测 conclusion）；19509cf 双 workflow 
 **下一轮候选**：① 按本卡做 runOne 第一刀（只抽失败处理段，验收=行数下降 + 238 Test 全绿 + 三条不变式全绿）；
   ② 另 3 处超长函数（defaultsQuality 345 / runApp 337 / Runner.run 261 / Normalize 200）同策略逐个单独轮；
   ③ T88/T90 线上正例（需额度窗口）；④ executor scratch（需产品决策）。
+
+## Round 200 收口（实测 2026-11-01 21:0x）：runOne 第一刀落地 —— fcd861d
+
+**取证（全部亲跑）**：聚合独占跑 rc=0 / 51 段 / 0 FAIL（纯检出 PASS、三平台 PASS、figures PASS、自检段 PASS）；
+  CI fcd861d 双 workflow success（两个 watch RC=0）；全仓 build/vet/test rc=0（32 包 ok）、gofmt 零列出。
+
+**这一轮真正的进步是工作方式，不是那 46 行**：
+  拆主状态机靠字符串手术极易翻车（我前几轮已栽过：方法插进 runOne 内部、索引语义搞错、漏 return 值）。
+  本轮改用 **GOFLAGS=-overlay**：把候选文件挂进编译与测试，**真文件一次没动**就验证完「编译过 + engine 包全绿」；
+  三次编译失败（undefined lastKind / 调用点缺 := / 残留 dec）全在 overlay 阶段解决，**工作树零污染**。
+  这是本会话第一次把「重构验证」从「改完再跑」变成「先验后落」——**代价是零，收益是不再有半成品状态**。
+  值得写进模板（下一轮候选①）：大函数抽取一律先 overlay 验证，再落盘。
+
+**连带修的 20 条行号引用是本轮的正确处置**：抽取使 runOne 983→1053（+70），`TestAuditReportCitationsResolve`
+  判红了 20 条。我没有放宽判据（它自己写着「改准或删除引用，不许放宽判据」），而是按它的**同一口径**
+  （逐字命中或全 token 命中）逐条重定位：18 条 +70 恰为正确位移、2 条多命中靠上下文判定
+  （1859→1885 其实是「下一行声称」、1898→1922）。**判据指出的问题就该按判据的标准修，不是改判据**。
+
+**净效果（可复算）**：`runOne` 362 → **316** 行、新方法 `recordFailureAttempt` **54** 行（单一职责、无 defer/goroutine）；
+  全仓 >180 行函数仍 **5** 处，`runOne` 已从第 1 位掉到第 3 位（`defaultsQuality` 378 / `runApp` 337 在前）。
+  注意 defaultsQuality 从 345 涨到 378 —— 是前几轮模板教训追加所致，属预期，不是漂移。
+
+**下一轮候选**：① 把「大函数抽取先 overlay 验证再落盘」写进 quality-gate-spec/refactoring 模板（本轮有实证）；
+  ② `defaultsQuality` 378 行拆分（它现在最大，但都是模板字面量，风险低）；③ `runApp` 337 行；
+  ④ T88/T90 线上正例（需额度窗口）。
