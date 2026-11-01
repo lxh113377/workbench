@@ -16,6 +16,27 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Added
+- **新建项目根注入面 `D:/workdesktop/AGENTS.md`：本仓产物首次「在新对话内可被引用」（round 253，2026-11-02）**：
+  动因 = 规则 #46「改动须在新对话内可引用，而不是在本轮对话内自嗨」。闸的静态腿对本会话产物判
+  `orphan=4`（DECOMPOSE 之外全孤儿）—— 这是**正确判决**：此前本项目根本没有根 AGENTS.md，
+  新对话开局读不到任何指向本仓产物的面。
+  文件内容按 #46 要求写**逐字路径指针**（七类权威产出 + 六条验收命令 + 三条硬纪律），
+  并埋一个自然锚点「项目面版本：f4a19b02」兼作实测腿的 8 位十六进制 canary。
+  **实测腿证据（权威）**：`newconv_probe.py --channel cli --path .../AGENTS.md --token f4a19b02 --repeat 2`
+  ⇒ `found=1 / hits=2 / tools=0 / PROBE_RC=0`，两轮答案都逐字 `CANARY=f4a19b02`。
+  **本轮最重要的自纠（㉓(c) 当场兑现）**：第一次探针我把中文短语当 token ⇒ `found=0` 两轮，
+  差点据此判定「AGENTS.md 不可引用」。读 `make_question()` 源码才发现 `--path` 型问句固定问
+  「那个 8 位十六进制串」，中文 canary 根本不在问句语义内 ⇒ **那次 found=0 是工具问句格式与被检串
+  类型的错配，是被检对象的属性吗？不是，是我的调用错。** 换成合规 canary 后立刻 found=1。
+  ⇒ 上一轮刚写进 ㉓(c) 的「拿判据前先确认该源的口径」，这一轮以**我自己误用判据**的形式复现了一次。
+  **同时测出闸自身的口径缺口**（不是本仓缺陷）：`newconv_ref_gate.py` 的 `SELF_FACE` 硬编码两张注入面，
+  项目根只登记了「焚诀」那一个；workdesktop 的根 AGENTS.md 明明被宿主 stat 注入（系统提示原文可见），
+  却因不在名单里被判 ORPHAN ⇒ **静态腿对本项目恒假红**。按 D7.2（闸的 owner 15 分钟内还在改）
+  **不动他人 owner 文件**，落待并入 patch：`docs/refgate-patch/selfface-workdesktop.patch.md`
+  （附所审 sha256=f2fae8c482b6，含更彻底方案：项目根由「会话工作区根+AGENTS.md」动态得出，免逐项目登记）。
+  验证：5 道相关门禁各 rc=0（reserved_names / gate_links / repo_eol / multi_bom / doc_refs）⇒ 新增根
+  文件不破坏任何现有判据；探针原始输出留证于 xtmp/r359_raw/。
+### Added
 - **quality-gate-spec ㉓ 追加 (g)：判据换源先确认该源排序语义 + 历史事实只做 advisory（round 251，2026-11-02）**：
   承接 r250 的读链器扩源实战，把那条隐性判断写成显式规则。㉓(f) 管「横向：这批同类文件有没有受理面」，
   (g) 管它的镜像「纵向：这条判据换到另一个源，方向/口径还成立吗」：
