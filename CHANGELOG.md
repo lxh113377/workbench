@@ -288,6 +288,23 @@
   `[87cc154]`
 
 ### Changed
+- **复核 P1-2 并推翻其「最小改法」：`_ =` 是刻意设计，且已有三层判据覆盖（round 215，2026-11-01）**：
+  按 ㉒ 先读源码后，结论与报告建议相反：
+  · `internal/autonomy/manager.go` 的 19 处 `_ =` **全部是持久化写入**（`AppendDecision` / `Upsert` /
+    `writeLedgerThenActivate`），无一处 defer 清理 —— 表面看正是报告指的「真风险面」；
+  · 但它**已有三条判据**（`append_decision_failure_test.go` 实测存在并逐条断言）：
+    `TestAppendDecisionReturnsErrorOnUnwritableLedger`（台账不可写 ⇒ 必须返回错误）、
+    `TestLedgerFailureDoesNotBlockActivationOnRealStore`（但**留痕失败不得阻断生效** —— **刻意的设计意图**：
+    自主线不能因台账写不进去就停摆）、`TestLedgerFailureIsObservable`（留痕失败**必须可观测**）；
+  · 另有 `nextgoal_order_test.go` / `manager_test.go` 背书错误语义；盘点文档已把该档标为「**已建判据**」。
+  ⇒ **若按报告「最小改法」给这几处加显式日志/返回错误，会直接破坏
+    `TestLedgerFailureDoesNotBlockActivationOnRealStore` 所守的设计意图** —— 即用一次「看起来更严谨」的改动
+    推翻一条已测的架构决策。**修正结论：P1-2 不需要改动。**
+  剩下 5 处属自检/探针面（失败无外部可见后果），不构成本仓在册的 WAL/queue 缺陷族。
+  ⇒ 补一条 ⑥/⑦ 的边界：**「看起来该改」的条目要先查有没有判据背书 —— 有背书就说明有人想过且测过**。
+  本会话第九次「先验反例推翻自己」，也是第三次推翻**自己先前写进报告的建议**（前两次：r207 覆盖率判据、
+  r212 空格路径缺口）。三次的共同点：**建议读起来都很有道理，但都没先查已有判据**。
+### Changed
 - **复核「门禁是否会把上游失败当成 0」——结论：不会，三处取数全部已带 rc 检查（round 214，2026-11-01）**：
   起因是我自己的一次性命令出错：`grep -rn … . | wc -l` 因 `runtime/soak-24h-v2` 下有无权限目录而让 grep 报错退出，
   `wc -l` 却给出 **0** —— 一个「看起来像零处」的假读数。我据此怀疑**门禁本身**也有同样缺陷，便去查源码。
