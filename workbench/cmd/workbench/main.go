@@ -111,21 +111,30 @@ func main() {
 	}
 }
 
-func runApp(args []string) error {
+// parseSilentFlag 解析「本次运行是否服务化/无窗口启动」。
+//
+// 为什么抽成纯函数（round 206）：runApp 337 行、体内 115 条语句覆盖率实测 0%、含 18 return / 9 defer /
+// 5 goroutine ⇒ 零覆盖下拆装配链无法验证行为等价。按「先建网、后拆墙」的顺序，先把它输入输出最明确的
+// 这一段（命令行参数 → 布尔）抽出来并单测，拿到覆盖后再动其余部分。
+//
+// 语义（原注释保留）：--silent 表达「服务化启动」，--headless 表达「本次运行根本不该出现任何窗口」；
+// 两者都置 true。保留两个名字有历史原因 —— 既有计划任务/守护脚本已用 --silent 在跑，改名会静默失效。
+//
+// 判据边界：按**整串精确匹配**，不做前缀/大小写匹配 —— "--silently"、"--Silent" 都不得命中（单测钉住），
+// 因为静默启动的标志一旦被误判，后果是「本该弹面板却被静默」，用户看不到任何反馈。
+func parseSilentFlag(args []string) bool {
 	silent := false
 	for _, a := range args {
 		switch a {
-		case "--silent":
-			silent = true
-		case "--headless":
-			// --headless 是 --silent 的显式子集（2026-10-21 老大指令「无头执行」）：
-			// 两者都"不弹面板"，区别在语义来源 —— --silent 表达"服务化启动"，
-			// --headless 表达"本次运行根本不该出现任何窗口"。
-			// 保留两个名字是因为既有计划任务/守护脚本已经用 --silent 在跑，
-			// 改名会静默失效（历史教训：快捷方式参数改动没同步 = 永远起不来）。
+		case "--silent", "--headless":
 			silent = true
 		}
 	}
+	return silent
+}
+
+func runApp(args []string) error {
+	silent := parseSilentFlag(args)
 
 	layout, err := config.ResolveLayout("")
 	if err != nil {
