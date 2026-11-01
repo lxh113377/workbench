@@ -152,6 +152,22 @@
   `check_gate_links` rc=0、`check_report_figures` rc=0（稳定项逐字命中）、上述两条引擎测试 rc=0。
 
 ### Fixed
+- **修掉我自己引入的偶发 CI 红：`instance_test.go` 的端口算术越界（round 186，2026-11-01）**：
+  CI run 41286238450 的 `build + coverage gate` 报 `--- FAIL: TestProbeExactPortDoesNotScanNeighbors`、
+  `instance_test.go:38: 副本监听失败（该检查失去意义）: listen tcp: address 65536: invalid port`。
+  根因（我自己造的两处叠加）：round 179 加固该判据时，我 ① 把副本端口设为 `base+2`，而 `base` 由 OS 随机分配，
+  Windows 动态端口区间含 65534/65535 ⇒ `base+2 = 65536` 越界；② 又把原先宽容的 `if err == nil {…}` 改成
+  `t.Fatalf` ⇒ 撞界时从「跳过一段断言」升级成「整条测试红」。上一笔 abf51c9 侥幸没撞上，这次撞上就打红 CI。
+  修法（保留杀伤力优先）：把端口三元组准备抽成 `listenMainAndReplica()`（不合法就换下一个随机 base 重试，
+  越界/端口被占属**环境噪声**不该 Fatalf），边界逻辑抽成纯函数 `portTrioFits(base)`（`base>=1024 && base+2<=65535`）
+  并加表驱动判据 `TestPortTrioFits`（钉 65533 可用 / 65534、65535 越界，即事故值本身成为用例）；
+  另补**前置自证**（base 与 base+2 必须各自精确命中）—— 否则核心断言 `base+1 => false` 可能只因「谁都没监听」而假绿。
+  杀伤力复验（加固后不能变弱）：双向顺延变异 `scan.json` / `scan_back.json` 仍各自翻红（UP_RC=1、DOWN_RC=1）；
+  基线连跑 40 次 STRESS_FAILS=0。⇒ 修的是测试自身的越界，没有为躲红而放宽判据。
+  同族教训（本轮又抓到我自己一处）：取证文档里我写的复跑命令 `git ls-files "tests/*"` 实测返回 1341，
+  而文中结论是「49 段门禁」⇒ **命令与结论口径不符**，正是本轮模板新增「先实测再引用」条款要防的形态，
+  已改为 `ls tests/check_*.ps1 | wc -l` 并在文中把两种口径的差异写明。
+
 
 - **两道门禁的 git 解析补显式兜底 + 显式进程调用：Stop 偏好下的「UNVERIFIED 设计」此前是死代码（round 174，2026-10-31 会话）**：
   `tests/check_untracked_go.ps1:28` 与 `tests/check_deadcode.ps1:27` 各自写了「取不到 git ⇒ rc=2 UNVERIFIED」，

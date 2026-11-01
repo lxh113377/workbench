@@ -235,6 +235,21 @@ if (-not (Test-Path -LiteralPath $axisPath)) {
       if ($line.TrimStart().StartsWith('func Test')) { $axisTests++ }
     }
   }
+  # 短版行（贴 PR 用）也要钉：本轮实测抓到的正是「表格已更新、短版行还留着 533/1,147」的**文内自相矛盾**，
+  # 而旧判据只查表格四行 ⇒ 盲区。形态固定：「基线：N .go / M 行 / K 包 / T 测试」。
+  $mShort = [regex]::Match($axisTxt, '基线：(\d+) \.go / (\d+),?(\d*) 行 / (\d+) 包 / (\d+),?(\d*) 测试')
+  if (-not $mShort.Success) {
+    $bad += ('五轴审查报告：找不到「基线：N .go / M 行 / K 包 / T 测试」短版行 ⇒ 该形态被改写或删除，其数字不再受核对')
+  } else {
+    $sGo = [int]$mShort.Groups[1].Value
+    $sLn = [int]($mShort.Groups[2].Value + $mShort.Groups[3].Value)
+    $sPk = [int]$mShort.Groups[4].Value
+    $sTt = [int]($mShort.Groups[5].Value + $mShort.Groups[6].Value)
+    if ($sGo -ne $axisGoN) { $bad += ('五轴报告·短版·受跟踪 .go：写 ' + $sGo + '，实测 ' + $axisGoN) }
+    if ($sLn -ne $axisLines) { $bad += ('五轴报告·短版·代码行数：写 ' + $sLn + '，实测 ' + $axisLines) }
+    if ($sPk -ne $axisPkgs) { $bad += ('五轴报告·短版·包数：写 ' + $sPk + '，实测 ' + $axisPkgs) }
+    if ($sTt -ne $axisTests) { $bad += ('五轴报告·短版·测试函数数：写 ' + $sTt + '，实测 ' + $axisTests) }
+  }
   $axisRows = 0
   $ali = 0
   foreach ($ln in ($axisTxt -split [char]10)) {
