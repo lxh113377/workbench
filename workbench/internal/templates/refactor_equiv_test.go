@@ -321,4 +321,16 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	+ prompt 字节长 + prompt sha256 前 8 字节）：ID 顺序 0 处差异；17 个字段 0 处差异；
 //	长度变化只有 quality-gate-spec 一条（14843→16575，+1732）；其余 28 条逐字节不变；hashChanged=[quality-gate-spec]。
 //	⇒ 与记录 22 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "e441d67711b226a7d43f404888feaf360ab1a0a9208cfcf1466414e38446ac7b"
+//
+// 基线更新记录 24（round 241，2026-11-02）：e441d677… → d8d8f41c…。
+//
+//	扩写 review-five-axis ④（门禁建议）：每条「应变成机器判据」的建议必须**标注受理面归属**
+//	（CI repo-gates / 提交前闸 / 本地聚合 / **无受理面（仅一次性分析脚本）**）。
+//	依据 r238-240 实测：受理面决定语义宽容度（CI 对 rc≠0 一律失败，本地对 SKIP/UNVERIFIED 不判红）
+//	与「该建议值不值得做」（177 处硬编码路径全在无受理面脚本 ⇒ 一处不改）。
+//	一条建议三要素：**发现 + 严重度 + 受理面**。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：ID 顺序 0 处差异；17 个字段 0 处差异；
+//	长度变化只有 review-five-axis 一条（11192→12161，+969）；其余 28 条逐字节不变；hashChanged=[review-five-axis]。
+//	⇒ 与记录 23 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "d8d8f41c6a176f7644ea74cba74318889d2fa08f503c02efa276c2d324ab77cf"
