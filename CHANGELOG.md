@@ -16,6 +16,24 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Added
+- **三份「格式全对、证据虚构」的引擎报告归档留存 + 新归档目录 `docs/archive/2026-11/` 建立（round 184-185，2026-11-01）**：
+  判例取证文档 `docs/取证-报告证据虚构-2026-11-01.md` 逐条对账（左=报告写、右=本仓实测，全部可复跑）：
+  报告引用 `package.json` / `pyproject.toml` / `.env.example` / `src/**/*.ts` / `docker-compose.yml`，本仓实测
+  **全不存在**（540 个受跟踪 `.go` 的 Go+PowerShell 工程），还写「未发现 `tests/`」而该目录实有 49 段聚合门禁；
+  用引擎自己的 `reportGateProblems` 判定，三份里**两份 0 problems 通过** ⇒ 格式判据在鼓励虚构，
+  这正是模板层加反虚构条款的依据（条款与本判例互证：条款侧见本段「模板层新增『证据落地（反虚构）』条款」条目）。
+  三份原文**不删**，移入 `docs/archive/2026-11/` 并在文件名加「-证据虚构-未采纳」、正文顶部加归档说明
+  （删掉就失去「为什么需要这条判据」的证据，与 round 175 归档占位件同一处置纪律）。
+  新目录索引 `README.md` 的 KB 列**由 round 183 的生成器校准**（`gen-archive-index.ps1 -Dir docs/archive/2026-11`
+  实测 GEN_RC=0、3 行全部与实物一致）—— 自己立的「不手填」规矩自己先守。
+  **吃自己的狗粮（自查抓到并已改）**：取证文档初版按「说明文档」结构写、漏了三节，而它的文件名含「报告」
+  ⇒ 落在 `claimsReport` 管辖内、会被自家判据统计为不合格。重构成 `## 结论/## 证据/## 门禁建议` + P0/P1/P2 分级后
+  新增长期判据 `internal/engine/fabrication_casebook_gate_test.go` 钉住它（判据必须首先作用于产出它的工具链
+  自身，否则对外宣称的标准是空的）；实测 rc=0 PASS。顺带清掉同期新增的 4 个仓库根散件
+  （explore.ps1 / explore.py / list_dir.ps1 / m.py），移档 `xtmp/round184-evidence/root-strays-2026-11-01/` + manifest；
+  据此**如实登记**：落点条款自 round 166 就在 prompt 里却仍复发 ⇒ 纯 prompt 约束拦不住，
+  治本需 executor 侧独立 scratch 工作目录（`executor.go:416` 的 `cmd.Dir = workDir` 目前=被审查项目根）。
+
 - **模板层新增「证据落地（反虚构）」条款，堵住三份「格式全对、内容全假」报告的共性缺口（round 184-185，2026-11-01 会话）**：
   取证（用**真实** `reportGateProblems` 逐份判定，不是读代码猜）：自主任务连出三份 docs/ 报告，
   两份 **0 problems** 顺利通过内容门禁 —— 它们的证据节写着 `Test-Path package.json`、
