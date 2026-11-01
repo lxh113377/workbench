@@ -29,4 +29,5 @@ for (let k = 0; k < fns.length; k++) {
     if (!has) bad.push({ line: i + 1, from: MAP[fns[k].name] || fns[k].name, to: target, circ });
   }
 }
-console.log(JSON.stringify({ templates: Object.keys(sets).length, dangling: bad }));
+console.log("XREF_OK dangling=" + bad.length + " templates=" + Object.keys(sets).length);
+if (bad.length) for (const b of bad) console.log("  - " + b.line + " " + b.from + " -> " + b.to + " " + b.circ);

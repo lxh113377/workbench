@@ -475,6 +475,11 @@ Section '工作空间卫生（Windows 保留设备名不得出现在被审查目
 #   故 CI 自维护 $gates 列表逐个调 tests/check_*.ps1）。round 194 把段直接挂在 check_all ⇒ 它在 CI
 #   **没有受理面**，本地绿不等于 CI 有牙 —— 正是本仓在册病「判据存在但没挂受理面」，这次是我自己造的。
 #   所以抽成 tests/check_scanner_selftest.ps1，同时挂 CI $gates 与本聚合，两边都有牙。
+Section '模板间跨引用可解析性（悬空引用回归）' {
+  $g = Join-Path $Root 'tests\check_template_xrefs.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Quiet
+}
 Section '扫描工具自检（泛型签名盲区回归）' {
   $g = Join-Path $Root 'tests\check_scanner_selftest.ps1'
   if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 3; return }
