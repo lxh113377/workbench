@@ -220,4 +220,16 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-audit 一条（11189→12766，+1577）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [quality-audit]。
 //	⇒ 与记录 14 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "449e1850cc6b8571885103b99c30988a2e7b23862acb001fa6972f21c3b27f43"
+//
+// 基线更新记录 16（round 228，2026-11-02）：449e1850… → fc0438ea…。
+//
+//	给 quality-verify 追加教训 ㉔「写完要回读原文：编译通过 ≠ 文本正确」。
+//	实证：本轮插句时多打个引号，编译照过、测试全绿，但渲染文本里出现怪引号；靠 grep 刚写的那一行才抓到。
+//	边界：优先回读「编译器/判据不覆盖」的产出（模板正文、报告散文、指令文件、对外文案）；
+//	代码逻辑相反，编译器与测试就是它的回读器。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-verify 一条（23382→24832，+1450）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [quality-verify]。
+//	⇒ 与记录 15 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "fc0438ea2049970213ab6fb1252590ab80900256d023c36707e32cdaeea8bbcd"
