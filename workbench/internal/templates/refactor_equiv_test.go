@@ -87,4 +87,16 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  hashChanged 恰好 = [quality-verify, quality-hygiene]（就是我在 defaults.go 里编辑的那两条）。
 //	⇒ 等价性证明的是「只有位移、没有增删」，比同幅增长更难伪造。若 hashChanged 出现第 3 条，
 //	或任何长度变化，就说明改坏了别处，应回滚重做而不是改基线。
-const wantDefaultsSetHash = "48c94ecccb7aae95c269548d72ce29938227921d3598edb3da87a286f3b6d913"
+//
+// 基线更新记录 4（round 191，2026-11-01）：48c94ecc… → cf197d39…。
+//
+//	给 quality-gate-spec 追加教训 ㉒（静态判据受理面小于运行时 + 同族缺陷须逐个实测复现，见该模板）。
+//	这次的差分是四轮里**最强的一次隔离证明**：dump 两侧 29 条模板（ID 顺序 / 17 个非 prompt 字段 /
+//	prompt 字节长 / prompt sha256 前 8 字节）实测
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；
+//	  长度变化**只有 1 条** —— quality-gate-spec 11473→13513（+2040，正是 ㉒ 文本字节数）；
+//	  其余 28 条**逐字节不变**（哈希也不变），hashChanged 恰为 [quality-gate-spec]。
+//	⇒ 单点改动、单条受影响，不存在"顺手改到别处"的可能。若 hashChanged 出现第 2 条，就是改坏了。
+//	契约侧同步：encoded_lessons_contract_test.go 为 quality-gate-spec 加 3 个片段（㉒ 的三个可判要素），
+//	TestEncodedLessonsSurviveRender 实测「编码教训 14 条全部到位」。
+const wantDefaultsSetHash = "cf197d392b052fb5b5dd0850ad8a967ae382b13cd4a4bb4a6894c55cfbe80850"
