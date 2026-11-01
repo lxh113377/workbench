@@ -980,6 +980,76 @@ func (e *Engine) supplyCandidates(ctx context.Context, cfg config.Config) {
 }
 
 // runOne 执行单个任务的完整生命周期。
+
+// recordFailureAttempt 是 runOne 失败处理段的抽取（round 200）。
+// 抽取依据 = docs/取证-runOne拆分前耦合度基线-2026-11-01.md 的量化基线：这一整块是 runOne 里耦合最低的部分
+// （只读 res/runErr/lastErr，只写 lastKind，无 defer/goroutine）；体内含 break（控重试循环）⇒ 控制流留在
+// runOne，这里只做「分类 → 判取消 → 归因 → 记账」，用返回值承接副作用：
+//
+//	kind     —— 本次失败分类（retry.Unknown / ParseKind / retry.Boot，或取消类别）
+//	lastKind —— 由调用方回写（保持原行为：取消优先、真失败才归因车道）
+//	cont     —— 是否继续重试（false ⇒ 调用方 break）
+//
+// 语义等价的三条不变式（抽取前后必须一致，也是本仓在册的回归锚点）：
+//
+//	① 取消优先于记账：classifyCancellation 命中时**不**调 router.RecordFailure（issue #11：否则用户点一次
+//	   「终止」就把无辜车道打成失败冷却）；
+//	② 不可重试同因必再失败：重试决策只由 pol.Decide 给出，本函数不自行判重试；
+//	③ 台账取证同构：取消行与失败行都写 StderrPath/ProducedRunes/DSHCommand（读台账不必记哪条有）。
+func (e *Engine) recordFailureAttempt(ctx context.Context, task *model.Task, attempt int, actualModel string,
+	elapsed time.Duration, res *executor.Result, runErr error, pol *retry.Policy, lastErr error) (retry.Kind, retry.Kind, bool) {
+	// ── 失败：先定类别 → 再判取消（取消优先于记账）→ 最后交给重试策略 ───────
+	// 只做分类，**先不记车道失败**：记账必须发生在「这是不是一次真失败」判定之后。
+	var lastKind retry.Kind
+	kind := retry.Unknown
+	if res != nil && res.ErrorKind != "" {
+		kind = retry.ParseKind(res.ErrorKind)
+	} else if runErr != nil {
+		kind = retry.Boot
+	}
+
+	// 取消优先于一切分类（issue #11 一次修掉两个缺陷）：
+	//   ① 归因：以 context.Cause 为准。改造前 kind 直接取 res.ErrorKind，
+	//      而 executor.go:427 用 "启动 DSH 失败: %w" 包装 context.Canceled 时，
+	//      KindCancelled 根本没机会被赋上 ⇒ 台账落成 kind=unknown（生产实测 2 条）。
+	//   ② 记账次序：改造前 RecordFailure 在取消判定**之前** ⇒ 用户点一次「终止」
+	//      就把那条无辜车道打成一次失败冷却（限流风暴期尤其坏）。asynq 把「重试」与
+	//      「算不算一次失败」分成两件事（IsFailure 谓词 + rdb.go:920 在写库处单点决定），
+	//      river 停机走 interrupted 不写 attempt error —— 同一不变量：取消不污染统计。
+	cancelKind, cancelText, cancelled := classifyCancellation(ctx, e.isCancelling(task.ID), kind)
+	if cancelled {
+		lastKind = cancelKind
+		// 取消行同样带取证三件套：台账六处写入点**列同构**，读的时候不必再记「哪条有、哪条没有」。
+		stderrPath, producedRunes, dshCommand := attemptEvidence(res)
+		e.store.AppendAttempt(store.AttemptRecord{
+			TaskID: task.ID, Attempt: attempt, Model: actualModel, Kind: string(cancelKind),
+			Action: "cancel", ElapsedMs: elapsed.Milliseconds(),
+			// 台账文案用具名归因而非 lastErr 原文：lastErr 常是包装泛错
+			// （"启动 DSH 失败: context canceled"），与 kind=cancelled 自相矛盾 ⇒ 读台账的人仍然查不动。
+			Error:      cancelText + causeSuffix(lastErr),
+			StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
+		})
+		e.finishCancelled(task.ID, lastErr, cancelText)
+		return cancelKind, cancelKind, false
+	}
+	// 真失败才归因到车道（取消已在上面 return，不会走到这里）。
+	if res != nil && res.ErrorKind != "" {
+		e.router.RecordFailure(actualModel, res.ErrorKind, errText(runErr))
+	} else if runErr != nil {
+		e.router.RecordFailure(actualModel, string(executor.KindBoot), errText(runErr))
+	}
+	lastKind = kind
+	dec := pol.Decide(kind, attempt, errText(lastErr))
+	// 失败台账带上取证两件套（stderr 落盘位置 + 产出体量，T15-④）。
+	stderrPath, producedRunes, dshCommand := attemptEvidence(res)
+	e.store.AppendAttempt(store.AttemptRecord{
+		TaskID: task.ID, Attempt: attempt, Model: actualModel, Kind: string(kind),
+		Action: string(dec.Action), DelayMs: dec.Delay.Milliseconds(),
+		ElapsedMs: elapsed.Milliseconds(), Error: errText(lastErr),
+		StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
+	})
+	return kind, lastKind, dec.Action == retry.ActionRetry
+}
 func (e *Engine) runOne(parent context.Context, task *model.Task) {
 	cfg := e.cstore.Get()
 	// 并发取消：引擎停止时不再开新任务。
@@ -1287,56 +1357,10 @@ func (e *Engine) runOne(parent context.Context, task *model.Task) {
 			return
 		}
 
-		// ── 失败：先定类别 → 再判取消（取消优先于记账）→ 最后交给重试策略 ───────
-		// 只做分类，**先不记车道失败**：记账必须发生在「这是不是一次真失败」判定之后。
-		kind := retry.Unknown
-		if res != nil && res.ErrorKind != "" {
-			kind = retry.ParseKind(res.ErrorKind)
-		} else if runErr != nil {
-			kind = retry.Boot
-		}
-
-		// 取消优先于一切分类（issue #11 一次修掉两个缺陷）：
-		//   ① 归因：以 context.Cause 为准。改造前 kind 直接取 res.ErrorKind，
-		//      而 executor.go:427 用 "启动 DSH 失败: %w" 包装 context.Canceled 时，
-		//      KindCancelled 根本没机会被赋上 ⇒ 台账落成 kind=unknown（生产实测 2 条）。
-		//   ② 记账次序：改造前 RecordFailure 在取消判定**之前** ⇒ 用户点一次「终止」
-		//      就把那条无辜车道打成一次失败冷却（限流风暴期尤其坏）。asynq 把「重试」与
-		//      「算不算一次失败」分成两件事（IsFailure 谓词 + rdb.go:920 在写库处单点决定），
-		//      river 停机走 interrupted 不写 attempt error —— 同一不变量：取消不污染统计。
-		cancelKind, cancelText, cancelled := classifyCancellation(ctx, e.isCancelling(task.ID), kind)
-		if cancelled {
-			lastKind = cancelKind
-			// 取消行同样带取证三件套：台账六处写入点**列同构**，读的时候不必再记「哪条有、哪条没有」。
-			stderrPath, producedRunes, dshCommand := attemptEvidence(res)
-			e.store.AppendAttempt(store.AttemptRecord{
-				TaskID: task.ID, Attempt: attempt, Model: actualModel, Kind: string(cancelKind),
-				Action: "cancel", ElapsedMs: elapsed.Milliseconds(),
-				// 台账文案用具名归因而非 lastErr 原文：lastErr 常是包装泛错
-				// （"启动 DSH 失败: context canceled"），与 kind=cancelled 自相矛盾 ⇒ 读台账的人仍然查不动。
-				Error:      cancelText + causeSuffix(lastErr),
-				StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
-			})
-			e.finishCancelled(task.ID, lastErr, cancelText)
-			return
-		}
-		// 真失败才归因到车道（取消已在上面 return，不会走到这里）。
-		if res != nil && res.ErrorKind != "" {
-			e.router.RecordFailure(actualModel, res.ErrorKind, errText(runErr))
-		} else if runErr != nil {
-			e.router.RecordFailure(actualModel, string(executor.KindBoot), errText(runErr))
-		}
-		lastKind = kind
-		dec := pol.Decide(kind, attempt, errText(lastErr))
-		// 失败台账带上取证两件套（stderr 落盘位置 + 产出体量，T15-④）。
-		stderrPath, producedRunes, dshCommand := attemptEvidence(res)
-		e.store.AppendAttempt(store.AttemptRecord{
-			TaskID: task.ID, Attempt: attempt, Model: actualModel, Kind: string(kind),
-			Action: string(dec.Action), DelayMs: dec.Delay.Milliseconds(),
-			ElapsedMs: elapsed.Milliseconds(), Error: errText(lastErr),
-			StderrPath: stderrPath, ProducedRunes: producedRunes, DSHCommand: dshCommand,
-		})
-		if dec.Action != retry.ActionRetry {
+		// ── 失败：分类 → 判取消 → 归因 → 记账（实现抽到 e.recordFailureAttempt，round 200）──
+		var cont bool
+		_, lastKind, cont = e.recordFailureAttempt(ctx, task, attempt, actualModel, elapsed, res, runErr, pol, lastErr)
+		if !cont {
 			break
 		}
 	}

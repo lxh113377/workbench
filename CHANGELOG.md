@@ -237,6 +237,26 @@
   `[87cc154]`
 
 ### Changed
+- **`runOne` 主状态机第一刀：失败处理段抽成 `recordFailureAttempt`（362 → 316 行，round 200，2026-11-01）**：
+  按 round 199 取证卡（`docs/取证-runOne拆分前耦合度基线-2026-11-01.md`）的量化基线执行 —— 报告要求「单独一轮做、
+  别混批」，本轮即单独一轮，只抽**耦合最低的一整块**（`engine.go` 原 1290-1338：分类 → 判取消 → 归因 → 记账）。
+  新方法 `recordFailureAttempt` 54 行，签名显式接管 8 个循环状态（`ctx/task/attempt/actualModel/elapsed/res/runErr/pol/lastErr`），
+  返回 `(kind, lastKind, cont)` 承接原副作用：`lastKind` 由调用方回写（保持「取消优先、真失败才归因车道」），
+  `cont=false` 让调用方 `break`（控制流不出主状态机）。
+  **语义等价三条不变式（抽取前后逐一核对）**：① 取消优先于记账 —— `classifyCancellation` 命中时**不**调
+  `router.RecordFailure`（issue #11：否则用户点一次终止就把无辜车道打成失败冷却）；② 重试决策仍只由 `pol.Decide`
+  给出（本函数不自行判重试）；③ 台账取证同构 —— 取消行与失败行都写 `StderrPath/ProducedRunes/DSHCommand`。
+  **工作方式（本轮最大改进）**：先用 `GOFLAGS=-overlay` 把候选文件挂进编译与测试，**真文件一次没动**就验证完
+  「编译过 + engine 包全绿」；确认后才落地。期间编译失败 3 次（`undefined: lastKind` / 调用点缺 `:=` / 残留 `dec`），
+  全在 overlay 阶段解决，**没污染工作树**。
+  **连带修 20 条报告行号引用**：抽取使 `runOne` 从 983 移到 1053（+70，正好是新方法占的行数），报告里 20 条
+  `engine.go:<行号>` 随之漂移 → `TestAuditReportCitationsResolve` 判红。处置按判据自己的口径（逐字/全 token 命中）
+  逐条重定位：18 条自动改准（+70 恰为正确位移）、2 条多命中靠上下文人工判定（`1859→1885` 实为下一行声称、
+  `1898→1922`）。**没有放宽判据**（测试里原话「改准或删除引用，不许放宽判据」）。
+  **净效果**：`runOne` 362 → 316 行，`recordFailureAttempt` 54 行（单一职责、无 defer/goroutine）；
+  全仓 >180 行函数仍 5 处（`runOne` 已从第 1 掉到第 3）。验证：全仓 build/vet/test rc=0（32 包 ok）、
+  gofmt 零列出、`TestAuditReportCitationsResolve` rc=0、engine 包全绿。
+### Changed
 - **`Defaults()` 从 491 行拆成 12 行 + 9 个领域函数，用全字段指纹证明零行为变化（round 177，2026-11-01 会话）** `[8cc4c97]`：
   对应五轴报告 P1-1。原实现 29 个 `mk(...)` 条目全在同一个切片字面量里，函数内虽有 7 个「── 领域分组」注释但
   形状上仍是一坨：改任一模板正文要滚动数百行才能确认上下文，评审 diff 无法一屏看全 ⇒ 漏看率高。
