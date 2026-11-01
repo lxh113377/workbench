@@ -295,4 +295,16 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 review-five-axis 一条（9886→11192，+1306）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [review-five-axis]。
 //	⇒ 与记录 20 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "5cf4317be03e116f095a2723423a136dd522a59732e9c7eba347e5eec9ee4ccd"
+//
+// 基线更新记录 22（round 236，2026-11-02）：5cf4317b… → 2a454cca…。
+//
+//	修 quality-gate-spec 一处**编号指代错误**：原文「第五条边界（防滥用）」紧跟在 ㉓ 之后，
+//	但该模板编号序列是 ②③⑤⑥⑦⑧⑨⑩㉑㉒㉓（**没有 ①④、也没有连续第五条**）⇒ 该指代无对象，读者无法定位它约束哪一条。
+//	改为「㉓ 的边界（防滥用）」，让边界**能指名它约束的规则**。
+//	依 r235 的「边界必须落在使用点」原则：边界不仅要靠近被约束的规则，还要能**说清自己属于哪条**。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-gate-spec 一条（14845→14843，-2）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [quality-gate-spec]。
+//	⇒ 与记录 21 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "2a454cca9be9e9e9129cee7de930d78b393e01ed213393d177f57ad69cba9787"
