@@ -16,6 +16,23 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Added
+- **新增门禁 `tests/check_scanner_selftest.ps1`：守「校验工具自己的盲区」，并纠正 round 194 的挂面错误（round 195，2026-11-01）**：
+  round 194 我把扫描工具的 `--self-test` 夹具直接挂进 `check_all.ps1` 第 51 段，随后自查发现一个被我忽略的事实 ——
+  **本仓 CI 根本不跑 check_all**（ci.yml 注释写明：同机并行会话争抢时它从约 3 分钟拖到 44 分钟未跑完，故 CI 自维护
+  一个 $gates 列表逐个调 tests/check_*.ps1）。⇒ 挂在 check_all 的段在 CI **没有受理面**，「本地绿」不等于「CI 有牙」。
+  这正是本仓反复在册的「判据存在但没挂受理面」，而这次**是我自己造的**（还配了个听起来很对的「零级联」理由——不新增
+  check_*.ps1 就不牵动 figures 三个稳定项；理由本身站得住，但它掩盖了「CI 不收 check_all」这个前提，我把「少改数字」
+  当成了「有覆盖」）。#39 不选折中：抽成正式门禁 `tests/check_scanner_selftest.ps1`，**三面同挂**（CI $gates + check_all +
+  受跟踪），figures 三个稳定项随之受跟踪 49→50 / CI 30→31 / check_all 49→50，按「代码与数字同批」在同一提交里同步。
+  门禁内容：调 `node setup/long-func-scan.js --self-test`，夹具 5 断言锁住 round 193 那次泛型签名漏匹配
+  （func NewClient[TTx any]( 被静默跳过 ⇒ 工具漏报、我误判报告 P2-4）。用 ProcessStartInfo 显式起进程（& 绝对路径
+  可能被按文档关联解释，round 183/190 两撞）。
+  **三态负控三条全 KILLED（且第一批负控是 vacuous 的，被我自己抓回）**：第一批我用 run_code 的 execSync 跑负控，
+  它自带空 PATH，export 追加空值 ⇒ Get-Command node 找不到 node ⇒ 三条全回 rc=3 SKIP，连「健康态本该 0」也拿到 3；
+  正是这个「健康态不绿」暴露了负控根本没执行变异。改用宿主通道重做：A 删 SIG 泛型段 ⇒ rc=1（真抓到变异）、
+  B 抑制结论行但保留退出码 0 ⇒ rc=2（不让「空绿」蒙混）、C PATH 去掉 nodejs ⇒ rc=3 打印「找不到 node…不代表工具正确」
+  （测不了≠不合格，也不写成 rc=0 洗成 PASS）。每步还原后 sha1sum 逐字节回原值 9990f33e86c7、临时备份用完即删。
+### Added
 - **长函数扫描工具内置 `--self-test` 夹具回归并挂进总门禁第 51 段（round 194，2026-11-01）**：把 round 193
   那次「校验工具自己的盲区产出错误结论」的事故固化成**永久回归**。事故本身：`setup/long-func-scan.js` 初版
   签名正则要求「函数名后紧跟左括号」，于是泛型函数 `func NewClient[TTx any](` 被整个跳过（名字后紧跟的是

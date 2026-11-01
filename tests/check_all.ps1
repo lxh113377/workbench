@@ -469,12 +469,16 @@ Section '工作空间卫生（Windows 保留设备名不得出现在被审查目
 # 零级联设计：不新增 tests/check_*.ps1 —— 那会级联牵动「报告数字一致性」门禁的受跟踪 49 / CI 30 /
 #   check_all 49 三个稳定项与 gate_coverage 计数。这里直接调 node + 纯夹具 ⇒ figures 三数全不动。
 # 三态：node 找不到 ⇒ rc=3 SKIP（测不了≠不合格，也不许把它写成 rc=0 洗成 PASS —— round 61 在册事故）。
-Section '长函数扫描工具自检（泛型签名盲区回归）' {
-  $s = Join-Path $Root 'setup\long-func-scan.js'
-  if (-not (Test-Path $s)) { Write-Host '    SKIP 扫描工具不存在'; $global:LASTEXITCODE = 3; return }
-  $nodeCmd = Get-Command node -ErrorAction SilentlyContinue
-  if (-not $nodeCmd) { Write-Host '    SKIP 找不到 node（本段无从判定）'; $global:LASTEXITCODE = 3; return }
-  & node $s --self-test
+# 扫描工具自检（round 194 立、round 195 改挂法）：把「校验工具自己的盲区」变成永久回归。
+# 为什么改挂法（round 195 自查抓到，且推翻 round 194 写在这里的「零级联」理由）：
+#   本仓 CI **根本不跑 check_all**（ci.yml 注释：同机并行会话争抢时它从约 3 分钟拖到 44 分钟未跑完，
+#   故 CI 自维护 $gates 列表逐个调 tests/check_*.ps1）。round 194 把段直接挂在 check_all ⇒ 它在 CI
+#   **没有受理面**，本地绿不等于 CI 有牙 —— 正是本仓在册病「判据存在但没挂受理面」，这次是我自己造的。
+#   所以抽成 tests/check_scanner_selftest.ps1，同时挂 CI $gates 与本聚合，两边都有牙。
+Section '扫描工具自检（泛型签名盲区回归）' {
+  $g = Join-Path $Root 'tests\check_scanner_selftest.ps1'
+  if (-not (Test-Path $g)) { Write-Host '    SKIP 门禁脚本不存在'; $global:LASTEXITCODE = 3; return }
+  & powershell -NoProfile -ExecutionPolicy Bypass -File $g -Quiet
 }
 
 Write-Host '========================================'
