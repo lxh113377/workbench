@@ -139,6 +139,30 @@ func TestEncodedLessonsSurviveRender(t *testing.T) {
 				t.Errorf("%s 渲染后仍有未替换占位符 %s", w.id, ph)
 			}
 		}
-		t.Logf("%s 渲染 %d 字，编码教训 %d 条全部到位", w.id, len(out), len(w.env))
+		// 守卫（round 197 加）：编号条数必须 >0。没有它，countLessons 若被改坏成恒返回 0，日志会
+		// 变成「实际 0 条编号教训」—— 表面无害，实际比原来更误导（读者会以为模板里一条教训都没有）。
+		// 刻意**不**断言「片段数 >= 编号数」：实测有反例（review-five-axis 片段 2 < 编号 5，因为该模板
+		// 多条教训共用一个长片段），那条断言会当场假红。
+		if n := countLessons(out); n <= 0 {
+			t.Fatalf("%s 渲染后数不到任何编号教训（countLessons=%d）—— 判据或模板编号形态被改坏", w.id, n)
+		}
+		t.Logf("%s 渲染 %d 字；%d 个契约片段全部命中（该模板实际 %d 条编号教训）", w.id, len(out), len(w.env), countLessons(out))
 	}
+}
+
+// countLessons 数渲染输出里「编号 + 空格」或「编号 + **」开头的教训条数。
+//
+// 为什么需要它（2026-11-01 round 197 实测）：本判据原先日志写「编码教训 %d 条」，而那个 %d 是
+// len(w.env) —— 即**契约片段数**，不是模板里的编号条数。实测两者不等（quality-verify 片段 33 /
+// 真实编号 21；quality-gate-spec 14/12；quality-hygiene 14/11；quality-audit 11/8），因为同一条教训
+// 可能登记多个片段（一条编号配 2-3 个关键串）。一个数字两用属口径缺陷（本仓在册「声明什么口径就用
+// 那个口径的数据源」），会把读者对「模板里到底写了多少条教训」的认知带偏；故拆成两个数各报各的。
+func countLessons(rendered string) int {
+	n := 0
+	for _, m := range []string{"①", "②", "③", "④", "⑤", "⑥", "⑦", "⑧", "⑨", "⑩", "⑪", "⑫", "⑬", "⑭", "⑮", "⑯", "⑰", "⑱", "⑲", "⑳", "㉑", "㉒", "㉓"} {
+		if strings.Contains(rendered, m+" ") || strings.Contains(rendered, m+"**") {
+			n++
+		}
+	}
+	return n
 }
