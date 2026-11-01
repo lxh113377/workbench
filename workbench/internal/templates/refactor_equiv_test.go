@@ -76,4 +76,15 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异、非 prompt 字段 0 处差异 ⇒ 变化 100% 可归因到「预期注入点」。
 //	这就是本判据允许更新基线的唯一情形：**全条同幅、字段零变、超幅部分可逐条归因**。
 //	若差分出现「字段值变化」或「同幅不成立」，说明改动泄漏到了别处，应修代码而不是改这里。
-const wantDefaultsSetHash = "646e35256a0b235e542252a4fc9e5278b96513d31b058a72aecd5b4fb2874677"
+//
+// 基线更新记录 3（round 187，2026-11-01）：646e3525… → 48c94ecc…，原因是把 quality-verify / quality-hygiene
+// 两条模板里的「上下文：{context}」占位符从 ⑧/⑤ 位置**移到各自正文末尾**（修结构性漂移，见
+// context_position_contract_test.go）。这次差分比前两次更强：不是「全条同幅增长」而是
+// 「**长度逐条完全不变**」—— 因为这是纯位移，一个字符都没增删。
+//
+//	差分证据（dump 双侧 29 条：ID 顺序 / 17 个非 prompt 字段 / prompt 字节长 / prompt sha256 前 8 字节）：
+//	  orderDiff=0、fieldDiff=[]、lenDiff=[]（29 条长度全部一字不差）、
+//	  hashChanged 恰好 = [quality-verify, quality-hygiene]（就是我在 defaults.go 里编辑的那两条）。
+//	⇒ 等价性证明的是「只有位移、没有增删」，比同幅增长更难伪造。若 hashChanged 出现第 3 条，
+//	或任何长度变化，就说明改坏了别处，应回滚重做而不是改基线。
+const wantDefaultsSetHash = "48c94ecccb7aae95c269548d72ce29938227921d3598edb3da87a286f3b6d913"

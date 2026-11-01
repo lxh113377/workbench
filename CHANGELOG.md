@@ -16,6 +16,18 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Added
+- **新增判据 `TestContextPlaceholderSitsAtPromptTail`：内置 md 模板的 `{context}` 占位符必须在自身指令末尾（round 187，2026-11-01）**：
+  它抓到的是**结构性漂移**——`quality-verify` 的「上下文：{context}」卡在 ⑧、`quality-hygiene` 卡在 ⑤，
+  其后还分别跟着 14 / 4 个编号教训；那是历次「往模板尾部追加教训」时把新条款接到占位符**之后**的累积结果。
+  危害不是排版：渲染时**项目上下文（变长、可能含用户粘贴来的噪声）被夹进指令中段**，而免费车道最容易丢的
+  就是长指令清单的中后段 ⇒ 尾部那批教训形同没写。这是本仓在册的「格式对、实质失效」形态。
+  口径三条都是本轮踩出来的：① 判运行时真值（`Defaults()` 的 PromptTemplate），不解析 defaults.go 源码；
+  ② 先扣除 `mk()` 追加的门禁条款，且必须按「真实两换行 + marker」切 —— 只按裸 marker 切会在更早处误截
+  （模板正文自己会**提到**「## 交付物门禁」那几个字），实测造出 18 条「没有 {context}」的假阳性；
+  ③ 判「占位符之后有无正文」这个**语义**，不比对「上下文：\n{context}」的字面形态（模板源码里是 Go 转义，
+  比字面形态会把反斜杠歧义带进判据）。作用域只覆盖「用了 {context} 的 11 条」：另 18 条本就不注入上下文，
+  把「没用某机制」判成「用错某机制」是判据越界（第一版实测如此）。
+
 - **三份「格式全对、证据虚构」的引擎报告归档留存 + 新归档目录 `docs/archive/2026-11/` 建立（round 184-185，2026-11-01）**：
   判例取证文档 `docs/取证-报告证据虚构-2026-11-01.md` 逐条对账（左=报告写、右=本仓实测，全部可复跑）：
   报告引用 `package.json` / `pyproject.toml` / `.env.example` / `src/**/*.ts` / `docker-compose.yml`，本仓实测
@@ -152,6 +164,14 @@
   `check_gate_links` rc=0、`check_report_figures` rc=0（稳定项逐字命中）、上述两条引擎测试 rc=0。
 
 ### Fixed
+- **把两条模板的 `{context}` 移到各自指令末尾（纯位移，长度一字不差）（round 187）**：
+  等价性用的是**位移证明**（比前两轮的「同幅增量」更强）：git worktree 检出 HEAD 基线树，两侧同跑 dump
+  导出 29 条模板的 17 个非 prompt 字段 + prompt 字节长 + prompt sha256 前 8 字节 ⇒
+  ID 顺序 0 差异、17 字段 0 差异、**prompt 长度 29 条全部不变**、哈希仅 2 条变化且正是我编辑的那两条。
+  另核位移的下游风险：`templates.Fingerprint` 含 PromptTemplate，但全仓**没有**持久化比对其值的使用者
+  （engine 里的 `routeFingerprint` 是模型路由的另一件事），promoted_pack / quality_pack 契约也不断言指纹 ⇒ 安全。
+  指纹基线随之更新（记录 3：646e3525… → 48c94ecc…），差分证据写在测试注释里。
+
 - **修掉我自己引入的偶发 CI 红：`instance_test.go` 的端口算术越界（round 186，2026-11-01）**：
   CI run 41286238450 的 `build + coverage gate` 报 `--- FAIL: TestProbeExactPortDoesNotScanNeighbors`、
   `instance_test.go:38: 副本监听失败（该检查失去意义）: listen tcp: address 65536: invalid port`。
