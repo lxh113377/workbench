@@ -109,4 +109,14 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化**只有 quality-verify 一条**（18861→20293，
 //	  +1432 = ㉑ 文本字节数），其余 28 条逐字节不变；hashChanged 恰为 [quality-verify]。
 //	与记录 4 同规格。若 hashChanged 出现第 2 条或任何长度变化，说明改坏了别处，应回滚重做而不是改基线。
-const wantDefaultsSetHash = "e03d3d80056ae26f99f70aa3e4e2c39c4d88ef73bd0b61c13c66ca85114e51b9"
+//
+// 基线更新记录 6（round 198，2026-11-01）：e03d3d80… → 4fc81ec2…。
+//
+//	给两条模板各加一条教训：quality-verify ㉒（断言前先验反例）、quality-gate-spec ㉓（跑门禁必须读结果）。
+//	更新依据是同规格的隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；
+//	  长度变化**恰好 2 条**（quality-verify 20293→21955、+1662 = ㉒ 字节；quality-gate-spec 13513→14845、
+//	  +1332 = ㉓ 字节）；其余 27 条逐字节不变；hashChanged 恰为这两条。
+//	⇒ 单点可控。出现第 3 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "4fc81ec203cc289d50461f90e1645ef1cab0ffc6e2ef7f7902bd9eb243c0fbd9"
