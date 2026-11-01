@@ -270,4 +270,16 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 review-five-axis 一条（8854→9886，+1032）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [review-five-axis]。
 //	⇒ 与记录 18 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "4e784b3d64582c46f46e17cb6f30db8ba8c7b73c45e5ccec94acdb549d76033c"
+//
+// 基线更新记录 20（round 234，2026-11-02）：4e784b3d… → ac4b627c…。
+//
+//	给 quality-audit 的 ⑤ 条补边界：原文「不要解析源码文本」写得**无条件**，读者可能误读成「任何情况都别读源码」；
+//	而 quality-verify ⑮ 恰恰要求「要看缩进、花括号与上下文成块地读」。两者不冲突但易混 ⇒ 补明确分界：
+//	**要「值」就执行程序；要「结构」就读源码但成块读。**
+//	实证：r234 扫描 38 条禁令、0 条配平，逐条排除后确认只有这一处有真实误读风险（其余禁令本质单向安全）。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-audit 一条（12766→13172，+406）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [quality-audit]。
+//	⇒ 与记录 19 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "ac4b627c44381f951fa919088eebfe8834ec87699688608a0744bccd053b910f"
