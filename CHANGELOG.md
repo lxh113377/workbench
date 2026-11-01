@@ -171,6 +171,10 @@
   另核位移的下游风险：`templates.Fingerprint` 含 PromptTemplate，但全仓**没有**持久化比对其值的使用者
   （engine 里的 `routeFingerprint` 是模型路由的另一件事），promoted_pack / quality_pack 契约也不断言指纹 ⇒ 安全。
   指纹基线随之更新（记录 3：646e3525… → 48c94ecc…），差分证据写在测试注释里。
+  **结构性教训（figures 判据连着抓我 3 次漂移之后定下的规矩，round 188）**：新增受跟踪 `.go` 时，报告数字必须与它
+  **同一批提交**。先提交代码、后同步数字，中间存在一个「必然红」的窗口 —— 本轮实测：`0150f5f` 带入
+  `context_position_contract_test.go`（+1 文件 / +70 行 / +1 测试）后聚合门禁才跑到 figures，一次报出 6 处漂移
+  （表格 3 处 + 贴 PR 短版 3 处，同一个原因）。正确顺序：改代码 → 跑 figures 取实测 → 同一提交带上代码与数字。
 
 - **修掉我自己引入的偶发 CI 红：`instance_test.go` 的端口算术越界（round 186，2026-11-01）**：
   CI run 41286238450 的 `build + coverage gate` 报 `--- FAIL: TestProbeExactPortDoesNotScanNeighbors`、
