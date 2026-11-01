@@ -288,6 +288,29 @@
   `[87cc154]`
 
 ### Changed
+- **撤销 round 211 登记的错误缺口：`cmd /c mklink` 对含空格路径实际可用（round 212 决定性实验，2026-11-01）**：
+  上轮我发现 `bootstrap.go:327` 用 `cmd /c mklink /J` 经 shell，便推断「含空格路径会被重新分词 ⇒ mklink 失败并静默
+  退化为整目录复制」，并把它登记为「新发现的真实缺口」。本轮动手修之前先做决定性实验（与生产代码完全相同的 Go 调用、
+  临时目录、跑完即删）：
+  ```go
+  exec.Command("cmd", "/c", "mklink", "/J", link, target)   // link/target 均含空格
+  ```
+  实测 `ERR=<nil> LINK_CREATED=true`、输出 `Junction created for …\wb space link <<===>> …\wb space target`
+  ⇒ **含空格路径成功建出 junction，缺口不存在**。**登记已撤销，不修代码（没有缺陷可修）。**
+  **根因（我混淆了两种链路）**：`exec.Command` **不经过 shell**，argv 已由 Go 分词，`cmd /c` 收到的是 6 个独立参数
+  ⇒ 单个 argv 内的空格被原样保留。**只有「把多个值拼成一个字符串再交给 shell」才会重新分词** —— 那是另一回事。
+  我上轮把「有 shell 参与」直接等同于「参数会被重新解析」，这是**推理跳步**：看到 `cmd /c` 就想到 shell 分词，
+  却忘了 Go 的 `exec.Command` 根本不给 shell 机会分词。
+  ⇒ 这条是本会话**第七次「先验反例推翻自己」**，也是第二次「推翻的是我自己上一轮的结论」（前一次是 round 207
+  推翻覆盖率判据）。两次的共同结构：**用一条推理替代了一次实验**。
+  **动作纪律（值得记）**：凡「某写法会导致某失败」这类断言，动手修之前必须**用一个最小可执行样本复现该失败**；
+  复现不出来就不是缺陷，撤登记而不是「顺手加个保险」。加了没必要的「保险」本身就是负债（多余代码 + 误导后人）。
+  `bootstrap.go:331` 的 copyDir 兜底仍应保留 —— 它服务于真正的 mklink 失败（权限不足 / 目录已存在 / 非 NTFS），
+  与空格无关。
+
+  另：本轮首次尝试用 PowerShell 做该实验时踩了自身在册坑 —— `cmd.exe /c $c | Out-String` 触发
+  `Cannot run a document in the middle of a pipeline`（round 183 已登记的同一条）。改为 Go 直接调用后一次复现成功。
+### Changed
 - **复核报告 P2-1（安全轴）并推翻其部分结论：数字 14→19、且「无一处经 shell」实为 2 处（round 211，2026-11-01）**：
   按 ㉒「断言前先验反例」复核 P2-1，三处发现：
   · **数字漂移**：报告写「全仓 14 处 `exec.Command`」，实测 **19 处**（`_test.go` 除外）；
