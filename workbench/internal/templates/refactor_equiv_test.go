@@ -149,4 +149,14 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 review-five-axis 一条（4567→6674，+2107 = ⑦ 字节）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [review-five-axis]。
 //	⇒ 与记录 8 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "8f8d24b32beaadbf3d7986bab283c3541420c82473e111d467a7345128ed83d5"
+//
+// 基线更新记录 10（round 216，2026-11-01）：8f8d24b3… → 2eb75ec1…。
+//
+//	给 review-five-axis 追加教训 ⑧（提整改建议前先查「测试背书」—— 有背书说明有人想过且测过，先读懂它守的
+//	是什么再决定改不改；本轮三次实证：片段>=编号、mklink 空格路径、manager.go 的 _ = 加日志，三次建议均被推翻）。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 review-five-axis 一条（6674→8854，+2180 = ⑧ 字节）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [review-five-axis]。
+//	⇒ 与记录 9 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "2eb75ec1636ee4001f4840fbc0ebed9b77c278e582dea5f7987f7c8cd11c6cdf"
