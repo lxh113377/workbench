@@ -367,4 +367,16 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	+ prompt 字节长 + prompt sha256 前 8 字节）：ID 顺序 0 处差异；17 个字段 0 处差异；
 //	长度变化只有 quality-gate-spec 一条（16575→17970，+1395）；其余 28 条逐字节不变；hashChanged=[quality-gate-spec]。
 //	⇒ 与记录 26 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "beca163e2b82535f882ac295b4fc17047c81175710371ca2b63d5db290aa272b"
+//
+// 基线更新记录 28（round 252，2026-11-02）：beca163e… → 0e95cf59…。
+//
+//	本轮**不改内容，只修编号断档**：quality-gate-spec ㉓ 的三个子切面此前被记作 (e)(f)(g)，但前面根本没有
+//	(a)-(d) —— 这是 ㉓ 独有的异常（同仓 quality-audit ㉔ 是完整的 (a)-(h)）。按 (g) 自己立的纪律「写完带序号的
+//	东西要核对单调/无重复/无断档」，本轮读链时发现它，遂重编号为 (a)(b)(c) 并同步段内 4 处自指 (f)→(b)。
+//	⇒ 记录 27 里写的「㉓ 追加 (g)」，其内容现在是 **(c)**；该笔记本身属历史留档、不改写（r235 留档≠现值）。
+//	同样不动的还有 CHANGELOG/DECOMPOSE 里 r250/r251 提到 (f)/(g) 的行：那是当时的记法，回改=篡改历史。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump）：ID 顺序 0 处差异；17 个字段 0 处
+//	差异；**prompt 字节长变化 0 处**（字母 a/b/c 与 e/f/g 等长，纯标记替换 ⇒ 长度必然不变，这本身是改动性质的
+//	交叉验证）；hashChanged=[quality-gate-spec]；其余 28 条逐字节不变。
+//	⇒ 出现长度变化或第 2 条 hash 变化即为改坏别处（本次意外改了内容），应回滚而非改基线。
+const wantDefaultsSetHash = "0e95cf5930e0e670bce32764c5cd2969a67acb1159699decafebc732a70a8997"
