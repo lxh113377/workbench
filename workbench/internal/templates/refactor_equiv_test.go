@@ -170,4 +170,15 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-audit 一条（5396→7614，+2218 = ㉔ 字节）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [quality-audit]。
 //	⇒ 与记录 10 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "fbe6c4252721cd9222c452e28e3a591beba7014e264d67bff88d6e6c911f7de6"
+//
+// 基线更新记录 12（round 222，2026-11-02）：fbe6c425… → e90f18b7…。
+//
+//	给 quality-audit 的教训 ㉔ 追加第 (g) 条「第四种形态：总分关系（纵向）」——
+//	判据钉住总量（测试函数总数 1,166）时，人以为「这一片都有人管」，而局部量（某包有几个测试文件）全裸；
+//	实证：r206 新增 runapp_args_test.go 后总数判据照常绿，散文里的 47/22 静默变 48/23（r221 才被抓到）。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-audit 一条（7614→9108，+1494 = (g) 字节）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [quality-audit]。
+//	⇒ 与记录 11 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "e90f18b78124ecdb756bd8fd0a99ff5e115b635aa8fdf03fe84298dce3c57ca3"
