@@ -282,4 +282,17 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-audit 一条（12766→13172，+406）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [quality-audit]。
 //	⇒ 与记录 19 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "ac4b627c44381f951fa919088eebfe8834ec87699688608a0744bccd053b910f"
+//
+// 基线更新记录 21（round 235，2026-11-02）：ac4b627c… → 5cf4317b…。
+//
+//	给 review-five-axis ⑤ 追加「第三条」：**单向禁令最容易被读成绝对禁令**。
+//	实证（r234）：38 条禁令里 37 条本质单向安全，真猎物仅 1 条（quality-audit ⑤「不要解析源码文本」
+//	vs quality-verify ⑮「要成块读源码」看似矛盾，实为「取值跑程序 / 结构读源码」两条路）。
+//	处置两条：① 把禁令收窄到真实适用面；② 在同句写明边界。**不要另加说明在别处**（读者不跨条目推理）。
+//	并记录「批量统计能定位候选、不能决定改动量」——按 38 条批量补配平会造 37 条冗余规则。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 review-five-axis 一条（9886→11192，+1306）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [review-five-axis]。
+//	⇒ 与记录 20 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "5cf4317be03e116f095a2723423a136dd522a59732e9c7eba347e5eec9ee4ccd"
