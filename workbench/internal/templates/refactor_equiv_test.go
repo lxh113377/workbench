@@ -345,4 +345,15 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	+ prompt 字节长 + prompt sha256 前 8 字节）：ID 顺序 0 处差异；17 个字段 0 处差异；
 //	长度变化只有 quality-verify 一条（26207→27186，+979）；其余 28 条逐字节不变；hashChanged=[quality-verify]。
 //	⇒ 与上一记录同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "4c0336d3a3932fe9fd732a75f2c8a6dd29c47f0d37d7daeca316ec849c639d30"
+//
+// 基线更新记录 26（round 247，2026-11-02）：4c0336d3… → 18cbe3e9…。
+//
+//	给 quality-verify ㉔ 追加 (g)：**回读的层次要随产物结构升级：单行 → 整块 → 整条链**
+//	（r243 抓到「覆盖吃掉相邻行」= 整块级；r246 抓到「记录号写成 18、与前序 22/23/24 冲突」= 整条链级；
+//	新行本身合法，逐行回读永远发现不了，必须打印整条「记录号→round」链才看到非单调序列）。
+//	本轮即按 (g) 执行：写记录号前先读链尾（21/22/23/24/25）⇒ 正确写 26，不再重演 18 事故。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：ID 顺序 0 处差异；17 个字段 0 处差异；
+//	长度变化只有 quality-verify 一条（27186→28782，+1596）；其余 28 条逐字节不变；hashChanged=[quality-verify]。
+//	⇒ 与记录 25 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "18cbe3e9f6a88f4e72969cc51d6616d3fcbfeca8ed8772008430d74e0b705e7c"
