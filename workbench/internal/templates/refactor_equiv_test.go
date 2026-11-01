@@ -181,4 +181,16 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-audit 一条（7614→9108，+1494 = (g) 字节）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [quality-audit]。
 //	⇒ 与记录 11 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "e90f18b78124ecdb756bd8fd0a99ff5e115b635aa8fdf03fe84298dce3c57ca3"
+//
+// 基线更新记录 13（round 224，2026-11-02）：e90f18b7… → a283953f…。
+//
+//	给 quality-audit 的教训 ㉔ 追加第 (h) 条：执行 (f)(g) 的「减源」时必须分清——
+//	「减源 ≠ 减信息」（删量化壳但保留语义）、「留档 ≠ 现值」（更正记录不参与减源）。
+//	实证：r223 删「48 个 Test / 23 个测试文件」时保留了「为什么 0 命中」那句；
+//	r217 的「47/22 已漂移为 48/23」历史记录保留不删。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-audit 一条（9108→10759，+1651 = (h) 字节）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [quality-audit]。
+//	⇒ 与记录 12 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "a283953f745e4776fc2538812b5b3c04a894b1a94ccc7c371a1e9a4b609da68a"
