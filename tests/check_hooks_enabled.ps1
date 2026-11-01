@@ -19,6 +19,19 @@ param([switch]$Quiet)
 $ErrorActionPreference = "Stop"
 $root = Split-Path -Parent $PSScriptRoot
 
+# git 解析必须显式兜底（2026-11-01 round 190 实测修的第 3 个同族实例）：
+#   本文件在 $ErrorActionPreference="Stop" 下裸调 `git config`，而 PowerShell 常常解析不到 git
+#   （Get-Command 返回空是本机常态，round 183 实测 GC=[]）⇒ 抛 CommandNotFoundException 直接逃逸，
+#   脚本以 **rc=1（崩溃）** 结束，而本件头部注释写明的设计是三态里「没测成 ⇒ rc=2 UNVERIFIED」。
+#   更糟的是 rc=1 在聚合器看来等于「闸门确实没装」⇒ 一个环境缺工具的问题被报成仓库配置缺陷，
+#   下一个读到红的人只会去跑 install-hooks.ps1（跑了也没用，因为问题不在配置）。
+#   样板同 check_gate_coverage.ps1 / check_untracked_go.ps1 / check_deadcode.ps1。
+$gitExe = (Get-Command git -ErrorAction SilentlyContinue).Source
+if (-not $gitExe) {
+  foreach ($cand in @('C:\Program Files\Git\cmd\git.exe')) { if (Test-Path $cand) { $gitExe = $cand; break } }
+}
+if (-not $gitExe) { Write-Host "UNVERIFIED: 找不到 git 可执行文件（闸门状态无从判定，不是闸门没装）" -ForegroundColor Yellow; exit 2 }
+
 Push-Location $root
 try {
   if (-not (Test-Path -LiteralPath ".git")) {
@@ -27,7 +40,44 @@ try {
   }
 
   $expected = ".githooks"
-  $actual = git config --get core.hooksPath 2>$null
+  # 三态要分清：git config --get 在**键未设置时自身返回 rc=1**（这是正常语义，不是调用失败）。
+  # 所以「rc≠0 ⇒ UNVERIFIED」会把「闸门确实没装」这个真 FAIL 伪装成测不了 —— 比原来的崩溃更糟
+  # （崩溃至少会逼人去看，伪装成 UNVERIFIED 会让它永远绿着不装）。只有进程起不来才算没测成。
+  # 为什么不用 & $gitExe：PowerShell 拿到绝对路径后仍可能按**文档关联**解释它，实测抛
+  #   "Cannot run a document in the middle of a pipeline"（round 183 与本轮 round 190 各撞一次），
+  #   try/catch 兜住了也只是「测不了」。正解 = 显式进程调用（样板 check_gate_coverage.ps1）。
+  $hg = New-Object System.Diagnostics.ProcessStartInfo
+  $hg.FileName = $gitExe
+  $hg.Arguments = "config --get core.hooksPath"
+  $hg.WorkingDirectory = $root
+  $hg.UseShellExecute = $false
+  $hg.CreateNoWindow = $true
+  $hg.RedirectStandardOutput = $true
+  $hg.StandardOutputEncoding = (New-Object System.Text.UTF8Encoding($false))
+  $hg.RedirectStandardError = $true
+  $actual = $null
+  $gitRc = -1
+  $gitErr = ""
+  try {
+    $hp = [System.Diagnostics.Process]::Start($hg)
+    $actual = $hp.StandardOutput.ReadToEnd()
+    $gitErr = $hp.StandardError.ReadToEnd()
+    $hp.WaitForExit()
+    $gitRc = $hp.ExitCode
+  } catch {
+    $actual = $null; $gitRc = -1
+    Write-Host ("UNVERIFIED: 无法启动 git 进程（" + $_.Exception.Message + "）—— 闸门状态无从判定，不代表未启用") -ForegroundColor Yellow
+    exit 2
+  }
+  if ($gitRc -eq 0) {
+    $actual = $actual.Trim()
+  } elseif ($gitRc -eq 1 -and $actual.Trim() -eq "" -and $gitErr.Trim() -eq "") {
+    # 键确实没设：交给下面的 FAIL 分支（这是本判据存在的意义）
+    $actual = ""
+  } else {
+    Write-Host ("UNVERIFIED: git config 异常退出 rc=" + $gitRc + " " + $gitErr.Trim() + " —— 不是闸门未启用") -ForegroundColor Yellow
+    exit 2
+  }
 
   if (-not $actual) {
     if (-not $Quiet) {

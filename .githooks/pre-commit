@@ -77,4 +77,36 @@ if [ $rc2 -ne 0 ]; then
   exit 1
 fi
 
+# ---- 第三道闸：报告规模数字与仓库实况一致（2026-11-01 round 189 加）----
+# 为什么放在提交前而不是只靠 CI/聚合（本仓 round 95 同一立场：判索引能在入库前那一刻拦住）：
+#   figures 判据本轮连着抓到我 3 次漂移，但每次都是「提交之后」才红 —— 因为缺陷是**提交顺序**造成的：
+#   先提交代码（新增受跟踪 .go ⇒ 文件数/行数/测试数都变）、后补报告数字，中间那段窗口里任何
+#   跑聚合的人都会红，而红因归属于上一笔。提交前跑一次就把这个窗口关掉。
+# 为什么这里判得准：check_report_figures 的计数走 git ls-files（**索引**口径，含刚 add 的新 .go），
+#   报告走工作区文件 ⇒ 「代码进暂存区、报告没跟着改」当场不一致，正是我们要拦的那一种。
+# 已知残留窗口（如实写，不假装全堵）：若有人改了报告却**没 git add 报告**，本闸读工作区会放行，
+#   入库的报告仍是旧值。那一档要靠聚合/CI 兜；本闸负责最高频的那一类（忘了改报告）。
+# 耗时实测 1.6s（相对 gofmt/BOM 两道毫秒级闸更慢，但换掉的是「下一轮才发现」的成本）。
+gate3="$repo_root/tests/check_report_figures.ps1"
+if [ ! -f "$gate3" ]; then
+  echo "pre-commit: 找不到 $gate3 —— 跳过报告数字闸" >&2
+  exit 0
+fi
+
+"$ps" -NoProfile -ExecutionPolicy Bypass -File "$gate3" -Quiet
+rc3=$?
+# 三态口径（与聚合门禁一致，round 190 自查修掉的误拦）：只有 rc=1 才是「数字确实不符」；
+# rc=2 是 UNVERIFIED（例如 hook 子进程里解析不到 git、或仓库根不存在），拦住提交等于把
+# 「我没测成」当成「你写错了」—— 那会让人开始绕 hook（本仓在册：门禁一误拦就被绕过）。
+if [ $rc3 -eq 2 ]; then
+  echo "pre-commit: 报告数字闸未能判定（UNVERIFIED），本次放行；本地聚合 check_all 仍会复查。" >&2
+elif [ $rc3 -ne 0 ]; then
+  echo "" >&2
+  echo "pre-commit: 报告规模数字与仓库实况不符（本次提交改了受跟踪 .go 的数量，报告数字没跟着改）。" >&2
+  echo "修复: 跑 powershell -File tests\check_report_figures.ps1 看差在哪，把报告里的数字改成实测值，" >&2
+  echo "      与代码**同一批** git add 后再提交。" >&2
+  echo "（紧急跳过: git commit --no-verify，但本地聚合 check_all 的「报告数字一致性」会判红）" >&2
+  exit 1
+fi
+
 exit 0
