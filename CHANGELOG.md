@@ -271,6 +271,23 @@
   `[87cc154]`
 
 ### Changed
+- **「超长函数」议题本轮闭合：4 处 >180 行全部有明确结论，`Config.Normalize` 与 `Runner.run` 经核查不拆（round 209）**：
+  本轮想对 `Config.Normalize`（200 行）动手 —— 它表面上是**最理想的候选**：覆盖率 **94%（90/96 语句）**、
+  零 `defer`、零 goroutine、零 `return`、9 个测试文件，完全满足 ㉓「有网才动」。但结构核查后**否决**：
+  · 作者**早已拆过三块**（`normalizeCrossField` / `normalizeAutonomy` / `normalizeWorkspace`）；
+  · 剩余最大块 `Executor`(48 处) 分布在**两段**（486-524 与 562-594），中间（525-561）夹着 `NormalizeRetention(c)`
+    与**三段迁移逻辑**（`SchemaVersion<2` / `fromSchema<=3` / `AppendProtocol`）；
+  · 553-560 行注释显示作者本人已在**同一处「迁移顺序 / fromSchema 判据」上复现三次缺陷** ⇒ 把两段合起来抽，
+    会**改变语句与迁移逻辑的相互位置**，正是这处最敏感的地方（㉓ 第 5 条：抽取不许改控制流/顺序）。
+  `Runner.run`（261 行）同样否决：实测 **7 defer / 6 goroutine / 19 return**，且 `internal/executor` 的 Runner
+  相关测试文件数 **0** —— 「有网」与「无顺序耦合」两个条件都不满足。
+  ⇒ **补全 ⑥ 的第二个边界**：`Config.Normalize` 是本轮最好的反例 —— **覆盖率 94% 说明「网在」，但「网在」不等于
+    「拆了就安全」**。三个必要条件齐了才动手：① 结构型长 ② 有回归网 ③ **无顺序耦合**。
+  **本会话对「超长函数」的处置全部闭合**：`Defaults()` 拆完（r183）、`defaultsQuality` 拆完（r202）、
+  `runOne` 拆一刀（r200，362→316）、`runApp` 拆两刀（r206/208，337→285）、`Config.Normalize` 与 `Runner.run`
+  经核查保留原样。**4 处 >180 行不再有「待办」，每一项都有实测依据的结论**。
+  这是本会话第五次「不拆/不做」的交付（前四次：环境噪声判据族、字符串续行判据、qualityVerifyTpl、runApp 暂缓）。
+### Changed
 - **`runApp` 第二刀：抽出「已在运行」分支为 `handleAlreadyRunning`（324 → 285 行，round 208，2026-11-01）**：
   这次是**真正按「有网才动」拆的** —— 依据是 round 207 更正后的结论（该分支的行为已有三条黑盒判据锁住），
   而不是凭「行数长」动手：
