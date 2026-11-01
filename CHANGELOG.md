@@ -257,6 +257,20 @@
   `[87cc154]`
 
 ### Changed
+- **`defaultsQuality` 拆分：389 行 → 9 行，四份 templates 各承一子函数（round 202，2026-11-01）**：
+  按 round 201 刚立的教训 ㉓ 全程执行 —— **overlay 先验后落**，真文件在验证通过前一次没动：
+  · 候选写到 `xtmp/defaults_candidate.go`，用 `GOFLAGS=-overlay` 跑 `go build` + `go test ./internal/templates/`；
+  · 编译一次通过、目标包测试 `ok`、**指纹哈希未变** ⇒ 机器证实「只搬位置、不改一个字节」的等价声明；
+  · 两关都过才写入，写入后**再跑真实** build/test 复核（build rc=0 / 测试 ok / gofmt 零列出）。
+  拆分形态：`defaultsQuality(now)` 变 9 行（`mk := newMk(now)` + `return []tpl{四子函数(mk),…}`）；新增
+  `qualityAuditTpl` 38 行 / `qualityGateSpecTpl` 106 行 / `qualityVerifyTpl` 176 行 / `qualityHygieneTpl` 66 行，
+  **拼接顺序与原顺序逐一对应**（audit → gate-spec → verify → hygiene）。另加 `type mkFn = …` 类型别名
+  （`newMk` 返回的 132 字符匿名函数签名，四个子函数共用，避免重复抄写）。
+  **净效果（`node setup/long-func-scan.js` 实测）**：全仓 >180 行函数 **5 处 → 4 处**；`defaultsQuality` 已不在名单。
+  这也印证了教训 ㉓ 的价值：本轮**一次成功**（上一轮抽 `runOne` 直接改真文件连翻三次车）。
+  **遗留**：`qualityVerifyTpl` 176 行仍逼近阈值（该模板含 23 条编号教训 + 36 个契约片段，是内容本身长），
+  下一步可再按「每条教训一个常量」拆，但那会牵动 `encoded_lessons_contract_test` 的片段登记，应单独一轮。
+### Changed
 - **`runOne` 主状态机第一刀：失败处理段抽成 `recordFailureAttempt`（362 → 316 行，round 200，2026-11-01）**：
   按 round 199 取证卡（`docs/取证-runOne拆分前耦合度基线-2026-11-01.md`）的量化基线执行 —— 报告要求「单独一轮做、
   别混批」，本轮即单独一轮，只抽**耦合最低的一整块**（`engine.go` 原 1290-1338：分类 → 判取消 → 归因 → 记账）。
