@@ -84,6 +84,34 @@ function selfTagFromSubjects(subs) {
   return hit;
 }
 
+// CHANGELOG 是 Keep-a-Changelog 语义：按 ### 节分组、组内**新在上（round 降序）**。
+// 与 DECOMPOSE 的「递增单调」不是一回事——把递增判据套上来 = 形态相似当判据（r234/r245 陷阱），
+// 且范围/斜杠标签（round 31/32、112-114）取哪端是歧义。所以这里**只做 advisory、跳过歧义、绝不判红**。
+function changelogAdvisory(chgLines) {
+  // 按 ### 节收集「纯单标签」条目首行；范围(带 -/)/多标签行一律跳过（取哪端是歧义，宁漏不误报）
+  const sections = [];
+  let sec = null;
+  chgLines.forEach(function (l, i) {
+    if (l.indexOf('## ') === 0) { sec = null; return; }
+    if (l.indexOf('### ') === 0) { sec = { head: l.slice(4, 14), singles: [] }; sections.push(sec); return; }
+    if (sec === null || l.indexOf('- **') !== 0) return;
+    const re = /[（(]round ([0-9]+)([-/]([0-9]+))?/g;
+    let m, count = 0, single = null, ambiguous = false;
+    while ((m = re.exec(l)) !== null) { count++; if (m[2] !== undefined) ambiguous = true; single = parseInt(m[1], 10); }
+    if (count === 1 && !ambiguous) sec.singles.push({ n: single, line: i + 1 });
+  });
+  // 组内「新在上」= 降序；下方号 > 上方号 ⇒ 违反降序 ⇒ 仅记 advisory（历史顺序不判红）
+  const issues = [];
+  sections.forEach(function (sc) {
+    for (let i = 1; i < sc.singles.length; i++) {
+      if (sc.singles[i].n > sc.singles[i - 1].n) {
+        issues.push(sc.head + '@L' + sc.singles[i].line + '(' + sc.singles[i - 1].n + '>' + sc.singles[i].n + ')');
+      }
+    }
+  });
+  return issues;
+}
+
 function audit(cards, chg, subs) {
   const e = expandCardTitles(cards);
   const gaps = findGaps(e.covered);
@@ -108,7 +136,8 @@ function audit(cards, chg, subs) {
     dups: dups,
     gapCount: gaps.length,
     evidencedMisses: evidenced,
-    harmlessSkips: skipped
+    harmlessSkips: skipped,
+    clAdvisory: changelogAdvisory(chg)
   };
 }
 
@@ -132,6 +161,23 @@ function selfTest() {
   // 反例：正文引用别轮（不带前括号）不该被当成自标签
   const r2 = audit(["## Round 1 卡"], ["- **条目**：见 round 2 的讨论"], []);
   ok("正文引用 round 2 不算自标签（2 根本不存在于区间）", r2.evidencedMisses.length === 0);
+// ---- CHANGELOG advisory 夹具：降序违例计数 + 范围标签跳过（关键：绝不进 nonMono，故不判红）----
+const clg = [
+  "## [Unreleased]",
+  "### Added",
+  "- **A**（round 20）：在上",
+  "- **B**（round 10）：在下（10<20 正确）",
+  "- **C**（round 15）：(15>10 ⇒ 违例1)",
+  "- **D**（round 31/32）：范围标签 ⇒ 跳过",
+  "## [1.0.0]",
+  "### Fixed",
+  "- **E**（round 5）：新节首项",
+  "- **F**（round 99）：(99>5 ⇒ 违例2)"
+];
+const adv = changelogAdvisory(clg);
+ok("advisory 抓到 2 条降序违例（C 与 F）", adv.length === 2);
+ok("范围标签 round 31/32 被跳过（不在违例里）", !adv.some(function (x) { return x.indexOf("31") >= 0; }));
+ok("advisory 不污染 nonMono 判据（audit 主夹具仍非单调=0）", r.nonMono.length === 0 && Array.isArray(r.clAdvisory));
   console.log(fails ? "SELFTEST FAIL count=" + fails : "SELFTEST_OK");
   process.exit(fails ? 1 : 0);
 }
@@ -162,10 +208,12 @@ else {
   console.log("覆盖空洞=" + r.gapCount + " => 有佐证(真漏卡) " + r.evidencedMisses.length + " / 无佐证(跳号无害) " + r.harmlessSkips.length);
   r.evidencedMisses.forEach(function (m) { console.log("  MISS round " + m.gap + " <- " + m.by); });
   if (r.harmlessSkips.length) console.log("  跳号: " + r.harmlessSkips.join(", "));
+  console.log("CHANGELOG 降序 advisory=" + r.clAdvisory.length + "（仅报告，历史顺序不判红）");
+  r.clAdvisory.slice(0, 6).forEach(function (x) { console.log("  （advisory）" + x); });
   // 结论行：供门禁解析（形状固定，缺行 ⇒ 门禁 UNVERIFIED 不计 PASS）
   const verdict = r.nonMono.length
     ? "CHAIN_FAIL nonMono=" + r.nonMono.length + " misses=" + r.evidencedMisses.length
-    : (!gitOk ? "git=off " : "") + "CHAIN_OK nonMono=0 misses=" + r.evidencedMisses.length + " dupHarmless=" + r.dupCount + " skips=" + r.harmlessSkips.length;
+    : (!gitOk ? "git=off " : "") + "CHAIN_OK nonMono=0 misses=" + r.evidencedMisses.length + " clAdv=" + r.clAdvisory.length + " dupHarmless=" + r.dupCount + " skips=" + r.harmlessSkips.length;
   console.log(verdict);
   // 只有「非单调」是硬错误（卡片顺序被人为打乱）；漏卡与重复都不判红，见文件头说明
   process.exit(r.nonMono.length ? 1 : 0);

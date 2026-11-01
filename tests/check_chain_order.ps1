@@ -60,6 +60,6 @@ if ($rc -ne 0) {
 }
 if (-not $Quiet) {
   Write-Host ("PASS: 序号链无非单调（" + $verdict[0].Trim() + "）") -ForegroundColor Green
-  @($linesArr | Where-Object { $_ -like "*MISS round*" -or $_ -like "*跳号*" }) | ForEach-Object { Write-Host ("  （报告项，不判红）" + $_.Trim()) -ForegroundColor DarkGray }
+  @($linesArr | Where-Object { $_ -like "*MISS round*" -or $_ -like "*跳号*" -or $_ -like "*advisory*" }) | ForEach-Object { Write-Host ("  （报告项，不判红）" + $_.Trim()) -ForegroundColor DarkGray }
 }
 exit 0
