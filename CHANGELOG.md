@@ -819,6 +819,22 @@
   长内联命令一律落盘成文件（内联进 markdown 极易在换行/引号抄写中断掉）。
 
 ### Fixed
+- **修 `setup/check-template-xrefs.js` 硬编码绝对路径 —— 它在 CI 上必红（round 239，2026-11-02）**：
+  r238 新门禁上线后 **CI 立刻红了**（`a145492 CI :: failure`）。查日志根因：
+  · 脚本里写了 `fs.readFileSync("D:/workdesktop/workbench/internal/templates/defaults.go")` ——
+    **CI runner 上仓库在 `D:\a\workbench\workbench`**，该路径不存在 ⇒ `ENOENT` ⇒ node 崩溃；
+  · 没有 `XREF_OK` 结论行 ⇒ 门禁按**三态设计正确返回 rc=2 UNVERIFIED** ⇒ CI 判失败。
+  ⇒ **这是「本机跑得通、CI 跑不通」的经典形态：把作者机器的绝对路径写进判据。**
+    **修法**：改用 `path.resolve(__dirname, "..")` 解析仓库根 —— 已实测**从任意 cwd 均可正确解析**（含 `/tmp`）。
+  **过程侧的一个真教训**：r238 我在本机跑了门禁、跑了负控、跑通了聚合，**但没在 CI 上验**（新门禁首次进 CI 就是首验）。
+    本机全绿 ≠ CI 绿 —— 这与在册的「看本机绿没看 CI 绿」是同一族（`quality-gate-spec` ㉓ 三种等价形态之一）。
+    新增门禁的**首跑必须看 CI**，因为它是唯一能暴露「环境差异（路径/工具/PATH）」的地方。
+  **顺带确认一个既存口径差异（不是缺陷，但需知道）**：CI 的 `repo gates` 循环是 `if ($rc -ne 0)` 一律失败，
+    而本地 `check_all` 对 UNVERIFIED/SKIP 不计 PASS 也不判红。⇒ **挂在 CI 的门禁，其 SKIP/UNVERIFIED 分支在 CI 上不被容忍**；
+    这是既存设计前提（GitHub runner 自带 node，日志里就有 `Node.js v22.23.4`，故 rc=3 分支在 CI 正常不触发）。
+  **修复后重做负向对照（㉑ 四步）**：① 健康态 `RC=0`；② 变异 `⑮→③` ⇒ `RC=1` +「1 处悬空引用」；
+    ③ 还原 sha1 逐字节一致；④ 复跑 `RC=0`；⑤ 备份即删。**负控在路径修复后重新做过，没有沿用旧结论。**
+### Fixed
 - **修 `quality-gate-spec` 一处编号指代错误：「第五条边界」改为「㉓ 的边界」（round 236，2026-11-02）**：
   按 r235 的「边界必须落在使用点」原则复核其余边界声明，发现一处**指代无对象**：
   · 原文「第五条边界（防滥用）：允许『看到红但确认不是自己的改动』…」紧跟在 **㉓** 之后；

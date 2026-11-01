@@ -1,5 +1,8 @@
 const fs = require("fs");
-const src = fs.readFileSync("D:/workdesktop/workbench/internal/templates/defaults.go", "utf8").split("\n");
+const path = require("path");
+const ROOT = path.resolve(__dirname, "..");
+const TPL = path.join(ROOT, "workbench", "internal", "templates", "defaults.go");
+const src = fs.readFileSync(TPL, "utf8").split("\n");
 const fns = [];
 for (let i = 0; i < src.length; i++) if (/^func quality\w+Tpl\(/.test(src[i])) fns.push({ name: src[i].replace(/^func (\w+)\(.*/, "$1"), start: i });
 const CIRC = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮⑯⑰⑱⑲⑳㉑㉒㉓";
