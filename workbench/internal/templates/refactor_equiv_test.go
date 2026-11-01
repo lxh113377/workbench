@@ -356,4 +356,15 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	+ prompt 字节长 + prompt sha256 前 8 字节）：ID 顺序 0 处差异；17 个字段 0 处差异；
 //	长度变化只有 quality-verify 一条（27186→28782，+1596）；其余 28 条逐字节不变；hashChanged=[quality-verify]。
 //	⇒ 与记录 25 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "18cbe3e9f6a88f4e72969cc51d6616d3fcbfeca8ed8772008430d74e0b705e7c"
+//
+// 基线更新记录 27（round 251，2026-11-02）：18cbe3e9… → beca163e…。
+//
+//	给 quality-gate-spec ㉓ 追加 (g)：判据**复用到新数据源前先独立确认那个源自己的排序语义**（(f) 受理面的镜像），
+//	并补配套边界「判据只对当前可修复项判红、对无法追溯修正的历史事实只做 advisory 不判红」+「歧义行跳过宁漏不误报」。
+//	依据 r250 实测：一条序号链「递增判据」若直接套到 Keep-a-Changelog 那种「新在上=降序」的源，得 132 处假红。
+//	本轮还实践了 (g)：写记录号前先读整条链（21-26）⇒ 正确写 27，写完再核对单调。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：ID 顺序 0 处差异；17 个字段 0 处差异；
+//	长度变化只有 quality-gate-spec 一条（16575→17970，+1395）；其余 28 条逐字节不变；hashChanged=[quality-gate-spec]。
+//	⇒ 与记录 26 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "beca163e2b82535f882ac295b4fc17047c81175710371ca2b63d5db290aa272b"
