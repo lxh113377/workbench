@@ -138,7 +138,9 @@ jobs:
             # 扫描工具自检（round 195 加）：校验工具自身的泛型签名盲区回归，纯内存夹具、不依赖仓库状态。
             'tests/check_scanner_selftest.ps1',
             # 模板间跨引用可解析性（round 238 加）：悬空引用会让读者靠位置猜它约束谁。
-            'tests/check_template_xrefs.ps1'
+            'tests/check_template_xrefs.ps1',
+            # 序号链读链巡检（round 248 加）：卡片顺序被人为打乱是行级回读抓不到的关系型错误。
+            'tests/check_chain_order.ps1'
           )
           $failed = @()
           foreach ($g in $gates) {
