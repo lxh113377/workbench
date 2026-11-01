@@ -129,4 +129,14 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化**只有 quality-verify 一条**（21955→23382，+1427 = ㉓ 字节）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [quality-verify]。
 //	⇒ 与记录 6 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "f1fb6258ed6a1b351d3e9f88c5960c5eabbdc0cc9a8169453d5240a15059744d"
+//
+// 基线更新记录 8（round 204，2026-11-01）：f1fb6258… → c363b6bd…。
+//
+//	给 review-five-axis 追加教训 ⑥（可读性轴上判「超长函数该不该拆」必须先区分结构型长 / 内容型长 ——
+//	本轮实测：runOne 结构型 362 行值得拆、qualityVerifyTpl 内容型 176 行拆了没收益）。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：
+//	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 review-five-axis 一条（2746→4567，+1821 = ⑥ 字节）；
+//	  其余 28 条逐字节不变；hashChanged 恰为 [review-five-axis]。
+//	⇒ 与记录 7 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "c363b6bd0276dc33afc958ec9a896b0e20c708859b7cc098a49655d5c4559637"

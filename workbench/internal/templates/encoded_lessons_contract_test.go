@@ -121,6 +121,10 @@ func TestEncodedLessonsSurviveRender(t *testing.T) {
 		}},
 		{"review-five-axis", []string{
 			"合并结论", "门禁建议", // 交付面承诺：报告须含合并结论与门禁建议
+			"结构型长",                                   // ⑥：控制流密集/耦合重 ⇒ 值得拆
+			"内容型长",                                   // ⑥：长在字面量上 ⇒ 拆了没收益
+			"promptLines / commentLines / codeLines", // ⑥：动手前先量三类行数占比
+			"搬家式重构",                                  // ⑥：看起来在改进但无收益
 		}},
 	}
 	for _, w := range wants {
