@@ -333,4 +333,16 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	+ prompt 字节长 + prompt sha256 前 8 字节）：ID 顺序 0 处差异；17 个字段 0 处差异；
 //	长度变化只有 review-five-axis 一条（11192→12161，+969）；其余 28 条逐字节不变；hashChanged=[review-five-axis]。
 //	⇒ 与记录 23 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "d8d8f41c6a176f7644ea74cba74318889d2fa08f503c02efa276c2d324ab77cf"
+//
+// 基线更新记录 25（round 246，2026-11-02）：d8d8f41c… → 4c0336d3…。
+//
+//	给 quality-verify ㉔(f) 追加「同族第二实例」：r245 又试做「报告状态陈述一致性」检查器，
+//	报的 4 个"冲突"100% 是检查器自己的分词 bug（限定语贪婪吃数字前缀，200 行被拆成 20|0），真矛盾 0 个；
+//	第二类硬伤：留档条目的续行不含留档关键词，行级判定扫不出语境 ⇒ 与 r230（转义污染不可机判）合并钉死：
+//	**语义层整体在机判能力之外，这一族别再尝试用判据硬框**；守住方式：可复算的量交给判据、语义语境交给人回读。
+//	顺带修了 (f) 一处 r233 遗留瑕疵（「JSON 内嵌转义」重复一次）并把新块的 ASCII 转义引号统一为中文引号（r235 规矩）。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：ID 顺序 0 处差异；17 个字段 0 处差异；
+//	长度变化只有 quality-verify 一条（26207→27186，+979）；其余 28 条逐字节不变；hashChanged=[quality-verify]。
+//	⇒ 与上一记录同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "4c0336d3a3932fe9fd732a75f2c8a6dd29c47f0d37d7daeca316ec849c639d30"
