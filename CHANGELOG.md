@@ -288,6 +288,22 @@
   `[87cc154]`
 
 ### Changed
+- **复核报告 P2-1（安全轴）并推翻其部分结论：数字 14→19、且「无一处经 shell」实为 2 处（round 211，2026-11-01）**：
+  按 ㉒「断言前先验反例」复核 P2-1，三处发现：
+  · **数字漂移**：报告写「全仓 14 处 `exec.Command`」，实测 **19 处**（`_test.go` 除外）；
+  · **原结论错误**：报告写「无一处使用 shell」，实测 **2 处确经 shell** —— `dshprofile/bootstrap.go:327`
+    （`cmd /c mklink /J`）与 `shortcut/shortcut_windows.go:77`（`powershell.exe … -File`）；
+  · **但注入面仍为零**（原结论的另一半成立，证据更硬）：`link`/`target` 全来自 `filepath.Join` 与 `ofmSourceDir()`
+    （读 `DSH_OFM_DIR` 或固定候选目录），无外部输入；shortcut 的 psScript 用 `[string]$args[0]`，`-File` 模式下
+    PowerShell 不二次解析引号 ⇒ 安全。
+  **新发现的真实缺口（报告原未提）**：`cmd /c` 对**含空格路径**会重新分词 —— `ofmSourceDir()` 可能返回
+  `D:\Program Files\…`，此时 `mklink` 失败并**静默退化为整目录复制**（`bootstrap.go:331` 兜底）。这不是安全问题，
+  是**性能与磁盘占用的隐性缺口**：junction 失效 ⇒ 复制整个 node_modules。已登记为候补（未做）。
+  **归因**：P2-1 是 round 176 写的，后续新增 5 处 `exec.Command` 未同步 —— 又一个「报告数字靠人手同步」实例；
+  而 `check_report_figures` 只覆盖「稳定规模数」（测试数/行数/包数），**不覆盖技术细节数**（如 exec.Command 计数），
+  故一直静默。这条边界值得记：规模数有判据，细节数没有。
+  ⇒ 本轮是「复核发现原报告有错」并修正，不是新增功能；结论行与 P2-1 节均已按实测改准。
+### Changed
 - **「超长函数」议题本轮闭合：4 处 >180 行全部有明确结论，`Config.Normalize` 与 `Runner.run` 经核查不拆（round 209）**：
   本轮想对 `Config.Normalize`（200 行）动手 —— 它表面上是**最理想的候选**：覆盖率 **94%（90/96 语句）**、
   零 `defer`、零 goroutine、零 `return`、9 个测试文件，完全满足 ㉓「有网才动」。但结构核查后**否决**：
