@@ -9,6 +9,8 @@
 //
 // 用法: node setup/long-func-scan.js [阈值行数，默认 180]   （在仓库根跑）
 // 输出口径: 函数起行到配平闭括号的行数（含两端），> 阈值才报；排除 _test.go。
+// 签名正则含可选泛型段 (\[[^\]]*\])? —— round 193 实测：漏了它会把 func NewClient[TTx any]( 这类
+// 泛型函数整个跳过（函数名后紧跟 [ 不是 (），导致长函数漏报。泛型函数必须进候选。
 const fs = require("fs");
 const cp = require("child_process");
 const TH = Number(process.argv[2] || 180);
@@ -18,7 +20,7 @@ const hits = [];
 for (const rel of files) {
   const L = fs.readFileSync(rel, "utf8").replace(/\r/g, "").split("\n");
   for (let i = 0; i < L.length; i++) {
-    const m = L[i].match(/^func (\([^)]*\) )?([A-Za-z_][A-Za-z0-9_]*)\(/);
+    const m = L[i].match(/^func (\([^)]*\) )?([A-Za-z_][A-Za-z0-9_]*)(\[[^\]]*\])?\(/);
     if (!m) continue;
     let depth = 0, started = false, end = i;
     for (let j = i; j < L.length; j++) {
