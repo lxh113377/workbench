@@ -348,7 +348,9 @@ const autonomyDeliverableGate = "\n\n" + model.DeliverableGateMarker + "（硬�
 	"   不分级的缺陷清单没法取舍，工作台的报告门禁会判它不合格。\n" +
 	"6. 不要输出你自己的工具调用语法（工作台不执行它们，只会判本方案/本产物不可用）。\n" +
 	// 第 7 条（round 166 · T114）：正文与 templates 侧共用 model.GatePlacementClause ⇒ 不可能漂移。
-	"7. " + model.GatePlacementClause + "\n"
+	"7. " + model.GatePlacementClause + "\n" +
+	// 第 8 条（round 184 · 反虚构）：正文与 templates 侧共用 model 单点 ⇒ 不可能漂移。
+	"8. " + model.GateEvidenceGroundingClause + "\n"
 
 func (p *Planner) buildLadderPrompt(goal *Goal, focus string, ctx PlanContext) string {
 	var b strings.Builder

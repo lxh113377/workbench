@@ -31,3 +31,23 @@ const DeliverableGateMarker = "## 交付物门禁"
 // 写临时目录"，模型可能把**报告**也写进临时目录 ⇒ 反被 T88 交付物门禁判红（本轮取证时专门核过这条歧义）。
 const GatePlacementClause = "**探查用的临时脚本与重定向输出**写到系统临时目录（或任务自己的 scratch 子目录），不要留在被审查的项目根；\n" +
 	"   不要用 `> nul` 这类写法（bash 下会生成名为 nul 的真实文件）。**交付物不在此列**：报告仍必须按第 1 条写到 docs/。"
+
+// GateEvidenceGroundingClause 是「证据落地（反虚构）」条款的正文（不含列表编号），由两处注入点共用：
+// templates 侧作为第 7 条、autonomy 侧作为第 8 条 —— 与 GatePlacementClause 同样的单点范式。
+//
+// 为什么必须有这条（2026-11-01 round 184 实测取证）：自主任务连出三份「格式全对、内容全假」的报告，
+//
+//	用真实的 reportGateProblems 跑它们，两份 **0 problems**（第三份只因缺 `## 门禁建议` 一节被挡）：
+//	  docs/全栈工程质量-覆盖度复盘.md   —— 证据节写 `命令：Test-Path package.json / pyproject.toml / .env.example`，
+//	    本仓是 Go + PowerShell 工程（550 个 .go、14 个 .js、344 个 .py，全在 tests/ 下），
+//	    这三个文件**全仓不存在** ⇒ 它给出的「P0：补齐全栈测试入口」是基于虚构文件的不存在提出的整改；
+//	  docs/复盘报告-全栈工程质量提升.md —— 「证据定位」写 `package.json:1-50（未见 madge/depcruise/archunit 脚本）`、
+//	    `docker-compose.yml 无 otel-collector/prometheus/grafana 服务`，两个路径都不存在，
+//	    并据此要求引入 JS 生态的架构守护工具与可观测栈；
+//	  docs/复盘-覆盖度与遗漏.md —— 写「未发现自动化测试入口文件（如 tests/、pytest.ini）」，
+//	    而**本仓 tests/ 下有 77 个在册门禁脚本**（check_all.ps1 49 段），这句是可证伪的假话。
+//	⇒ 三道都「有 file:line、有可复跑命令、有 P0/P1/P2 分级」，形状满分；现有判据只判形状，
+//	  所以放行。而 T88 交付物门禁 + reportGate 的既有表述是「每条都要带 文件:行号 或可复跑命令」，
+//	  模型照字面执行时完全可以编一个不存在的路径来满足格式 ⇒ **格式判据本身在鼓励虚构**。
+//	本条款补的是缺失的那一维：引用前必须实测存在，建议必须匹配仓库真实技术栈。
+const GateEvidenceGroundingClause = "**先实测再引用**：报告里每一个路径、每一个 `文件:行号`、每一条命令及其期望输出，都必须是你本轮**真的读到 / 跑过**的；没验证存在的路径一律不写（不要用记忆里的通用文件名凑格式）。给整改建议前先看仓库**实际是什么技术栈**（列目录、看构建文件确认），与仓库构成不符的建议即使格式正确也算无效交付。\n   典型失效形态（本仓 2026-11-01 实测，三份报告全中）：给 Go/PowerShell 仓推荐 npm 工具链、引用不存在的 `package.json` / `docker-compose.yml` / `.env.example` 并据其「不存在」提出整改、声称「没有 tests/」而该目录实际存在几十个脚本 —— 这类报告能过一切**格式**门禁，所以必须靠本条约束内容来源。"

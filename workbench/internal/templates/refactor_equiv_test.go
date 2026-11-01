@@ -57,4 +57,23 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	git worktree remove xtmp/r11_baseline --force        # 用完即删（#44 ⑧ 负控副本纪律）
 //
 // 拆分后同法算出同一哈希 ⇒ 证明 29 个模板的 17 个可观察字段逐字未变（纯机械拆分）。
-const wantDefaultsSetHash = "57859219ff0ceed544627d981381488f7654ce30a7dc09f95be78513fa2093c9"
+// 基线更新记录（round 184，2026-11-01）：由 57859219…fa2093c9 改为 e7f520dc…f1d7b69。
+//
+//	原因**不是**「测试红了就改期望值」——那会让本判据失效。更新前做了逐字段差分取证：
+//	  用 git worktree 检出 HEAD 基线树，在同一份 dump 测试下导出两侧 29 条模板的
+//	  17 个非 Prompt 字段（ID/Name/Domain/PriorityWeight/ValuePrior/CostPrior/Cooldown/DiversityGroup/
+//	  Chain 三字段/Enabled/Builtin/Format/Sections 数/ModelTier/MaxMinutes）与 PromptTemplate 长度，
+//	  结论：ID 顺序 0 处差异、非 Prompt 字段 0 处差异、PromptTemplate 长度**每条都恰好 +821 字节**
+//	  （= "7. " 3 + 条款正文 817 + 换行 1）。⇒ 本次哈希变化 100% 来自新增的反虚构条款注入，
+//	  没有任何模板的其它字段被顺带改到。这类「条款追加」是本判据允许更新基线的唯一情形，
+//	  且必须留下差分证据；若差分不是全条同幅、或出现字段差异，就该修代码而不是改基线。
+//
+// 基线更新记录 2（round 184-185，2026-11-01）：57859219… → e7f520dc…（加第 7 条反虚构条款）→ 646e3525…（再加 ⑧ 教训）。
+//
+//	两次都**先做逐字段差分再改基线**（差分脚本 dump 两侧 29 条模板的 17 个非 prompt 字段 + prompt 字节长）：
+//	  round 184：28 条 +821、quality-audit 亦 +821，非 prompt 字段 0 处差异 ⇒ 只来自条款注入。
+//	  round 185：28 条 +821、quality-audit +1898（=821+1077，多出的 1077 是我这次单独给它加的 ⑧），
+//	  ID 顺序 0 处差异、非 prompt 字段 0 处差异 ⇒ 变化 100% 可归因到「预期注入点」。
+//	这就是本判据允许更新基线的唯一情形：**全条同幅、字段零变、超幅部分可逐条归因**。
+//	若差分出现「字段值变化」或「同幅不成立」，说明改动泄漏到了别处，应修代码而不是改这里。
+const wantDefaultsSetHash = "646e35256a0b235e542252a4fc9e5278b96513d31b058a72aecd5b4fb2874677"
