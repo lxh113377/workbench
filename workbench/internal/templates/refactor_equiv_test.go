@@ -307,4 +307,18 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	  ID 顺序 0 处差异；17 个字段 0 处差异；长度变化只有 quality-gate-spec 一条（14845→14843，-2）；
 //	  其余 28 条逐字节不变；hashChanged 恰为 [quality-gate-spec]。
 //	⇒ 与记录 21 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "2a454cca9be9e9e9129cee7de930d78b393e01ed213393d177f57ad69cba9787"
+//
+// 基线更新记录 23（round 240，2026-11-02）：2a454cca… → e441d677…。
+//
+//	扩写 quality-gate-spec ㉓（第⑤条动作 + (e)三条硬规矩 + (f)反向教训），不另立编号：
+//	⑤ 新增门禁的首跑必须看 CI —— r238 我在本机做了四步验证全绿、推上 CI 第一次就红（硬编码绝对路径，
+//	  runner 上路径不同 ⇒ 读不到文件）。本机验证再多也是同一台机器，环境差异只有另一种环境能暴露。
+//	(e) 三条：①禁绝对路径（须换 cwd 实测）②引用文件与门禁同批提交③首跑查 CI 日志那行是 PASS 还是 FAILED；
+//	  并钉住两受理面宽容度不同：CI 的 repo gates 是 rc≠0 一律失败，本地 check_all 对 SKIP/UNVERIFIED 不判红。
+//	(f) 反向防过度推广：同族扫描查出 177 处硬编码路径全在 docs/skill-audit 一次性分析脚本里、无任何受理面 ⇒ 不改。
+//	  「一次扫清」的前提是先确认同类处在同一受理面上。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条的 17 个非 prompt 字段
+//	+ prompt 字节长 + prompt sha256 前 8 字节）：ID 顺序 0 处差异；17 个字段 0 处差异；
+//	长度变化只有 quality-gate-spec 一条（14843→16575，+1732）；其余 28 条逐字节不变；hashChanged=[quality-gate-spec]。
+//	⇒ 与记录 22 同规格。出现第 2 条哈希变化或任何字段差异，即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "e441d67711b226a7d43f404888feaf360ab1a0a9208cfcf1466414e38446ac7b"
