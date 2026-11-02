@@ -379,4 +379,18 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	差异；**prompt 字节长变化 0 处**（字母 a/b/c 与 e/f/g 等长，纯标记替换 ⇒ 长度必然不变，这本身是改动性质的
 //	交叉验证）；hashChanged=[quality-gate-spec]；其余 28 条逐字节不变。
 //	⇒ 出现长度变化或第 2 条 hash 变化即为改坏别处（本次意外改了内容），应回滚而非改基线。
-const wantDefaultsSetHash = "0e95cf5930e0e670bce32764c5cd2969a67acb1159699decafebc732a70a8997"
+//
+// 基线更新记录 29（round 254，2026-11-02）：0e95cf59… → af18cc79…。
+//
+//	给 review-five-axis ⑧ 追加「第二维」：审计并发/资源泄漏类项时（2026-11-02 一轮实测，两个结论都靠真实代码/探针才没写错）：
+//	(a)「文件里没 ctx.Done/.Stop 字样」这种弱信号筛 goroutine 泄漏，报 3 个生产候选 ⇒ 逐个读实际循环体 3/3 全误报
+//	    （遍历有限切片+select default / 只做 Wait+close / 子进程 Wait）；批量筛只定位候选，定夺必须读码。
+//	(b)「for 循环里 time.After 泄漏」是 Go 经典反模式，本仓确有一处；但 go.mod 声明 1.27（≥1.23 runtime 不再持有
+//	    未停止 timer 强引用）⇒ 写探针实测：造 20 万未接收 timer 强制 GC，堆 1934KB→646KB（基线631、残留15KB）⇒ 不成立、不立项。
+//	(c) 探针自身也会错：第一版 select 两分支（等 time.After 一小时 + 等永不写的通道）⇒ 首次 select 就阻塞一小时不循环；
+//	    发现耗时异常先怀疑探针（补对照组），不是被测对象。
+//	本轮契约测试还实际拦住一次：插入文本含 select{} 花括号被模板 Validate 当未知占位符判红 ⇒ 改文不放宽判据。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条 17 非 prompt 字段 + prompt 长度 + hash 前8）：
+//	ID 顺序 0 处差异；17 字段 0 处差异；长度变化只有 review-five-axis 一条（12161→14942，+2781）；其余 28 条逐字节不变。
+//	⇒ 与记录 28 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "af18cc79b1239a392e69363259316eb827a7959cbb1bb952f57a01f05c71a8c7"
