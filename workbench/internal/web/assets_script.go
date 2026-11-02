@@ -596,7 +596,7 @@ const appJS = `(() => {
   // ── 交互动作 ─────────────────────────────────────────
   const WB = {
     async start() { await api('/api/engine/start', { method: 'POST', body: '{}' }); toast('引擎已启动'); renderOverview(); },
-    async stopEngine() { await api('/api/engine/stop', { method: 'POST', body: '{}' }); toast('正在停止引擎'); },
+	async stopEngine() { try { await api('/api/engine/stop', { method: 'POST', body: '{}' }); toast('正在停止引擎'); } catch (e) { toast(e.message); } },
     async pause() { try { await api('/api/engine/pause', { method: 'POST', body: '{}' }); toast('已暂停'); refreshTop(); } catch (e) { toast(e.message); } },
     async resume() { try { await api('/api/engine/resume', { method: 'POST', body: '{}' }); toast('已继续'); refreshTop(); } catch (e) { toast(e.message); } },
     async cancel(id) { try { await api('/api/tasks/' + id + '/cancel', { method: 'POST', body: '{}' }); toast('已请求终止'); renderQueue(); } catch (e) { toast(e.message); } },

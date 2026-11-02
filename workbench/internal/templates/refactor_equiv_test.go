@@ -406,4 +406,18 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条 17 非 prompt 字段 + prompt 长度 + hash 前8）：
 //	ID 顺序 0 处差异；17 字段 0 处差异；长度变化只有 quality-verify 一条（28782→30515，+1733）；其余 28 条逐字节不变。
 //	⇒ 与记录 29 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "e1f6023ddc92967dec5eac2bc9a44c9d806c3abd52e05c83aa266f679876bece"
+//
+// 基线更新记录 31（round 256，2026-11-02）：e1f6023d… → 0d26841b…。
+//
+//	给 quality-verify ⑮ 追加「补充」：取块边界用固定行数窗口既会假红也会假绿（本轮实测假绿，更危险）。
+//	场景：枚举内嵌 appJS 的 async 方法是否都有 try 兜底，用「声明行往下 8 行」当方法体 grep try ⇒ 把紧邻的下一个
+//	方法框了进来 —— 一个其实没 try 的方法被判「有 try」（假绿），差点据此宣布「全部已兜底、无需修」。假绿比假红
+//	更坏：假红会被复跑/人工挡，假绿让你停止检查。正解按大括号配平取整块。⇒ 独立佐证：本轮据此从假绿爬回，
+//	精确配平后真缺陷浮出（WB.stopEngine 无 catch），已单独修复（assets_script.go，不进本指纹集，见下）。
+//	本轮同时改了 internal/web/assets_script.go（给 WB.stopEngine 补 try/catch 对齐兄弟方法）—— 它不喂 Defaults()
+//	⇒ 不进入本指纹集，本 hash 只反映 quality-verify 一条的变化（28782→… 不变，只 quality-verify 30515→31881，+1366）。
+//	契约测试本轮再次实际拦停一次：插入文本含中文顿号花括号被模板 Validate 当未知占位符判红 ⇒ 改文不放宽判据。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条 17 非 prompt 字段 + prompt 长度 + hash 前8）：
+//	ID 顺序 0 处差异；17 字段 0 处差异；长度变化只有 quality-verify 一条（+1366）；其余 28 条逐字节不变。
+//	⇒ 与记录 30 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "0d26841b30da899cd9ef6d874c63afaf2f599c5c633d1dcee3ce6dc7e360314e"
