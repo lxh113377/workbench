@@ -16,6 +16,27 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Added
+- **报告 P2-2 补测：常驻空闲态内存首次实测 PASS（40.6MB / 上界 128MB）（round 278）**：
+  P2-2 此前登记为「需活实例才能测」的未完成项（round 217 实测 `REAL_RC=2` / `UNVERIFIED: 没有以该产物
+  路径运行的实例`）。本轮补上：
+  · **操作方式（无头、全程可回滚）**：`Start-Process dist/workbench.exe --silent -WindowStyle Hidden`
+    → 等 14s 就绪 → 再等 25s 进入空闲 → 跑 `tests/check_resident_longrun.ps1` → **`Stop-Process -Force` 终止**
+    → 复核 `LEFT=0`（无残留进程）+ 工作树 CLEAN。**单次全程约 40s，不改变机器持久状态。**
+  · **实测读数**：`CHECK residentLongrun result=PASS median=40.6MB bound=128MB`；
+    明细 `相位=stopped(仅引擎循环开关) 活跃任务=0 采样=15点/28s 中位=40.6MB 极差=0MB(带宽8) 上界=128MB`。
+  · **读数解读（这里必须分清两件事，否则会得出越界结论）**：
+    ① `中位 40.6MB / 极差 0MB` ⇒ 空闲态内存**完全稳定、无爬升**，距上界余量 87.4MB（约 3.15 倍）；
+    ② 门禁头注释记录的历史基线是 **46.9MB（恒定）**，本轮 40.6MB **低于该基线**、属同一量级
+       ⇒ **未出现该门禁设计要抓的「量级塌方」**。
+    ⇒ 但**不能**据此说「内存问题已证伪」：本门禁只覆盖**空闲态**；执行期（6 任务并发实测 86~115MB、
+      峰值 752MB）是另一状态、按设计不设上界。**P2-2 的正确结论是「空闲态已实测且达标」，
+      不是「性能轴无问题」。** —— 这条边界比 PASS 本身更值得写清。
+  · 报告里同时补入**复跑方式**（供 PR 复查）与三态说明，删掉了旧的「本轮不做这件事」表述。
+  验证：doc_refs / multi_bom / repo_eol / changelog / report_figures / template_xrefs 六道门禁各 rc=0。
+  **一次 `$` 展开事故也记**：第一次直接用 `powershell -Command` 内联写 `$p = Start-Process ...`，
+  `$p` 被 bash 展开成空串 ⇒ PowerShell 报 `The term '=' is not recognized`。改成 **.ps1 文件落盘再跑**。
+  ⇒ 本会话第 N 次同一坑：**内联 PowerShell 里的 `$` 一律先落 `.ps1` 文件，别塞进 `-Command`。**
+### Added
 - **quality-verify ⑩(d) 续写 sync.Map 专项：注册-清理成对 + 类型断言静默失效（round 277）**：
   补上 round 276 留下的明确欠账（只扫了 6 处声明、未读各自并发语义）。本轮把 4 张 sync.Map
   （runningIDs / taskCancels / cancelling / pathLocks）逐点读代码复核，**0 真缺陷**，两类形态值得记：
