@@ -454,4 +454,18 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条 17 非 prompt 字段 + prompt 长度 + hash 前8）：
 //	ID 顺序 0 处差异；17 字段 0 处差异；长度变化只有 quality-audit 一条（+1933）；其余 28 条逐字节不变。
 //	⇒ 与记录 32 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "0aec9eb3fcd4063102975441dd549695a2ff4f6cf0825c71160d38fe5340ea1e"
+//
+// 基线更新记录 34（round 260，2026-11-02）：0aec9eb3… → fab1f546…。
+//
+//	给 quality-hygiene ⑥ 添加**孪生反面**：「命令要读的产物，必须先写再引用」（2026-11-02 实测，同一晚 3 次同型）。
+//	形态 = 引用未写之物：git commit -F xtmp/xxx_msg.txt 而该文件还在「下一步再写」清单里 ⇒ fatal: could not read
+//	log file；同理 powershell -File 指向未落盘脚本、git add -- <path> 指向未创建文件。
+//	与 ⑥ 主条的互补关系是本条的核心：⑥ 讲**写早于索引**（内容没进提交），本条讲**读早于写**（命令必失败）；
+//	两者都是「前置产物与使用顺序错位」，且**都不会被常规门禁判红**（前者门禁只看内容合规，后者只是命令报错 ——
+//	而命令报错常被当成网络/环境问题重试掉，本会话确实发生过把脚本语法错误判成网络问题）。
+//	动作要求：凡命令要读某物（-F 文件 / -File 脚本 / -- 路径 / @参数文件）先确认存在（test -f / ls / 先写），
+//	列进「先做」；连续两次以上同型 ⇒ 按习惯问题处理，不记成偶发。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条 17 非 prompt 字段 + prompt 长度 + hash 前8）：
+//	ID 顺序 0 处差异；17 字段 0 处差异；长度变化只有 quality-hygiene 一条（+1265，与渲染 9184→10449 吻合）；其余 28 条逐字节不变。
+//	⇒ 与记录 33 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "fab1f54600706aa6fad5b917cc591b37a3c8027f66ddc32c8fa6dab591563139"
