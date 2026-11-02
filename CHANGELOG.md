@@ -16,6 +16,26 @@
 > 替换块必须把锚点里的**全部**内容重新输出，否则静默丢行。
 
 ### Added
+- **新增路径安全契约测试：日志文件名守卫 + 任务详情 id 存在性（round 265，2026-11-02）**：
+  顺 objective 的安全轴审计文件服务面（`os.ReadFile` / `layout.*File` 的全部落点）。**结论：0 真缺陷**，
+  但发现一处**判据缺口**（与 r258 的 `sanitizeFileName` 黑洞同族）：
+  · `handleLogs` 用 `?file=` 直接拼 `layout.LogFile(name)` 读盘，且已有两道防线 ——
+    `strings.ContainsAny(name, 反斜杠 斜杠 冒号 星号 问号 引号 尖括号 竖线)` 挡全部路径提供符 + 全局 `guard` 强制 token；
+  · `handleTaskDetail` 的 id 直接进 `layout.TaskFile(id, "events.jsonl")`，安全性依赖「先 `Store().Get(id)` 命中」。
+  ⇒ 这两道防线**都没有任何测试** —— 谁删掉 `ContainsAny` 或把 `Get` 校验挪到读盘之后，接口立刻变成任意文件读，
+    而现有判据一条都不会红。补 `logs_name_guard_contract_test.go` 锁住这两个行为。
+  **本轮最值得记的是：我的判据第一版没有牙，是变异自证抓出来的。**
+  · 第一版断言写成「200 且空列表也算通过」—— 于是我短路掉 `ContainsAny`（`if false {`）后，测试**照样绿**。
+    ⇒ 那是**一道看起来在守安全、实际恒绿的假判据**，比没有判据更糟（它会给错误结论盖章）。
+  · 改法是区分两件事：**「被拒绝」必须是 400（`bad()` 的语义）；「文件不存在」才是 200 空列表**。
+    改成 `code != http.StatusBadRequest` 即判红后，同一变异立刻红并精确点名：
+    「文件名 `../audit.jsonl` 含路径语义，期望 400 拒绝，**实得 200** —— 任意文件读风险」。
+  ⇒ **教训：安全性判据必须先做「删掉防线」的变异自证，否则你无法区分「它在守」与「它恒绿」。**
+  审计还逐点否掉了两处看似可疑的点（记录以免后人重查）：`gov_api.go:69` / `pool_api.go:135` 的 `TrimPrefix` 只取
+  id 走存储层、**不做路径拼接**；`pool_api` 的注释还留着它当年 `vendor/model-x` 被按 `/` 截断的真实缺陷记录。
+  `RuntimeFile/AutonomyFile` 的参数全是代码内字面量（`goals.json` / `decisions.jsonl`），无外部可控。
+  验证：新判据两条 PASS、变异必红（精确点名）、对照绿；全仓 32 包 ok、fmt=0、vet=0；临时 overlay 文件全删。
+### Added
 - **前端/资产审计三连带：三处弱信号逐点否掉，0 真缺陷，不改代码（round 264，2026-11-02）**：
   顺 objective 的 HTML/CSS/JS + 性能调优 + 工程化构建维度，做了三次带量化证据的审计，
   **三次的 grep 信号都很像真缺陷、逐点读码后全部不成立** —— 记下来是因为「否掉」比「改掉」更省风险：
