@@ -172,7 +172,9 @@ if ($LASTEXITCODE -ne 0) { Pop-Location; throw "go vet 失败" }
 if (-not $SkipTests) {
 Mark "4/6 test+覆盖率"
   Write-Host "==> 4/6 运行测试 + 覆盖率门禁" -ForegroundColor Cyan
-  $coverOut = (& go test ./... -count=1 -cover 2>&1 | Out-String)
+  # 本步先排除「产物新鲜度」那条判据（-skip）：它比对本包内嵌资产与 dist/workbench.exe，而 exe 要到第 5 步才重建
+  # ⇒ 改了内嵌资产后本步必然红、永远走不到第 5 步（顺序死锁，2026-11-02 实测）。第 5 步建完 exe 后在 5.5 补跑它。
+  $coverOut = (& go test ./... -count=1 -cover -skip "TestAssetsPresentInArtifact" 2>&1 | Out-String)
   $testRc = $LASTEXITCODE
   Write-Host $coverOut
   if ($testRc -ne 0) { Pop-Location; throw "测试失败" }
@@ -269,8 +271,21 @@ Write-Host "==> 5/6 构建单 EXE" -ForegroundColor Cyan
 $buildTime = Get-Date -Format o
 $env:CGO_ENABLED = "0"
 & go build -trimpath -ldflags "-s -w -H=windowsgui -X main.version=$Version -X main.buildTime=$buildTime" -o (Join-Path $dist "workbench.exe") ./cmd/workbench
-if ($LASTEXITCODE -ne 0) { Pop-Location; throw "构建失败" }
+$buildRc = $LASTEXITCODE
+if ($buildRc -ne 0) { Pop-Location; throw "构建失败" }
+
+# 5.5/6 产物新鲜度：必须等 exe 真的建出来才判（这条判据比对本包内嵌资产与 dist 里那个 exe 的字节）。
+# 为什么不在第 4 步（测试阶段）判：旧 exe 必然与改过的内嵌资产不一致 ⇒ 改了资产的重建会在测试步永久卡死，
+# 走不到第 5 步建新 exe（2026-11-02 实测的顺序死锁）。所以第 4 步用 -skip 排除它，建完 exe 在这里补跑。
+# 这里仍红就是真缺陷：构建没把资产打进 exe。
+Mark "5.5/6 产物新鲜度（建完 exe 才可判）"
+Write-Host "==> 5.5/6 校验产物内嵌资产与源码一致" -ForegroundColor Cyan
+$assetTest = (& go test ./internal/web/ -count=1 -run TestAssetsPresentInArtifact 2>&1 | Out-String)
+$assetRc = $LASTEXITCODE
+if ($assetRc -ne 0) { Write-Host $assetTest; Pop-Location; throw "产物新鲜度判据失败：exe 内嵌资产与源码不一致" }
+Write-Host "    产物新鲜度通过" -ForegroundColor Green
 Pop-Location
+
 
 Mark "6/6 校验+链接判据"
 Write-Host "==> 6/6 校验产物" -ForegroundColor Cyan

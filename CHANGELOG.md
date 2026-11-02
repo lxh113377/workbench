@@ -1095,6 +1095,28 @@
   长内联命令一律落盘成文件（内联进 markdown 极易在换行/引号抄写中断掉）。
 
 ### Fixed
+- **build.ps1 顺序死锁修复：产物新鲜度判据从测试步挪到建完 exe 之后（round 261，2026-11-02）**：
+  **缺陷**：build.ps1 第 4 步跑测试、第 5 步才建 exe；而 `TestAssetsPresentInArtifact` 比对本包内嵌资产与
+  `dist/workbench.exe` 的字节 ⇒ **改了内嵌资产后重建必然卡死在第 4 步**（旧 exe 与源码不一致 ⇒ 判红 ⇒
+  走不到第 5 步建新 exe）。这道判据的文档还写着「重跑 build 重建产物」，在陈旧态下根本走不通。
+  **修法（最小且不减闸）**：① 第 4 步测试加 `-skip "TestAssetsPresentInArtifact"`（该判据此刻不可能通过）；
+  ② 第 5 步建完 exe 后新增 **5.5 步补跑它** —— 此时 exe 已新，若仍红就是真缺陷（构建没把资产打进 exe）。
+  **关键实测（这条修复的信任来源，不是推理）**：
+  · **负控 A（产物缺失）**：删掉 exe → 全量 build **`BUILD_RC=0`**，走完全程、5.5 通过、exe 重建；
+  · **负控 B（产物陈旧，即原缺陷现场）**：`touch` 源码使产物旧 → build **`BUILD_RC=0`**，不再卡死、5.5 判定通过；
+  · **反向对照（证明旧行为真的会红）**：真改内嵌资产 + **不带 skip** ⇒ **`FAIL`**「产物缺或旧于源码的内嵌资产:
+    appJS 83024 字节」；同场景 + **带 skip** ⇒ `ok` 且**覆盖率读数完全不变（65.3%）**（该判据是断言型、不贡献语句覆盖）；
+  · 干净树第 4 步真实命令 `STEP4_RC=0`、**32 包全 ok 零 FAIL**；完整 build 全绿。
+  **过程中我自己制造并当场修掉的三个错**（如实记，都是「不验证就落盘」的代价）：
+  ① **差点写坏生产构建脚本**：手拼 `\uFEFF + s.split(NL).join(CR+NL)` 把整个 build.ps1 写成「每行一个带引号
+     字符串」⇒ `check_ps1_syntax` 精确点名 `build.ps1:4` `:7` 判红 ⇒ 立即 `git checkout --` 还原、语法闸回绿。
+     终解：**BOM 天然留在 `lines[0]` 首字符，全程不手动拼 BOM**，只做逐行 splice；
+  ② 第一版 5.5 段插在 `Pop-Location` **之后** ⇒ 在仓库根跑 `go test` 报 `cannot find main module`；
+  ③ 第二版插在「构建失败检查」**之前** ⇒ 我的 `go test` 会覆盖 `$LASTEXITCODE`，**真构建失败会被吞掉**。
+     终解：`$buildRc = $LASTEXITCODE` → 判失败 → 跑 5.5 → 最后 `Pop-Location`。
+  **一个值得记的判断**：改 ps1 这类带 BOM 的文件，**只能逐行 splice**，任何「拼字符串重写全文」都是赌博 ——
+  而 `check_ps1_syntax`（89 脚本）是唯一能抓住它的机械闸，本轮实测它能精确点名文件与行号。
+### Fixed
 - **5 处 render 直接调用补 .catch —— 修掉 fire-and-forget 静默失败，并推翻我上一轮的错误结论（round 257，2026-11-02）**：
   上轮审计 appJS 时我判「3 个 render 函数由外层 render() 的 try→failPane 兜着、不必动」并写进收口卡。
   本轮复查发现这是**只看一条路径就宣布全局安全**：那 3 个函数除被 render() 分派 await 外，另有 5 处直接调用
