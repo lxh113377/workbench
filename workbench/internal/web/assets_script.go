@@ -471,7 +471,7 @@ const appJS = `(() => {
       // 输入即过滤（250ms 去抖，避免每个字符都重排一整张表）
       inp.oninput = function () {
         clearTimeout(inp._t);
-        inp._t = setTimeout(function () { tplQuery = inp.value; tplShowAll = false; renderTemplates().then(function () { const el = document.getElementById('tplSearch'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }); }, 250);
+        inp._t = setTimeout(function () { tplQuery = inp.value; tplShowAll = false; renderTemplates().then(function () { const el = document.getElementById('tplSearch'); if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }).catch(function (e) { toast(e.message); }); }, 250);
       };
     }
   }
@@ -699,7 +699,7 @@ const appJS = `(() => {
         const enabled = document.getElementById('autostart').checked;
         await api('/api/autostart', { method: 'POST', body: JSON.stringify({ enabled: enabled }) });
         toast('开机自启已' + (enabled ? '开启' : '关闭'));
-        renderSettings();
+        renderSettings().catch(function (e) { toast(e.message); });
       } catch (e) { toast(e.message); }
     },
     async diagnose() {
@@ -783,17 +783,17 @@ const appJS = `(() => {
       try {
         await api('/api/templates', { method: 'POST', body: JSON.stringify(tpl) });
         toast('模板已保存');
-        renderTemplates();
+        renderTemplates().catch(function (e) { toast(e.message); });
       } catch (e) { toast(e.message); }
     },
     async deleteTemplate(id, btn) {
       armConfirm(btn, '再点一次确认删除', async () => {
-        try { await api('/api/templates/' + id, { method: 'DELETE' }); toast('已删除该模板'); renderTemplates(); } catch (e) { toast(e.message); }
+        try { await api('/api/templates/' + id, { method: 'DELETE' }); toast('已删除该模板'); renderTemplates().catch(function (e) { toast(e.message); }); } catch (e) { toast(e.message); }
       });
     },
     async resetTemplates(btn) {
       armConfirm(btn, '再点确认恢复默认', async () => {
-        try { await api('/api/templates/reset', { method: 'POST', body: '{}' }); toast('已恢复默认'); renderTemplates(); } catch (e) { toast(e.message); }
+        try { await api('/api/templates/reset', { method: 'POST', body: '{}' }); toast('已恢复默认'); renderTemplates().catch(function (e) { toast(e.message); }); } catch (e) { toast(e.message); }
       });
     },
     // ── 工作目录（AI 开发功能扩展） ──────────────────────

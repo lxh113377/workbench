@@ -420,4 +420,20 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条 17 非 prompt 字段 + prompt 长度 + hash 前8）：
 //	ID 顺序 0 处差异；17 字段 0 处差异；长度变化只有 quality-verify 一条（+1366）；其余 28 条逐字节不变。
 //	⇒ 与记录 30 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "0d26841b30da899cd9ef6d874c63afaf2f599c5c633d1dcee3ce6dc7e360314e"
+//
+// 基线更新记录 32（round 257，2026-11-02）：0d26841b… → 5293f49e…。
+//
+//	给 review-five-axis ⑧ 追加第三维：「安全 / 不必改 / 已被兜住」这类否定性结论，比缺陷断言更需要枚举全部触发点
+//	—— 缺陷写错下个人还会查，安全断言写错会被直接采信、从此无人再看。本轮**推翻我自己上一轮写的结论**：上轮判
+//	「3 个 render 函数由外层 render() 的 try→failPane 兜着、不必动」，是只看一条路径就宣布全局安全；本轮复查发现
+//	它们另有 5 处直接调用（搜索去抖 then 之后、保存自启/保存模板/删除/重置里）**全部未 await、全部无 catch**，
+//	未 await 的 async 调用其 rejection 逃出词法上包着它的 try/catch ⇒ 静默失败、占位可能永驻。已真修这 5 处。
+//	三维代价方向区分：第一维防「推翻别人已测的设计」（白改）、第二维防「凭空造不存在的缺陷」（多改）、
+//	第三维防「错误地宣布安全」（漏改）—— 都是「没把事实枚举全就写进报告」，但第三维是漏，最隐蔽。
+//	本轮同时改了 internal/web/assets_script.go：5 处 render 直接调用补 .catch 是行内替换（该文件 1227 行不变），
+//	但模板 + 契约 + 本笔记本身使全仓 .go 行数 +36 ⇒ figures 仍需同步（已同步 89,601→89,637）；assets_script.go 不喂
+//	Defaults() ⇒ 不进入本指纹集。TestEmbeddedJSIsSyntaxValid PASS 证内嵌 JS 语法未被补丁破坏，产物已重建。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条 17 非 prompt 字段 + prompt 长度 + hash 前8）：
+//	ID 顺序 0 处差异；17 字段 0 处差异；长度变化只有 review-five-axis 一条（+2423）；其余 28 条逐字节不变。
+//	⇒ 与记录 31 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "5293f49e4b97fab4d408997a1c6b9411feba8ea7d728e4b10d8a5b7b31b63b88"
