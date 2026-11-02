@@ -586,4 +586,20 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump）：ID 顺序 0 处差异；17 字段 0 处差异；
 //	长度只有 quality-verify 一条（PromptTemplate 42672，较基线 +1568）；其余 28 条逐字节不变。
 //	⇒ 与记录 40 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "90a460429713ce07dc410a05bba556bf3f9493346cbaf3686b16c3396b1aceec"
+//
+// 基线更新记录 42（round 276，2026-11-02）：90a46042… → 49720f48…。
+//
+//	给 quality-verify ⑩(d) 续写一条原子量专项：**比「哪块字段没加锁」更隐蔽的，是原子量上的 check-then-act**。
+//	2026-11-02 round 276 实测：原子量的单次 Load 与单次 Store 各自都安全，但「先 Load 判断、再 Store」
+//	是**复合操作** —— 两步之间可能被别的 goroutine 插进来，同一段逻辑被执行两次。
+//	判法：同一变量在 Load 之后几行内出现 Store、且中间隔着条件判断 ⇒ 候选；正确写法通常是 CompareAndSwap。
+//	⚠️ 但**命中≠缺陷**：本轮唯一一处此类候选（rescueSweepAt 的 Load→Store）实测**不是缺陷** ——
+//	它所在整个函数被入口处一个 tickBusy.CompareAndSwap 互斥住（同一时刻只有一个 tick 在跑），
+//	复合操作虽非原子，却由外层串行化保护。⇒ 复核顺序固定为：**先找外层互斥，再谈复合操作**。
+//	这也解释了「有原子量/有锁」的静态扫描为何误报率极高：**保护常常不在同一函数里，而在调用链入口**。
+//	所以每个候选都必须往上追一层调用者，确认是否存在 entry-level 互斥（CAS 门、单例锁、单 goroutine 驱动）。
+//	只查本函数会漏掉这层保护，把「受保护」判成「裸奔」。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump）：ID 顺序 0 处差异；17 字段 0 处差异；
+//	长度只有 quality-verify 一条（PromptTemplate 44080，较基线 +1408）；其余 28 条逐字节不变。
+//	⇒ 与记录 41 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "49720f48934315fa804c19a543649b681e85ad408c275a8315400ce84c3977fa"
