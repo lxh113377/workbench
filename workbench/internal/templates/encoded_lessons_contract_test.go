@@ -134,6 +134,8 @@ func TestEncodedLessonsSurviveRender(t *testing.T) {
 			"不要造夹在中间的半吊子判据",                   // ⑩(f)续：覆盖更多行 ≠ 抓得到该抓的
 			"先 Load 判断、再 Store",               // ⑩(d)续：原子量上的复合操作 check-then-act
 			"先找外层互斥，再谈复合操作",                   // ⑩(d)续：保护常在调用链入口不在本函数
+			"注册-清理必须成对",                       // ⑩(d)续：sync.Map 漏 Delete 是无界增长且不报错
+			"类型断言失败是静默失效",                     // ⑩(d)续：存取形状唯一才算钉住
 		}},
 		{"quality-gate-spec", []string{
 			"静态配对检查", // ⑥：判据读外部数据件时必须配静态配对检查

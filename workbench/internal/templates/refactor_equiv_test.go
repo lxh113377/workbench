@@ -602,4 +602,22 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump）：ID 顺序 0 处差异；17 字段 0 处差异；
 //	长度只有 quality-verify 一条（PromptTemplate 44080，较基线 +1408）；其余 28 条逐字节不变。
 //	⇒ 与记录 41 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "49720f48934315fa804c19a543649b681e85ad408c275a8315400ce84c3977fa"
+//
+// 基线更新记录 43（round 277，2026-11-02）：49720f48… → 38a74c7c…。
+//
+//	给 quality-verify ⑩(d) 续写 sync.Map 专项：**它承诺单次操作原子，不承诺「读-改-写」原子；最坏失效是静默**。
+//	2026-11-02 round 277 实测：4 张 sync.Map（运行中 ID / 取消入口 / 取消标记 / 路径锁）逐点复核，**0 真缺陷**。
+//	两类形态值得记：① **注册-清理必须成对**（Store 必配 defer/explicit Delete）—— 漏一边是无界增长，
+//	而 map 增长不报错、只让内存曲线慢慢抬头；实测所有注册点都成对。
+//	② **类型断言失败是静默失效**：sync.Map 存 interface{}，取出要断言；断言失败若只判 ok 不报错，
+//	性质是「本应取消的任务没被取消」，调用方完全无感（面板点了终止、任务继续跑）。
+//	仓内做法值得照抄：**存取两侧形状唯一**（存具名类型而非裸函数），并用判据钉住断言点数量
+//	（cancel_cause_contract_test.go 的 TestTaskCancelsTypeConsistency 实测还禁止退回裸函数形态）——
+//	因为形状不一致时编译器/测试/运行期都不会喊。
+//	判法：扫 sync.Map 先数 Store 与 Delete 是否成对，再数类型断言点是否与 Store 形状一致；
+//	两项都比「有没有加锁」更接近真实失效模式。**别把「没有 LoadOrStore」当缺陷** ——
+//	只有需要「不存在才创建」时才该用它，普通 Store 覆盖写是另一种正确语义。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump）：ID 顺序 0 处差异；17 字段 0 处差异；
+//	长度只有 quality-verify 一条（PromptTemplate 45648，较基线 +1568）；其余 28 条逐字节不变。
+//	⇒ 与记录 42 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "38a74c7cf620b681392e0d5621a36c09327845aefba1baef5e9999a6a99d8205"
