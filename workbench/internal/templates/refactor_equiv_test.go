@@ -468,4 +468,18 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条 17 非 prompt 字段 + prompt 长度 + hash 前8）：
 //	ID 顺序 0 处差异；17 字段 0 处差异；长度变化只有 quality-hygiene 一条（+1265，与渲染 9184→10449 吻合）；其余 28 条逐字节不变。
 //	⇒ 与记录 33 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "fab1f54600706aa6fad5b917cc591b37a3c8027f66ddc32c8fa6dab591563139"
+//
+// 基线更新记录 35（round 263，2026-11-02）：fab1f546… → e592fb00…。
+//
+//	给 review-five-axis ⑧ 追加第四维：**前端资源生命周期审计 —— 「设了定时器没看到 clear」不等于泄漏，先判它活多久**。
+//	2026-11-02 一次完整前端审计里，弱信号报的候选 0 个是真缺陷：setInterval 2 处 / clearInterval 0 处、
+//	addEventListener 7 处 / removeEventListener 0 处，看起来像一整族泄漏；逐点读码后确认两处定时器都在单页壳顶层
+//	IIFE 里跑一次、页面生命周期内一直存活（单页应用不卸载就不需要清理），7 个监听器也都在顶层或一次性绑定。
+//	⇒ 判「要不要清」的前置问题是「这个对象或页面会不会被销毁/重建」；只有会被重复创建的才需成对清理。
+//	另一类真缺口在「断了怎么办」而非「有没有清」：实时流（SSE/WebSocket）断开后若不降级会呈现静默陈旧 ——
+//	顶栏数字还在动、内容却冻结，比泄漏更该报。本仓实测该面已被 round 154 系统性解决并有三条判据（sse_fallback_test）。
+//	所以本轮**只沉淀方法、未改任何生产代码**（逐点读码 0 真缺陷 ⇒ 不制造无谓改动）。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump）：ID 顺序 0 处差异；17 字段 0 处差异；
+//	长度只有 review-five-axis 一条（+2272，与渲染 17364→19636 吻合）；其余 28 条逐字节不变。
+//	⇒ 与记录 34 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "e592fb0029a2a8ded10b1a5dd023d26b53ad5c36708cb043327a3221811c2eec"
