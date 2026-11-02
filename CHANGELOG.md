@@ -1454,6 +1454,25 @@
   长内联命令一律落盘成文件（内联进 markdown 极易在换行/引号抄写中断掉）。
 
 ### Fixed
+- **`docs/模型池.md` 两处过时声明按实测更正（round 282）**：
+  承 r281 的发现（「过时» 比「空话」更隐蔽 —— 它当时是真的，只是后来变旧，不报错、只矛盾于后来发生的事）。
+  本轮把该排查扩到另一份活文档 `docs/模型池.md`（293 行、7 处现值声明、**文件名无日期 ⇒ 被视为常青文档**）。
+  实测发现开篇那行有**两处**过时（原样保留更正说明，不抹去历史）：
+  · **文件数 13 → 实测 65**（25 生产 + 40 测试）。差 52 个 —— 这是典型「无判据盯的局部量」：
+    `check_report_figures` 钉的是全仓/workbench 的总量，不钉「某个目录有几个文件」。
+  · **「纯标准库」不准确**：`go list` 实测 19 个 import，其中 16 标准库 + **3 个本仓内部包**
+    （`workbench/internal/config` / `executor` / `model`）。严格说正确口径是「**无第三方依赖**」——
+    内部包不是第三方，但也不能叫「纯标准库」。**这处更值得记：它不是数字漂移，是口径不准。**
+  · 两处都补了**复算命令**（`ls internal/modelpool/*.go | wc -l` 与 `go list -f '{{join .Imports "\n"}}' ...`），
+    下次任何人可当场核验，不必信文中的数。
+  **一次工具自错也如实记**：我第一次用 `grep -rh "^\s*\""` 抽 import 路径，结果被命令里的引号解析搞乱，
+  返回的是 `apiKey:strings.TrimSpace(...)` 这类**结构体字段行**而不是 import 列表 —— 我**没有**拿它当结论，
+  改用权威的 `go list -f '{{join .Imports}}'` 才得出正确集合。
+  ⇒ **教训：抓 import 不要靠 grep 文本，用 `go list`**（前者受引号/缩进/续行影响，后者是编译器口径）。
+  **本轮也守住了范围纪律**：扫描发现 40 份活文档都有现值声明，但**没有铺开全扫** —— 只挑「无日期 + 声明多」
+  的一份做到底。**一次一件，符合「执行模型不要步子迈太大」的既定约束。**
+  验证：figures / doc_refs / multi_bom / repo_eol / changelog / template_xrefs 各 rc=0。
+### Fixed
 - **修 retryPol 三处锁外读：统一走已有的 policy() getter（round 270，2026-11-02）**：
   **缺陷（并发轴审计，三级证据）**：`Engine.retryPol` 由 `retryPolMu` 保护，写点在 `New` / `RestoreInterrupted` /
   `ReloadConfig` 三处；其中 **`ReloadConfig()` 由并发 HTTP handler 触发**（`web/server.go` 的 `handleSettings`
