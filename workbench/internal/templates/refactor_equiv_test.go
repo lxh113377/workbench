@@ -393,4 +393,17 @@ func TestDefaultsRefactorIsBehaviorPreserving(t *testing.T) {
 //	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条 17 非 prompt 字段 + prompt 长度 + hash 前8）：
 //	ID 顺序 0 处差异；17 字段 0 处差异；长度变化只有 review-five-axis 一条（12161→14942，+2781）；其余 28 条逐字节不变。
 //	⇒ 与记录 28 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
-const wantDefaultsSetHash = "af18cc79b1239a392e69363259316eb827a7959cbb1bb952f57a01f05c71a8c7"
+//
+// 基线更新记录 30（round 255，2026-11-02）：af18cc79… → e1f6023d…。
+//
+//	给 quality-verify ⑰ 追加第三维：探针不能只验会报错的形态，必须专门造「可能静默通过」的最坏边界样本；
+//	「编译器会兜底」这类安全假设不是一元的（2026-11-02 实测，为验证本仓「Go raw string 内不得混入定界符」
+//	约定的兜底强度而做）。四种混入形态 go build 实测：带 ${} 的 JS 模板串、未配对反引号、反引号后接纯文本
+//	三种 RC=1（编译器拦下）；但「混入恰好拼成合法 rawstring + 字面量 + rawstring 表达式」这一种 **RC=0 静默通过**，
+//	内嵌 JS 已被定界符腰斩 ⇒ 兜底只在「混入破坏 Go 语法」时生效。这条独立佐证 round 175 那道内嵌资产闸
+//	放弃「数反引号」改用 go/parser 取真实 raw literal 的决策（连编译器都不是一元防线）。
+//	本轮同时应验了 ⑰(c)/⑮：第一版探针自己写错（raw string 少收尾引号）→ 读数异常先怀疑探针，不采信。
+//	更新依据：单条隔离增长证明（worktree 检出 HEAD 基线树，两侧同跑 dump 导出 29 条 17 非 prompt 字段 + prompt 长度 + hash 前8）：
+//	ID 顺序 0 处差异；17 字段 0 处差异；长度变化只有 quality-verify 一条（28782→30515，+1733）；其余 28 条逐字节不变。
+//	⇒ 与记录 29 同规格。出现第 2 条 hash 变化或任何字段差异即为改坏别处，应回滚而非改基线。
+const wantDefaultsSetHash = "e1f6023ddc92967dec5eac2bc9a44c9d806c3abd52e05c83aa266f679876bece"
