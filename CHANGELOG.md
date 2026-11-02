@@ -1226,6 +1226,33 @@
   长内联命令一律落盘成文件（内联进 markdown 极易在换行/引号抄写中断掉）。
 
 ### Fixed
+- **修 retryPol 三处锁外读：统一走已有的 policy() getter（round 270，2026-11-02）**：
+  **缺陷（并发轴审计，三级证据）**：`Engine.retryPol` 由 `retryPolMu` 保护，写点在 `New` / `RestoreInterrupted` /
+  `ReloadConfig` 三处；其中 **`ReloadConfig()` 由并发 HTTP handler 触发**（`web/server.go` 的 `handleSettings`
+  L764 与 `handleEvalConfig` L727）。而读侧有三处在 `retryPolMu.Unlock()` **之后**直接读该字段
+  （原 L191 / L761 / L2337 的 `logRetryPolicyFixes(e.log, e.retryPol)`）⇒ 锁外读，与并发写者形成真实竞争窗口。
+  **关键定性：这不是「设计如此」，是漏用** —— 仓内**已有正确封装** `e.policy()`（L409，读锁保护 + nil 兜底
+  `retry.Default()`），且 L1097 已在用它。修法即三处改用 getter（最小改动、不改语义）。
+  **必须如实记的证据边界**：本机**无 gcc**（`CGO_ENABLED=0`，build.ps1 也强制 0）⇒ **`-race` 跑不了**，
+  所以我**没有**「竞态已复现」的证据，只能声称「存在锁外读、且该字段有并发写者与并发读者」。
+  → 不把「理论上会竞态」写成「实测竞态」，是这条修复的证据口径。
+  **新增判据 `retry_policy_guard_contract_test.go`**：静态钉住「retryPol 只经 policy() 读」，
+  允许两种合法形态（写赋值、getter 内部返回），其余一律红。两个实现细节都是踩坑后改对的：
+  ① getter 边界按**大括号配平**找函数体（「第一个行首 }」会误判嵌套块 ⇒ 把合法返回 L417 判成违规）；
+  ② 用正则 `e\.retryPol(?:[^.A-Za-z0-9_]|$)` 匹配读形态（`strings.Contains` 会把 `e.retryPolMu.Lock()`
+     当成超串误命中 ⇒ 多报 2 处）。
+  **D10.2 变异自证 —— 这里出了一次关键失误并当场纠正**：先用 `GOFLAGS=-overlay` 做变异，测试**仍 PASS**。
+  原因不是判据没牙，而是**我的判据读的是磁盘 `engine.go`，而 overlay 只改编译视图、不改磁盘** ⇒ 变异从未进入判据视野。
+  改为**真实文件变异**（字节备份 → 改盘 → 跑 → `finally` 立即还原）后：**FAIL** 并精确点名
+  「L193 / L763 / L2339: logRetryPolicyFixes(e.log, e.retryPol)」，还原后**字节一致**（`restored=true`）。
+  ⇒ 教训与上轮写进 quality-verify ⑩(b) 的那条完全对上：**变异读数为空时不能定论，必须换一种能出数的实验**。
+  另外还修了 `TestAuditReportCitationsResolve` 的连带红：我给 engine.go 加注释使行号移动，而报告
+  `docs/工作空间工程质量-五轴审查-2026-10-30.md` 里有 **31 条 `engine.go:<行号>  <代码>` 引用**全部漂移。
+  修法不是「+N 偏移」（实测偏移并非统一值），而是**按报告声称的代码片段在当前文件里定位真实行号**（内容定位，
+  唯一命中优先、多命中取与旧值最近的）⇒ 31 处全部改准、`TestAuditReportCitationsResolve` PASS。
+  验证：引擎包 build/vet 全绿、新增判据 PASS + 变异必红 + 对照绿、全仓 32 包 ok、fmt=0、
+  报告数字同步（546→547 / 89,995→90,087 / 1,172→1,173，均现值或引用现值的交叉引用、无留档、留档段未波及）。
+### Fixed
 - **build.ps1 顺序死锁修复：产物新鲜度判据从测试步挪到建完 exe 之后（round 261，2026-11-02）**：
   **缺陷**：build.ps1 第 4 步跑测试、第 5 步才建 exe；而 `TestAssetsPresentInArtifact` 比对本包内嵌资产与
   `dist/workbench.exe` 的字节 ⇒ **改了内嵌资产后重建必然卡死在第 4 步**（旧 exe 与源码不一致 ⇒ 判红 ⇒

@@ -188,7 +188,9 @@ func New(layout config.Layout, cstore *config.Store, st *store.Store, reg *templ
 	// 且 New→SetLogger→ReloadConfig 之间不发请求，不会丢已在途的令牌状态。
 	e.applyRateLimit(cfg.Executor)
 	e.retryPol = buildRetryPolicy(cfg.Executor)
-	logRetryPolicyFixes(e.log, e.retryPol)
+	// 读侧用 policy()（读锁保护）：ReloadConfig 由并发 HTTP handler 触发（handleSettings/handleEvalConfig），
+	// 直接读 e.retryPol 会与那次写入形成锁外竞争（2026-11-02 round 268 审计发现三处漏用 getter）。
+	logRetryPolicyFixes(e.log, e.policy())
 	// 自主子系统：初始化失败只降级，不阻断引擎构造。
 	e.initAutonomy()
 	return e, nil
@@ -758,7 +760,7 @@ func (e *Engine) Recover() error {
 	e.retryPolMu.Lock()
 	e.retryPol = buildRetryPolicy(cfg.Executor)
 	e.retryPolMu.Unlock()
-	logRetryPolicyFixes(e.log, e.retryPol)
+	logRetryPolicyFixes(e.log, e.policy())
 	if n > 0 {
 		e.emitEvent(model.Event{Type: "engine", At: model.Now(), Msg: fmt.Sprintf("恢复了 %d 个中断任务", n)})
 	}
@@ -2334,7 +2336,7 @@ func (e *Engine) ReloadConfig() {
 	e.retryPolMu.Lock()
 	e.retryPol = buildRetryPolicy(cfg.Executor)
 	e.retryPolMu.Unlock()
-	logRetryPolicyFixes(e.log, e.retryPol)
+	logRetryPolicyFixes(e.log, e.policy())
 	newSlots := make(chan struct{}, cfg.Executor.Concurrency)
 	e.mu.Lock()
 	e.slots = newSlots
